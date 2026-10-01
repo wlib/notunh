@@ -1,0 +1,24 @@
+{
+  "include": ["./src/", "./scripts/", "./tests/", "./*.html.tsx", "./*/*.html.tsx"],
+
+  "compilerOptions": {
+    "types": ["vite/client", "node", "geojson"],
+
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+
+    "jsx": "react-jsx",
+
+    "strict": true,
+    "isolatedModules": true,
+    "noEmit": true,
+
+    "skipLibCheck": true
+  }
+}

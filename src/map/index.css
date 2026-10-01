@@ -1,0 +1,558 @@
+/* The full-screen map never scrolls; the panel over it does */
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Layout: a bottom sheet over the map, until there's room to float the panel beside it */
+
+/* Fixed to the whole screen, rather than 100dvh, which iOS can leave short of the toolbar below */
+#app {
+  container: app / size;
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.map {
+  /* The whole viewport, under the panel, so it never resizes */
+  grid-area: 1 / 1 / -1 / -1;
+  /* Keep maplibre's control z-indices beneath the panel */
+  isolation: isolate;
+}
+
+.map .maplibregl-ctrl-top-left,
+.map .maplibregl-ctrl-top-right {
+  margin-block-start: env(safe-area-inset-top);
+}
+
+/* The sheet covers the bottom of the map */
+.map .maplibregl-ctrl-bottom-right {
+  inset: env(safe-area-inset-top) auto auto 0;
+}
+
+.panel {
+  --gap:   clamp(0.5rem, 2cqi, 0.875rem);
+  --inset: clamp(0.75rem, 3.5cqi, 1rem);
+
+  grid-area: 2 / 1;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  /* Never more than about half, so the map always shows, and kept above the keyboard */
+  max-block-size: min(45cqb, 40rem, 100cqb - var(--keyboard, 0px) - env(safe-area-inset-top));
+  margin-block-end: var(--keyboard, 0px);
+  padding: var(--inset);
+  padding-block-start: 0;
+  padding-block-end: max(var(--inset), env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transition: translate 250ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+/* Down to just the header, leaving the map */
+.panel.lowered {
+  translate: 0 var(--lowest);
+  overflow-y: hidden;
+}
+
+.panel > :not(.grabber, .panel-header) {
+  transition: opacity 250ms;
+}
+
+.panel.lowered > :not(.grabber, .panel-header) {
+  opacity: 0;
+}
+
+.panel.dragging {
+  transition: none;
+}
+
+/* A handle to drag or tap the sheet down and back up by, sticking to the top as the panel scrolls */
+.grabber {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  flex: none;
+  display: grid;
+  place-items: center;
+  block-size: 1.5rem;
+  margin-inline: calc(-1 * var(--inset));
+  margin-block-end: calc(-1 * var(--gap) / 2);
+  padding: 0;
+  border: none;
+  background: var(--surface);
+  touch-action: none;
+}
+
+.grabber::before {
+  content: "";
+  inline-size: 2.25rem;
+  block-size: 0.3rem;
+  border-radius: 1rem;
+  background: var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+  }
+}
+
+@container app (inline-size >= 48rem) {
+  .panel {
+    grid-area: 1 / 1;
+    align-self: start;
+    justify-self: start;
+    block-size: auto;
+    inline-size: clamp(20rem, 32cqi, 26rem);
+    max-block-size: calc(100cqb - 2 * var(--gap));
+    margin: var(--gap);
+    padding: var(--inset);
+    border-radius: var(--radius-l);
+  }
+
+  .panel.lowered {
+    translate: none;
+    overflow-y: auto;
+  }
+
+  .panel.lowered > * {
+    opacity: 1;
+  }
+
+  .grabber {
+    display: none;
+  }
+
+  .panel-header {
+    touch-action: auto;
+  }
+
+  .map .maplibregl-ctrl-bottom-right {
+    inset: auto 0 0 auto;
+  }
+}
+
+.panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  /* Dragging it moves the sheet, rather than scrolling the panel */
+  touch-action: none;
+}
+
+.panel-header h1 {
+  margin-inline-end: auto;
+}
+
+.status {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.dot {
+  display: inline-block;
+  inline-size: 0.5em;
+  aspect-ratio: 1;
+  margin-inline-end: 0.4em;
+  border-radius: 50%;
+  background: var(--positive);
+  vertical-align: 0.1em;
+}
+
+/* Planner */
+
+.planner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.planner-fields {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.place-input {
+  display: grid;
+  grid-template-columns: 4em minmax(0, 1fr) auto;
+  align-items: center;
+  border-radius: var(--radius-m);
+  background: var(--surface-raised);
+}
+
+.place-input:focus-within {
+  outline: 2px solid var(--accent);
+}
+
+.place-label {
+  padding-inline-start: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.place-input input {
+  grid-column: 2;
+  min-inline-size: 0;
+  /* At least 16px so iOS doesn't zoom in on focus */
+  font-size: max(1rem, 16px);
+  padding: 0.6rem 0.75rem 0.6rem 0.25rem;
+  border: none;
+  background: none;
+  outline: none;
+}
+
+.clear {
+  display: grid;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: none;
+  color: var(--muted);
+}
+
+.suggestions {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suggestions li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.625rem;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.suggestions li + li {
+  border-block-start: 1px solid var(--border);
+}
+
+.suggestions [aria-selected="true"],
+.suggestions li:hover {
+  background: var(--surface-raised);
+}
+
+.swap {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+/* Results */
+
+.itineraries ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.itineraries p {
+  margin: 0;
+}
+
+.itinerary {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+}
+
+.itinerary.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.itinerary-summary {
+  display: grid;
+  gap: 0.375rem;
+  inline-size: 100%;
+  padding: 0.625rem 0.75rem;
+  border: none;
+  background: none;
+  text-align: start;
+}
+
+.itinerary-times {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0 0.75rem;
+}
+
+.duration {
+  font-weight: 600;
+}
+
+.itinerary-legs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.9rem;
+}
+
+.walk-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.leave {
+  margin-inline-start: auto;
+  color: var(--muted);
+}
+
+.walk-option {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  inline-size: 100%;
+  margin-block-start: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-m);
+  background: none;
+  text-align: start;
+  color: var(--muted);
+}
+
+.walk-option.selected {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.stop-link {
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: start;
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
+.route-badge {
+  display: inline-block;
+  min-inline-size: 1.9em;
+  padding: 0.05em 0.4em;
+  border-radius: 0.375rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.steps {
+  display: grid;
+  gap: 0.625rem;
+  margin: 0 0.75rem 0.75rem;
+  padding: 0.625rem 0 0;
+  border-block-start: 1px solid var(--border);
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 1.9em minmax(0, 1fr);
+  align-items: start;
+  gap: 0.625rem;
+}
+
+.step > .icon {
+  justify-self: center;
+  margin-block-start: 0.1em;
+  color: var(--muted);
+}
+
+.step.ride > div {
+  padding-inline-start: 0.625rem;
+  border-inline-start: 3px solid var(--route-color);
+}
+
+.step .muted {
+  margin-block: 0.125rem;
+  font-size: 0.85rem;
+}
+
+/* Stop */
+
+.stop-view header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.stop-view h2 {
+  font-size: 1.05rem;
+}
+
+.stop-view p {
+  margin: 0;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+
+.close:hover {
+  color: var(--text);
+}
+
+.stop-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: 0.5rem;
+  margin-block: 0.625rem;
+}
+
+.arrivals {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.arrivals li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.arrival-direction {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.arrival-times {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.arrival-times.muted {
+  font-weight: 400;
+}
+
+.legend {
+  margin-block: 0.75rem 0;
+  font-size: 0.8rem;
+}
+
+/* Routes */
+
+.routes h2 {
+  margin-block-end: 0.375rem;
+}
+
+.routes ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.routes li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.routes li button {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border: none;
+  border-radius: var(--radius-s);
+  background: none;
+  text-align: start;
+}
+
+.routes li button:hover {
+  background: var(--surface-raised);
+}
+
+/* Badges of every width line up as one column */
+.routes .route-badge {
+  inline-size: 100%;
+}
+
+.routes .not-running {
+  opacity: 0.5;
+}
+
+.route-status {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Map cards */
+
+.map-card .maplibregl-popup-content {
+  padding: 0.75rem;
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font: inherit;
+}
+
+.map-card .maplibregl-popup-tip {
+  display: none;
+}
+
+.map-card-body {
+  display: grid;
+  gap: 0.375rem;
+  font-size: 0.9rem;
+}
+
+.map-card-body p {
+  margin: 0;
+}
+
+.bus-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.map-card-actions {
+  display: grid;
+  gap: 0.375rem;
+  margin-block-start: 0.25rem;
+}

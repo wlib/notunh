@@ -1,0 +1,25 @@
+# Typecheck, test, and build every pull request. Pull requests run with a read-only token and no secrets,
+# since their code, forks' included, is whatever the author wrote
+
+name: Check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Fetches data if missing, typechecks, and tests first
+      - run: npm run build

@@ -1,0 +1,144 @@
+/* Plain pages: a single readable column */
+
+.page {
+  container-type: inline-size;
+  display: grid;
+  gap: 1.75rem;
+  max-inline-size: 34rem;
+  margin-inline: auto;
+  padding:
+    max(2.5rem, env(safe-area-inset-top))
+    max(1.25rem, env(safe-area-inset-right))
+    max(3rem, env(safe-area-inset-bottom))
+    max(1.25rem, env(safe-area-inset-left));
+}
+
+.page p {
+  margin: 0;
+}
+
+.page section p + p {
+  margin-block-start: 0.75rem;
+}
+
+.page summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.page details[open] summary {
+  margin-block-end: 0.75rem;
+}
+
+.page h2 {
+  margin-block-end: 0.5rem;
+  font-size: 1rem;
+}
+
+.intro {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.intro p {
+  font-size: 1.1rem;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.wordmark {
+  font-size: clamp(2.25rem, 12vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.wordmark span {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* Each section of the app, as a row to tap */
+.sections {
+  display: grid;
+  border-block: 1px solid var(--border);
+}
+
+.sections a {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.2rem 1rem;
+  padding-block: 1rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sections a + a {
+  border-block-start: 1px solid var(--border);
+}
+
+.sections strong {
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+
+.sections span:not(.icon) {
+  grid-column: 1;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.sections .icon {
+  grid-area: 1 / 2 / 3;
+  font-size: 1.3rem;
+  color: var(--accent);
+  transition: translate 150ms;
+}
+
+.sections a:hover .icon {
+  translate: 0.2rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sections .icon {
+    transition: none;
+  }
+
+  .sections a:hover .icon {
+    translate: none;
+  }
+}
+
+.credits {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.credits dt {
+  margin-block-start: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.credits dd {
+  margin: 0;
+}
+
+@container (inline-size >= 30rem) {
+  .credits {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.4rem 1.25rem;
+  }
+
+  .credits dt {
+    margin: 0;
+    font-size: inherit;
+  }
+}
+
+.page :is(section, details) p.muted {
+  font-size: 0.9rem;
+}

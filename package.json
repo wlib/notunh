@@ -1,0 +1,38 @@
+{
+  "private": true,
+  "name": "notunh",
+  "type": "module",
+  "scripts": {
+    "icons": "node scripts/icons.mts",
+    "data": "node scripts/map/gtfs.mts && node scripts/dining/menus.mts",
+    "data:missing": "node scripts/map/gtfs.mts --if-missing && node scripts/dining/menus.mts --if-missing",
+    "predev": "npm run data:missing",
+    "dev": "vite",
+    "prebuild": "npm run data:missing && npm run typecheck && npm test",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "deploy": "npm run data && npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@leeoniya/ufuzzy": "^1.0.19",
+    "@turf/boolean-point-in-polygon": "^7.4.0",
+    "bruh": "^2.0.0-beta.5",
+    "maplibre-gl": "^6.11.2"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^26.6.3",
+    "colorjs.io": "^0.7.1",
+    "csv-parse": "^7.0.3",
+    "fast-check": "^4.10.2",
+    "fflate": "^0.8.3",
+    "sharp": "^0.34.5",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6",
+    "vite-plugin-bruh": "^2.0.0-beta.1",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.146.0"
+  }
+}

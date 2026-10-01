@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "notunh",
+  "compatibility_date": "2026-10-01",
+  "routes": [{ "pattern": "notunh.app", "custom_domain": true }],
+  // Static assets only so far, no Worker script
+  "assets": {
+    "directory": "./dist"
+  }
+}

@@ -1,5 +1,7 @@
 /** @jsxImportSource bruh/server */
 
+import { SURFACE } from "./theme.mts"
+
 /** The <head> every page shares, around its own title, description, and entry script */
 export const Head = ({ title, description, script }: { title: string, description: string, script: string }) =>
   <head>
@@ -9,8 +11,8 @@ export const Head = ({ title, description, script }: { title: string, descriptio
     <title>{title}</title>
     <meta name="description" content={description} />
 
-    <meta name="theme-color" content="#fcfaf7" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101317" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content={SURFACE.light} />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content={SURFACE.dark} />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

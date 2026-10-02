@@ -15,6 +15,26 @@ body {
   initial-value: 0px;
 }
 
+/* The sheet's own, so changing them every frame restyles the panel alone rather than everything in it */
+@property --sheet-drop {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --keyboard {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+/* Inherited, as the panel's children move by it */
+@property --sheet-shift {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
 /* Fixed to the whole screen, rather than 100dvh, which iOS can leave short of the toolbar below */
 #app {
   container: app / size;
@@ -46,6 +66,8 @@ body {
   --inset: clamp(0.75rem, 3.5cqi, 1rem);
 
   grid-area: 2 / 1;
+  /* The sheet measures its header from here */
+  position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
@@ -54,8 +76,8 @@ body {
 
   /* About half the screen until the sheet sets its height, and kept above the keyboard */
   max-block-size: var(--sheet-max, min(45cqb, 40rem));
-  margin-block-end: var(--keyboard, 0px);
-  translate: 0 var(--sheet-drop, 0px);
+  margin-block-end: var(--keyboard);
+  translate: 0 var(--sheet-drop);
   padding: var(--inset);
   padding-block-start: 0;
   padding-block-end: max(var(--inset), env(safe-area-inset-bottom));
@@ -65,9 +87,19 @@ body {
   border-radius: var(--radius-l) var(--radius-l) 0 0;
   background: var(--surface);
   box-shadow: var(--shadow);
+}
+
+/* The content keeps its place on screen while the box around it changes */
+.panel > :not(.grabber) {
+  translate: 0 var(--sheet-shift);
+}
+
+/* Only a slide between detents animates, and only by translate, so no frame of it lays out or paints */
+.panel.moving,
+.panel.moving > :not(.grabber) {
   transition:
     translate 250ms cubic-bezier(0.2, 0.9, 0.3, 1),
-    max-block-size 250ms cubic-bezier(0.2, 0.9, 0.3, 1);
+    opacity 250ms;
 }
 
 /* Down to just the header, leaving the map */
@@ -81,10 +113,6 @@ body {
 
 .panel.lowered > :not(.grabber, .panel-header) {
   opacity: 0;
-}
-
-.panel.dragging {
-  transition: none;
 }
 
 /* A handle to drag or tap the sheet down and back up by, sticking to the top as the panel scrolls */
@@ -113,8 +141,9 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .panel {
-    transition: none;
+  .panel.moving,
+  .panel.moving > :not(.grabber) {
+    transition-property: opacity;
   }
 }
 
@@ -134,6 +163,10 @@ body {
 
   .panel.lowered {
     overflow-y: auto;
+  }
+
+  .panel > :not(.grabber) {
+    translate: none;
   }
 
   .panel.lowered > * {

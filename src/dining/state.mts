@@ -4,7 +4,8 @@ import { r, watch } from "bruh/reactive"
 import indexUrl from "./menus.json?url"
 import { fileUrl, loadJson, type Filters, type Food, type Meal, type MenusIndex, type SearchFood, type Serving } from "./menus.mts"
 import { createSearch } from "./search.mts"
-import { localDay, localHour } from "../shell/time.mts"
+import { status, type WallTime } from "./hours.mts"
+import { localDay, localHour, localMinutes } from "../shell/time.mts"
 
 export const index = await loadJson<MenusIndex>(indexUrl)
 
@@ -161,6 +162,27 @@ export const goToFood = (file: string, { hall: servedAt, date: servedOn, meal }:
   focusedFood.value = file
   query.value = ""
 }
+
+/** Durham's wall clock, to the minute */
+export const now = r<WallTime>({ date: localDay(Date.now()), minute: localMinutes(Date.now()) })
+const tick = () => {
+  const date = localDay(Date.now())
+  const minute = localMinutes(Date.now())
+  if (date !== now.value.date || minute !== now.value.minute)
+    now.value = { date, minute }
+}
+// On each minute, and on coming back to the page, since phones pause timers in the background
+const everyMinute = () => {
+  tick()
+  setTimeout(everyMinute, 60_000 - Date.now() % 60_000)
+}
+everyMinute()
+document.addEventListener("visibilitychange", tick)
+
+/** Whether each hall is open now, by hall, for halls with hours */
+export const hallStatus = r(() =>
+  Object.fromEntries(Object.entries(index.hours).map(([id, hours]) => [id, status(hours, now.value)]))
+)
 
 export const hallName = (id: string) =>
   index.halls.find(hall => hall.id === id)?.name ?? id

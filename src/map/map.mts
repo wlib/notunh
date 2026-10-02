@@ -1,6 +1,6 @@
 import "maplibre-gl/dist/maplibre-gl.css"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
-import { Map as MapLibre, AttributionControl, GeolocateControl, NavigationControl, Marker, setWorkerUrl, type GeoJSONSource, type LngLatLike, type MapGeoJSONFeature } from "maplibre-gl"
+import { Map as MapLibre, AttributionControl, NavigationControl, Marker, setWorkerUrl, type GeoJSONSource, type LngLatLike, type MapGeoJSONFeature } from "maplibre-gl"
 import { watch, type Reactive, type SourceNode } from "bruh/reactive"
 import type { Feed } from "./feed.mts"
 import type { Vehicle } from "./umo.mts"
@@ -8,6 +8,7 @@ import type { Itinerary, Place } from "./plan.mts"
 import { type Coordinates, type Padding, coveredPadding, ridePath } from "./geometry.mts"
 import { nameAt, walkPath, type MapHints } from "./osm.mts"
 import { animateBuses } from "./buses.mts"
+import { showYou } from "./you.mts"
 import { layLanes, measureCorridors } from "./corridors.mts"
 
 // maplibre finds its worker with a computed URL that vite can't see, so bundle it as a worker explicitly
@@ -42,15 +43,17 @@ const icon = (size: number, draw: (context: OffscreenCanvasRenderingContext2D) =
   }
 }
 
-// A circle with a nose pointing toward the bearing (north, before rotation)
+// A circle drawn to a point toward the bearing (north, before rotation), its sides tangent to the circle
 const busIcon = (color: string) =>
   icon(40, context => {
-    const center = 20
+    const [x, y, radius, tip] = [20, 22, 12, 3]
+    // The angle either side of straight up where a line from the tip just touches the circle
+    const touch = Math.acos(radius / (y - tip))
     context.beginPath()
-    context.moveTo(center, 2)
-    context.lineTo(center + 8, 11)
-    context.arc(center, center + 2, 12, -Math.PI / 2 + 0.75, -Math.PI / 2 - 0.75 + 2 * Math.PI)
+    context.moveTo(x, tip)
+    context.arc(x, y, radius, -Math.PI / 2 + touch, -Math.PI / 2 - touch + 2 * Math.PI)
     context.closePath()
+    context.lineJoin = "round"
     context.fillStyle = color
     context.strokeStyle = "white"
     context.lineWidth = 2.5
@@ -65,16 +68,16 @@ const busIcon = (color: string) =>
 const chevronIcon = (color: string) =>
   icon(12, context => {
     context.beginPath()
-    context.moveTo(4.5, 3)
+    context.moveTo(3.5, 2)
     context.lineTo(7.5, 6)
-    context.lineTo(4.5, 9)
+    context.lineTo(3.5, 10)
     context.lineCap = "round"
     context.lineJoin = "round"
     context.strokeStyle = "white"
-    context.lineWidth = 3.5
+    context.lineWidth = 4
     context.stroke()
     context.strokeStyle = color
-    context.lineWidth = 1.75
+    context.lineWidth = 2
     context.stroke()
     // White over it, part way, tints it
     context.globalAlpha = 0.45
@@ -110,8 +113,9 @@ const LANE = widthAt(1.75, 4.5)
 const CASING = widthAt(3.5, 7)
 const laneOffset = byZoom(zoom => ["*", ["get", "slot"], LANE(zoom)])
 
-// Chevrons scaled with lanes, so a lane is always 5 of their pixels over
-const CHEVRON_SIZE = (zoom: number) => LANE(zoom) / 5
+// Chevrons scaled with lanes, so a lane is always this many of their pixels over
+const CHEVRON_LANE = 3
+const CHEVRON_SIZE = (zoom: number) => LANE(zoom) / CHEVRON_LANE
 
 /** Chevrons along a line layer, showing which way its buses go */
 const arrows = (id: string, source: string, filter?: any, offset = false) => ({
@@ -147,7 +151,8 @@ export const createMap = (
     to:               SourceNode<Place | undefined>,
     selectedStop:     SourceNode<number | undefined>,
     itinerary:        Reactive<Itinerary | undefined>,
-    focusedBuses:     Reactive<{ vehicles?: ReadonlySet<string>, route?: string }>
+    focusedBuses:     Reactive<{ vehicles?: ReadonlySet<string>, route?: string }>,
+    riding:           Reactive<string | undefined>
   },
   onTap: (tap: Tap) => void
 ) => {
@@ -160,7 +165,9 @@ export const createMap = (
   })
   map.addControl(new AttributionControl({ compact: true }), "bottom-right")
   map.addControl(new NavigationControl({ visualizePitch: true }), "top-right")
-  map.addControl(new GeolocateControl({ trackUserLocation: true }), "top-right")
+  // Buses are only drawn once the map has loaded, but the location button is wanted right away
+  let busPosition: (id: string) => Coordinates | undefined = () => undefined
+  const drawYou = showYou(map, panel, state.riding, id => busPosition(id))
 
   // What the camera should show, kept clear of the panel and reapplied while the panel settles into its
   // new size, then left alone; touching the map lets go of it right away
@@ -239,8 +246,6 @@ export const createMap = (
         )
     }
   }
-
-  let busPosition: (id: string) => Coordinates | undefined = () => undefined
 
   map.on("load", () => {
     for (const route of feed.routes) {
@@ -383,7 +388,7 @@ export const createMap = (
       const colors = new Map(feed.routes.map(route => [route.id, route.color]))
       map.getSource<GeoJSONSource>("routes")!.setData(collection(
         layLanes(corridors, shown, routeOrder).map(({ route, slot, coordinates }) =>
-          line(coordinates, { route, slot, offset: [0, slot * 5], color: colors.get(route) })
+          line(coordinates, { route, slot, offset: [0, slot * CHEVRON_LANE], color: colors.get(route) })
         )
       ))
       map.setFilter("vehicles", ["in", ["get", "route"], ["literal", [...shown]]])
@@ -470,10 +475,8 @@ export const createMap = (
     })
 
     busPosition = animateBuses(map, feed, state.vehicles, state.layovers, state.focusedBuses)
+    drawYou()
   })
 
-  return {
-    map,
-    busPosition: (id: string) => busPosition(id)
-  }
+  return { map }
 }

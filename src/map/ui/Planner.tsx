@@ -5,7 +5,8 @@
 import { r, watch, type SourceNode } from "bruh/reactive"
 import type { Place } from "../plan.mts"
 import { searchPlaces } from "../osm.mts"
-import { feed, from, to, selectedStop, isLocating, locationProblem, useCurrentLocation } from "../state.mts"
+import { feed, from, to, selectedStop, isLocating, useCurrentLocation } from "../state.mts"
+import { locationProblem } from "../location.mts"
 import { Icon } from "../../shell/ui.tsx"
 
 type Field = "from" | "to"

@@ -9,13 +9,13 @@ import "bruh/components/intl/list"
 import type { BruhChild } from "bruh/browser"
 import { TIME_ZONE } from "./time.mts"
 
-/** Like "2:35 PM" */
-export const ClockTime = ({ at }: { at: Date }) =>
-  <bruh-date-time date={at.toISOString()} time-zone={TIME_ZONE} hour="numeric" minute="2-digit" />
+/** Like "2:35 PM"; times already on Durham's wall clock, like opening hours, are UTC dates in time zone "UTC" */
+export const ClockTime = ({ at, timeZone = TIME_ZONE }: { at: Date, timeZone?: string }) =>
+  <bruh-date-time date={at.toISOString()} time-zone={timeZone} hour="numeric" minute="2-digit" />
 
 /** Like "2:35 – 2:50 PM", sharing what the two times have in common */
-export const ClockRange = ({ from, to }: { from: Date, to: Date }) =>
-  <bruh-date-time date={from.toISOString()} end-date={to.toISOString()} time-zone={TIME_ZONE} hour="numeric" minute="2-digit" />
+export const ClockRange = ({ from, to, timeZone = TIME_ZONE }: { from: Date, to: Date, timeZone?: string }) =>
+  <bruh-date-time date={from.toISOString()} end-date={to.toISOString()} time-zone={timeZone} hour="numeric" minute="2-digit" />
 
 /** Like "Thu 4:17 AM", for when something last happened */
 export const DayTime = ({ at }: { at: Date }) =>

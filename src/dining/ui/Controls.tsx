@@ -3,10 +3,12 @@
 // Search, then which hall, day, and meal, and the filters for diets and allergens
 
 import { r, watch } from "bruh/reactive"
+import type { BruhChild } from "bruh/browser"
 import { MEALS, type Filters } from "../menus.mts"
 import { index, dates, hall, date, meals, menu, preferredMeal, query, isSearching, filters, toggleFilter } from "../state.mts"
 import { Day } from "../../shell/intl.tsx"
 import { DayName, mealName } from "./common.tsx"
+import { HallHours, OpenDot } from "./Hours.tsx"
 
 const servedMeals = MEALS.filter(meal =>
   Object.values(index.days).some(days => Object.values(days).some(day => day.meals.includes(meal)))
@@ -14,7 +16,7 @@ const servedMeals = MEALS.filter(meal =>
 
 const Segmented = <T extends string,>({ label, options, selected, choose, disabled }: {
   label: string,
-  options: { value: T, label: string }[],
+  options: { value: T, label: BruhChild }[],
   selected: () => T,
   choose: (value: T) => void,
   disabled?: (value: T) => boolean
@@ -99,10 +101,11 @@ export const Controls = () =>
       <>
         <Segmented
           label="Dining hall"
-          options={index.halls.map(({ id, name }) => ({ value: id, label: name }))}
+          options={index.halls.map(({ id, name }) => ({ value: id, label: <><OpenDot id={id} />{name}</> }))}
           selected={() => hall.value}
           choose={value => hall.value = value}
         />
+        <HallHours />
         <Days />
         <Segmented
           label="Meal"

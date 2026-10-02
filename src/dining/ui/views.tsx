@@ -4,7 +4,8 @@
 
 import { r } from "bruh/reactive"
 import { passes, type FoodSummary } from "../menus.mts"
-import { today, hall, dayMeals, menu, query, filters, searchable, hasFailed, goToFood, hallName } from "../state.mts"
+import { spansOn } from "../hours.mts"
+import { index, today, hall, date, dayMeals, menu, query, filters, searchable, hasFailed, goToFood, hallName } from "../state.mts"
 import { Count, Plural } from "../../shell/intl.tsx"
 import { FoodItem } from "./Food.tsx"
 import { DayName, mealName } from "./common.tsx"
@@ -24,8 +25,16 @@ export const MenuView = () =>
       return <p class="empty muted">Loading the menu…</p>
 
     const current = menu.value
+    const hours = index.hours[hall.value]
     if (!current)
-      return <p class="empty muted">{hallName(hall.value)} hasn't posted a menu for that day yet.</p>
+      return (
+        <p class="empty muted">
+          {hours && !spansOn(hours, date.value).length
+            ? `${hallName(hall.value)} is closed that day.`
+            : `${hallName(hall.value)} hasn't posted a menu for that day yet.`
+          }
+        </p>
+      )
 
     const stations = current.stations
       .map(station => ({ ...station, foods: station.foods.filter(food => passes(food, filters.value)) }))

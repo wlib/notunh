@@ -100,8 +100,8 @@ export const animateBuses = (
         continue
 
       const previous = fixes.get(vehicle.id)
-      // Umo sometimes sends an older fix after a newer one
-      if (previous && vehicle.gpsTime <= previous.vehicle.gpsTime) {
+      // Umo sometimes sends an older fix after a newer one, though a bus put on another route is news either way
+      if (previous && vehicle.gpsTime <= previous.vehicle.gpsTime && previous.vehicle.route?.id === vehicle.route.id) {
         next.set(vehicle.id, previous)
         continue
       }
@@ -153,6 +153,7 @@ export const animateBuses = (
         focused      ? focused.has(fix.vehicle.id) :
         focusedRoute ? focusedRoute === route.id :
                        undefined
+      const sureness = confidence((now - fix.at) / 1000)
       positions.set(fix.vehicle.id, point)
       return {
         type: "Feature",
@@ -163,7 +164,8 @@ export const animateBuses = (
           text:    route.text,
           bearing,
           scale:   focused && isFocused ? 1.3 : 1,
-          opacity: confidence((now - fix.at) / 1000) * (isFocused === false ? 0.25 : 1)
+          // Faded behind the focused ones, but never so far as to disappear
+          opacity: isFocused === false ? Math.max(0.2, sureness * 0.4) : sureness
         },
         geometry: { type: "Point", coordinates: point }
       }

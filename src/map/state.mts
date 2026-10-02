@@ -5,6 +5,7 @@ import feedUrl from "./gtfs.json?url"
 import { distance, isServiceActive, loadFeed, localDate } from "./feed.mts"
 import { type Vehicle, type Prediction, type StopPredictions, STALE_VEHICLE_SECONDS, fetchVehicles, fetchPredictions, fetchStopPredictions } from "./umo.mts"
 import { type Itinerary, type Place, buildRuns, itineraryKey, plan, timeAt, walkOnly, walkSeconds } from "./plan.mts"
+import { currentLocation, locationProblem } from "./location.mts"
 
 const VEHICLE_POLL_MS = 5_000
 const PREDICTION_POLL_MS = 30_000
@@ -196,20 +197,29 @@ export const itinerary = r((): Itinerary | undefined => {
 //#region Map
 
 export const selectedStop = r<number>()
-/** The id of the bus whose card is open */
+/** The id of the bus tapped to see its stops */
 export const selectedBus = r<string>()
+/** The bus you're on, by vehicle id */
+export const riding = r<string>()
+/** A bus you seem to be on, to ask about */
+export const suggested = r<string>()
+/** The bus whose stops the panel shows: one tapped, else the one you're on */
+export const viewedBus = r(() => selectedBus.value ?? riding.value)
+
 /** The route picked from the list to highlight */
 export const pickedRoute = r<string>()
-/** The selected bus's route, else the picked one */
+/** The viewed bus's route, else the picked one */
 export const highlightedRoute = r(() =>
-  (selectedBus.value === undefined
+  (viewedBus.value === undefined
     ? undefined
-    : vehicles.value.find(vehicle => vehicle.id === selectedBus.value)?.route?.id
+    : vehicles.value.find(vehicle => vehicle.id === viewedBus.value)?.route?.id
   ) ?? pickedRoute.value
 )
 
-/** Buses to pick out on the map: the ones an itinerary rides, else those on the selected bus's route */
+/** Buses to pick out on the map: the viewed one, else the ones an itinerary rides, else those on the picked route */
 export const focusedBuses = r((): { vehicles?: ReadonlySet<string>, route?: string } => {
+  if (viewedBus.value !== undefined)
+    return { vehicles: new Set([viewedBus.value]) }
   const rides = itinerary.value?.legs.filter(leg => leg.kind === "ride") ?? []
   if (rides.length)
     return { vehicles: new Set(rides.flatMap(leg => leg.run.vehicle ?? [])) }
@@ -259,40 +269,23 @@ watch(() => {
 //#endregion
 
 export const isLocating = r(false)
-/** Why the current location couldn't be found, in words for the person who asked */
-export const locationProblem = r<string>()
 
-// By GeolocationPositionError code
-const LOCATION_PROBLEMS: Record<number, string> = {
-  1: "notunh isn't allowed to see your location. Allow it in your browser's settings for this site, or search for a place.",
-  2: "Your location isn't available right now. Search for a place instead.",
-  3: "Finding your location took too long. Try again, or search for a place."
+/** The current location as a place, or undefined with locationProblem saying why, unless quiet */
+export const useCurrentLocation = async ({ quiet = false } = {}): Promise<Place | undefined> => {
+  locationProblem.value = undefined
+  isLocating.value = true
+  try {
+    const { lat, lon } = await currentLocation()
+    return { lat, lon, name: "Your location" }
+  }
+  catch (problem) {
+    if (!quiet)
+      locationProblem.value = problem as string
+  }
+  finally {
+    isLocating.value = false
+  }
 }
-
-/** The current location, or undefined with locationProblem saying why, unless quiet */
-export const useCurrentLocation = ({ quiet = false } = {}) =>
-  new Promise<Place | undefined>(resolve => {
-    const fail = (problem: string) => {
-      isLocating.value = false
-      if (!quiet)
-        locationProblem.value = problem
-      resolve(undefined)
-    }
-    locationProblem.value = undefined
-    // Browsers only share location with secure pages, so not over plain http on a local network
-    if (!isSecureContext || !navigator.geolocation)
-      return fail("This browser can't share your location with this page. Search for a place instead.")
-
-    isLocating.value = true
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        isLocating.value = false
-        resolve({ lat: coords.latitude, lon: coords.longitude, name: "Your location" })
-      },
-      error => fail(LOCATION_PROBLEMS[error.code] ?? LOCATION_PROBLEMS[2]),
-      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 }
-    )
-  })
 
 // Start from the current location if the user already allowed it
 navigator.permissions?.query({ name: "geolocation" })

@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto"
 import { DIETS, type FoodSummary, type Meal, type MenusData, type MenusIndex, type SearchFood, type Serving } from "../../src/dining/menus.mts"
 
-export const publish = (data: MenusData) => {
+export const publish = (data: MenusData, hours: MenusIndex["hours"] = {}) => {
   const files = new Map<string, string>()
   const add = (value: unknown) => {
     const json = JSON.stringify(value)
@@ -55,6 +55,7 @@ export const publish = (data: MenusData) => {
   const index: MenusIndex = {
     fetched: data.fetched,
     halls: data.halls,
+    hours,
     diets: DIETS.filter(diet => data.foods.some(food => food.diets.includes(diet))),
     contains: [...counts].sort((a, b) => b[1] - a[1]).map(([item]) => item),
     days,

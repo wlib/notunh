@@ -57,6 +57,46 @@
   cursor: default;
 }
 
+/* A lit dot beside a hall's name while it's open, and a ring while it's closed */
+.open-dot {
+  display: inline-block;
+  inline-size: 0.5em;
+  block-size: 0.5em;
+  margin-inline-end: 0.45em;
+  vertical-align: 0.1em;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+}
+
+.open-dot[data-open="true"] {
+  border-color: var(--positive);
+  background: var(--positive);
+}
+
+/* The hall's hours under its name, with the caveat off to the side */
+.hall-hours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.75rem;
+  justify-content: space-between;
+  margin: 0;
+  padding-inline: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.hall-hours strong {
+  font-weight: 600;
+}
+
+.hall-hours a {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.hall-hours a:hover {
+  color: var(--accent);
+}
+
 /* Days scroll sideways rather than wrapping */
 .days {
   display: flex;

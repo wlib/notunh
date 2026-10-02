@@ -522,6 +522,111 @@ body {
   font-size: 0.8rem;
 }
 
+/* Bus */
+
+.bus-view {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.bus-view header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.625rem;
+}
+
+.bus-view header .route-badge {
+  margin-block-start: 0.15rem;
+}
+
+.bus-view h2 {
+  font-size: 1.05rem;
+}
+
+.bus-view p {
+  margin: 0;
+}
+
+.bus-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: 0.5rem;
+}
+
+.cue {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-s);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+/* The stops still to come, joined by the route's line */
+.bus-stops {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bus-stops li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.375rem;
+  font-size: 0.9rem;
+}
+
+.bus-stops li + li {
+  border-block-start: 1px solid var(--border);
+}
+
+.bus-stop-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.bus-stops li:first-child .bus-stop-time,
+.bus-stops .yours .bus-stop-time {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bus-stops .yours .stop-link {
+  font-weight: 600;
+}
+
+/* Past your stop, where you won't be going */
+.bus-stops .past {
+  opacity: 0.5;
+}
+
+.tag {
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.375rem;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ride-suggestion {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-m);
+}
+
+.ride-suggestion .button {
+  padding-block: 0.4rem;
+}
+
 /* Routes */
 
 .routes h2 {
@@ -596,11 +701,6 @@ body {
   margin: 0;
 }
 
-.bus-card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
 
 .map-card-actions {
   display: grid;

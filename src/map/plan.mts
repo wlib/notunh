@@ -81,6 +81,12 @@ export const walkSeconds = (meters: number) =>
 export const timeAt = (run: Run, position: number) =>
   run.base + run.trip.times[position] + run.delays[position]
 
+/** The trip a bus is on or about to start, from Umo's predictions: of those it's running, the one ending soonest */
+export const runOf = (runs: Run[], vehicle: string, now: number) =>
+  runs
+    .filter(run => run.vehicle === vehicle && timeAt(run, run.trip.stops.length - 1) >= now)
+    .sort((a, b) => timeAt(a, a.trip.stops.length - 1) - timeAt(b, b.trip.stops.length - 1))[0] as Run | undefined
+
 /** Identifies an itinerary across replans, changing only when its trips or times do */
 export const itineraryKey = (itinerary: Itinerary) =>
   itinerary.legs

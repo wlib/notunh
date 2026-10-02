@@ -8,6 +8,17 @@ export type Hall = {
   name: string
 }
 
+/** When a hall opens and closes, as minutes after midnight, with closing after midnight past 1440 */
+export type Span = [open: number, close: number]
+
+/** A hall's usual hours, which breaks and holidays change */
+export type Hours = {
+  /** Sunday first: each day's open spans, with none when it's closed */
+  week: Span[][],
+  /** By YYYY-MM-DD: one-off hours this week, like an early close, and why */
+  special?: Record<string, { spans: Span[], note: string }>
+}
+
 export type Nutrition = Partial<Record<typeof NUTRIENTS[number]["key"], number>>
 
 export type Food = {
@@ -97,6 +108,8 @@ export type MenusIndex = {
   /** Epoch milliseconds the menus were fetched */
   fetched: number,
   halls: Hall[],
+  /** By hall, where its hours are known */
+  hours: Record<string, Hours>,
   /** Diets some food suits */
   diets: string[],
   /** Everything some food contains, most common first */

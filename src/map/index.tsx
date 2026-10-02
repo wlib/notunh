@@ -7,15 +7,18 @@ import { r, watch } from "bruh/reactive"
 import { Popup } from "maplibre-gl"
 import { createMap } from "./map.mts"
 import {
-  feed, vehicles, layovers, from, to, selected, itinerary,
-  selectedStop, selectedBus, highlightedRoute, focusedBuses, shownRoutes
+  feed, layovers, from, to, selected, itinerary, selectedStop, selectedBus,
+  riding, suggested, viewedBus, highlightedRoute, focusedBuses, shownRoutes
 } from "./state.mts"
+import { locationProblem } from "./location.mts"
+import { fusedVehicles } from "./riding.mts"
 import { AppTitle, Icon } from "../shell/ui.tsx"
 import { Planner, Suggestions, editing } from "./ui/Planner.tsx"
 import { Itineraries } from "./ui/Itineraries.tsx"
 import { StopView } from "./ui/StopView.tsx"
 import { RouteList, Status } from "./ui/RouteList.tsx"
-import { BusCard, PlaceCard } from "./ui/cards.tsx"
+import { PlaceCard } from "./ui/cards.tsx"
+import { BusView, RideSuggestion } from "./ui/BusView.tsx"
 import { makeSheet, raise } from "./ui/sheet.mts"
 
 const clearTrip = () => {
@@ -42,9 +45,11 @@ const Panel = () =>
     {grabber}
     {header}
     <Planner />
+    <RideSuggestion />
     {r(() =>
       editing.value                    ? <Suggestions /> :
       selectedStop.value !== undefined ? <StopView stop={selectedStop.value} /> :
+      viewedBus.value !== undefined    ? <BusView id={viewedBus.value} /> :
       from.value && to.value           ? <Itineraries /> :
                                          <RouteList />
     )}
@@ -56,27 +61,31 @@ document.getElementById("app")!.replaceChildren(mapElement, panel)
 
 makeSheet(panel, grabber, header)
 // Something new to show brings the sheet back up
-watch([from, to, selectedStop], raise, { skipFirst: true })
+watch([from, to, selectedStop, selectedBus], raise, { skipFirst: true })
+// And so does a question or a problem for you
+watch(() => {
+  if (suggested.value || locationProblem.value)
+    raise()
+})
 
 /** The one card open on the map; any tap closes it rather than doing something else */
 let card: Popup | undefined
 
-const openCard = (lngLat: [number, number], content: Node, onClose?: () => void) => {
+const openCard = (lngLat: [number, number], content: Node) => {
   const popup = new Popup({ closeButton: false, closeOnClick: false, className: "map-card", offset: 16, maxWidth: "18rem" })
   popup.on("close", () => {
     if (card === popup)
       card = undefined
-    onClose?.()
   })
   card = popup
   return popup.setLngLat(lngLat).setDOMContent(content).addTo(map)
 }
 
-const { map, busPosition } = createMap(
+const { map } = createMap(
   mapElement,
   panel,
   feed,
-  { vehicles, layovers, shownRoutes, highlightedRoute, from, to, selectedStop, itinerary, focusedBuses },
+  { vehicles: fusedVehicles, layovers, shownRoutes, highlightedRoute, from, to, selectedStop, itinerary, focusedBuses, riding },
   tap => {
     if (card) {
       card.remove()
@@ -86,21 +95,8 @@ const { map, busPosition } = createMap(
     if (tap.kind === "stop")
       selectedStop.value = tap.stop
     else if (tap.kind === "bus") {
-      const position = busPosition(tap.id)
-      if (!position)
-        return
-      // Ride along with the bus
-      const follow = () => {
-        const next = busPosition(tap.id)
-        if (next)
-          card?.setLngLat(next)
-      }
+      selectedStop.value = undefined
       selectedBus.value = tap.id
-      map.on("render", follow)
-      openCard(position, <BusCard id={tap.id} />, () => {
-        map.off("render", follow)
-        selectedBus.value = undefined
-      })
     }
     else
       openCard(

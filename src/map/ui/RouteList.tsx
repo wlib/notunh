@@ -59,14 +59,21 @@ export const RouteList = () =>
     </ul>
   </section>
 
-export const Status = () =>
-  <span class="status">
-    {r(() => {
-      if (isLiveDown.value)
-        return "Live updates unavailable"
-      if (lastUpdate.value === undefined)
-        return "Connecting…"
-      const count = [...liveCounts.value.values()].reduce((a, b) => a + b, 0)
-      return <><span class="dot" /><Plural value={count} one={<><Count value={1} /> bus live</>} other={<><Count value={count} /> buses live</>} /></>
-    })}
-  </span>
+export const Status = () => {
+  // Only buses on the routes the map shows, so the two agree, and as a number, so the header only redraws when
+  // the count changes rather than with every poll
+  const count = r(() =>
+    [...liveCounts.value].reduce((total, [route, live]) => total + (shownRoutes.value.has(route) ? live : 0), 0)
+  )
+  return (
+    <span class="status">
+      {r(() => {
+        if (isLiveDown.value)
+          return "Live updates unavailable"
+        if (lastUpdate.value === undefined)
+          return "Connecting…"
+        return <><span class="dot" /><Plural value={count.value} one={<><Count value={1} /> bus live</>} other={<><Count value={count.value} /> buses live</>} /></>
+      })}
+    </span>
+  )
+}

@@ -1,7 +1,7 @@
 // Routes sharing a street drawn side by side like a transit diagram, rather than on top of each other,
 // one lane per route whichever way it goes
 
-import { angleBetween, bearing, offsetLine, segmentMeters, type Coordinates } from "./geometry.mts"
+import { angleBetween, bearing, offsetLine, segmentMeters, sideways, type Coordinates } from "./geometry.mts"
 
 const STEP = 12     // m between points once resampled, the resolution lanes change at
 const NEAR = 18     // m, lines this close along the same street share it
@@ -23,7 +23,9 @@ export type Strand = {
 export type LaneSlots = {
   route: string,
   points: Coordinates[],
-  slots: number[]
+  slots: number[],
+  /** Which way is right at each point, for drawing the lane at any width */
+  sideways: Coordinates[]
 }
 
 export type Lane = {
@@ -147,7 +149,7 @@ const taper = (points: Coordinates[], slots: number[]) => {
       return slot + by * t * t * (3 - 2 * t)
     }, slots[0] ?? 0)
 
-  const tapered: Omit<LaneSlots, "route"> = { points: [], slots: [] }
+  const tapered: Pick<LaneSlots, "points" | "slots"> = { points: [], slots: [] }
   points.forEach((point, i) => {
     const [from, to] = [along[i], along[i + 1]]
     const isSliding = to !== undefined && changes.some(({ at }) => from < at + TAPER / 2 && to > at - TAPER / 2)
@@ -184,10 +186,12 @@ export const laneSlots = (corridors: Corridors, shown: ReadonlySet<string>, orde
         const position = present[start].indexOf(route) - (present[start].length - 1) / 2
         slots.push(...Array<number>(end - start).fill(isWithAxis ? position : -position))
       }
-      return { route, ...taper(points, smooth(slots)) }
+      const tapered = taper(points, smooth(slots))
+      return { route, ...tapered, sideways: sideways(tapered.points) }
     })
 }
 
 /** Each strand's lane drawn where it runs, some meters across per slot */
 export const layLanes = (lanes: LaneSlots[], meters: number): Lane[] =>
-  lanes.map(({ route, points, slots }) => ({ route, coordinates: offsetLine(points, slots.map(slot => slot * meters)) }))
+  lanes.map(({ route, points, slots, sideways }) =>
+    ({ route, coordinates: offsetLine(points, slots.map(slot => slot * meters), sideways) }))

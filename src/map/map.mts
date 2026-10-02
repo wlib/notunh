@@ -382,10 +382,11 @@ export const createMap = (
     })
 
     // Only the routes shown share lanes, so they're laid out again when that changes, and drawn into the lines
-    // themselves, so a change of lane slides along them; their spacing is in meters, so they're drawn again every
-    // half zoom to stay a line width apart
+    // themselves, so a change of lane slides along them; their spacing is in meters, so they're drawn again once a
+    // zoom ends a half zoom or more away, to stay a line width apart. Not during it, as drawing them again is heavy
+    // enough to stutter a pinch
     const zoomBand = r(Math.round(map.getZoom() * 2) / 2)
-    map.on("zoom", () => zoomBand.value = Math.round(map.getZoom() * 2) / 2)
+    map.on("zoomend", () => zoomBand.value = Math.round(map.getZoom() * 2) / 2)
     const lanes = r(() => laneSlots(corridors, state.shownRoutes.value, routeOrder))
     const colors = new Map(feed.routes.map(route => [route.id, route.color]))
     watch(() => {

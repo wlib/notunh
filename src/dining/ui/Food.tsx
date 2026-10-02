@@ -4,10 +4,10 @@
 
 import { bruhChildrenToNodes, type BruhChild } from "bruh/browser"
 import uFuzzy from "@leeoniya/ufuzzy"
-import { NUTRIENTS, type Food } from "../menus.mts"
+import { NUTRIENTS, type Food, type FoodSummary } from "../menus.mts"
 import { nameOf, partsOf, type Ingredient } from "../ingredients.mts"
 import type { Match } from "../search.mts"
-import { data, focusedFood } from "../state.mts"
+import { focusedFood, loadFood } from "../state.mts"
 import { Count, List, Quantity } from "../../shell/intl.tsx"
 
 /** Text with uFuzzy's matched ranges marked */
@@ -25,7 +25,7 @@ const marked = (text: string, ranges?: number[]) =>
 const DIET_BADGES: Record<string, string> = { Vegan: "VG", Vegetarian: "V", Halal: "H" }
 
 /** Vegan already says vegetarian */
-const shownDiets = (food: Food) =>
+const shownDiets = (food: FoodSummary) =>
   food.diets.filter(diet => diet !== "Vegetarian" || !food.diets.includes("Vegan"))
 
 // Clauses like "Contains 2% or less of" lead into what follows, rather than being made of it
@@ -83,17 +83,27 @@ const FoodDetails = ({ food, found }: { food: Food, found: Match["ingredients"] 
   )
 }
 
-export const FoodItem = ({ index, match, children }: { index: number, match?: Match, children?: BruhChild }) => {
-  const food = data.foods[index]
+export const FoodItem = ({ food, match, children }: { food: FoodSummary, match?: Match, children?: BruhChild }) => {
   const found = match?.ingredients ?? new Map()
-  // Details are only built once opened, since most never are
+  // Details are only loaded once opened, since most never are
   const body = <div class="food-details" /> as HTMLElement
+  const show = (child: BruhChild) => body.replaceChildren(...bruhChildrenToNodes([child]))
+  /** Loading or loaded, so opening it again does nothing; a failed load clears it to try again */
+  let isStarted = false
   const details: HTMLDetailsElement =
     <details
       class="food"
       ontoggle={() => {
-        if (details.open && !body.hasChildNodes())
-          body.replaceChildren(...bruhChildrenToNodes([<FoodDetails food={food} found={found} />]))
+        if (!details.open || isStarted)
+          return
+        isStarted = true
+        show(<p class="muted">Loading…</p>)
+        loadFood(food.file)
+          .then(full => show(<FoodDetails food={full} found={found} />))
+          .catch(() => {
+            isStarted = false
+            show(<p class="muted">Couldn't load this food's details. Close it and open it again to retry.</p>)
+          })
       }}
     >
       <summary>
@@ -101,7 +111,7 @@ export const FoodItem = ({ index, match, children }: { index: number, match?: Ma
         <span class="food-tags">
           {shownDiets(food).map(diet => <abbr class="diet" title={diet}>{DIET_BADGES[diet] ?? diet}</abbr>)}
           {/* Zero is what placeholders like "Salad Bar" list, not a measurement */}
-          {food.nutrition.calories ? <span class="muted"><Count value={food.nutrition.calories} /> cal</span> : undefined}
+          {food.calories ? <span class="muted"><Count value={food.calories} /> cal</span> : undefined}
         </span>
         {!match?.name && found.size > 0 &&
           <span class="food-excerpt muted">
@@ -113,7 +123,7 @@ export const FoodItem = ({ index, match, children }: { index: number, match?: Ma
       {body}
     </details>
 
-  if (!match && focusedFood.peek() === index) {
+  if (!match && focusedFood.peek() === food.file) {
     focusedFood.value = undefined
     details.open = true
     requestAnimationFrame(() => details.scrollIntoView({ block: "center" }))

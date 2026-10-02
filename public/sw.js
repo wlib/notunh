@@ -36,6 +36,25 @@ const store = async (request, response) => {
   return response
 }
 
+// A page names the data files it still uses, and the rest under the same folder can go
+self.addEventListener("message", event => {
+  const { keep } = event.data ?? {}
+  if (!Array.isArray(keep) || !keep.length)
+    return
+  const folder = keep[0].slice(0, keep[0].lastIndexOf("/") + 1)
+  const kept = new Set(keep)
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(async cache => {
+        for (const request of await cache.keys()) {
+          const { pathname } = new URL(request.url)
+          if (pathname.startsWith(folder) && !kept.has(pathname))
+            await cache.delete(request)
+        }
+      })
+  )
+})
+
 const isBrandAsset = pathname =>
   pathname === "/manifest.webmanifest" || /^\/icon(-\d+(-maskable)?)?\.(svg|png)$/.test(pathname)
 

@@ -3,8 +3,8 @@
 // A meal's menu by station, or every upcoming food matching a search
 
 import { r } from "bruh/reactive"
-import { passes } from "../menus.mts"
-import { data, today, hall, menu, query, filters, search, servings, goToFood, hallName } from "../state.mts"
+import { passes, type FoodSummary } from "../menus.mts"
+import { today, hall, dayMeals, menu, query, filters, searchable, hasFailed, goToFood, hallName } from "../state.mts"
 import { Count, Plural } from "../../shell/intl.tsx"
 import { FoodItem } from "./Food.tsx"
 import { DayName, mealName } from "./common.tsx"
@@ -13,16 +13,24 @@ const MAX_RESULTS = 60
 /** Meals listed under a search result */
 const MAX_SERVINGS = 6
 
+const Failed = () =>
+  <p class="empty muted">Couldn't load the menus. Check your connection and reload the page.</p>
+
 export const MenuView = () =>
   r(() => {
+    if (hasFailed.value)
+      return <Failed />
+    if (!dayMeals.value)
+      return <p class="empty muted">Loading the menu…</p>
+
     const current = menu.value
     if (!current)
       return <p class="empty muted">{hallName(hall.value)} hasn't posted a menu for that day yet.</p>
 
     const stations = current.stations
-      .map(station => ({ ...station, foods: station.foods.filter(food => passes(data.foods[food], filters.value)) }))
+      .map(station => ({ ...station, foods: station.foods.filter(food => passes(food, filters.value)) }))
       .filter(station => station.foods.length)
-    const count = (list: { foods: number[] }[]) => list.reduce((total, station) => total + station.foods.length, 0)
+    const count = (list: { foods: FoodSummary[] }[]) => list.reduce((total, station) => total + station.foods.length, 0)
     const hidden = count(current.stations) - count(stations)
 
     return (
@@ -33,7 +41,7 @@ export const MenuView = () =>
                 <section class="station">
                   <h2 class="eyebrow">{station.name}</h2>
                   <ul>
-                    {station.foods.map(food => <FoodItem index={food} />)}
+                    {station.foods.map(food => <FoodItem food={food} />)}
                   </ul>
                 </section>
               )}
@@ -51,10 +59,15 @@ export const MenuView = () =>
 
 export const SearchView = () =>
   r(() => {
-    const found = search(query.value).filter(({ food }) =>
-      servings.get(food)?.some(menu => menu.date >= today) &&
-      passes(data.foods[food], filters.value)
-    )
+    if (hasFailed.value)
+      return <Failed />
+    if (!searchable.value)
+      return <p class="empty muted">Loading every upcoming menu to search…</p>
+
+    const { foods, search } = searchable.value
+    const found = search(query.value)
+      .map(match => ({ match, food: foods[match.food], servings: foods[match.food].servings.filter(serving => serving.date >= today) }))
+      .filter(({ food, servings }) => servings.length && passes(food, filters.value))
 
     if (!found.length)
       return <p class="empty muted">Nothing on the upcoming menus matches “{query.value.trim()}”.</p>
@@ -68,20 +81,20 @@ export const SearchView = () =>
           }
         </p>
         <ul class="results">
-          {found.slice(0, MAX_RESULTS).map(match =>
-            <FoodItem index={match.food} match={match}>
+          {found.slice(0, MAX_RESULTS).map(({ match, food, servings }) =>
+            <FoodItem food={food} match={match}>
               <span class="servings">
-                {servings.get(match.food)!.filter(menu => menu.date >= today).slice(0, MAX_SERVINGS).map(menu =>
+                {servings.slice(0, MAX_SERVINGS).map(serving =>
                   <button
                     type="button"
                     class="chip"
                     onclick={event => {
                       // Go to the menu rather than opening the food
                       event.preventDefault()
-                      goToFood(match.food, menu)
+                      goToFood(food.file, serving)
                     }}
                   >
-                    <DayName date={menu.date} /> · {hallName(menu.hall).split(" ")[0]} · {mealName(menu.meal)}
+                    <DayName date={serving.date} /> · {hallName(serving.hall).split(" ")[0]} · {mealName(serving.meal)}
                   </button>
                 )}
               </span>

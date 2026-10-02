@@ -16,7 +16,7 @@ import { Itineraries } from "./ui/Itineraries.tsx"
 import { StopView } from "./ui/StopView.tsx"
 import { RouteList, Status } from "./ui/RouteList.tsx"
 import { BusCard, PlaceCard } from "./ui/cards.tsx"
-import { isLowered, makeSheet } from "./ui/sheet.mts"
+import { makeSheet, raise } from "./ui/sheet.mts"
 
 const clearTrip = () => {
   from.value = undefined
@@ -56,9 +56,7 @@ document.getElementById("app")!.replaceChildren(mapElement, panel)
 
 makeSheet(panel, grabber, header)
 // Something new to show brings the sheet back up
-watch([from, to, selectedStop], () => {
-  isLowered.value = false
-}, { skipFirst: true })
+watch([from, to, selectedStop], raise, { skipFirst: true })
 
 /** The one card open on the map; any tap closes it rather than doing something else */
 let card: Popup | undefined

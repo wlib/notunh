@@ -4,3 +4,4 @@ dist/
 # Generated from upstream data, by `npm run data` or on demand before dev and build
 src/map/gtfs.json
 src/dining/menus.json
+public/data/

@@ -5,7 +5,7 @@
 import { r, watch, type SourceNode } from "bruh/reactive"
 import type { Place } from "../plan.mts"
 import { searchPlaces } from "../osm.mts"
-import { feed, from, to, selectedStop, useCurrentLocation } from "../state.mts"
+import { feed, from, to, selectedStop, isLocating, locationProblem, useCurrentLocation } from "../state.mts"
 import { Icon } from "../../shell/ui.tsx"
 
 type Field = "from" | "to"
@@ -52,6 +52,7 @@ const choose = async (option: Place | undefined) => {
   const field = editing.peek()
   if (!field)
     return
+  locationProblem.value = undefined
   const place = option ?? await useCurrentLocation()
   if (!place)
     return
@@ -147,18 +148,28 @@ export const Suggestions = () =>
     ))}
   </ul>
 
+const LocationNotice = () =>
+  r(() =>
+    isLocating.value      ? <p class="notice muted" role="status">Finding your location…</p> :
+    locationProblem.value ? <p class="notice" role="status">{locationProblem.value}</p> :
+                            undefined
+  )
+
 export const Planner = () =>
-  <form class="planner" onsubmit={event => event.preventDefault()}>
-    <div class="planner-fields">
-      <PlaceInput field="from" label="From" placeholder="Search or tap the map" />
-      <PlaceInput field="to"   label="To"   placeholder="Where to?" />
-    </div>
-    <button
-      type="button"
-      class="swap"
-      aria-label="Swap start and destination"
-      onclick={() => [from.value, to.value] = [to.value, from.value]}
-    >
-      <Icon name="swap" />
-    </button>
-  </form>
+  <>
+    <form class="planner" onsubmit={event => event.preventDefault()}>
+      <div class="planner-fields">
+        <PlaceInput field="from" label="From" placeholder="Search or tap the map" />
+        <PlaceInput field="to"   label="To"   placeholder="Where to?" />
+      </div>
+      <button
+        type="button"
+        class="swap"
+        aria-label="Swap start and destination"
+        onclick={() => [from.value, to.value] = [to.value, from.value]}
+      >
+        <Icon name="swap" />
+      </button>
+    </form>
+    <LocationNotice />
+  </>

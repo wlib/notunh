@@ -1,7 +1,8 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { convert, type NutrisliceFood, type NutrisliceWeek } from "../../scripts/dining/convert.mts"
-import { DIETS, passes, type Food } from "../../src/dining/menus.mts"
+import { publish } from "../../scripts/dining/publish.mts"
+import { DIETS, passes, type Food, type Meal, type SearchFood } from "../../src/dining/menus.mts"
 import { createSearch } from "../../src/dining/search.mts"
 
 const TAGS = [...DIETS, "Milk", "Egg", "Wheat", "Gluten", "Soy", "Fish", "Pork", "Guiding Stars 2 stars"]
@@ -52,6 +53,50 @@ test("each Nutrislice food is kept once, however often it's served", () =>
     const data = convert([{ id: "hall", name: "Hall" }], [{ hall: "hall", meal: "lunch", week }, { hall: "hall", meal: "dinner", week }], 0, DATES[0])
     const ids = new Set(week.days.flatMap(listed => listed.menu_items.flatMap(item => item.food ? [item.food.id] : [])))
     expect(data.foods.length).toBe(ids.size)
+  }))
+)
+
+const twoMeals = (week: NutrisliceWeek) =>
+  convert(
+    [{ id: "hall", name: "Hall" }, { id: "other", name: "Other" }],
+    [{ hall: "hall", meal: "lunch", week }, { hall: "other", meal: "dinner", week }],
+    0,
+    DATES[0]
+  )
+
+test("the published files put every meal back together, with each food in a file of its own", () =>
+  fc.assert(fc.property(weekOf(DATES), week => {
+    const data = twoMeals(week)
+    const { index, files } = publish(data)
+    const read = <T,>(file: string): T => JSON.parse(files.get(file)!)
+
+    expect(new Set(index.files)).toEqual(new Set(files.keys()))
+    for (const menu of data.menus) {
+      const day = index.days[menu.hall][menu.date]
+      const meal = read<Meal[]>(day.file).find(({ meal }) => meal === menu.meal)!
+      expect(day.meals).toContain(menu.meal)
+      expect(meal.stations.map(station => station.name)).toEqual(menu.stations.map(station => station.name))
+      meal.stations.forEach((station, i) =>
+        expect(station.foods.map(food => read<Food>(food.file))).toEqual(menu.stations[i].foods.map(food => data.foods[food]))
+      )
+    }
+  }))
+)
+
+test("a food is the same file however many days serve it, and search lists it once with each meal serving it", () =>
+  fc.assert(fc.property(weekOf(DATES), week => {
+    const data = twoMeals(week)
+    const { index, files } = publish(data)
+    const search = JSON.parse(files.get(index.search)!) as SearchFood[]
+
+    expect(files.size).toBe(new Set([...files.values()]).size)
+    expect(search.map(food => food.name)).toEqual([...new Set(search.map(food => food.name))])
+    for (const food of search)
+      for (const { hall, date, meal } of food.servings)
+        expect(data.menus.some(menu =>
+          menu.hall === hall && menu.date === date && menu.meal === meal &&
+          menu.stations.some(station => station.foods.some(i => data.foods[i].name === food.name))
+        )).toBe(true)
   }))
 )
 

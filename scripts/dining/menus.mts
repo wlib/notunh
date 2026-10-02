@@ -1,18 +1,20 @@
 // Downloads the dining halls' menus from Nutrislice (behind unh.nutrislice.com) for this week and the next two,
-// as far ahead as UNH publishes, and converts them into the JSON the dining page bundles.
-// Nutrislice doesn't send CORS headers, so this happens at build time, and CI rebuilds nightly.
-// With --if-missing, menus already there are kept
+// as far ahead as UNH publishes, and splits them into the files the dining page loads: the index it bundles,
+// and the rest under public/data/dining/. Nutrislice doesn't send CORS headers, so this happens at build time,
+// and the site rebuilds nightly. With --if-missing, menus already there are kept
 
-import { access, writeFile } from "node:fs/promises"
+import { access, mkdir, rm, writeFile } from "node:fs/promises"
 import { localDay } from "../../src/shell/time.mts"
 import { MEALS } from "../../src/dining/menus.mts"
 import { convert, type NutrisliceWeek } from "./convert.mts"
+import { publish } from "./publish.mts"
 
 const API = "https://unh.api.nutrislice.com/menu/api"
-const OUTPUT = new URL("../../src/dining/menus.json", import.meta.url)
+const INDEX = new URL("../../src/dining/menus.json", import.meta.url)
+const FILES = new URL("../../public/data/dining/", import.meta.url)
 const WEEKS = 3
 
-if (process.argv.includes("--if-missing") && await access(OUTPUT).then(() => true, () => false))
+if (process.argv.includes("--if-missing") && await access(INDEX).then(() => true, () => false))
   process.exit(0)
 
 const get = async <T,>(path: string): Promise<T> => {
@@ -53,6 +55,11 @@ const data = convert(halls.map(({ id, name }) => ({ id, name })), weeks, Date.no
 if (!data.menus.length)
   throw new Error("Nutrislice has no menus posted")
 
-await writeFile(OUTPUT, JSON.stringify(data))
+// The index goes last, so it only ever names files that are there
+const { index, files } = publish(data)
+await rm(FILES, { recursive: true, force: true })
+await mkdir(FILES, { recursive: true })
+await Promise.all([...files].map(([name, json]) => writeFile(new URL(`${name}.json`, FILES), json)))
+await writeFile(INDEX, JSON.stringify(index))
 const dates = [...new Set(data.menus.map(menu => menu.date))]
-console.log(`Wrote ${data.halls.length} halls, ${data.foods.length} foods, ${data.menus.length} meals (${dates[0]}–${dates.at(-1)})`)
+console.log(`Wrote ${data.halls.length} halls, ${data.foods.length} foods, ${data.menus.length} meals (${dates[0]}–${dates.at(-1)}) in ${files.size} files`)

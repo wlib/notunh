@@ -3,12 +3,14 @@
 // Search, then which hall, day, and meal, and the filters for diets and allergens
 
 import { r, watch } from "bruh/reactive"
-import { DIETS, MEALS, type Filters } from "../menus.mts"
-import { data, dates, hall, date, meals, menu, preferredMeal, query, isSearching, filters, toggleFilter, avoidable } from "../state.mts"
+import { MEALS, type Filters } from "../menus.mts"
+import { index, dates, hall, date, meals, menu, preferredMeal, query, isSearching, filters, toggleFilter } from "../state.mts"
 import { Day } from "../../shell/intl.tsx"
 import { DayName, mealName } from "./common.tsx"
 
-const servedMeals = MEALS.filter(meal => data.menus.some(menu => menu.meal === meal))
+const servedMeals = MEALS.filter(meal =>
+  Object.values(index.days).some(days => Object.values(days).some(day => day.meals.includes(meal)))
+)
 
 const Segmented = <T extends string,>({ label, options, selected, choose, disabled }: {
   label: string,
@@ -83,9 +85,9 @@ const FiltersPanel = () => {
         Diets and allergens{r(() => count.value ? ` · ${count.value} on` : "")}
       </summary>
       <p class="eyebrow">Only show</p>
-      <FilterChips kind="diets" items={DIETS.filter(diet => data.foods.some(food => food.diets.includes(diet)))} />
+      <FilterChips kind="diets" items={index.diets} />
       <p class="eyebrow">Hide anything with</p>
-      <FilterChips kind="avoid" items={avoidable} />
+      <FilterChips kind="avoid" items={index.contains} />
     </details>
   )
 }
@@ -97,7 +99,7 @@ export const Controls = () =>
       <>
         <Segmented
           label="Dining hall"
-          options={data.halls.map(({ id, name }) => ({ value: id, label: name }))}
+          options={index.halls.map(({ id, name }) => ({ value: id, label: name }))}
           selected={() => hall.value}
           choose={value => hall.value = value}
         />

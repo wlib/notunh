@@ -258,19 +258,46 @@ watch(() => {
 
 //#endregion
 
-export const useCurrentLocation = () =>
-  new Promise<Place | undefined>(resolve =>
+export const isLocating = r(false)
+/** Why the current location couldn't be found, in words for the person who asked */
+export const locationProblem = r<string>()
+
+// By GeolocationPositionError code
+const LOCATION_PROBLEMS: Record<number, string> = {
+  1: "notunh isn't allowed to see your location. Allow it in your browser's settings for this site, or search for a place.",
+  2: "Your location isn't available right now. Search for a place instead.",
+  3: "Finding your location took too long. Try again, or search for a place."
+}
+
+/** The current location, or undefined with locationProblem saying why, unless quiet */
+export const useCurrentLocation = ({ quiet = false } = {}) =>
+  new Promise<Place | undefined>(resolve => {
+    const fail = (problem: string) => {
+      isLocating.value = false
+      if (!quiet)
+        locationProblem.value = problem
+      resolve(undefined)
+    }
+    locationProblem.value = undefined
+    // Browsers only share location with secure pages, so not over plain http on a local network
+    if (!isSecureContext || !navigator.geolocation)
+      return fail("This browser can't share your location with this page. Search for a place instead.")
+
+    isLocating.value = true
     navigator.geolocation.getCurrentPosition(
-      ({ coords }) => resolve({ lat: coords.latitude, lon: coords.longitude, name: "Your location" }),
-      () => resolve(undefined),
-      { enableHighAccuracy: true, timeout: 10_000 }
+      ({ coords }) => {
+        isLocating.value = false
+        resolve({ lat: coords.latitude, lon: coords.longitude, name: "Your location" })
+      },
+      error => fail(LOCATION_PROBLEMS[error.code] ?? LOCATION_PROBLEMS[2]),
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 60_000 }
     )
-  )
+  })
 
 // Start from the current location if the user already allowed it
 navigator.permissions?.query({ name: "geolocation" })
   .then(async status => {
     if (status.state === "granted" && !from.peek())
-      from.value = await useCurrentLocation()
+      from.value = await useCurrentLocation({ quiet: true })
   })
   .catch(() => {})

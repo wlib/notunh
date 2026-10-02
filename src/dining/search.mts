@@ -36,7 +36,7 @@ const rangesIn = (names: string[], needle: string) => {
 }
 
 /** @returns foods matching a search: those named for it first, then those with it in their ingredients */
-export const createSearch = (foods: Food[]) => {
+export const createSearch = (foods: Pick<Food, "name" | "ingredients">[]) => {
   const names = uFuzzy.latinize(foods.map(food => food.name))
   const ingredients = foods.map(food => flattenIngredients(food.ingredients ?? []))
   const labels = uFuzzy.latinize(ingredients.map(list => list.join(", ")))

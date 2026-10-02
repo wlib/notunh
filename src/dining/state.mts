@@ -1,13 +1,30 @@
 // What's being looked at and searched for: reactive values only, no DOM
 
 import { r, watch } from "bruh/reactive"
-import menusUrl from "./menus.json?url"
-import { DIETS, loadMenus, type Filters, type Menu } from "./menus.mts"
+import indexUrl from "./menus.json?url"
+import { fileUrl, loadJson, type Filters, type Food, type Meal, type MenusIndex, type SearchFood, type Serving } from "./menus.mts"
 import { createSearch } from "./search.mts"
 import { localDay, localHour } from "../shell/time.mts"
 
-export const data = await loadMenus(menusUrl)
-export const search = createSearch(data.foods)
+export const index = await loadJson<MenusIndex>(indexUrl)
+
+// Cached files the menus no longer use can go
+navigator.serviceWorker?.controller?.postMessage({ keep: index.files.map(fileUrl) })
+
+/** Each file's contents, loaded once */
+const loaded = new Map<string, Promise<unknown>>()
+const load = <T,>(file: string) => {
+  if (!loaded.has(file))
+    loaded.set(file, loadJson<T>(fileUrl(file)).catch(error => {
+      loaded.delete(file)
+      throw error
+    }))
+  return loaded.get(file) as Promise<T>
+}
+
+/** A food's ingredients, nutrition, and the rest, by its file */
+export const loadFood = (file: string) =>
+  load<Food>(file)
 
 /** YYYY-MM-DD in Durham */
 export const today = localDay(Date.now())
@@ -15,16 +32,7 @@ export const today = localDay(Date.now())
 export const tomorrow = new Date(Date.parse(`${today}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
 
 /** Every day with a menu, from today on */
-export const dates = [...new Set(data.menus.map(menu => menu.date))].filter(date => date >= today)
-
-/** Everything foods are tagged as containing, most common first */
-export const avoidable = (() => {
-  const counts = new Map<string, number>()
-  for (const food of data.foods)
-    for (const item of food.contains)
-      counts.set(item, (counts.get(item) ?? 0) + 1)
-  return [...counts].sort((a, b) => b[1] - a[1]).map(([item]) => item)
-})()
+export const dates = [...new Set(Object.values(index.days).flatMap(Object.keys))].filter(date => date >= today).sort()
 
 //#region Remembered between visits
 
@@ -52,13 +60,13 @@ const store = (key: string, value: unknown) => {
 
 // Most people eat at one hall
 const storedHall = stored("dining-hall")
-export const hall = r(data.halls.find(({ id }) => id === storedHall)?.id ?? data.halls[0]?.id ?? "")
+export const hall = r(index.halls.find(({ id }) => id === storedHall)?.id ?? index.halls[0]?.id ?? "")
 watch([hall], () => store("dining-hall", hall.value))
 
 // Dietary needs don't change from visit to visit
 export const filters = r<Filters>({
-  diets: storedList("dining-diets", DIETS),
-  avoid: storedList("dining-avoid", avoidable)
+  diets: storedList("dining-diets", index.diets),
+  avoid: storedList("dining-avoid", index.contains)
 })
 watch([filters], () => {
   store("dining-diets", [...filters.value.diets])
@@ -88,17 +96,40 @@ export const preferredMeal = r(
                           "dinner"
 )
 
-const menusFor = (hallId: string, day: string) =>
-  data.menus.filter(menu => menu.hall === hallId && menu.date === day)
+/** The meals the hall serves that day */
+export const meals = r(() => index.days[hall.value]?.[date.value]?.meals ?? [])
 
-export const meals = r(() => menusFor(hall.value, date.value).map(menu => menu.meal))
+/** The hall's meals that day, undefined while they load, and empty when there's no menu */
+export const dayMeals = r<Meal[]>()
+export const hasFailed = r(false)
+watch([hall, date], () => {
+  const day = index.days[hall.value]?.[date.value]
+  dayMeals.value = day ? undefined : []
+  hasFailed.value = false
+  if (!day)
+    return
 
-export const menu = r((): Menu | undefined => {
-  const served = menusFor(hall.value, date.value)
-  // Brunch stands in for breakfast or lunch
+  let isCurrent = true
+  load<Meal[]>(day.file)
+    .then(meals => {
+      if (isCurrent)
+        dayMeals.value = meals
+    })
+    .catch(() => {
+      if (isCurrent)
+        hasFailed.value = true
+    })
+  return () => {
+    isCurrent = false
+  }
+})
+
+/** The meal to show, with brunch standing in for breakfast or lunch */
+export const menu = r((): Meal | undefined => {
+  const served = dayMeals.value ?? []
   return (
-    served.find(menu => menu.meal === preferredMeal.value) ??
-    served.find(menu => menu.meal === "brunch" && ["breakfast", "lunch"].includes(preferredMeal.value)) ??
+    served.find(({ meal }) => meal === preferredMeal.value) ??
+    served.find(({ meal }) => meal === "brunch" && ["breakfast", "lunch"].includes(preferredMeal.value)) ??
     served[0]
   )
 })
@@ -106,31 +137,30 @@ export const menu = r((): Menu | undefined => {
 export const query = r("")
 export const isSearching = r(() => query.value.trim().length >= 2)
 
-/** A food to open and scroll to once its menu shows, from following a search result there */
-export const focusedFood = r<number>()
+/** Every upcoming food and a search over them, loaded once someone first searches */
+export const searchable = r<{ foods: SearchFood[], search: ReturnType<typeof createSearch> }>()
+watch([isSearching], () => {
+  if (isSearching.value && !searchable.value)
+    load<SearchFood[]>(index.search)
+      .then(foods => {
+        searchable.value ??= { foods, search: createSearch(foods) }
+      })
+      .catch(() => {
+        hasFailed.value = true
+      })
+})
+
+/** A food, by its file, to open and scroll to once its menu shows, from following a search result there */
+export const focusedFood = r<string>()
 
 /** Shows a meal's menu with a food on it opened */
-export const goToFood = (food: number, menu: Menu) => {
-  hall.value = menu.hall
-  date.value = menu.date
-  preferredMeal.value = menu.meal
-  focusedFood.value = food
+export const goToFood = (file: string, { hall: servedAt, date: servedOn, meal }: Serving) => {
+  hall.value = servedAt
+  date.value = servedOn
+  preferredMeal.value = meal
+  focusedFood.value = file
   query.value = ""
 }
 
 export const hallName = (id: string) =>
-  data.halls.find(hall => hall.id === id)?.name ?? id
-
-/** Each food's meals, soonest first */
-export const servings = (() => {
-  const byFood = new Map<number, Menu[]>()
-  for (const menu of data.menus)
-    for (const station of menu.stations)
-      for (const food of station.foods) {
-        const list = byFood.get(food) ?? []
-        if (list.at(-1) !== menu)
-          list.push(menu)
-        byFood.set(food, list)
-      }
-  return byFood
-})()
+  index.halls.find(hall => hall.id === id)?.name ?? id

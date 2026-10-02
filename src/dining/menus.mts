@@ -1,4 +1,5 @@
-// Dining hall menus, converted from Nutrislice by scripts/dining/convert.mts, and how to filter them
+// Dining hall menus: converted from Nutrislice by scripts/dining/convert.mts, then split by
+// scripts/dining/publish.mts into the files the dining page loads, and how to filter them
 
 import type { Ingredient } from "./ingredients.mts"
 
@@ -38,7 +39,7 @@ export type Menu = {
   stations: Station[]
 }
 
-/** The JSON written at build time */
+/** Every menu, as converted, before it's split up */
 export type MenusData = {
   /** Epoch milliseconds the menus were fetched */
   fetched: number,
@@ -69,12 +70,58 @@ export const NUTRIENTS = [
   { key: "mg_iron",         label: "Iron",          unit: "milligram" }
 ] as const
 
-export const loadMenus = async (url: string): Promise<MenusData> => {
+//#region Published files
+
+/** A food as a menu lists it: enough to show and filter it, and the file with the rest */
+export type FoodSummary = Pick<Food, "name" | "diets" | "contains"> & {
+  calories?: number,
+  /** The whole Food's file, named for what's in it, so every day serving it shares the one file */
+  file: string
+}
+
+/** One meal's stations, at a hall on a day */
+export type Meal = {
+  meal: string,
+  stations: { name: string, foods: FoodSummary[] }[]
+}
+
+export type Serving = Pick<Menu, "hall" | "date" | "meal">
+
+/** An upcoming food with what searching needs: its ingredients, and where and when it's served */
+export type SearchFood = FoodSummary & Pick<Food, "ingredients"> & {
+  servings: Serving[]
+}
+
+/** What the dining page loads first, naming the files with everything else */
+export type MenusIndex = {
+  /** Epoch milliseconds the menus were fetched */
+  fetched: number,
+  halls: Hall[],
+  /** Diets some food suits */
+  diets: string[],
+  /** Everything some food contains, most common first */
+  contains: string[],
+  /** By hall, then YYYY-MM-DD: the file with that day's Meals, and which meals they are */
+  days: Record<string, Record<string, { file: string, meals: string[] }>>,
+  /** The file with every SearchFood */
+  search: string,
+  /** Every file in use, so caches can drop the rest */
+  files: string[]
+}
+
+export const DATA_PATH = "/data/dining/"
+
+export const fileUrl = (file: string) =>
+  `${DATA_PATH}${file}.json`
+
+export const loadJson = async <T,>(url: string): Promise<T> => {
   const response = await fetch(url)
   if (!response.ok)
-    throw new Error(`Failed to load menus: ${response.status}`)
+    throw new Error(`Failed to load ${url}: ${response.status}`)
   return response.json()
 }
+
+//#endregion
 
 export type Filters = {
   /** Diets a food has to suit all of */
@@ -83,6 +130,6 @@ export type Filters = {
   avoid: ReadonlySet<string>
 }
 
-export const passes = (food: Food, { diets, avoid }: Filters) =>
+export const passes = (food: Pick<Food, "diets" | "contains">, { diets, avoid }: Filters) =>
   [...diets].every(diet => food.diets.includes(diet)) &&
   !food.contains.some(item => avoid.has(item))

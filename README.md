@@ -24,7 +24,15 @@ Trip planning is a Connection Scan over the timetable plus live delays, with a r
 
 ## Dining
 
-Menus come from Nutrislice (`unh.api.nutrislice.com`, behind `unh.nutrislice.com`): a week per hall and meal, with stations, ingredients, diet and allergen tags, and nutrition, published about two weeks ahead. It has no CORS, so `npm run data` fetches today through the end of what's posted into `src/dining/menus.json` (about 100 KB gzipped), each food once, and CI rebuilds nightly. Search, filters, and everything else run in the browser.
+Menus come from Nutrislice (`unh.api.nutrislice.com`, behind `unh.nutrislice.com`): a week per hall and meal, with stations, ingredients, diet and allergen tags, and nutrition, published about two weeks ahead. It has no CORS, so `npm run data` fetches today through the end of what's posted, and splits it so the page only loads what it shows:
+
+- `src/dining/menus.json`, the index the page bundles: halls, which meals each hall serves each day, and the name of every other file
+- under `public/data/dining/`, each named by a hash of what's in it:
+  - a file per hall per day, with each food's name, tags, and calories (about 2 KB gzipped)
+  - a file per food, with its ingredients and nutrition, loaded when it's opened; a food served all week is one file, and stays cached across nightly rebuilds
+  - every upcoming food with its ingredients and servings, loaded on the first search
+
+The page tells the service worker which files the index still names, and it drops the rest from its cache. Search, filters, and everything else run in the browser.
 
 ## Commands
 

@@ -1,7 +1,7 @@
 // Routes sharing a street drawn side by side like a transit diagram, rather than on top of each other,
 // one lane per route whichever way it goes
 
-import { angleBetween, bearing, offsetLine, segmentMeters, sideways, type Coordinates } from "./geometry.mts"
+import { angleBetween, bearing, segmentMeters, type Coordinates } from "./geometry.mts"
 
 const STEP = 12     // m between points once resampled, the resolution lanes change at
 const NEAR = 18     // m, lines this close along the same street share it
@@ -23,13 +23,16 @@ export type Strand = {
 export type LaneSlots = {
   route: string,
   points: Coordinates[],
-  slots: number[],
-  /** Which way is right at each point, for drawing the lane at any width */
-  sideways: Coordinates[]
+  slots: number[]
 }
 
+/** A piece of a strand's lane at one slot, which a map pushes over on screen by that many line widths */
 export type Lane = {
   route: string,
+  /** Fractional within a slide from one slot to the next */
+  slot: number,
+  /** One short step of a slide, rather than a run between them */
+  isSliding: boolean,
   coordinates: Coordinates[]
 }
 
@@ -186,12 +189,24 @@ export const laneSlots = (corridors: Corridors, shown: ReadonlySet<string>, orde
         const position = present[start].indexOf(route) - (present[start].length - 1) / 2
         slots.push(...Array<number>(end - start).fill(isWithAxis ? position : -position))
       }
-      const tapered = taper(points, smooth(slots))
-      return { route, ...tapered, sideways: sideways(tapered.points) }
+      return { route, ...taper(points, smooth(slots)) }
     })
 }
 
-/** Each strand's lane drawn where it runs, some meters across per slot */
-export const layLanes = (lanes: LaneSlots[], meters: number): Lane[] =>
-  lanes.map(({ route, points, slots, sideways }) =>
-    ({ route, coordinates: offsetLine(points, slots.map(slot => slot * meters), sideways) }))
+/**
+ * Each strand's lane in pieces at one slot each: runs between slides, and a step for each pair of points within
+ * one, each a fraction of a lane over from the last, which round caps join without a seam
+ */
+export const lanePieces = (lanes: LaneSlots[]): Lane[] =>
+  lanes.flatMap(({ route, points, slots }) => {
+    const pieces: Lane[] = []
+    for (let i = 1; i < points.length; i++) {
+      const slot = (slots[i - 1] + slots[i]) / 2
+      const last = pieces.at(-1)
+      if (last?.slot === slot)
+        last.coordinates.push(points[i])
+      else
+        pieces.push({ route, slot, isSliding: slots[i - 1] !== slots[i], coordinates: [points[i - 1], points[i]] })
+    }
+    return pieces
+  })

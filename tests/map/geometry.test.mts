@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { coveredPadding, indicesAlongShape, offsetLine, pointAt, snapToLines, toLine, type Coordinates } from "../../src/map/geometry.mts"
+import { coveredPadding, indicesAlongShape, pointAt, snapToLines, toLine, type Coordinates } from "../../src/map/geometry.mts"
 
 const CENTER = { lat: 43.135, lon: -70.93 }
 
@@ -114,47 +114,3 @@ test("a bus with no heading stays on the pass along a street it was on, on a lin
   }))
 )
 
-// A line wandering gently about town: steps of 10 to 50 m, turning up to 30° at a time
-const gentleLines = fc
-  .array(fc.tuple(fc.double({ min: 10, max: 50, noNaN: true }), fc.double({ min: -30, max: 30, noNaN: true })), { minLength: 1, maxLength: 20 })
-  .map(steps => {
-    let heading = 0
-    return steps.reduce<Coordinates[]>((points, [meters, turn]) => {
-      heading += turn
-      const [lon, lat] = points.at(-1)!
-      const radians = heading * Math.PI / 180
-      return [...points, [lon + Math.sin(radians) * meters / 81_150, lat + Math.cos(radians) * meters / 110_540]]
-    }, [[-70.93, 43.135]])
-  })
-
-test("an offset line with no offset is the line itself", () =>
-  fc.assert(fc.property(gentleLines, line => {
-    offsetLine(line, line.map(() => 0)).forEach((point, i) => {
-      expect(point[0]).toBeCloseTo(line[i][0], 9)
-      expect(point[1]).toBeCloseTo(line[i][1], 9)
-    })
-  }))
-)
-
-test("an offset line runs its offset away, to the right for positive and the left for negative", () =>
-  fc.assert(fc.property(gentleLines, fc.double({ min: -8, max: 8, noNaN: true }), (line, meters) => {
-    const offset = offsetLine(line, line.map(() => meters))
-    // Right of the way the line starts out for positive offsets, by the sign of the cross product
-    const direction = [(line[1][0] - line[0][0]) * 81_150, (line[1][1] - line[0][1]) * 110_540]
-    const shift = [(offset[0][0] - line[0][0]) * 81_150, (offset[0][1] - line[0][1]) * 110_540]
-    if (Math.abs(meters) > 0.01)
-      expect(Math.sign(direction[0] * shift[1] - direction[1] * shift[0])).toBe(-Math.sign(meters))
-    // Every point is about the offset from the line, a little more at mitered corners
-    for (const point of offset) {
-      const nearest = Math.min(...line.slice(1).map((b, i) => {
-        const a = line[i]
-        const [ax, ay, bx, by] = [(a[0] - point[0]) * 81_150, (a[1] - point[1]) * 110_540, (b[0] - point[0]) * 81_150, (b[1] - point[1]) * 110_540]
-        const [dx, dy] = [bx - ax, by - ay]
-        const t = Math.min(1, Math.max(0, -(ax * dx + ay * dy) / (dx * dx + dy * dy)))
-        return Math.hypot(ax + t * dx, ay + t * dy)
-      }))
-      expect(nearest).toBeGreaterThan(Math.abs(meters) * 0.95 - 0.05)
-      expect(nearest).toBeLessThan(Math.abs(meters) * 2 + 0.05)
-    }
-  }))
-)

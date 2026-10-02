@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { laneSlots, layLanes as lay, measureCorridors, type LaneSlots, type Strand } from "../../src/map/corridors.mts"
+import { laneSlots, lanePieces, measureCorridors, type LaneSlots, type Strand } from "../../src/map/corridors.mts"
 import { segmentMeters, type Coordinates } from "../../src/map/geometry.mts"
 
 // Every route shown
@@ -61,17 +61,23 @@ test("a route going both ways along a street keeps one lane", () =>
   }))
 )
 
-test("lanes run each strand end to end, drawn a lane's meters across per slot", () =>
-  fc.assert(fc.property(bearings, bearings, fc.double({ min: 1, max: 30, noNaN: true }), (a, b, meters) => {
+test("a lane's pieces run its strand end to end, each starting where the last ended, at slots it takes or slides between", () =>
+  fc.assert(fc.property(bearings, bearings, (a, b) => {
     const strands = [{ route: "a", coordinates: street(a) }, { route: "b", coordinates: street(b) }]
     const lanes = layLanes(strands, ["a", "b"])
     for (const { route, coordinates } of strands) {
       const lane = lanes.find(lane => lane.route === route)!
-      expect(lane.points[0]).toEqual(coordinates[0])
-      expect(lane.points.at(-1)).toEqual(coordinates.at(-1))
-      // Where it starts, its line sits slot × meters off the street
-      const [drawn] = lay([lane], meters)
-      expect(segmentMeters(drawn.coordinates[0], lane.points[0])).toBeCloseTo(Math.abs(lane.slots[0]) * meters, 3)
+      const pieces = lanePieces([lane])
+      expect(pieces[0].coordinates[0]).toEqual(coordinates[0])
+      expect(pieces.at(-1)!.coordinates.at(-1)).toEqual(coordinates.at(-1))
+      pieces.slice(1).forEach((piece, i) => expect(piece.coordinates[0]).toEqual(pieces[i].coordinates.at(-1)))
+      const [low, high] = [Math.min(...lane.slots), Math.max(...lane.slots)]
+      for (const { slot, isSliding } of pieces) {
+        expect(slot).toBeGreaterThanOrEqual(low)
+        expect(slot).toBeLessThanOrEqual(high)
+        if (!isSliding)
+          expect(lane.slots).toContain(slot)
+      }
     }
   }))
 )

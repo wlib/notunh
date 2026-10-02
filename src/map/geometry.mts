@@ -235,47 +235,6 @@ export const project = (point: Coordinates, bearingDegrees: number, meters: numb
 export const metersPerPixel = (lat: number, zoom: number) =>
   40_075_016.686 * Math.cos(lat * Math.PI / 180) / 512 / 2 ** zoom
 
-// A corner pushes an offset line out along its bisector, by up to this many times the offset
-const MAX_MITER = 2
-
-/** At each point of a line, the degrees east and north a meter to its right is, stretched at corners so an offset holds along both sides */
-export const sideways = (points: Coordinates[]): Coordinates[] => {
-  const unit = ([x, y]: [number, number]): [number, number] => {
-    const length = Math.hypot(x, y)
-    return length ? [x / length, y / length] : [0, 0]
-  }
-  return points.map((point, i) => {
-    const { x, y } = scale(point[1])
-    // Directions in meters in and out of the point, the same at the ends
-    const [before, after] = [points[Math.max(0, i - 1)], points[Math.min(points.length - 1, i + 1)]]
-    const inward = unit([(point[0] - before[0]) * x, (point[1] - before[1]) * y])
-    const outward = unit([(after[0] - point[0]) * x, (after[1] - point[1]) * y])
-    const [dx, dy] = i === 0 ? outward : i === points.length - 1 ? inward : unit([inward[0] + outward[0], inward[1] + outward[1]])
-    const miter = 1 / Math.max(1 / MAX_MITER, dx * outward[0] + dy * outward[1])
-    return [dy * miter / x, -dx * miter / y]
-  })
-}
-
-/**
- * A line running alongside another, each point some meters to the right of it (left when negative).
- * Corners are mitered, and where an inside bend is tighter than the offset, the points that would double back are
- * dropped rather than looping. Lines offset again and again can pass in their sideways once, the slow part
- */
-export const offsetLine = (points: Coordinates[], offsets: number[], right = sideways(points)): Coordinates[] => {
-  const shifted = points.map(([lon, lat], i): Coordinates => [lon + right[i][0] * offsets[i], lat + right[i][1] * offsets[i]])
-  // Kept points must go forward along the original line, not back against it
-  const { x, y } = scale(points[0]?.[1] ?? 0)
-  const kept = [0]
-  for (let i = 1; i < points.length; i++) {
-    const last = kept.at(-1)!
-    const along = (points[i][0] - points[last][0]) * (shifted[i][0] - shifted[last][0]) * x * x +
-      (points[i][1] - points[last][1]) * (shifted[i][1] - shifted[last][1]) * y * y
-    if (along > 0 || i === points.length - 1)
-      kept.push(i)
-  }
-  return kept.map(i => shifted[i])
-}
-
 export type Rect = { top: number, bottom: number, left: number, right: number, width: number, height: number }
 
 export type Padding = { top: number, bottom: number, left: number, right: number }

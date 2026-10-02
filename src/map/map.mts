@@ -5,11 +5,11 @@ import { r, watch, type Reactive, type SourceNode } from "bruh/reactive"
 import type { Feed } from "./feed.mts"
 import type { Vehicle } from "./umo.mts"
 import type { Itinerary, Place } from "./plan.mts"
-import { type Coordinates, type Padding, coveredPadding, metersPerPixel, ridePath } from "./geometry.mts"
+import { type Coordinates, type Padding, coveredPadding, ridePath } from "./geometry.mts"
 import { nameAt, walkPath, type MapHints } from "./osm.mts"
 import { animateBuses } from "./buses.mts"
 import { showYou } from "./you.mts"
-import { laneSlots, layLanes, measureCorridors } from "./corridors.mts"
+import { laneSlots, lanePieces, measureCorridors } from "./corridors.mts"
 
 // maplibre finds its worker with a computed URL that vite can't see, so bundle it as a worker explicitly
 setWorkerUrl(workerUrl)
@@ -111,12 +111,17 @@ const lineWidth = (low: number, high: number) =>
 // Route lanes sit side by side, each a line width over
 const LANE = widthAt(1.75, 4.5)
 const CASING = widthAt(3.5, 7)
-// Lanes are a line width apart on screen, which in meters is twice as far for each zoom out, past the widths' range
-const laneMeters = (zoom: number) =>
-  LANE(Math.min(ZOOMS.at(-1)!, Math.max(ZOOMS[0], zoom))) * metersPerPixel(DURHAM[1], zoom)
+// Each piece of a lane is pushed over on screen by its slot, so lanes stay a line width apart at any zoom
+const laneOffset = byZoom(zoom => ["*", ["get", "slot"], LANE(zoom)])
 
-// Chevrons scaled with lanes, a lane being 3 of their pixels across
-const CHEVRON_SIZE = (zoom: number) => LANE(zoom) / 3
+// Chevrons scaled with lanes, a lane being this many of their pixels across, so they're pushed over by a fixed
+// multiple of the slot
+const CHEVRON_LANE = 3
+const CHEVRON_SIZE = (zoom: number) => LANE(zoom) / CHEVRON_LANE
+
+/** A color most of the way to white, faded without the overlapping ends of a lane's pieces showing through */
+const fade = (color: string) =>
+  "#" + [1, 3, 5].map(i => Math.round(255 - (255 - parseInt(color.slice(i, i + 2), 16)) * 0.15).toString(16).padStart(2, "0")).join("")
 
 /** Chevrons along a line layer, showing which way its buses go */
 const arrows = (id: string, source: string, filter?: any) => ({
@@ -130,6 +135,8 @@ const arrows = (id: string, source: string, filter?: any) => ({
     "symbol-spacing": 120,
     "icon-image": ["concat", "chevron-", ["get", "route"]] as any,
     "icon-size": byZoom(CHEVRON_SIZE),
+    // Icon pixels down are to the right of the line, where its lane is drawn
+    "icon-offset": ["coalesce", ["get", "offset"], ["literal", [0, 0]]] as any,
     "icon-padding": 6,
     "icon-ignore-placement": true,
     "icon-rotation-alignment": "map" as const,
@@ -265,16 +272,17 @@ export const createMap = (
       type: "line",
       source: "routes",
       layout: rounded,
-      paint: { "line-color": "white", "line-width": byZoom(CASING) }
+      paint: { "line-color": "white", "line-width": byZoom(CASING), "line-offset": laneOffset }
     })
     map.addLayer({
       id: "routes",
       type: "line",
       source: "routes",
       layout: rounded,
-      paint: { "line-color": ["get", "color"], "line-width": byZoom(LANE) }
+      paint: { "line-color": ["get", "color"], "line-width": byZoom(LANE), "line-offset": laneOffset }
     })
-    map.addLayer(arrows("routes-arrows", "routes"))
+    // A slide's steps are too short for chevrons, except overzoomed, where they'd crowd
+    map.addLayer(arrows("routes-arrows", "routes", ["!", ["get", "isSliding"]]))
 
     map.addLayer({
       id: "itinerary-casing",
@@ -381,19 +389,15 @@ export const createMap = (
       onTap({ kind: "place", place: { lon: lng, lat, name: "Dropped pin" }, hints: hintsAt(event.point) })
     })
 
-    // Only the routes shown share lanes, so they're laid out again when that changes, and drawn into the lines
-    // themselves, so a change of lane slides along them; their spacing is in meters, so they're drawn again once a
-    // zoom ends a half zoom or more away, to stay a line width apart. Not during it, as drawing them again is heavy
-    // enough to stutter a pinch
-    const zoomBand = r(Math.round(map.getZoom() * 2) / 2)
-    map.on("zoomend", () => zoomBand.value = Math.round(map.getZoom() * 2) / 2)
+    // Only the routes shown share lanes, so they're laid out again when that changes
     const lanes = r(() => laneSlots(corridors, state.shownRoutes.value, routeOrder))
     const colors = new Map(feed.routes.map(route => [route.id, route.color]))
     watch(() => {
       map.getSource<GeoJSONSource>("routes")!.setData(collection(
-        layLanes(lanes.value, laneMeters(zoomBand.value)).map(({ route, coordinates }) =>
-          line(coordinates, { route, color: colors.get(route) })
-        )
+        lanePieces(lanes.value).map(({ route, slot, isSliding, coordinates }) => {
+          const color = colors.get(route)!
+          return line(coordinates, { route, slot, isSliding, color, faded: fade(color), offset: [0, slot * CHEVRON_LANE] })
+        })
       ))
     })
     watch(() => {
@@ -404,13 +408,15 @@ export const createMap = (
     watch(() => {
       const highlighted = state.highlightedRoute.value
       const isHighlighted = ["==", ["get", "route"], highlighted ?? ""] as any
-      const opacity = (dimmed: number) =>
+      const dim = (bright: any, dimmed: any) =>
         state.itinerary.value ? dimmed :
-        highlighted           ? ["case", isHighlighted, 1, dimmed] as any :
-                                1
+        highlighted           ? ["case", isHighlighted, bright, dimmed] as any :
+                                bright
+      const opacity = (dimmed: number) => dim(1, dimmed)
       const wider = (width: (zoom: number) => number) =>
         byZoom(zoom => ["case", isHighlighted, width(zoom) * 1.6, width(zoom)])
-      map.setPaintProperty("routes", "line-opacity", opacity(0.15))
+      // Faded by color rather than opacity, as a lane's pieces overlap where they meet
+      map.setPaintProperty("routes", "line-color", dim(["get", "color"], ["get", "faded"]))
       map.setPaintProperty("routes-arrows", "icon-opacity", opacity(0.15))
       map.setPaintProperty("routes-casing", "line-opacity", opacity(0.3))
       map.setPaintProperty("routes", "line-width", wider(LANE))

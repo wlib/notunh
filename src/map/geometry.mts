@@ -107,6 +107,31 @@ export const toLine = (coordinates: Coordinates[], trips: { id: string, lat: num
   }
 }
 
+const linesCache = new WeakMap<Feed, Map<string, Line[]>>()
+
+/** Each route's lines: one per shape its trips follow, with those trips' stops along it */
+export const routeLines = (feed: Feed) => {
+  let lines = linesCache.get(feed)
+  if (!lines) {
+    lines = new Map(feed.routes.map(route => {
+      const trips = feed.trips.filter(trip => trip.route === route.id)
+      return [
+        route.id,
+        [...new Set(trips.map(trip => trip.shape))].map(shape =>
+          toLine(
+            feed.shapes[shape],
+            trips
+              .filter(trip => trip.shape === shape)
+              .map(trip => trip.stops.map(stop => feed.stops[stop]))
+          )
+        )
+      ]
+    }))
+    linesCache.set(feed, lines)
+  }
+  return lines
+}
+
 /** A position on a line, in meters from its start */
 export type Track = {
   line:     Line,
@@ -204,6 +229,48 @@ export const project = (point: Coordinates, bearingDegrees: number, meters: numb
   const { x, y } = scale(point[1])
   const radians = bearingDegrees * Math.PI / 180
   return [point[0] + Math.sin(radians) * meters / x, point[1] + Math.cos(radians) * meters / y]
+}
+
+/** Meters a screen pixel spans at a latitude and zoom, for maplibre's 512 px tiles */
+export const metersPerPixel = (lat: number, zoom: number) =>
+  40_075_016.686 * Math.cos(lat * Math.PI / 180) / 512 / 2 ** zoom
+
+// A corner pushes an offset line out along its bisector, by up to this many times the offset
+const MAX_MITER = 2
+
+/**
+ * A line running alongside another, each point some meters to the right of it (left when negative).
+ * Corners are mitered, and where an inside bend is tighter than the offset, the points that would double back are
+ * dropped rather than looping
+ */
+export const offsetLine = (points: Coordinates[], offsets: number[]): Coordinates[] => {
+  const unit = ([x, y]: [number, number]): [number, number] => {
+    const length = Math.hypot(x, y)
+    return length ? [x / length, y / length] : [0, 0]
+  }
+  const shifted = points.map((point, i) => {
+    const { x, y } = scale(point[1])
+    // Directions in meters in and out of the point, the same at the ends
+    const [before, after] = [points[Math.max(0, i - 1)], points[Math.min(points.length - 1, i + 1)]]
+    const inward = unit([(point[0] - before[0]) * x, (point[1] - before[1]) * y])
+    const outward = unit([(after[0] - point[0]) * x, (after[1] - point[1]) * y])
+    const [dx, dy] = i === 0 ? outward : i === points.length - 1 ? inward : unit([inward[0] + outward[0], inward[1] + outward[1]])
+    // Right of the direction, stretched at corners so the offset holds along both sides
+    const miter = 1 / Math.max(1 / MAX_MITER, dx * outward[0] + dy * outward[1])
+    const meters = offsets[i] * miter
+    return [point[0] + dy * meters / x, point[1] - dx * meters / y] as Coordinates
+  })
+  // Kept points must go forward along the original line, not back against it
+  const kept = [0]
+  for (let i = 1; i < points.length; i++) {
+    const last = kept.at(-1)!
+    const { x, y } = scale(points[i][1])
+    const along = [(points[i][0] - points[last][0]) * x, (points[i][1] - points[last][1]) * y]
+    const step = [(shifted[i][0] - shifted[last][0]) * x, (shifted[i][1] - shifted[last][1]) * y]
+    if (along[0] * step[0] + along[1] * step[1] > 0 || i === points.length - 1)
+      kept.push(i)
+  }
+  return kept.map(i => shifted[i])
 }
 
 export type Rect = { top: number, bottom: number, left: number, right: number, width: number, height: number }

@@ -1,26 +1,34 @@
 // Routes sharing a street drawn side by side like a transit diagram, rather than on top of each other,
 // one lane per route whichever way it goes
 
-import { angleBetween, bearing, segmentMeters, type Coordinates } from "./geometry.mts"
+import { angleBetween, bearing, offsetLine, segmentMeters, type Coordinates } from "./geometry.mts"
 
 const STEP = 12     // m between points once resampled, the resolution lanes change at
 const NEAR = 18     // m, lines this close along the same street share it
 const PARALLEL = 35 // degrees, lines crossing at more than this only meet at an intersection
 const MIN_RUN = 8   // segments, shorter lane changes are noise where routes merge and split
+const TAPER = 30    // m a lane change slides across over, eased in and out
+const FINE = 3      // m between points within a slide, so it curves rather than bends
 // Lanes are ordered across a street as seen facing along it in a direction folded into [AXIS, AXIS + 180),
-// so every route on the street agrees on the order. Odd, so few streets run right along the fold
-const AXIS = 17 // degrees
+// so every route on the street agrees on the order. A street running along the fold could fall either side of it,
+// so this is the fold that, tried against Durham's routes, crosses and overlaps them least
+const AXIS = 152 // degrees
 
 export type Strand = {
   route: string,
   coordinates: Coordinates[]
 }
 
+/** A strand's lane, as how many lanes to the right of its own direction it runs at each of its points */
+export type LaneSlots = {
+  route: string,
+  points: Coordinates[],
+  slots: number[]
+}
+
 export type Lane = {
   route: string,
-  coordinates: Coordinates[],
-  /** Line widths to the right of the lane's own direction */
-  slot: number
+  coordinates: Coordinates[]
 }
 
 /** Points no further than STEP apart along a line */
@@ -73,11 +81,8 @@ const smooth = (slots: number[]) => {
 export type Corridors = {
   strand: Strand,
   points: Coordinates[],
-  segments: {
-    alongside: ReadonlySet<string>,
-    /** Facing along the axis, rather than against it */
-    isWithAxis: boolean
-  }[]
+  /** The routes alongside each segment */
+  segments: ReadonlySet<string>[]
 }[]
 
 /** Finds which routes share the street along each stretch of each strand, the slow part, done once */
@@ -124,36 +129,65 @@ export const measureCorridors = (strands: Strand[]): Corridors => {
               alongside.add(strands[other.strand].route)
           }
 
-      return {
-        alongside,
-        isWithAxis: ((segment.bearing - AXIS) % 360 + 360) % 360 < 180
-      }
+      return alongside
     })
   }))
 }
 
-/** Splits the shown routes' strands into lanes, each a stretch with the same routes alongside, in the given order across it */
-export const layLanes = (corridors: Corridors, shown: ReadonlySet<string>, order: string[]): Lane[] => {
+/** A run of segments' slots, with each change between runs eased over TAPER, at points FINE apart within it */
+const taper = (points: Coordinates[], slots: number[]) => {
+  const along = [0]
+  for (let i = 1; i < points.length; i++)
+    along.push(along[i - 1] + segmentMeters(points[i - 1], points[i]))
+  // A change between two segments is centered on the point they share
+  const changes = slots.flatMap((slot, i) => i && slot !== slots[i - 1] ? [{ at: along[i], by: slot - slots[i - 1] }] : [])
+  const slotAt = (meters: number) =>
+    changes.reduce((slot, { at, by }) => {
+      const t = Math.min(1, Math.max(0, (meters - at) / TAPER + 0.5))
+      return slot + by * t * t * (3 - 2 * t)
+    }, slots[0] ?? 0)
+
+  const tapered: Omit<LaneSlots, "route"> = { points: [], slots: [] }
+  points.forEach((point, i) => {
+    const [from, to] = [along[i], along[i + 1]]
+    const isSliding = to !== undefined && changes.some(({ at }) => from < at + TAPER / 2 && to > at - TAPER / 2)
+    const steps = isSliding ? Math.ceil((to - from) / FINE) : 1
+    for (let step = 0; step < steps; step++) {
+      const t = step / steps
+      const next = points[i + 1] ?? point
+      tapered.points.push([point[0] + (next[0] - point[0]) * t, point[1] + (next[1] - point[1]) * t])
+      tapered.slots.push(slotAt(from + ((to ?? from) - from) * t))
+    }
+  })
+  return tapered
+}
+
+/**
+ * The shown routes' strands, each at a slot across the street at every point: in the given order among the routes
+ * alongside, flipped for strands facing against the axis, and easing from one slot to the next
+ */
+export const laneSlots = (corridors: Corridors, shown: ReadonlySet<string>, order: string[]): LaneSlots[] => {
   const rank = new Map(order.map((route, i) => [route, i]))
   const byRank = (a: string, b: string) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0)
 
   return corridors
     .filter(({ strand }) => shown.has(strand.route))
-    .flatMap(({ strand: { route }, points, segments }) => {
-      const slots = segments.map(({ alongside, isWithAxis }) => {
-        const present = [...alongside].filter(other => shown.has(other)).sort(byRank)
+    .map(({ strand: { route }, points, segments }) => {
+      const present = segments.map(alongside => [...alongside].filter(other => shown.has(other)).sort(byRank))
+      // Stretches with the same routes alongside, each facing along the axis or against it as a whole
+      const slots: number[] = []
+      for (let start = 0, end = 1; start < segments.length; start = end++) {
+        while (end < segments.length && present[end].join() === present[start].join())
+          end++
+        const isWithAxis = ((bearing(points[start], points[end]) - AXIS) % 360 + 360) % 360 < 180
         // Left to right facing along the axis, so flipped for strands going the other way
-        const position = present.indexOf(route) - (present.length - 1) / 2
-        return isWithAxis ? position : -position
-      })
-
-      const lanes: Lane[] = []
-      smooth(slots).forEach((slot, index) => {
-        if (lanes.at(-1)?.slot === slot)
-          lanes.at(-1)!.coordinates.push(points[index + 1])
-        else
-          lanes.push({ route, slot, coordinates: [points[index], points[index + 1]] })
-      })
-      return lanes
+        const position = present[start].indexOf(route) - (present[start].length - 1) / 2
+        slots.push(...Array<number>(end - start).fill(isWithAxis ? position : -position))
+      }
+      return { route, ...taper(points, smooth(slots)) }
     })
 }
+
+/** Each strand's lane drawn where it runs, some meters across per slot */
+export const layLanes = (lanes: LaneSlots[], meters: number): Lane[] =>
+  lanes.map(({ route, points, slots }) => ({ route, coordinates: offsetLine(points, slots.map(slot => slot * meters)) }))

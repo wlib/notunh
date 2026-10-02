@@ -1,7 +1,8 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { ColorSpace, contrastWCAG21, parse, sRGB } from "colorjs.io/fn"
-import { interpolateTimes, parseTable, readableText } from "../../scripts/map/convert.mts"
+import { interpolateTimes, parseTable, readableText, smoothShape } from "../../scripts/map/convert.mts"
+import type { Coordinates } from "../../src/map/geometry.mts"
 
 ColorSpace.register(sRGB)
 
@@ -63,3 +64,37 @@ test("readableText keeps a readable GTFS color, otherwise picks whichever of bla
       expect(contrast(chosen)).toBe(Math.max(contrast("#000000"), contrast("#ffffff")))
   }))
 )
+
+/** Meters from a point to the nearest point of a polyline */
+const offLine = ([lon, lat]: Coordinates, line: Coordinates[]) => {
+  const meters = ([x, y]: Coordinates) => [(x - lon) * 81_150, (y - lat) * 110_540]
+  let nearest = Infinity
+  for (let i = 0; i + 1 < line.length; i++) {
+    const [[ax, ay], [bx, by]] = [meters(line[i]), meters(line[i + 1])]
+    const [dx, dy] = [bx - ax, by - ay]
+    const t = dx || dy ? Math.min(1, Math.max(0, -(ax * dx + ay * dy) / (dx * dx + dy * dy))) : 0
+    nearest = Math.min(nearest, Math.hypot(ax + t * dx, ay + t * dy))
+  }
+  return nearest
+}
+
+// A street wandering about Durham: steps of 5 to 60 m, in any direction, with GPS wobble
+const shapes = fc
+  .array(fc.tuple(fc.double({ min: 5, max: 60, noNaN: true }), fc.double({ min: 0, max: 2 * Math.PI, noNaN: true })), { minLength: 1, maxLength: 30 })
+  .map(steps => steps.reduce<Coordinates[]>((points, [meters, angle]) => {
+    const [lon, lat] = points.at(-1)!
+    return [...points, [lon + Math.sin(angle) * meters / 81_150, lat + Math.cos(angle) * meters / 110_540]]
+  }, [[-70.93, 43.135]]))
+
+test("smoothShape keeps the ends and stays on the street, within a few meters of the shape either way", () => {
+  fc.assert(fc.property(shapes, shape => {
+    const smooth = smoothShape(shape)
+    expect(smooth[0]).toEqual(shape[0])
+    expect(smooth.at(-1)).toEqual(shape.at(-1))
+    // Dropped wobbles and cut corners, at most a few meters each
+    for (const point of smooth)
+      expect(offLine(point, shape)).toBeLessThan(9)
+    for (const point of shape)
+      expect(offLine(point, smooth)).toBeLessThan(9)
+  }))
+})

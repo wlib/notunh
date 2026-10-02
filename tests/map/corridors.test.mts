@@ -1,11 +1,11 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { layLanes as lay, measureCorridors, type Strand } from "../../src/map/corridors.mts"
-import type { Coordinates } from "../../src/map/geometry.mts"
+import { laneSlots, layLanes as lay, measureCorridors, type LaneSlots, type Strand } from "../../src/map/corridors.mts"
+import { segmentMeters, type Coordinates } from "../../src/map/geometry.mts"
 
 // Every route shown
 const layLanes = (strands: Strand[], order: string[]) =>
-  lay(measureCorridors(strands), new Set(order), order)
+  laneSlots(measureCorridors(strands), new Set(order), order)
 
 const CENTER = { lat: 43.135, lon: -70.93 }
 
@@ -16,8 +16,8 @@ const street = (bearing: number): Coordinates[] =>
     return [CENTER.lon + Math.sin(radians) * i * 20 / 81_150, CENTER.lat + Math.cos(radians) * i * 20 / 110_540]
   })
 
-const slots = (lanes: ReturnType<typeof layLanes>, route: string) =>
-  new Set(lanes.filter(lane => lane.route === route).map(lane => lane.slot))
+const slots = (lanes: LaneSlots[], route: string) =>
+  new Set(lanes.filter(lane => lane.route === route).flatMap(lane => lane.slots))
 
 const bearings = fc.integer({ min: 0, max: 359 })
 
@@ -61,15 +61,17 @@ test("a route going both ways along a street keeps one lane", () =>
   }))
 )
 
-test("lanes cover each strand end to end", () =>
-  fc.assert(fc.property(bearings, bearings, (a, b) => {
+test("lanes run each strand end to end, drawn a lane's meters across per slot", () =>
+  fc.assert(fc.property(bearings, bearings, fc.double({ min: 1, max: 30, noNaN: true }), (a, b, meters) => {
     const strands = [{ route: "a", coordinates: street(a) }, { route: "b", coordinates: street(b) }]
     const lanes = layLanes(strands, ["a", "b"])
     for (const { route, coordinates } of strands) {
-      const own = lanes.filter(lane => lane.route === route)
-      expect(own[0].coordinates[0]).toEqual(coordinates[0])
-      expect(own.at(-1)!.coordinates.at(-1)).toEqual(coordinates.at(-1))
-      own.slice(1).forEach((lane, i) => expect(lane.coordinates[0]).toEqual(own[i].coordinates.at(-1)))
+      const lane = lanes.find(lane => lane.route === route)!
+      expect(lane.points[0]).toEqual(coordinates[0])
+      expect(lane.points.at(-1)).toEqual(coordinates.at(-1))
+      // Where it starts, its line sits slot × meters off the street
+      const [drawn] = lay([lane], meters)
+      expect(segmentMeters(drawn.coordinates[0], lane.points[0])).toBeCloseTo(Math.abs(lane.slots[0]) * meters, 3)
     }
   }))
 )
@@ -77,8 +79,23 @@ test("lanes cover each strand end to end", () =>
 test("hiding a route closes up the lanes beside it", () =>
   fc.assert(fc.property(bearings, bearing => {
     const strands = ["a", "b", "c"].map(route => ({ route, coordinates: street(bearing) }))
-    const lanes = lay(measureCorridors(strands), new Set(["a", "c"]), ["a", "b", "c"])
+    const lanes = laneSlots(measureCorridors(strands), new Set(["a", "c"]), ["a", "b", "c"])
     expect(lanes.some(lane => lane.route === "b")).toBe(false)
     expect([...slots(lanes, "a"), ...slots(lanes, "c")].map(Math.abs)).toEqual([0.5, 0.5])
+  }))
+)
+
+test("a route joining another slides over into its lane rather than jumping", () =>
+  fc.assert(fc.property(bearings, fc.integer({ min: 5, max: 25 }), (bearing, joins) => {
+    // b runs the whole street, and a only from partway along it
+    const lanes = layLanes([
+      { route: "a", coordinates: street(bearing).slice(joins) },
+      { route: "b", coordinates: street(bearing) }
+    ], ["a", "b"])
+    for (const { points, slots } of lanes)
+      // Half a lane over, eased over 30 m, which is at most 1.5 times as steep as sliding evenly
+      slots.slice(1).forEach((slot, i) =>
+        expect(Math.abs(slot - slots[i])).toBeLessThanOrEqual(1.5 * 0.5 / 30 * segmentMeters(points[i], points[i + 1]) + 1e-9)
+      )
   }))
 )

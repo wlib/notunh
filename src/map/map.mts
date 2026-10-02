@@ -1,22 +1,22 @@
 import "maplibre-gl/dist/maplibre-gl.css"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
-import { Map as MapLibre, AttributionControl, NavigationControl, Marker, setWorkerUrl, type GeoJSONSource, type LngLatLike, type MapGeoJSONFeature } from "maplibre-gl"
-import { watch, type Reactive, type SourceNode } from "bruh/reactive"
+import { Map as MapLibre, AttributionControl, NavigationControl, Marker, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature } from "maplibre-gl"
+import { r, watch, type Reactive, type SourceNode } from "bruh/reactive"
 import type { Feed } from "./feed.mts"
 import type { Vehicle } from "./umo.mts"
 import type { Itinerary, Place } from "./plan.mts"
-import { type Coordinates, type Padding, coveredPadding, ridePath } from "./geometry.mts"
+import { type Coordinates, type Padding, coveredPadding, metersPerPixel, ridePath } from "./geometry.mts"
 import { nameAt, walkPath, type MapHints } from "./osm.mts"
 import { animateBuses } from "./buses.mts"
 import { showYou } from "./you.mts"
-import { layLanes, measureCorridors } from "./corridors.mts"
+import { laneSlots, layLanes, measureCorridors } from "./corridors.mts"
 
 // maplibre finds its worker with a computed URL that vite can't see, so bundle it as a worker explicitly
 setWorkerUrl(workerUrl)
 
 const STYLE = "https://tiles.openfreemap.org/styles/liberty"
 const FONT = ["Noto Sans Bold"]
-const DURHAM: LngLatLike = [-70.9345, 43.1365]
+const DURHAM: Coordinates = [-70.9345, 43.1365]
 const TAP_RADIUS = 22 // px, about a fingertip
 const SETTLE_MS = 1000 // the panel's size settles this soon after it changes what it shows
 
@@ -111,14 +111,15 @@ const lineWidth = (low: number, high: number) =>
 // Route lanes sit side by side, each a line width over
 const LANE = widthAt(1.75, 4.5)
 const CASING = widthAt(3.5, 7)
-const laneOffset = byZoom(zoom => ["*", ["get", "slot"], LANE(zoom)])
+// Lanes are a line width apart on screen, which in meters is twice as far for each zoom out, past the widths' range
+const laneMeters = (zoom: number) =>
+  LANE(Math.min(ZOOMS.at(-1)!, Math.max(ZOOMS[0], zoom))) * metersPerPixel(DURHAM[1], zoom)
 
-// Chevrons scaled with lanes, so a lane is always this many of their pixels over
-const CHEVRON_LANE = 3
-const CHEVRON_SIZE = (zoom: number) => LANE(zoom) / CHEVRON_LANE
+// Chevrons scaled with lanes, a lane being 3 of their pixels across
+const CHEVRON_SIZE = (zoom: number) => LANE(zoom) / 3
 
 /** Chevrons along a line layer, showing which way its buses go */
-const arrows = (id: string, source: string, filter?: any, offset = false) => ({
+const arrows = (id: string, source: string, filter?: any) => ({
   id,
   type: "symbol" as const,
   source,
@@ -129,8 +130,6 @@ const arrows = (id: string, source: string, filter?: any, offset = false) => ({
     "symbol-spacing": 120,
     "icon-image": ["concat", "chevron-", ["get", "route"]] as any,
     "icon-size": byZoom(CHEVRON_SIZE),
-    // Icon pixels down are to the right of the line, where its lane is drawn
-    ...offset ? { "icon-offset": ["get", "offset"] as any } : {},
     "icon-padding": 6,
     "icon-ignore-placement": true,
     "icon-rotation-alignment": "map" as const,
@@ -266,16 +265,16 @@ export const createMap = (
       type: "line",
       source: "routes",
       layout: rounded,
-      paint: { "line-color": "white", "line-width": byZoom(CASING), "line-offset": laneOffset }
+      paint: { "line-color": "white", "line-width": byZoom(CASING) }
     })
     map.addLayer({
       id: "routes",
       type: "line",
       source: "routes",
       layout: rounded,
-      paint: { "line-color": ["get", "color"], "line-width": byZoom(LANE), "line-offset": laneOffset }
+      paint: { "line-color": ["get", "color"], "line-width": byZoom(LANE) }
     })
-    map.addLayer(arrows("routes-arrows", "routes", undefined, true))
+    map.addLayer(arrows("routes-arrows", "routes"))
 
     map.addLayer({
       id: "itinerary-casing",
@@ -382,16 +381,22 @@ export const createMap = (
       onTap({ kind: "place", place: { lon: lng, lat, name: "Dropped pin" }, hints: hintsAt(event.point) })
     })
 
-    // Only the routes shown share lanes, so lay them out again when that changes
+    // Only the routes shown share lanes, so they're laid out again when that changes, and drawn into the lines
+    // themselves, so a change of lane slides along them; their spacing is in meters, so they're drawn again every
+    // half zoom to stay a line width apart
+    const zoomBand = r(Math.round(map.getZoom() * 2) / 2)
+    map.on("zoom", () => zoomBand.value = Math.round(map.getZoom() * 2) / 2)
+    const lanes = r(() => laneSlots(corridors, state.shownRoutes.value, routeOrder))
+    const colors = new Map(feed.routes.map(route => [route.id, route.color]))
     watch(() => {
-      const shown = state.shownRoutes.value
-      const colors = new Map(feed.routes.map(route => [route.id, route.color]))
       map.getSource<GeoJSONSource>("routes")!.setData(collection(
-        layLanes(corridors, shown, routeOrder).map(({ route, slot, coordinates }) =>
-          line(coordinates, { route, slot, offset: [0, slot * CHEVRON_LANE], color: colors.get(route) })
+        layLanes(lanes.value, laneMeters(zoomBand.value)).map(({ route, coordinates }) =>
+          line(coordinates, { route, color: colors.get(route) })
         )
       ))
-      map.setFilter("vehicles", ["in", ["get", "route"], ["literal", [...shown]]])
+    })
+    watch(() => {
+      map.setFilter("vehicles", ["in", ["get", "route"], ["literal", [...state.shownRoutes.value]]])
     })
 
     // Routes fade behind an itinerary, and a highlighted one stands out: on top, wider, the rest faded

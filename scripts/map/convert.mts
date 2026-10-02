@@ -2,6 +2,7 @@
 
 import { parse as parseCsv } from "csv-parse/sync"
 import { ColorSpace, contrastWCAG21, parse, sRGB } from "colorjs.io/fn"
+import { angleBetween, type Coordinates } from "../../src/map/geometry.mts"
 import { distance, type FeedData, type Route, type Service, type Stop, type Trip } from "../../src/map/feed.mts"
 
 ColorSpace.register(sRGB)
@@ -64,7 +65,103 @@ export const readableText = (color: string, text: string) => {
   )
 }
 
-const round = (x: number) => Math.round(x * 1e5) / 1e5
+// Degrees to about a meter for stops, and a decimeter for shapes, finer than the curves drawn along them
+const round = (x: number, digits = 5) => Math.round(x * 10 ** digits) / 10 ** digits
+
+// Shapes are traced from GPS, wobbling a meter or two either way every 10 m or so, which draws as a jagged line
+// and turns buses at every wobble. Wobbles within this are dropped, then a smooth curve is drawn through what's left
+const WOBBLE = 4    // m
+const TURN_STEP = 6 // degrees the curve turns between the points drawn along it
+const MIN_STEP = 2  // m, unless they'd be closer than this, as rounding would then turn them more
+
+type Meters = [number, number]
+
+/** Meters east and north of a point and back, flat-earth, fine at city scale */
+const metersFrom = (origin: Coordinates) => {
+  const x = 111_320 * Math.cos(origin[1] * Math.PI / 180)
+  return {
+    to: ([lon, lat]: Coordinates): Meters => [(lon - origin[0]) * x, (lat - origin[1]) * 110_540],
+    from: ([east, north]: Meters): Coordinates => [origin[0] + east / x, origin[1] + north / 110_540]
+  }
+}
+
+/** Ramer–Douglas–Peucker: the fewest points that stay within a tolerance of the line through all of them */
+const simplify = (points: Meters[], tolerance: number): Meters[] => {
+  const keep = new Set([0, points.length - 1])
+  const split = (first: number, last: number) => {
+    const [a, b] = [points[first], points[last]]
+    const [dx, dy] = [b[0] - a[0], b[1] - a[1]]
+    const length = Math.hypot(dx, dy)
+    let [farthest, distance] = [-1, tolerance]
+    for (let i = first + 1; i < last; i++) {
+      const [px, py] = [points[i][0] - a[0], points[i][1] - a[1]]
+      const d = length ? Math.abs(px * dy - py * dx) / length : Math.hypot(px, py)
+      if (d > distance)
+        [farthest, distance] = [i, d]
+    }
+    if (farthest === -1)
+      return
+    keep.add(farthest)
+    split(first, farthest)
+    split(farthest, last)
+  }
+  split(0, points.length - 1)
+  return points.filter((_, i) => keep.has(i))
+}
+
+/** The point at a time between two points reached at two other times */
+const lerp = (p: Meters, q: Meters, from: number, to: number, at: number): Meters =>
+  [p[0] + (q[0] - p[0]) * (at - from) / (to - from), p[1] + (q[1] - p[1]) * (at - from) / (to - from)]
+
+/**
+ * The point a fraction of the way from b to c along a centripetal Catmull–Rom curve through a, b, c, and d,
+ * which passes through every point without overshooting tight turns or looping (Barry and Goldman's form)
+ */
+const catmullRom = (a: Meters, b: Meters, c: Meters, d: Meters, fraction: number) => {
+  // Each point is reached after the square root of the distance from the last, never no time at all
+  const knot = (from: number, p: Meters, q: Meters) => from + Math.max(1e-6, Math.hypot(q[0] - p[0], q[1] - p[1]) ** 0.5)
+  const t1 = knot(0, a, b)
+  const t2 = knot(t1, b, c)
+  const t3 = knot(t2, c, d)
+  const t = t1 + (t2 - t1) * fraction
+  const [ab, bc, cd] = [lerp(a, b, 0, t1, t), lerp(b, c, t1, t2, t), lerp(c, d, t2, t3, t)]
+  return lerp(lerp(ab, bc, 0, t2, t), lerp(bc, cd, t1, t3, t), t1, t2, t)
+}
+
+/** A shape with its GPS wobble dropped and a smooth curve through it, with a point every few degrees of turning */
+export const smoothShape = (shape: Coordinates[]) => {
+  const meters = metersFrom(shape[0])
+  const points = simplify(shape.map(meters.to), WOBBLE)
+  // Each end carries on straight, so the curve doesn't bend toward nothing
+  const at = (i: number): Meters =>
+    i < 0 ? [2 * points[0][0] - points[1][0], 2 * points[0][1] - points[1][1]] :
+    i >= points.length ? [2 * points.at(-1)![0] - points.at(-2)![0], 2 * points.at(-1)![1] - points.at(-2)![1]] :
+    points[i]
+  const heading = (p: Meters, q: Meters) => Math.atan2(q[0] - p[0], q[1] - p[1]) * 180 / Math.PI
+
+  const smooth: Meters[] = [points[0]]
+  for (let i = 0; i + 1 < points.length; i++) {
+    const curve = (fraction: number) => catmullRom(at(i - 1), at(i), at(i + 1), at(i + 2), fraction)
+    const direction = (fraction: number) =>
+      heading(curve(Math.min(fraction, 1 - 1e-3)), curve(Math.min(fraction, 1 - 1e-3) + 1e-3))
+    // Halved wherever a straight line between its ends would leave the curve's own direction by more than half a
+    // step at either end, until the halves are short
+    const draw = (from: number, start: Meters, to: number, end: Meters) => {
+      const chord = heading(start, end)
+      const isBent = Math.max(angleBetween(chord, direction(from)), angleBetween(chord, direction(to))) > TURN_STEP / 2
+      if (isBent && Math.hypot(end[0] - start[0], end[1] - start[1]) > 2 * MIN_STEP) {
+        const middle = (from + to) / 2
+        const point = curve(middle)
+        draw(from, start, middle, point)
+        draw(middle, point, to, end)
+      }
+      else
+        smooth.push(end)
+    }
+    draw(0, points[i], 1, points[i + 1])
+  }
+  return smooth.map(meters.from)
+}
 
 const DAY_COLUMNS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
@@ -156,9 +253,11 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
 
   const shapes: Record<string, [number, number][]> = {}
   for (const [id, points] of groupBy(table("shapes.txt"), point => point.shape_id))
-    shapes[id] = points
-      .sort((a, b) => +a.shape_pt_sequence - +b.shape_pt_sequence)
-      .map(point => [round(+point.shape_pt_lon), round(+point.shape_pt_lat)])
+    shapes[id] = smoothShape(
+      points
+        .sort((a, b) => +a.shape_pt_sequence - +b.shape_pt_sequence)
+        .map((point): Coordinates => [+point.shape_pt_lon, +point.shape_pt_lat])
+    ).map(([lon, lat]) => [round(lon, 6), round(lat, 6)])
 
   return {
     version: feedInfo?.feed_version ?? "",

@@ -6,7 +6,7 @@ import { watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, IControl, Map as MapLibre } from "maplibre-gl"
 import { MIN_SPEED, reckon, type Fix } from "./fixes.mts"
 import { location, locationProblem, currentLocation } from "./location.mts"
-import { coveredPadding, type Coordinates } from "./geometry.mts"
+import { coveredPadding, metersPerPixel, type Coordinates } from "./geometry.mts"
 
 const BLEND_MS    = 1000   // to ease from where the dot was drawn to where a new fix puts it
 const FRAME_MS    = 50     // ~20 fps, unless the map is following, which moves with every frame
@@ -15,9 +15,6 @@ const FOLLOW_ZOOM = 16
 
 // The page's accent, light, which reads on the map either way
 const COLOR = "#1a469d"
-
-// Meters per pixel at zoom 0 at the equator, for 512 px tiles
-const METERS_PER_PIXEL = 40_075_016.686 / 512
 
 const headingIcon = () => {
   const size = 48
@@ -71,11 +68,10 @@ export const showYou = (
   })
 
   let isFollowing = false
-  // Dragging, zooming, or rotating the map by hand lets go of following
-  map.on("movestart", event => {
-    if (event.originalEvent)
-      setFollowing(false)
-  })
+  // Touching the map lets go of following straight away, as following moves the map every frame, which would
+  // otherwise cancel a drag before maplibre counted it as one
+  for (const type of ["pointerdown", "wheel", "keydown"])
+    map.getCanvasContainer().addEventListener(type, () => setFollowing(false), { capture: true, passive: true })
 
   /** Where you are right now, as the bus if you're on one */
   const here = (now: number) => {
@@ -107,7 +103,7 @@ export const showYou = (
     const features: GeoJSON.Feature[] = !fix || !point || isOnBus ? [] : [{
       type: "Feature",
       properties: {
-        radius: fix.accuracy / (METERS_PER_PIXEL * Math.cos(fix.lat * Math.PI / 180)),
+        radius: fix.accuracy / metersPerPixel(fix.lat, 0),
         opacity: Date.now() - fix.at > STALE_MS ? 0.4 : 1,
         ...fix.heading !== undefined && (fix.speed ?? 0) >= MIN_SPEED ? { heading: fix.heading } : {}
       },

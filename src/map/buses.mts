@@ -6,7 +6,7 @@ import { watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, Map as MapLibre } from "maplibre-gl"
 import { routeLabel, type Feed } from "./feed.mts"
 import { STALE_VEHICLE_SECONDS, type Vehicle } from "./umo.mts"
-import { pointAt, snapToLines, toLine, type Coordinates, type Line } from "./geometry.mts"
+import { pointAt, routeLines, snapToLines, type Coordinates } from "./geometry.mts"
 import { createPace, expectedDistance, observe, type Trace } from "./pace.mts"
 
 const MAX_EXTRAPOLATION = 45 // s of driving guessed past a fix
@@ -74,20 +74,7 @@ export const animateBuses = (
   /** Buses to draw larger, with the rest faded, or routes whose buses are the ones to show */
   focus: Reactive<{ vehicles?: ReadonlySet<string>, route?: string }>
 ) => {
-  const linesByRoute = new Map(feed.routes.map(route => {
-    const trips = feed.trips.filter(trip => trip.route === route.id)
-    return [
-      route.id,
-      [...new Set(trips.map(trip => trip.shape))].map(shape =>
-        toLine(
-          feed.shapes[shape],
-          trips
-            .filter(trip => trip.shape === shape)
-            .map(trip => trip.stops.map(stop => feed.stops[stop]))
-        )
-      )
-    ] as [string, Line[]]
-  }))
+  const linesByRoute = routeLines(feed)
 
   let fixes = new Map<string, Fix>()
   const positions = new Map<string, Coordinates>()

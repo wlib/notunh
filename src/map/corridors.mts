@@ -1,7 +1,7 @@
 // Routes sharing a street drawn side by side like a transit diagram, rather than on top of each other,
 // one lane per route whichever way it goes
 
-import { angleBetween, bearing, segmentMeters, type Coordinates } from "./geometry.mts"
+import { alongSegment, angleBetween, bearing, segmentMeters, type Coordinates } from "./geometry.mts"
 
 const STEP = 12     // m between points once resampled, the resolution lanes change at
 const NEAR = 18     // m, lines this close along the same street share it
@@ -59,8 +59,7 @@ type Segment = {
 
 const distanceToSegment = ([px, py]: [number, number], { a: [ax, ay], b: [bx, by] }: Segment) => {
   const [dx, dy] = [bx - ax, by - ay]
-  const lengthSquared = dx * dx + dy * dy
-  const t = lengthSquared ? Math.min(1, Math.max(0, ((px - ax) * dx + (py - ay) * dy) / lengthSquared)) : 0
+  const t = alongSegment(px - ax, py - ay, dx, dy)
   return Math.hypot(ax + t * dx - px, ay + t * dy - py)
 }
 

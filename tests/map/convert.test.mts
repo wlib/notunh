@@ -2,7 +2,7 @@ import { test, expect } from "vitest"
 import fc from "fast-check"
 import { ColorSpace, contrastWCAG21, parse, sRGB } from "colorjs.io/fn"
 import { interpolateTimes, parseTable, readableText, smoothShape } from "../../scripts/map/convert.mts"
-import type { Coordinates } from "../../src/map/geometry.mts"
+import { alongSegment, type Coordinates } from "../../src/map/geometry.mts"
 
 ColorSpace.register(sRGB)
 
@@ -65,32 +65,38 @@ test("readableText keeps a readable GTFS color, otherwise picks whichever of bla
   }))
 )
 
+/** Meters east and north of one point from another, flat-earth around Durham */
+const offset = ([lon, lat]: Coordinates, [x, y]: Coordinates) => [(x - lon) * 81_150, (y - lat) * 110_540]
+
+const metersApart = (a: Coordinates, b: Coordinates) => Math.hypot(...offset(a, b))
+
 /** Meters from a point to the nearest point of a polyline */
-const offLine = ([lon, lat]: Coordinates, line: Coordinates[]) => {
-  const meters = ([x, y]: Coordinates) => [(x - lon) * 81_150, (y - lat) * 110_540]
+const offLine = (point: Coordinates, line: Coordinates[]) => {
   let nearest = Infinity
   for (let i = 0; i + 1 < line.length; i++) {
-    const [[ax, ay], [bx, by]] = [meters(line[i]), meters(line[i + 1])]
+    const [[ax, ay], [bx, by]] = [offset(point, line[i]), offset(point, line[i + 1])]
     const [dx, dy] = [bx - ax, by - ay]
-    const t = dx || dy ? Math.min(1, Math.max(0, -(ax * dx + ay * dy) / (dx * dx + dy * dy))) : 0
+    const t = alongSegment(-ax, -ay, dx, dy)
     nearest = Math.min(nearest, Math.hypot(ax + t * dx, ay + t * dy))
   }
   return nearest
 }
 
+/** A point some meters from another along a heading in radians */
+const stepFrom = ([lon, lat]: Coordinates, radians: number, meters: number): Coordinates =>
+  [lon + Math.sin(radians) * meters / 81_150, lat + Math.cos(radians) * meters / 110_540]
+
 // A street wandering about Durham: steps of 5 to 60 m, in any direction, with GPS wobble
 const shapes = fc
   .array(fc.tuple(fc.double({ min: 5, max: 60, noNaN: true }), fc.double({ min: 0, max: 2 * Math.PI, noNaN: true })), { minLength: 1, maxLength: 30 })
-  .map(steps => steps.reduce<Coordinates[]>((points, [meters, angle]) => {
-    const [lon, lat] = points.at(-1)!
-    return [...points, [lon + Math.sin(angle) * meters / 81_150, lat + Math.cos(angle) * meters / 110_540]]
-  }, [[-70.93, 43.135]]))
+  .map(steps => steps.reduce<Coordinates[]>((points, [meters, angle]) => [...points, stepFrom(points.at(-1)!, angle, meters)], [[-70.93, 43.135]]))
 
 test("smoothShape keeps the ends and stays on the street, within a few meters of the shape either way", () => {
   fc.assert(fc.property(shapes, shape => {
     const smooth = smoothShape(shape)
     expect(smooth[0]).toEqual(shape[0])
     expect(smooth.at(-1)).toEqual(shape.at(-1))
+    smooth.slice(1).forEach((point, i) => expect(metersApart(point, smooth[i])).toBeGreaterThan(0))
     // Dropped wobbles and cut corners, at most a few meters each
     for (const point of smooth)
       expect(offLine(point, shape)).toBeLessThan(9)
@@ -98,3 +104,24 @@ test("smoothShape keeps the ends and stays on the street, within a few meters of
       expect(offLine(point, smooth)).toBeLessThan(9)
   }))
 })
+
+test("smoothShape keeps straight streets straight, rounding off only their corner", () =>
+  fc.assert(fc.property(
+    fc.double({ min: 0, max: 360, noNaN: true }),
+    fc.double({ min: 20, max: 160, noNaN: true }),
+    fc.array(fc.double({ min: 5, max: 150, noNaN: true }), { minLength: 1, maxLength: 6 }),
+    fc.array(fc.double({ min: 5, max: 150, noNaN: true }), { minLength: 1, maxLength: 6 }),
+    (heading, turn, before, after) => {
+      // Two straight streets meeting at a corner, with their points however far apart
+      const walk = (from: Coordinates, degrees: number, steps: number[]) =>
+        steps.reduce<Coordinates[]>((points, meters) => [...points, stepFrom(points.at(-1)!, degrees * Math.PI / 180, meters)], [from])
+      const first = walk([-70.93, 43.135], heading, before)
+      const corner = first.at(-1)!
+      const shape = [...first, ...walk(corner, heading + turn, after).slice(1)]
+      // Off by no more than a dropped wobble, as a slight enough corner is one, give or take this test's flatter earth
+      for (const point of smoothShape(shape))
+        if (metersApart(point, corner) > 15)
+          expect(offLine(point, shape)).toBeLessThan(4.1)
+    }
+  ))
+)

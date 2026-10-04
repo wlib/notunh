@@ -13,24 +13,31 @@ const FAR = 200  // m
 // Meters per degree around a latitude, flat-earth, fine at city scale
 const scale = (lat: number) => ({ x: 111_320 * Math.cos(lat * Math.PI / 180), y: 110_540 })
 
-const squaredMeters = ([lon, lat]: Coordinates, point: { lat: number, lon: number }) => {
-  const { x, y } = scale(lat)
-  return ((lon - point.lon) * x) ** 2 + ((lat - point.lat) * y) ** 2
-}
+/** How far along a segment (dx, dy) the point nearest an offset (px, py) from its start is, as a fraction of it */
+export const alongSegment = (px: number, py: number, dx: number, dy: number) =>
+  dx || dy ? Math.min(1, Math.max(0, (px * dx + py * dy) / (dx * dx + dy * dy))) : 0
 
 /**
- * Each stop's vertex along a shape, in order: the closest point of the first close approach
- * after the previous stop's, so loops passing a stop twice stay in order
+ * Each stop's place along a shape as a fractional vertex index, in order: the vertex before it plus how far along
+ * the next segment it lies, at the closest point of the first close approach after the previous stop's, so loops
+ * passing a stop twice stay in order. Measured to segments, as vertices can be far apart along a straight street
  */
 export const indicesAlongShape = (shape: Coordinates[], stops: { lat: number, lon: number }[]) => {
   let index = 0
   return stops.map(stop => {
+    const { x, y } = scale(stop.lat)
     let best = index
     let bestDistance = Infinity
-    for (let i = index; i < shape.length; i++) {
-      const d = squaredMeters(shape[i], stop)
+    for (let i = Math.floor(index); i < shape.length - 1; i++) {
+      // In meters from the segment's start
+      const [a, b] = [shape[i], shape[i + 1]]
+      const [dx, dy] = [(b[0] - a[0]) * x, (b[1] - a[1]) * y]
+      const [px, py] = [(stop.lon - a[0]) * x, (stop.lat - a[1]) * y]
+      // Never before the previous stop, which may be partway along this same segment
+      const t = Math.max(index - i, alongSegment(px, py, dx, dy))
+      const d = (px - t * dx) ** 2 + (py - t * dy) ** 2
       if (d < bestDistance) {
-        best = i
+        best = i + t
         bestDistance = d
       }
       else if (bestDistance <= CLOSE ** 2 && d > FAR ** 2)
@@ -57,7 +64,9 @@ export const ridePath = (feed: Feed, leg: RideLeg): Coordinates[] => {
     indices = indicesAlongShape(shape, trip.stops.map(stop => feed.stops[stop]))
     shapeIndices.set(trip, indices)
   }
-  return [first, ...shape.slice(indices[leg.fromPosition], indices[leg.toPosition] + 1), last]
+  // The vertices between the two stops, which lie partway along the segments they're on
+  const [from, to] = [indices[leg.fromPosition], indices[leg.toPosition]]
+  return [first, ...shape.slice(Math.floor(from) + 1, Math.floor(to) + 1), last]
 }
 
 export const segmentMeters = (a: Coordinates, b: Coordinates) => {
@@ -99,7 +108,9 @@ export const toLine = (coordinates: Coordinates[], trips: { id: string, lat: num
     stops: [
       ...new Map(trips.flatMap(stops =>
         indicesAlongShape(coordinates, stops).map((index, i) => {
-          const stop = { id: stops[i].id, distance: distances[index] }
+          const vertex = Math.floor(index)
+          const next = distances[vertex + 1] ?? distances[vertex]
+          const stop = { id: stops[i].id, distance: distances[vertex] + (index - vertex) * (next - distances[vertex]) }
           return [`${stop.id}@${stop.distance}`, stop] as const
         })
       )).values()
@@ -177,8 +188,7 @@ export const snapToLines = (lines: Line[], point: { lat: number, lon: number }, 
       const ay = (a[1] - point.lat) * y
       const dx = (b[0] - a[0]) * x
       const dy = (b[1] - a[1]) * y
-      const length = Math.hypot(dx, dy)
-      const t = length ? Math.min(1, Math.max(0, -(ax * dx + ay * dy) / length ** 2)) : 0
+      const t = alongSegment(-ax, -ay, dx, dy)
       const meters = Math.hypot(ax + t * dx, ay + t * dy)
       if (meters > MAX_SNAP)
         continue

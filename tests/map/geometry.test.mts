@@ -27,8 +27,28 @@ test("stops on a loop map to their own vertices, in order, even where the loop r
     const shape = loop(200)
     const expected = endsAtStart ? [...indices, 200] : indices
     const stops = expected.map(i => ({ lon: shape[i][0], lat: shape[i][1] }))
-    expect(indicesAlongShape(shape, stops)).toEqual(expected)
+    indicesAlongShape(shape, stops).forEach((index, i) => expect(index).toBeCloseTo(expected[i], 6))
   }))
+)
+
+test("stops between far-apart vertices find their place along a street, and on the way back along another", () =>
+  fc.assert(fc.property(
+    fc.array(fc.double({ min: 0.05, max: 0.95, noNaN: true }), { minLength: 1, maxLength: 6 }),
+    fc.array(fc.double({ min: 0.05, max: 0.95, noNaN: true }), { minLength: 1, maxLength: 6 }),
+    (out, back) => {
+      // A kilometer out along one street and back along another 150 m over, with vertices only at the ends
+      const [x, y] = [1 / 81_150, 1 / 110_540]
+      const shape: Coordinates[] = [[0, 0], [0, 1000], [150, 1000], [150, 0]].map(([e, n]) => [CENTER.lon + e * x, CENTER.lat + n * y])
+      const ahead = [...out].sort((a, b) => a - b)
+      const behind = [...back].sort((a, b) => a - b)
+      const stops = [
+        ...ahead.map(t => ({ lon: CENTER.lon, lat: CENTER.lat + t * 1000 * y })),
+        ...behind.map(t => ({ lon: CENTER.lon + 150 * x, lat: CENTER.lat + (1 - t) * 1000 * y }))
+      ]
+      const expected = [...ahead, ...behind.map(t => 2 + t)]
+      indicesAlongShape(shape, stops).forEach((index, i) => expect(index).toBeCloseTo(expected[i], 3))
+    }
+  ))
 )
 
 test("indices along a shape never go backward", () =>
@@ -41,7 +61,7 @@ test("indices along a shape never go backward", () =>
       for (let i = 1; i < indices.length; i++)
         expect(indices[i]).toBeGreaterThanOrEqual(indices[i - 1])
       for (const index of indices)
-        expect(index).toBeLessThan(shape.length)
+        expect(index).toBeLessThanOrEqual(shape.length - 1)
     }
   ))
 )

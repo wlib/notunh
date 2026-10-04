@@ -2,7 +2,7 @@
 
 import { parse as parseCsv } from "csv-parse/sync"
 import { ColorSpace, contrastWCAG21, parse, sRGB } from "colorjs.io/fn"
-import { angleBetween, type Coordinates } from "../../src/map/geometry.mts"
+import { alongSegment, angleBetween, type Coordinates } from "../../src/map/geometry.mts"
 import { distance, type FeedData, type Route, type Service, type Stop, type Trip } from "../../src/map/feed.mts"
 
 ColorSpace.register(sRGB)
@@ -69,12 +69,23 @@ export const readableText = (color: string, text: string) => {
 const round = (x: number, digits = 5) => Math.round(x * 10 ** digits) / 10 ** digits
 
 // Shapes are traced from GPS, wobbling a meter or two either way every 10 m or so, which draws as a jagged line
-// and turns buses at every wobble. Wobbles within this are dropped, then a smooth curve is drawn through what's left
+// and turns buses at every wobble. Wobbles within this are dropped, then each corner left is rounded off over up to
+// CORNER either side of it, so a straight street stays straight however far apart its points are
 const WOBBLE = 4    // m
-const TURN_STEP = 6 // degrees the curve turns between the points drawn along it
+const CORNER = 15   // m, about a bus's turning radius
+const TURN_STEP = 6 // degrees a rounded corner turns between the points drawn along it
 const MIN_STEP = 2  // m, unless they'd be closer than this, as rounding would then turn them more
 
 type Meters = [number, number]
+
+const length = (p: Meters, q: Meters) => Math.hypot(q[0] - p[0], q[1] - p[1])
+const heading = (p: Meters, q: Meters) => Math.atan2(q[0] - p[0], q[1] - p[1]) * 180 / Math.PI
+
+/** The point some meters from p toward q */
+const toward = (p: Meters, q: Meters, meters: number): Meters => {
+  const t = meters / length(p, q)
+  return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]
+}
 
 /** Meters east and north of a point and back, flat-earth, fine at city scale */
 const metersFrom = (origin: Coordinates) => {
@@ -91,13 +102,14 @@ const simplify = (points: Meters[], tolerance: number): Meters[] => {
   const split = (first: number, last: number) => {
     const [a, b] = [points[first], points[last]]
     const [dx, dy] = [b[0] - a[0], b[1] - a[1]]
-    const length = Math.hypot(dx, dy)
-    let [farthest, distance] = [-1, tolerance]
+    let [farthest, worst] = [-1, tolerance]
     for (let i = first + 1; i < last; i++) {
       const [px, py] = [points[i][0] - a[0], points[i][1] - a[1]]
-      const d = length ? Math.abs(px * dy - py * dx) / length : Math.hypot(px, py)
-      if (d > distance)
-        [farthest, distance] = [i, d]
+      // From the segment rather than the line through it, so a stretch that doubles back on itself is kept
+      const t = alongSegment(px, py, dx, dy)
+      const d = Math.hypot(px - t * dx, py - t * dy)
+      if (d > worst)
+        [farthest, worst] = [i, d]
     }
     if (farthest === -1)
       return
@@ -109,58 +121,33 @@ const simplify = (points: Meters[], tolerance: number): Meters[] => {
   return points.filter((_, i) => keep.has(i))
 }
 
-/** The point at a time between two points reached at two other times */
-const lerp = (p: Meters, q: Meters, from: number, to: number, at: number): Meters =>
-  [p[0] + (q[0] - p[0]) * (at - from) / (to - from), p[1] + (q[1] - p[1]) * (at - from) / (to - from)]
-
-/**
- * The point a fraction of the way from b to c along a centripetal Catmull–Rom curve through a, b, c, and d,
- * which passes through every point without overshooting tight turns or looping (Barry and Goldman's form)
- */
-const catmullRom = (a: Meters, b: Meters, c: Meters, d: Meters, fraction: number) => {
-  // Each point is reached after the square root of the distance from the last, never no time at all
-  const knot = (from: number, p: Meters, q: Meters) => from + Math.max(1e-6, Math.hypot(q[0] - p[0], q[1] - p[1]) ** 0.5)
-  const t1 = knot(0, a, b)
-  const t2 = knot(t1, b, c)
-  const t3 = knot(t2, c, d)
-  const t = t1 + (t2 - t1) * fraction
-  const [ab, bc, cd] = [lerp(a, b, 0, t1, t), lerp(b, c, t1, t2, t), lerp(c, d, t2, t3, t)]
-  return lerp(lerp(ab, bc, 0, t2, t), lerp(bc, cd, t1, t3, t), t1, t2, t)
-}
-
-/** A shape with its GPS wobble dropped and a smooth curve through it, with a point every few degrees of turning */
+/** A shape with its GPS wobble dropped and its corners rounded, with a point every few degrees of turning */
 export const smoothShape = (shape: Coordinates[]) => {
   const meters = metersFrom(shape[0])
   const points = simplify(shape.map(meters.to), WOBBLE)
-  // Each end carries on straight, so the curve doesn't bend toward nothing
-  const at = (i: number): Meters =>
-    i < 0 ? [2 * points[0][0] - points[1][0], 2 * points[0][1] - points[1][1]] :
-    i >= points.length ? [2 * points.at(-1)![0] - points.at(-2)![0], 2 * points.at(-1)![1] - points.at(-2)![1]] :
-    points[i]
-  const heading = (p: Meters, q: Meters) => Math.atan2(q[0] - p[0], q[1] - p[1]) * 180 / Math.PI
-
   const smooth: Meters[] = [points[0]]
-  for (let i = 0; i + 1 < points.length; i++) {
-    const curve = (fraction: number) => catmullRom(at(i - 1), at(i), at(i + 1), at(i + 2), fraction)
-    const direction = (fraction: number) =>
-      heading(curve(Math.min(fraction, 1 - 1e-3)), curve(Math.min(fraction, 1 - 1e-3) + 1e-3))
-    // Halved wherever a straight line between its ends would leave the curve's own direction by more than half a
-    // step at either end, until the halves are short
-    const draw = (from: number, start: Meters, to: number, end: Meters) => {
-      const chord = heading(start, end)
-      const isBent = Math.max(angleBetween(chord, direction(from)), angleBetween(chord, direction(to))) > TURN_STEP / 2
-      if (isBent && Math.hypot(end[0] - start[0], end[1] - start[1]) > 2 * MIN_STEP) {
-        const middle = (from + to) / 2
-        const point = curve(middle)
-        draw(from, start, middle, point)
-        draw(middle, point, to, end)
-      }
-      else
-        smooth.push(end)
+  for (let i = 1; i + 1 < points.length; i++) {
+    const [a, corner, b] = [points[i - 1], points[i], points[i + 1]]
+    // Up to halfway along each side, so neighboring corners meet at most, each curve leaving along the side
+    const cut = Math.min(CORNER, length(a, corner) / 2, length(corner, b) / 2)
+    const [start, end] = [toward(corner, a, cut), toward(corner, b, cut)]
+    const steps = Math.max(1, Math.min(
+      Math.ceil(angleBetween(heading(a, corner), heading(corner, b)) / TURN_STEP),
+      Math.floor(2 * cut / MIN_STEP)
+    ))
+    // A quadratic Bézier with the corner as its control point
+    for (let step = 0; step <= steps; step++) {
+      const t = step / steps
+      const [u, v, w] = [(1 - t) ** 2, 2 * (1 - t) * t, t ** 2]
+      smooth.push([u * start[0] + v * corner[0] + w * end[0], u * start[1] + v * corner[1] + w * end[1]])
     }
-    draw(0, points[i], 1, points[i + 1])
   }
-  return smooth.map(meters.from)
+  if (points.length > 1)
+    smooth.push(points.at(-1)!)
+  // Two corners cut to meet halfway along a short side both put a point there, and points much closer than a meter
+  // would round to one
+  const isEnd = (i: number) => i === 0 || i === smooth.length - 1
+  return smooth.filter((point, i) => isEnd(i) || length(point, smooth[i - 1]) > 0.5).map(meters.from)
 }
 
 const DAY_COLUMNS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]

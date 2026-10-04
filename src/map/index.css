@@ -4,6 +4,8 @@ html,
 body {
   height: 100%;
   overflow: hidden;
+  /* iOS bounces even a page that can't scroll, taking the map with it, when a drag has nothing else to scroll */
+  overscroll-behavior: none;
 }
 
 /* Layout: a bottom sheet over the map, until there's room to float the panel beside it */
@@ -94,6 +96,13 @@ body {
   translate: 0 var(--sheet-shift);
 }
 
+/* Dragging these moves the sheet rather than scrolling the panel: its header, and all of it when there's nothing
+   to scroll */
+.panel-header,
+.panel.fits {
+  touch-action: none;
+}
+
 /* Only a slide between detents animates, and only by translate, so no frame of it lays out or paints */
 .panel.moving,
 .panel.moving > :not(.grabber) {
@@ -177,7 +186,8 @@ body {
     display: none;
   }
 
-  .panel-header {
+  .panel-header,
+  .panel.fits {
     touch-action: auto;
   }
 
@@ -191,8 +201,6 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem 1rem;
-  /* Dragging it moves the sheet, rather than scrolling the panel */
-  touch-action: none;
 }
 
 .panel-header h1 {

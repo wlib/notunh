@@ -78,6 +78,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     shiftTo(0)
     panel.scrollTop = scroll
     set("--sheet-drop", lowered ? Math.max(0, box() - loweredExtent()) : 0)
+    panel.classList.toggle("fits", panel.scrollHeight <= panel.clientHeight)
   }
 
   /** Slides to the detent from wherever the sheet is now, mid-slide included, and rests once there */
@@ -128,9 +129,10 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   // Anything taking focus in the sheet, like a field, needs it up
   panel.addEventListener("focusin", raise)
 
-  // Dragged by the grabber or the header, apart from what's tappable in it, as a height between lowered and tall
+  // Dragged by the grabber or the header, or anywhere when there's nothing to scroll, as a height between lowered
+  // and tall. Tapping the grabber or the header toggles it, and tapping anything else is left to that
   let drag: {
-    y: number, from: number, extent: number, at: number, velocity: number,
+    y: number, from: number, extent: number, at: number, velocity: number, isHandle: boolean,
     box: number, scroll: number, scrolled: number, content: number, lowered: number, half: number, tall: number
   } | undefined
 
@@ -144,7 +146,11 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
 
   panel.addEventListener("pointerdown", event => {
     const target = event.target as Element
-    if (!isSheet() || !target.closest(".grabber, .panel-header") || target.closest("a, input, button:not(.grabber)"))
+    // Links and fields keep the pointer; so do buttons in the header, which is otherwise a handle
+    if (!isSheet() || target.closest("a, input"))
+      return
+    const isHandle = target.closest(".grabber, .panel-header") !== null && !target.closest("button:not(.grabber)")
+    if (!isHandle && !panel.classList.contains("fits"))
       return
     const { half, tall } = caps()
     const content = panel.scrollHeight
@@ -159,6 +165,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
       extent: from,
       at: event.timeStamp,
       velocity: 0,
+      isHandle,
       box: height,
       scroll: panel.scrollTop,
       scrolled,
@@ -168,12 +175,19 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
       tall: height
     }
     show(from)
-    panel.setPointerCapture(event.pointerId)
+    // Anything else is only held once it's a drag, as a click goes to whatever holds the pointer when it's let go
+    if (isHandle)
+      panel.setPointerCapture(event.pointerId)
   })
 
   panel.addEventListener("pointermove", event => {
     if (!drag)
       return
+    if (!panel.hasPointerCapture(event.pointerId)) {
+      if (Math.abs(event.clientY - drag.y) < SLOP)
+        return
+      panel.setPointerCapture(event.pointerId)
+    }
     const extent = show(drag.from - (event.clientY - drag.y))
     drag.velocity = (extent - drag.extent) / Math.max(1, event.timeStamp - drag.at)
     drag.extent = extent
@@ -183,18 +197,20 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   const release = (event: PointerEvent) => {
     if (!drag)
       return
-    const { from, extent, velocity, lowered, half, tall } = drag
+    const { from, extent, velocity, isHandle, lowered, half, tall } = drag
     drag = undefined
 
     const current = detent.peek()
     let next = current
-    if (event.type !== "pointercancel" && Math.abs(extent - from) < SLOP)
-      next = current === "lowered" ? "half" : "lowered"
-    else if (event.type !== "pointercancel") {
-      // The nearest height to where it's headed, with half winning when the content isn't long enough to be taller
-      const headed = extent + velocity * FLICK_MS
-      const heights: [Detent, number][] = [["half", half], ["lowered", lowered], ["tall", tall]]
-      next = heights.reduce((a, b) => Math.abs(b[1] - headed) < Math.abs(a[1] - headed) ? b : a)[0]
+    if (event.type !== "pointercancel") {
+      if (Math.abs(extent - from) >= SLOP) {
+        // The nearest height to where it's headed, with half winning when the content isn't long enough to be taller
+        const headed = extent + velocity * FLICK_MS
+        const heights: [Detent, number][] = [["half", half], ["lowered", lowered], ["tall", tall]]
+        next = heights.reduce((a, b) => Math.abs(b[1] - headed) < Math.abs(a[1] - headed) ? b : a)[0]
+      }
+      else if (isHandle)
+        next = current === "lowered" ? "half" : "lowered"
     }
     // A new detent slides there when it's watched, so only staying put needs the slide back
     if (next === current)

@@ -1,10 +1,11 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { distance, serviceDayStart, withIndexes, type Feed, type FeedData } from "../../src/map/feed.mts"
+import type { StopPredictions } from "../../src/map/umo.mts"
 import {
-  ALTERNATIVES, HORIZON, MAX_ACCESS_WALK, MAX_TRANSFER_WALK, MIN_TIME_SAVED, TRANSFER_BUFFER,
-  buildConnections, buildRuns, byArrival, cost, latestDeparture, plan, scan, timeAt, walkOnly, walkSeconds,
-  type Itinerary, type Place, type Run
+  ALTERNATIVES, HORIZON, LAYOVER, MAX_ACCESS_WALK, MAX_TRANSFER_WALK, MIN_TIME_SAVED, MIN_TRANSFER_GAIN,
+  buildConnections, buildRuns, cost, plan, rides, scan, slack, timeAt, uncertainty, walkAllowance, walkOnly,
+  walkSeconds, type Itinerary, type Place, type Run
 } from "../../src/map/plan.mts"
 
 // The planner properties are cheap and the interesting cases are rare, so look harder
@@ -32,7 +33,8 @@ const feed = fc
         fc.record({
           stops: fc.array(fc.nat(stops.length - 1), { minLength: 2, maxLength: 6 }),
           first: fc.integer({ min: 7 * 3600, max: 11 * 3600 }),
-          gaps:  fc.array(fc.nat({ max: 300 }), { minLength: 8, maxLength: 8 })
+          gaps:  fc.array(fc.nat({ max: 300 }), { minLength: 8, maxLength: 8 }),
+          timepoints: fc.uniqueArray(fc.nat(5), { maxLength: 3 })
         }),
         { minLength: 1, maxLength: 8 }
       )
@@ -55,7 +57,8 @@ const feed = fc
           headsign: "",
           shape: "",
           stops: trip.stops,
-          times: trip.stops.map((_, j) => j === 0 ? time : time += trip.gaps[j - 1])
+          times: trip.stops.map((_, j) => j === 0 ? time : time += trip.gaps[j - 1]),
+          timepoints: trip.timepoints.filter(position => position < trip.stops.length).sort((a, b) => a - b)
         }
       }),
       shapes: {}
@@ -81,8 +84,9 @@ const scenario = feed.chain(feed =>
   )
 )
 
-// The earliest arrival over every itinerary with at most two rides, by brute force
-const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: number) => {
+// The earliest arrival over every itinerary with at most two rides (or one), by brute force, leaving each boarding
+// the slack the planner needs: a walk's allowance, how unsure getting off the last bus is, and the bus's own
+const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: number, maxRides = 2) => {
   let best = Infinity
   const stops = feed.stops
 
@@ -101,7 +105,7 @@ const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: numb
       for (let i = 0; i < run.trip.stops.length; i++)
         for (let j = i + 1; j < run.trip.stops.length; j++)
           if (
-            timeAt(run, i) >= ready(run.trip.stops[i]) &&
+            timeAt(run, i) >= ready(run.trip.stops[i]) + slack(run, i, timeAt(run, i), start) &&
             timeAt(run, i) >= start &&
             timeAt(run, j - 1) <= start + HORIZON
           )
@@ -110,18 +114,21 @@ const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: numb
 
   const access = (stop: number) =>
     distance(from, stops[stop]) <= MAX_ACCESS_WALK
-      ? start + walkSeconds(distance(from, stops[stop]))
+      ? start + walkAllowance(distance(from, stops[stop]))
       : Infinity
 
   for (const first of rides(access)) {
     finish(first.alight, first.arrival)
+    if (maxRides < 2)
+      continue
 
+    const ready = first.arrival + uncertainty(first.arrival - start)
     const transfer = (stop: number) => {
       const meters = distance(stops[first.alight], stops[stop])
       return (
-        stop === first.alight              ? first.arrival + TRANSFER_BUFFER :
-        meters <= MAX_TRANSFER_WALK        ? first.arrival + walkSeconds(meters) + TRANSFER_BUFFER :
-                                             Infinity
+        stop === first.alight       ? ready :
+        meters <= MAX_TRANSFER_WALK ? ready + walkAllowance(meters) :
+                                      Infinity
       )
     }
     for (const second of rides(transfer))
@@ -137,7 +144,8 @@ const expectValid = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, s
 
   let at: Place = from
   let time = itinerary.start
-  let hasRidden = false
+  // The earliest the next bus can be counted on to be caught, with the slack it needs on top
+  let ready = itinerary.start
   let previousRun: Run | undefined
   for (const leg of itinerary.legs) {
     expect(leg.start).toBeGreaterThanOrEqual(time)
@@ -145,6 +153,7 @@ const expectValid = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, s
       expect(distance(at, leg.from)).toBe(0)
       expect(leg.meters).toBeCloseTo(distance(leg.from, leg.to), 3)
       expect(leg.end - leg.start).toBe(walkSeconds(leg.meters))
+      ready += walkAllowance(leg.meters)
       at = leg.to
     }
     else {
@@ -153,10 +162,10 @@ const expectValid = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, s
       expect(distance(at, feed.stops[run.trip.stops[fromPosition]])).toBe(0)
       expect(leg.start).toBe(timeAt(run, fromPosition))
       expect(leg.end).toBe(timeAt(run, toPosition))
-      if (hasRidden && run !== previousRun)
-        expect(leg.start).toBeGreaterThanOrEqual(time + TRANSFER_BUFFER)
-      hasRidden = true
+      if (run !== previousRun)
+        expect(leg.start).toBeGreaterThanOrEqual(ready + slack(run, fromPosition, leg.start, start) - 1e-6)
       previousRun = run
+      ready = leg.end + uncertainty(leg.end - start)
       at = feed.stops[run.trip.stops[toPosition]]
     }
     time = leg.end
@@ -170,10 +179,10 @@ const beatsWalking = (from: Place, to: Place, start: number, end: number) =>
 
 // When riding only ties walking somewhere along the way, scan rightly prefers walking there,
 // which is the walk-only option and not a bus itinerary, so these properties are about buses that help
-test("scan finds valid itineraries at least as early as any with two rides", () =>
+test("scan finds valid itineraries, with the slack every boarding needs, at least as early as any with two rides", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
-    const itinerary = scan(feed, runs, buildConnections(runs, start), from, to, start)
+    const itinerary = scan(feed, runs, buildConnections(runs, start), from, to, start, { now: start })
     const best = bruteForce(feed, runs, from, to, start)
 
     if (itinerary)
@@ -185,24 +194,13 @@ test("scan finds valid itineraries at least as early as any with two rides", () 
   }))
 )
 
-test("the reverse scan's latest departure still arrives in time", () =>
-  fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
-    const runs = buildRuns(feed, TODAY, [])
-    const connections = buildConnections(runs, start)
-    const itinerary = scan(feed, runs, connections, from, to, start)
-    fc.pre(itinerary !== undefined && beatsWalking(from, to, start, itinerary.end))
-
-    const leave = latestDeparture(feed, byArrival(connections), from, to, itinerary!.end)
-    expect(leave).toBeGreaterThanOrEqual(itinerary!.start)
-    expect(scan(feed, runs, connections, from, to, leave)!.end).toBeLessThanOrEqual(itinerary!.end + 1e-6)
-  }))
-)
-
 test("plan suggests valid, distinct buses that feel better than walking, best first", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
     const itineraries = plan(feed, runs, from, to, start)
     const walking = walkOnly(from, to, start)
+    const buses = (itinerary: Itinerary) =>
+      itinerary.legs.flatMap(leg => leg.kind === "ride" ? [leg.run] : [])
 
     expect(itineraries.length).toBeLessThanOrEqual(ALTERNATIVES)
     for (const itinerary of itineraries) {
@@ -211,13 +209,76 @@ test("plan suggests valid, distinct buses that feel better than walking, best fi
     }
     for (let i = 1; i < itineraries.length; i++)
       expect(cost(itineraries[i], start)).toBeGreaterThanOrEqual(cost(itineraries[i - 1], start))
-    // None leaves earlier without arriving sooner than another
     for (const a of itineraries)
       for (const b of itineraries)
         if (a !== b)
-          expect(a.start >= b.start && a.end <= b.end).toBe(a.start === b.start && a.end === b.end ? a === b : false)
+          expect(buses(a)).not.toEqual(buses(b))
   }))
 )
+
+test("plan only changes buses to arrive well before one bus or walking could", () =>
+  fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
+    const runs = buildRuns(feed, TODAY, [])
+    const simpler = Math.min(bruteForce(feed, runs, from, to, start, 1), walkOnly(from, to, start).end)
+    for (const itinerary of plan(feed, runs, from, to, start))
+      if (rides(itinerary) > 1)
+        expect(itinerary.end + MIN_TRANSFER_GAIN).toBeLessThanOrEqual(simpler + 1e-6)
+  }))
+)
+
+test("plan's best option feels no worse than catching a bus from a nearer stop", () =>
+  fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
+    const runs = buildRuns(feed, TODAY, [])
+    const connections = buildConnections(runs, start)
+    const [best] = plan(feed, runs, from, to, start)
+    const quickest = scan(feed, runs, connections, from, to, start, { now: start, direct: true })
+    fc.pre(best !== undefined && quickest !== undefined)
+
+    const meters = quickest!.legs[0].kind === "walk" ? quickest!.legs[0].meters : 0
+    const walking = cost(walkOnly(from, to, start), start)
+    feed.stops.forEach((stop, access) => {
+      if (distance(from, stop) >= meters)
+        return
+      const nearer = scan(feed, runs, connections, from, to, start, { now: start, direct: true, access })
+      if (nearer && cost(nearer, start) < walking - MIN_TIME_SAVED)
+        expect(cost(best, start)).toBeLessThanOrEqual(cost(nearer, start) + 1e-6)
+    })
+  }))
+)
+
+/** Umo predicting a trip's bus at one of its stops */
+const predict = (stop: { id: string, name: string }, tripId: string, at: number, isLive = true): StopPredictions => ({
+  serverTimestamp: 0,
+  route: { id: "R", title: "R", color: "000000", textColor: "FFFFFF" },
+  stop:  { id: stop.id, name: stop.name, code: stop.id },
+  values: [{
+    timestamp: at * 1000,
+    minutes: 0,
+    vehicleId: "V",
+    tripId,
+    isDeparture: !isLive,
+    affectedByLayover: !isLive,
+    direction: { id: "", name: "", destinationName: "" }
+  }]
+})
+
+/** A feed of trips along the same stops, at their own times and timepoints */
+const lineFeed = (trips: { times: number[], timepoints: number[] }[]) =>
+  withIndexes({
+    version: "test",
+    start: 20000101,
+    end: 20991231,
+    routes: [{ id: "R", name: "R", long: "Route", color: "#000000", text: "#FFFFFF" }],
+    stops: trips[0].times.map((_, i) => ({ ...CENTER, lat: CENTER.lat + i * 0.01, id: `${i}`, name: `Stop ${i}` })),
+    services: { daily: { days: 127, start: 20000101, end: 20991231, added: [], removed: [] } },
+    trips: trips.map(({ times, timepoints }, i) => ({
+      id: `T${i}`, route: "R", service: "daily", headsign: "", shape: "", stops: times.map((_, j) => j), times, timepoints
+    })),
+    shapes: {}
+  })
+
+const runOn = (runs: Run[], trip: string) =>
+  runs.find(run => run.trip.id === trip && run.base === BASE)!
 
 test("live delays shift a trip's times", () =>
   fc.assert(fc.property(feed, fc.integer({ min: -300, max: 900 }), (feed, delay) => {
@@ -226,20 +287,9 @@ test("live delays shift a trip's times", () =>
     fc.pre(trip.stops.indexOf(trip.stops.at(-1)!) === trip.stops.length - 1)
     const stop = feed.stops[trip.stops.at(-1)!]
     const scheduled = serviceDayStart(TODAY) / 1000 + trip.times.at(-1)!
-    const runs = buildRuns(feed, TODAY, [{
-      serverTimestamp: 0,
-      route: { id: "R", title: "R", color: "000000", textColor: "FFFFFF" },
-      stop:  { id: stop.id, name: stop.name, code: stop.id },
-      values: [{
-        timestamp: (scheduled + delay) * 1000,
-        minutes: 0,
-        vehicleId: "V",
-        tripId: trip.id,
-        isDeparture: false,
-        affectedByLayover: false,
-        direction: { id: "", name: "", destinationName: "" }
-      }]
-    }])
+    // An early bus would hold at a timepoint on the way, and be on time from there on
+    fc.pre(delay >= 0 || trip.timepoints.length === 0)
+    const runs = buildRuns(feed, TODAY, [predict(stop, trip.id, scheduled + delay)])
     const run = runs.find(run => run.trip === trip && run.base === serviceDayStart(TODAY) / 1000)!
     expect(run.isLive).toBe(true)
     expect(timeAt(run, trip.stops.length - 1)).toBe(scheduled + delay)
@@ -251,20 +301,7 @@ test("trips Umo skips over while predicting their route aren't coming", () =>
     const trip = feed.trips[pick % feed.trips.length]
     const stop = feed.stops[trip.stops[0]]
     const predicted = BASE + trip.times[0]
-    const runs = buildRuns(feed, TODAY, [{
-      serverTimestamp: 0,
-      route: { id: "R", title: "R", color: "000000", textColor: "FFFFFF" },
-      stop:  { id: stop.id, name: stop.name, code: stop.id },
-      values: [{
-        timestamp: predicted * 1000,
-        minutes: 0,
-        vehicleId: "V",
-        tripId: trip.id,
-        isDeparture: true,
-        affectedByLayover: true,
-        direction: { id: "", name: "", destinationName: "" }
-      }]
-    }])
+    const runs = buildRuns(feed, TODAY, [predict(stop, trip.id, predicted, false)])
 
     for (const other of feed.trips)
       for (const base of [BASE - 86400, BASE, BASE + 86400]) {
@@ -272,5 +309,33 @@ test("trips Umo skips over while predicting their route aren't coming", () =>
         const isPredicted = other === trip && base === BASE
         expect(isKept).toBe(isPredicted || base + other.times[0] > predicted)
       }
+  }))
+)
+
+test("an early bus waits at a timepoint for its scheduled time, and a late one goes straight on", () =>
+  fc.assert(fc.property(fc.integer({ min: 1, max: 4 }), fc.integer({ min: -600, max: 600 }), (timepoint, delay) => {
+    const times = [8, 9, 10, 11, 12, 13].map(hour => hour * 3600)
+    const feed = lineFeed([{ times, timepoints: [timepoint] }])
+    const run = runOn(buildRuns(feed, TODAY, [predict(feed.stops[0], "T0", BASE + times[0] + delay)]), "T0")
+    times.forEach((_, position) => {
+      const isHeld = delay < 0 && position >= timepoint
+      expect(run.delays[position]).toBe(isHeld ? 0 : delay)
+      expect(run.holds[position]).toBe(isHeld && position === timepoint ? -delay : 0)
+    })
+  }))
+)
+
+test("a connector's next loop starts a layover after its bus gets in, unless it waits for its scheduled start", () =>
+  fc.assert(fc.property(fc.integer({ min: 0, max: 1800 }), fc.boolean(), (gap, waits) => {
+    // The bus is on T0, which ends at 9:00, and Umo has its next loop, T1, starting on schedule
+    const feed = lineFeed([
+      { times: [8 * 3600, 9 * 3600], timepoints: [] },
+      { times: [9 * 3600 + LAYOVER + gap, 10 * 3600 + LAYOVER + gap], timepoints: waits ? [0] : [] }
+    ])
+    const runs = buildRuns(feed, TODAY, [
+      predict(feed.stops[1], "T0", BASE + 9 * 3600),
+      predict(feed.stops[0], "T1", BASE + 9 * 3600 + LAYOVER + gap, false)
+    ])
+    expect(timeAt(runOn(runs, "T1"), 0)).toBe(BASE + 9 * 3600 + LAYOVER + (waits ? gap : 0))
   }))
 )

@@ -3,7 +3,7 @@
 // The ways to get there by bus, and walking the whole way
 
 import { r } from "bruh/reactive"
-import { type Itinerary, type Leg, itineraryKey } from "../plan.mts"
+import { type Itinerary, type Leg, type RideLeg, itineraryKey, slack } from "../plan.mts"
 import { now, selected, itineraries, itinerary, walk } from "../state.mts"
 import { ClockRange, Distance, Minutes, Plural } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
@@ -29,6 +29,20 @@ const Delay = ({ seconds }: { seconds: number }) => {
     late < 0 ? <><Minutes value={-late} /> early</> :
                "on time"
   )
+}
+
+/**
+ * How sure a boarding is: a bus waiting for its scheduled time, when to be at the stop for the first one, or how
+ * long there is to change buses
+ */
+const Boarding = ({ itinerary, leg }: { itinerary: Itinerary, leg: RideLeg }) => {
+  const { run, fromPosition, start } = leg
+  if (run.holds[fromPosition] >= 60)
+    return <>Waits here until <Time seconds={start} /></>
+  const previous = itinerary.legs.slice(0, itinerary.legs.indexOf(leg)).findLast(leg => leg.kind === "ride")
+  return previous
+    ? <><Minutes value={minutes(start - previous.end)} /> to change</>
+    : <>Be there by <Time seconds={start - slack(run, fromPosition, start, now.peek())} /></>
 }
 
 const Steps = ({ itinerary }: { itinerary: Itinerary }) =>
@@ -58,6 +72,7 @@ const Steps = ({ itinerary }: { itinerary: Itinerary }) =>
               {run.isLive
                 ? <span class="live">Live, <Delay seconds={run.delays[fromPosition]} /></span>
                 : "Scheduled"}
+              {" · "}<Boarding itinerary={itinerary} leg={leg} />
             </div>
             <div>
               <strong><Time seconds={leg.end} /></strong> Get off at <StopLink stop={run.trip.stops[toPosition]} />

@@ -38,7 +38,9 @@ export type Trip = {
   /** Indices into FeedData.stops */
   stops:    number[],
   /** Seconds since the start of the service day, aligned with stops */
-  times:    number[]
+  times:    number[],
+  /** Positions in stops where the bus waits for its scheduled time before going on, which the connectors don't */
+  timepoints: number[]
 }
 
 /** The JSON written at build time */

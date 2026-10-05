@@ -234,7 +234,8 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
       times:    interpolateTimes(
         stopTimes.map(stopTime => parseTime(stopTime.departure_time || stopTime.arrival_time)),
         along
-      )
+      ),
+      timepoints: stopTimes.flatMap((stopTime, i) => stopTime.timepoint === "1" ? [i] : [])
     }
   })
 

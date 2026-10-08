@@ -15,8 +15,12 @@
     "test": "vitest run",
     "model": "node scripts/map/model.mts",
     "db:generate": "drizzle-kit generate --config drizzle.config.mts",
-    "worker": "node scripts/laundry/rooms.mts --if-missing && wrangler d1 migrations apply notunh --local && wrangler dev --test-scheduled",
-    "deploy": "npm run data && npm run build && wrangler d1 migrations apply notunh --remote && wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply notunh --remote",
+    "db:migrate:local": "wrangler d1 migrations apply notunh --local",
+    "worker": "node scripts/laundry/rooms.mts --if-missing && npm run db:migrate:local && wrangler dev --test-scheduled",
+    "predeploy": "npm run db:migrate",
+    "deploy": "wrangler deploy",
+    "deploy:fresh": "npm run data && npm run build && npm run deploy",
     "places:refresh": "node scripts/map/places.mts --refresh"
   },
   "dependencies": {

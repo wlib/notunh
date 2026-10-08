@@ -71,7 +71,9 @@ npm run worker     # the Worker on http://localhost:8787 with a local D1, crons 
                    # curl "localhost:8787/cdn-cgi/handler/scheduled?cron=*+*+*+*+*"
 npm run model -- --local  # fit the bus model from it, with BUILD_TOKEN set here and in .dev.vars
 npm run db:generate       # a migration in worker/migrations for changes to worker/schema.mts
-npm run deploy     # fresh data, build, migrations, then wrangler deploy
+npm run db:migrate # apply production D1 migrations
+npm run deploy     # migrations, then deploy the existing build
+npm run deploy:fresh # fresh data, build, then deploy with migrations
 ```
 
 ## Deploying
@@ -79,7 +81,7 @@ npm run deploy     # fresh data, build, migrations, then wrangler deploy
 Cloudflare Workers Builds builds and deploys the `notunh` Worker from this repo's `main` (Cloudflare dashboard, Worker → Settings → Build), on every push:
 
 - Build command: `npm run build`, which in a fresh clone downloads the day's data, then typechecks and tests before building
-- Deploy command: `npx wrangler d1 migrations apply notunh --remote && npx wrangler deploy`
+- Deploy command: `npm run deploy`. Its `predeploy` script applies D1 migrations first; a migration failure stops deployment. Keep migration and deployment steps in `package.json`, so future changes don't require editing the dashboard command.
 
 If upstream is down the build fails and the last deploy stays up. Cloudflare preview builds remain enabled. **Check** (GitHub Actions) also typechecks, tests, and builds each pull request without secrets.
 

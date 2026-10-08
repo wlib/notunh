@@ -63,8 +63,8 @@ const Machines = ({ id }: { id: string }) =>
         })}
         <footer class="muted">
           {room.isStale
-            ? <>The machines couldn't be reached just now; this is what they last said, at {at}.</>
-            : <>The machines report their own timers, as of {at}; a ~ marks our estimate.</>
+            ? <>Unable to refresh machine status. Showing the last update from {at}.</>
+            : <>Machine status updated at {at}. Times marked ~ are estimates.</>
           }
         </footer>
       </>

@@ -64,7 +64,7 @@ export type Assessment = {
   basis:    "reported" | "inferred" | "stale",
   /** Epoch milliseconds a running machine should finish, or a done one finished */
   readyAt?: number,
-  /** A short reason, like "no word for 12 min" */
+  /** A short reason, like "no update for 12 min" */
   note?:    string
 }
 
@@ -121,7 +121,7 @@ export const assess = (m: Machine, now: number, history?: History): Assessment =
     // Quiet past its end: it finished and the radio missed it, so it's done but still has someone's clothes in it
     if (now > endAt + QUIET_RUNNING)
       return { state: "done", basis: "inferred", readyAt: endAt, note: "probably done" }
-    return { state: "running", basis: "stale", readyAt: Math.max(endAt, now), note: `no word for ${Math.round((now - m.at) / 60_000)} min` }
+    return { state: "running", basis: "stale", readyAt: Math.max(endAt, now), note: `no update for ${Math.round((now - m.at) / 60_000)} min` }
   }
 
   if (m.status === "done")

@@ -64,6 +64,6 @@ export const RoomList = () =>
       )}
     </ul>
     <footer class="muted">
-      Counts are from the machines' own last reports, a few minutes behind. Open a room for the live word.
+      Counts update every few minutes. Select a room to see the latest machine status and remaining times.
     </footer>
   </>

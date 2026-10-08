@@ -36,12 +36,16 @@ const point = fc.record({
   lon: fc.double({ min: -71.2, max: -70.6, noNaN: true })
 })
 
-test("distance is a metric", () =>
-  fc.assert(fc.property(point, point, point, (a, b, c) => {
+test("distance is symmetric and approximates great-circle distance locally", () =>
+  fc.assert(fc.property(point, point, (a, b) => {
     expect(distance(a, a)).toBe(0)
     expect(distance(a, b)).toBeCloseTo(distance(b, a), 6)
-    // Within a millionth, as the flat-earth approximation bends the triangle inequality by a hair on long nearly
-    // straight paths
-    expect(distance(a, c)).toBeLessThanOrEqual((distance(a, b) + distance(b, c)) * (1 + 1e-6) + 1e-6)
+    const radians = Math.PI / 180
+    const h = Math.sin((b.lat - a.lat) * radians / 2) ** 2
+      + Math.cos(a.lat * radians) * Math.cos(b.lat * radians)
+      * Math.sin((b.lon - a.lon) * radians / 2) ** 2
+    const spherical = 2 * 6_371_000 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+    // The flat-earth formula is accurate to 0.01% in this region, but is not an exact metric.
+    expect(Math.abs(distance(a, b) - spherical)).toBeLessThanOrEqual(spherical * 1e-4 + 1e-6)
   }))
 )

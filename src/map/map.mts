@@ -90,9 +90,10 @@ const chevronIcon = (color: string) =>
     context.stroke()
   })
 
-// A small disc with a glyph in white: a washing machine's door for laundry, a fork and knife for dining
+// A disc with a glyph in white: a washing machine's door for laundry, a fork and knife for dining
 const buildingIcon = (kind: Building["kind"]) =>
-  icon(16, context => {
+  icon(24, context => {
+    context.scale(1.5, 1.5)
     context.beginPath()
     context.arc(8, 8, 7.5, 0, 2 * Math.PI)
     context.fillStyle = QUIET[kind]
@@ -331,7 +332,7 @@ export const createMap = (
       minzoom: 13.5,
       layout: {
         "icon-image": ["concat", "building-", ["get", "kind"]],
-        "icon-size": ["interpolate", ["linear"], ["zoom"], 13.5, 0.7, 17, 1],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 13.5, 1, 17, 1.25],
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
         "text-field": ["step", ["zoom"], "", 16.5, ["get", "name"]],

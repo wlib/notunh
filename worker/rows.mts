@@ -3,7 +3,7 @@
 // back in the order they were stored, and the build sorts where it must
 
 import { drizzle } from "drizzle-orm/d1"
-import { and, asc, desc, eq, getTableColumns, gt, gte, lt, sql, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, getTableColumns, getTableName, gt, gte, lt, sql, type SQL } from "drizzle-orm"
 import type { BatchItem } from "drizzle-orm/batch"
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core"
 import { HOUR, addDays, dayStart, type Day } from "../src/shared/time.mts"
@@ -65,9 +65,30 @@ export const chunks = <T,>(table: SQLiteTable, rows: readonly T[]) => {
   return Array.from({ length: Math.ceil(rows.length / size) }, (_, i) => rows.slice(i * size, (i + 1) * size))
 }
 
-/** Every column set to the row that conflicted, for an upsert */
-export const excluded = (table: SQLiteTable) =>
-  Object.fromEntries(Object.entries(getTableColumns(table)).map(([key, column]) => [key, sql.raw(`excluded.${column.name}`)]))
+/**
+ * Rows as D1's own statements, as few as the bound parameters allow, with the columns and values Drizzle's schema
+ * gives them but none of its query building, which would cost a cron's run several of its 10 ms of CPU, nor its
+ * defaults, which the tables it's used on have none of. Given a key, a row there already is replaced
+ */
+export const inserts = <T extends SQLiteTable,>(db: D1Database, table: T, rows: readonly T["$inferInsert"][], key?: SQLiteColumn[]) => {
+  const columns = Object.entries(getTableColumns(table))
+  const quoted  = (column: SQLiteColumn) => `"${column.name}"`
+  const names   = columns.map(([, column]) => quoted(column))
+  const tuple   = `(${names.map(() => "?").join(", ")})`
+  const replace = key
+    ? ` on conflict (${key.map(quoted).join(", ")}) do update set ${names.map(name => `${name} = excluded.${name}`).join(", ")}`
+    : ""
+  return chunks(table, rows).map(chunk =>
+    db
+      .prepare(`insert into "${getTableName(table)}" (${names.join(", ")}) values ${chunk.map(() => tuple).join(", ")}${replace}`)
+      .bind(...chunk.flatMap(row =>
+        columns.map(([property, column]) => {
+          const value = (row as Record<string, unknown>)[property]
+          return value == null ? null : column.mapToDriverValue(value)
+        })
+      ))
+  )
+}
 
 /** The most rows one write takes */
 export const maxRows = ({ table }: Entry) =>

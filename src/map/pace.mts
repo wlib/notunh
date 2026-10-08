@@ -156,7 +156,9 @@ export const cross = (previous: Trace | undefined, track: Track, at: number, isS
       if (left?.stop === previousStop.index && (line.isLoop || i > 0)) {
         const meters = driven(previousStop, stop)
         const rate = meters / (time - left.at)
-        if (rate >= MIN_RATE && rate <= MAX_RATE)
+        // Stops whose zones overlap have nothing between them to drive, and a negative distance over a negative time
+        // would pass for a rate
+        if (meters > 0 && rate >= MIN_RATE && rate <= MAX_RATE)
           crossings.push({ kind: "drive", from: previousStop.id, to: stop.id, meters, start: left.at, end: time })
       }
       entered = { stop: stop.index, at: time }

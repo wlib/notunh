@@ -19,8 +19,9 @@
       "* * * * *",
       // Umo's predictions
       "*/5 * * * *",
-      // Laundry machines, 2 minutes later, and only every third run overnight
-      "2-59/5 * * * *",
+      // Laundry machines, a quarter of the rooms each minute but every fifth, so each is polled every 5 minutes, and
+      // only every third round overnight
+      "1-4,6-9,11-14,16-19,21-24,26-29,31-34,36-39,41-44,46-49,51-54,56-59 * * * *",
       // Prune, then rebuild the site with a fresh timetable and menus (4:17 AM in Durham, EDT)
       "17 8 * * *"
     ]

@@ -58,9 +58,9 @@ body {
   margin-block-start: env(safe-area-inset-top);
 }
 
-/* The sheet covers the bottom of the map */
+/* The sheet covers the bottom of the map, so the attribution moves up beside the controls, short of them */
 .map .maplibregl-ctrl-bottom-right {
-  inset: env(safe-area-inset-top) auto auto 0;
+  inset: env(safe-area-inset-top) 3.25rem auto 0;
 }
 
 .panel {

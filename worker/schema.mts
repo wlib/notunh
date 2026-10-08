@@ -93,7 +93,7 @@ export const polls = sqliteTable("polls", {
 
 /** One current snapshot per room, refreshed even when no machine changes status */
 export const roomSnapshots = sqliteTable("room_snapshots", {
-  room: text().primaryKey(),
-  at: integer().notNull(),
+  room:     text().primaryKey(),
+  at:       integer().notNull(),
   machines: text({ mode: "json" }).$type<Machine[]>().notNull()
 })

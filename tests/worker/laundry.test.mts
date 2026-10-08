@@ -84,33 +84,42 @@ const environment = () => {
 const count = (sqlite: ReturnType<typeof environment>["sqlite"], table: string) =>
   (sqlite.prepare(`select count(*) as n from ${table}`).get() as { n: number }).n
 
-// 6:02 PM in Durham, EDT, and the runs every 5 minutes from then
-const EVENING = Date.parse("2026-10-07T22:02:00Z")
+// 6 PM in Durham, EDT, when a round of polls starts, and the rounds every 5 minutes from then
+const EVENING = Date.parse("2026-10-07T22:00:00Z")
 const RUNS = [0, 1, 2, 3].map(run => EVENING + run * 300_000)
 
 const run = (env: Env, at: number) =>
   collector.run(env, at, new AbortController().signal)
 
-test("the collector asks every room with no User-Agent of ours, writes a first sighting of every machine over three runs, then only changes", async () => {
+/** A round's runs, each minute after its start, or only those of its minutes given */
+const round = async (env: Env, start: number, minutes = [1, 2, 3, 4]) => {
+  for (const minute of minutes)
+    await run(env, start + minute * 60_000)
+}
+
+test("the collector asks every room once a round with no User-Agent of ours, writes a first sighting of every machine, then only changes", async () => {
   const requests: Request[] = []
   const { env, sqlite } = environment()
 
   vendor(at163002, requests)
-  // 3:07 AM, which overnight is skipped
-  await run(env, Date.parse("2026-10-08T07:07:00Z"))
+  // From 3:05 AM, a round which overnight is skipped
+  await round(env, Date.parse("2026-10-08T07:05:00Z"))
   expect(requests).toHaveLength(0)
 
-  await run(env, RUNS[0])
-  expect(requests).toHaveLength(ROOMS.length)
+  await round(env, RUNS[0], [1])
+  expect(requests).toHaveLength(Math.ceil(ROOMS.length / 4))
+  await round(env, RUNS[0], [2, 3, 4])
+  expect(requests.map(({ url }) => url.match(/locations\/(\w+)\//)![1]).toSorted()).toEqual(ROOMS.map(({ id }) => id).toSorted())
   for (const request of requests)
     expect(request.headers.get("user-agent")).toBeNull()
-  await run(env, RUNS[1])
-  await run(env, RUNS[2])
   expect(count(sqlite, "latest")).toBe(ROOMS.length * 11)
+  expect(count(sqlite, "transitions")).toBe(ROOMS.length * 11)
+  await round(env, RUNS[1])
+  await round(env, RUNS[2])
   expect(count(sqlite, "transitions")).toBe(ROOMS.length * 11)
 
   vendor(at163257)
-  await run(env, RUNS[3])
+  await round(env, RUNS[3])
   expect(count(sqlite, "transitions")).toBe(ROOMS.length * 13)
   expect(sqlite.prepare("select status from latest where machine = ?").get(`${STOKE}-mac_572309`)).toEqual({ status: "free" })
   expect(sqlite.prepare("select at, failed from polls order by at").all()).toEqual(RUNS.map(at => ({ at, failed: "[]" })))
@@ -119,9 +128,49 @@ test("the collector asks every room with no User-Agent of ours, writes a first s
 test("a room that answers with nothing usable counts as not fetched", async () => {
   const { env, sqlite } = environment()
   vendor({ data: [{ unexpected: true }] })
-  await run(env, EVENING)
+  await round(env, EVENING)
   expect(count(sqlite, "transitions")).toBe(0)
   expect(JSON.parse((sqlite.prepare("select failed from polls").get() as { failed: string }).failed)).toHaveLength(ROOMS.length)
+})
+
+test("a round's one poll fails exactly the rooms none of its minutes fetched, whichever minutes ran", async () =>
+  fc.assert(fc.asyncProperty(fc.subarray([1, 2, 3, 4], { minLength: 1 }), fc.subarray(ROOMS.map(({ id }) => id)), async (minutes, down) => {
+    const { env, sqlite } = environment()
+    const requests: Request[] = []
+    vi.stubGlobal("fetch", async (input: string, init?: RequestInit) => {
+      requests.push(new Request(input, init))
+      const room = input.match(/locations\/(\w+)\/machines/)![1]
+      return down.includes(room)
+        ? new Response("", { status: 503 })
+        : Response.json({ data: at163002.data.map(m => ({ ...m, id: `${room}-${m.id}` })) })
+    })
+    await round(env, EVENING, minutes)
+    const fetched = new Set(requests.map(({ url }) => url.match(/locations\/(\w+)\//)![1]).filter(room => !down.includes(room)))
+    const polls = sqlite.prepare("select at, failed from polls").all() as { at: number, failed: string }[]
+    expect(polls.map(({ at }) => at)).toEqual([EVENING])
+    expect(JSON.parse(polls[0].failed).toSorted()).toEqual(ROOMS.map(({ id }) => id).filter(id => !fetched.has(id)).toSorted())
+  }))
+)
+
+test("a minute run again changes nothing, and the next round starts with nothing failed", async () => {
+  const { env, sqlite } = environment()
+  vendor(503)
+  await round(env, EVENING)
+  vendor(at163002)
+  await round(env, RUNS[1])
+  await round(env, RUNS[1], [2])
+  expect(count(sqlite, "transitions")).toBe(ROOMS.length * 11)
+  expect(sqlite.prepare("select at, failed from polls order by at").all().map(({ at, failed }) => [at, JSON.parse(failed as string).length]))
+    .toEqual([[EVENING, ROOMS.length], [RUNS[1], 0]])
+})
+
+test("overnight, the rounds starting every 15 minutes poll", async () => {
+  const requests: Request[] = []
+  const { env } = environment()
+  vendor(at163002, requests)
+  // 3 AM in Durham, EDT
+  await round(env, Date.parse("2026-10-08T07:00:00Z"))
+  expect(requests).toHaveLength(ROOMS.length)
 })
 
 const cache = () => {
@@ -154,15 +203,16 @@ test("a room's live status is asked for with the asker's own User-Agent, shared 
 test("when the vendor can't answer, a room is the collector's last record of it, marked stale, as of the machines' last word", async () => {
   const { env } = environment()
   vendor(at163302)
-  // A first sighting of every machine takes three runs
   for (const at of RUNS.slice(0, 3))
-    await run(env, at)
+    await round(env, at)
   vi.stubGlobal("caches", { default: cache() })
   vendor(503)
   const live = await (await ask(env, `/api/laundry/rooms/${STOKE}`)).json<RoomLive>()
   expect(live.isStale).toBe(true)
   expect(live.machines).toHaveLength(11)
-  expect(live.at).toBe(RUNS[2])
+  // As of the minute of its last round that polled it
+  expect(live.at - RUNS[2]).toBeGreaterThanOrEqual(0)
+  expect(live.at - RUNS[2]).toBeLessThan(300_000)
   expect(Object.keys(live.history)).toHaveLength(11)
 })
 
@@ -170,7 +220,7 @@ test("every room's counts come from the collector's records alone, shared for 5 
   const { env } = environment()
   vendor(at163302)
   for (const at of RUNS.slice(0, 3))
-    await run(env, at)
+    await round(env, at)
   const requests: Request[] = []
   vendor(503, requests)
   vi.stubGlobal("caches", { default: cache() })
@@ -189,7 +239,6 @@ test("a room's own address is the laundry page, and a made-up one isn't", async 
   expect((await ask(env, "/laundry/nowhere-hall/")).status).toBe(404)
 })
 
-
 test("unchanged machines retain fresh heartbeats and extended timers without adding transitions", async () => {
   vi.useFakeTimers({ toFake: ["Date"] })
   const { env, sqlite } = environment()
@@ -200,12 +249,12 @@ test("unchanged machines retain fresh heartbeats and extended timers without add
   ] })
   vi.setSystemTime(EVENING)
   vendor(snapshot(EVENING, "AVAILABLE", 600))
-  await run(env, EVENING)
+  await round(env, EVENING)
   const transitions = count(sqlite, "transitions")
   const later = EVENING + 4 * 86_400_000
   vi.setSystemTime(later)
   vendor(snapshot(later, "IN_USE", 1800))
-  await run(env, later)
+  await round(env, later)
   expect(count(sqlite, "transitions")).toBe(transitions + ROOMS.length)
   vi.stubGlobal("caches", { default: cache() })
   const summaries = await (await ask(env, "/api/laundry/rooms")).json<Summaries>()
@@ -214,6 +263,7 @@ test("unchanged machines retain fresh heartbeats and extended timers without add
   vendor(503)
   const fallback = await (await ask(env, `/api/laundry/rooms/${STOKE}`)).json<RoomLive>()
   expect(fallback.isStale).toBe(true)
-  expect(fallback.at).toBe(later)
+  expect(fallback.at - later).toBeGreaterThanOrEqual(0)
+  expect(fallback.at - later).toBeLessThan(300_000)
   expect(fallback.machines.find(m => m.id.endsWith("-running"))).toMatchObject({ at: later, remaining: 1800 })
 })

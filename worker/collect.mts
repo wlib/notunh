@@ -1,10 +1,9 @@
 // What each cron trigger runs, and for the sources that are sampled, storing what one saw in a minute as a gzipped
 // row in samples
 
-import { drizzle } from "drizzle-orm/d1"
-import { sql } from "drizzle-orm"
 import { encode } from "../src/map/raw.mts"
 import { samples } from "./schema.mts"
+import { inserts } from "./rows.mts"
 
 /** Who's asking, for Umo, which refuses a request without a User-Agent */
 export const HEADERS = { "user-agent": "notunh/1 (+https://notunh.app)" }
@@ -43,9 +42,6 @@ export const sampling = ({ name, cron, collect }: Source): Job => ({
   run: async (env, at, signal) => {
     const seen = await collect(at, signal)
     if (seen.length)
-      await drizzle(env.DB)
-        .insert(samples)
-        .values({ source: name, at, body: await encode(seen) })
-        .onConflictDoUpdate({ target: [samples.source, samples.at], set: { body: sql`excluded.body` } })
+      await env.DB.batch(inserts(env.DB, samples, [{ source: name, at, body: await encode(seen) }], [samples.source, samples.at]))
   }
 })

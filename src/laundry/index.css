@@ -80,6 +80,8 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  /* Cut at its own top edge only, so the heading's backdrop shows just where rows have scrolled up under it */
+  clip-path: inset(0 -100vmax -100vmax);
 }
 
 .rooms > li {
@@ -99,6 +101,8 @@
   line-height: 1.2;
 }
 
+/* Behind the status bar while the heading is stuck there, growing as the list scrolls under it and never over the
+   page's own header above the list */
 .rooms-head::before {
   content: "";
   position: absolute;

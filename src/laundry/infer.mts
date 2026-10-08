@@ -1,6 +1,6 @@
 // What we're willing to claim about a machine from its last report and a little history, and about a room from its
-// machines. The controllers push every minute or two while running, so a fresh countdown is trustworthy, but a
-// finished machine lingers as done until its door opens, and an idle one's stamp is only a heartbeat
+// machines. The controllers report every 20 minutes or so while running, so a countdown that recent is trustworthy,
+// but a finished machine lingers as done until its door opens, and an idle one's stamp is only a heartbeat
 
 import { DAY, HOUR } from "../shared/time.mts"
 
@@ -97,8 +97,8 @@ export type RoomLive = {
   history:  Record<string, History>
 }
 
-// The vendor's own app shows "UPDATING" once a running machine has been quiet this long
-export const QUIET_RUNNING = 7 * 60_000
+// Running machines report about every 20 minutes, so one quiet longer than this missed a report, or finished
+export const QUIET_RUNNING = 25 * 60_000
 // A machine unchanged this long while its room has changed since is a dead radio, whatever it claims
 export const DEAD_AFTER = 3 * DAY
 // Clothes sitting in a finished machine this long usually mean the door sensor missed them being taken out

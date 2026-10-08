@@ -71,6 +71,20 @@ test("a bus seen driving between stops teaches how long that stretch and each st
   ))
 )
 
+test("stops close enough that their zones overlap teach no drive between them, and nothing learned is ever negative", () =>
+  fc.assert(fc.property(
+    fc.integer({ min: 2, max: 18 }),
+    fc.integer({ min: 1, max: 2 * ZONE - 1 }),
+    fc.integer({ min: 3, max: 12 }),
+    (slot, gap, speed) => {
+      const { pace } = run([slot * 100, slot * 100 + gap], speed, [10, 10], ZONE / speed / 2)
+      expect(pace.drives.has("s0>s1")).toBe(false)
+      for (const { seconds, excess } of [...pace.drives.values(), ...pace.zones.values()])
+        expect(seconds > 0 && Number.isFinite(excess)).toBe(true)
+    }
+  ))
+)
+
 test("a bus that left a stop is expected where the last bus was that long after leaving it", () =>
   fc.assert(fc.property(
     // With a stop past the next, so it pulls out of that one at a pace learned too
@@ -84,8 +98,8 @@ test("a bus that left a stop is expected where the last bus was that long after 
       const start = positions[0] + ZONE
       const trace: Trace = { track: { line, distance: start }, at: 0, isStopped: false, left: { stop: 0, at: 0 } }
       const reach = (positions[1] - start) / speed
-      // This property checks travel and waiting at a fixed learned pace. Keep those observations fresh throughout
-      // the prediction; otherwise the intentional decay after arrival also changes the rate while it waits.
+      // At a fixed learned pace, so what was learned is kept fresh through the whole prediction, or its decay after
+      // the bus arrives would change the rate while it waits
       for (const seen of [...pace.drives.values(), ...pace.zones.values()])
         seen.at = reach + waits[1]
 

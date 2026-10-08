@@ -35,16 +35,17 @@ export type Tap =
   | { kind: "building", place: Place }
   | { kind: "place",    place: Place, hints: MapHints }
 
-// Bitmaps drawn at twice their size for sharp screens
+// Bitmaps drawn at the screen's own density, and at least twice their size, so they're sharp wherever they're shown
+const DENSITY = Math.max(2, Math.ceil(devicePixelRatio))
 const icon = (size: number, draw: (context: OffscreenCanvasRenderingContext2D) => void) => {
-  const canvas = new OffscreenCanvas(size * 2, size * 2)
+  const canvas = new OffscreenCanvas(size * DENSITY, size * DENSITY)
   const context = canvas.getContext("2d")!
-  context.scale(2, 2)
+  context.scale(DENSITY, DENSITY)
   draw(context)
   return {
-    width:  size * 2,
-    height: size * 2,
-    data: new Uint8Array(context.getImageData(0, 0, size * 2, size * 2).data.buffer)
+    width:  size * DENSITY,
+    height: size * DENSITY,
+    data: new Uint8Array(context.getImageData(0, 0, size * DENSITY, size * DENSITY).data.buffer)
   }
 }
 
@@ -90,44 +91,35 @@ const chevronIcon = (color: string) =>
     context.stroke()
   })
 
-// A disc with a glyph in white: a washing machine's door for laundry, a fork and knife for dining
+// Glyphs on a 24 unit grid, after Tabler's wash machine and tools kitchen 2, pared down to read at a dozen pixels
+const GLYPHS: Record<Building["kind"], string> = {
+  laundry: "M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M16 14a4 4 0 1 1 -8 0a4 4 0 1 1 8 0 M8.5 6.5h.01 M11.5 6.5h.01",
+  dining:  "M19 3v12h-5c-.02 -3.68 .18 -7.4 5 -12z M19 15v6 M8 3v18 M5 3v3a3 3 0 0 0 6 0v-3"
+}
+
+// A small muted disc in a white ring, with its glyph in white: a washing machine for laundry, a fork and knife
+// for dining
 const buildingIcon = (kind: Building["kind"]) =>
-  icon(24, context => {
-    context.scale(1.5, 1.5)
+  icon(20, context => {
     context.beginPath()
-    context.arc(8, 8, 7.5, 0, 2 * Math.PI)
+    context.arc(10, 10, 9, 0, 2 * Math.PI)
+    context.fillStyle = "white"
+    context.shadowColor = "rgb(0 0 0 / 0.2)"
+    context.shadowBlur = 1.5
+    context.fill()
+    context.shadowColor = "transparent"
+    context.beginPath()
+    context.arc(10, 10, 7.75, 0, 2 * Math.PI)
     context.fillStyle = QUIET[kind]
     context.fill()
+    context.translate(10, 10)
+    context.scale(0.45, 0.45)
+    context.translate(-12, -12)
     context.strokeStyle = "white"
-    context.fillStyle = "white"
-    context.lineWidth = 1.2
+    context.lineWidth = 2.25
     context.lineCap = "round"
-    context.beginPath()
-    if (kind === "laundry") {
-      context.roundRect(4.5, 4, 7, 8, 1.2)
-      context.moveTo(10.6, 8.6)
-      context.arc(8, 8.6, 2.1, 0, 2 * Math.PI)
-      context.stroke()
-    }
-    else {
-      for (const x of [4.6, 6, 7.4]) {
-        context.moveTo(x, 4)
-        context.lineTo(x, 6.4)
-      }
-      context.moveTo(4.6, 6.4)
-      context.quadraticCurveTo(6, 8, 7.4, 6.4)
-      context.moveTo(6, 7.4)
-      context.lineTo(6, 12)
-      context.moveTo(10.4, 9)
-      context.lineTo(10.4, 12)
-      context.stroke()
-      context.beginPath()
-      context.moveTo(10.4, 9.4)
-      context.lineTo(10.4, 4)
-      context.quadraticCurveTo(12.2, 5.6, 11.6, 9.4)
-      context.closePath()
-      context.fill()
-    }
+    context.lineJoin = "round"
+    context.stroke(new Path2D(GLYPHS[kind]))
   })
 
 const collection = (features: GeoJSON.Feature[]): GeoJSON.FeatureCollection => ({
@@ -308,11 +300,11 @@ export const createMap = (
 
   map.on("load", () => {
     for (const route of feed.routes) {
-      map.addImage(`bus-${route.id}`, busIcon(route.color), { pixelRatio: 2 })
-      map.addImage(`chevron-${route.id}`, chevronIcon(route.color), { pixelRatio: 2 })
+      map.addImage(`bus-${route.id}`, busIcon(route.color), { pixelRatio: DENSITY })
+      map.addImage(`chevron-${route.id}`, chevronIcon(route.color), { pixelRatio: DENSITY })
     }
     for (const kind of ["laundry", "dining"] as const)
-      map.addImage(`building-${kind}`, buildingIcon(kind), { pixelRatio: 2 })
+      map.addImage(`building-${kind}`, buildingIcon(kind), { pixelRatio: DENSITY })
 
     map.addSource("buildings", { type: "geojson", data: collection(buildingFeatures) })
     map.addSource("routes",    { type: "geojson", data: collection([]) })
@@ -332,13 +324,13 @@ export const createMap = (
       minzoom: 13.5,
       layout: {
         "icon-image": ["concat", "building-", ["get", "kind"]],
-        "icon-size": ["interpolate", ["linear"], ["zoom"], 13.5, 1, 17, 1.25],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 13.5, 0.8, 17, 1],
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
         "text-field": ["step", ["zoom"], "", 16.5, ["get", "name"]],
         "text-font": FONT,
         "text-size": 10,
-        "text-offset": [0, 1],
+        "text-offset": [0, 1.1],
         "text-anchor": "top",
         "text-max-width": 8,
         "text-optional": true

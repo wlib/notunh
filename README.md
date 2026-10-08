@@ -81,7 +81,7 @@ Cloudflare Workers Builds builds and deploys the `notunh` Worker from this repo'
 - Build command: `npm run build`, which in a fresh clone downloads the day's data, then typechecks and tests before building
 - Deploy command: `npx wrangler d1 migrations apply notunh --remote && npx wrangler deploy`
 
-If upstream is down the build fails and the last deploy stays up. Preview builds are off, since **Check** (GitHub Actions) already typechecks, tests, and builds each pull request.
+If upstream is down the build fails and the last deploy stays up. Cloudflare preview builds remain enabled. **Check** (GitHub Actions) also typechecks, tests, and builds each pull request without secrets.
 
 The Worker (`worker/`) is a small [Hono](https://hono.dev) app that only answers `/api/*` and the laundry rooms' addresses (`run_worker_first` in `wrangler.jsonc`); every other page and asset is served without it. Its cron triggers keep raw samples of the live API in the D1 database `notunh`, one gzipped row per source per minute (`src/map/raw.mts`): the buses' fixes polled six times a minute, and Umo's predictions every 5 minutes; and the laundry collector's changes. Its tables are in `worker/schema.mts` (Drizzle), with migrations generated from it. Nightly at 4:17 AM (3:17 in winter, as cron runs in UTC) it prunes samples, laundry transitions, and polls past `RETAIN_DAYS` (60) and extracted visits past `RETAIN_VISIT_DAYS` (365), and POSTs the Deploy Hook (Worker secret `DEPLOY_HOOK`), so Cloudflare rebuilds with fresh menus, timetable, and models.
 

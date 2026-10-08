@@ -22,21 +22,21 @@ export const publish = (data: MenusData, hours: MenusIndex["hours"] = {}) => {
     file: add(food)
   }))
 
-  // Menus are in order by date, hall, and meal, so each day's meals and each food's servings come out in order
+  // Menus are in order by day, hall, and meal, so each day's meals and each food's servings come out in order
   const days: MenusIndex["days"] = {}
   const servings = data.foods.map(() => new Map<string, Serving>())
-  for (const [key, menus] of Map.groupBy(data.menus, menu => `${menu.hall} ${menu.date}`)) {
-    const { hall, date } = menus[0]
+  for (const [key, menus] of Map.groupBy(data.menus, menu => `${menu.hall} ${menu.day}`)) {
+    const { hall, day } = menus[0]
     const meals = menus.map(({ meal, stations }): Meal => ({
       meal,
       stations: stations.map(station => ({ name: station.name, foods: station.foods.map(food => summaries[food]) }))
     }))
     days[hall] ??= {}
-    days[hall][date] = { file: add(meals), meals: meals.map(({ meal }) => meal) }
+    days[hall][day] = { file: add(meals), meals: meals.map(({ meal }) => meal) }
     for (const { meal, stations } of menus)
       for (const station of stations)
         for (const food of station.foods)
-          servings[food].set(`${key} ${meal}`, { hall, date, meal })
+          servings[food].set(`${key} ${meal}`, { hall, day, meal })
   }
 
   const search = add(

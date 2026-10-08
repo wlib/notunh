@@ -101,6 +101,12 @@ a {
   color: var(--positive);
 }
 
+/* A line in place of what isn't there, like a menu still loading, or a note under what is */
+.empty,
+.footnote {
+  margin-block: 1rem;
+}
+
 /* Section titles in lists of things, like a menu's stations */
 .eyebrow {
   font-size: 0.8rem;

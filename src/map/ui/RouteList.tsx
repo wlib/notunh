@@ -5,6 +5,7 @@
 import { r } from "bruh/reactive"
 import { feed, lastUpdate, isLiveDown, liveCounts, runningToday, shownRoutes, chosenRoutes, pickedRoute } from "../state.mts"
 import { Count, Plural } from "../../shell/intl.tsx"
+import { toggled } from "../../shell/state.mts"
 import { RouteBadge, route } from "./common.tsx"
 
 export const RouteList = () =>
@@ -15,24 +16,14 @@ export const RouteList = () =>
         const count = r(() => liveCounts.value.get(id) ?? 0)
         const isRunning = r(() => runningToday.value.has(id))
         const isPicked = r(() => pickedRoute.value === id)
-        const checkbox: HTMLInputElement =
-          <input
-            type="checkbox"
-            aria-label={`Show ${long}`}
-            checked={r(() => shownRoutes.value.has(id))}
-            onchange={() => {
-              const next = new Set(shownRoutes.value)
-              if (checkbox.checked)
-                next.add(id)
-              else
-                next.delete(id)
-              chosenRoutes.value = next
-            }}
-          />
-
         return (
           <li class={{ "not-running": r(() => !isRunning.value) }}>
-            {checkbox}
+            <input
+              type="checkbox"
+              aria-label={`Show ${long}`}
+              checked={r(() => shownRoutes.value.has(id))}
+              onchange={() => chosenRoutes.value = toggled(shownRoutes.peek(), id)}
+            />
             <button
               type="button"
               aria-pressed={r(() => isPicked.value ? "true" : "false")}

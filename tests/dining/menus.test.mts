@@ -38,13 +38,13 @@ test("each meal keeps every food it lists, in order, under the station it was li
     const data = convert([{ id: "hall", name: "Hall" }], [{ hall: "hall", meal: "lunch", week }], 0, from)
 
     for (const listed of week.days.filter(listed => listed.date >= from)) {
-      const menu = data.menus.find(menu => menu.date === listed.date)
+      const menu = data.menus.find(menu => menu.day === listed.date)
       const foods = listed.menu_items.flatMap(item => item.food ? [item.food.name.trim()] : [])
       expect(menu?.stations.flatMap(station => station.foods.map(food => data.foods[food].name)) ?? []).toEqual(foods)
       for (const station of menu?.stations ?? [])
         expect(station.foods.length).toBeGreaterThan(0)
     }
-    expect(data.menus.every(menu => menu.date >= from)).toBe(true)
+    expect(data.menus.every(menu => menu.day >= from)).toBe(true)
   }))
 )
 
@@ -72,7 +72,7 @@ test("the published files put every meal back together, with each food in a file
 
     expect(new Set(index.files)).toEqual(new Set(files.keys()))
     for (const menu of data.menus) {
-      const day = index.days[menu.hall][menu.date]
+      const day = index.days[menu.hall][menu.day]
       const meal = read<Meal[]>(day.file).find(({ meal }) => meal === menu.meal)!
       expect(day.meals).toContain(menu.meal)
       expect(meal.stations.map(station => station.name)).toEqual(menu.stations.map(station => station.name))
@@ -92,9 +92,9 @@ test("a food is the same file however many days serve it, and search lists it on
     expect(files.size).toBe(new Set([...files.values()]).size)
     expect(search.map(food => food.name)).toEqual([...new Set(search.map(food => food.name))])
     for (const food of search)
-      for (const { hall, date, meal } of food.servings)
+      for (const { hall, day, meal } of food.servings)
         expect(data.menus.some(menu =>
-          menu.hall === hall && menu.date === date && menu.meal === meal &&
+          menu.hall === hall && menu.day === day && menu.meal === meal &&
           menu.stations.some(station => station.foods.some(i => data.foods[i].name === food.name))
         )).toBe(true)
   }))

@@ -1,15 +1,12 @@
-# Rebuilds and redeploys notunh.app every night, so the bus timetable and dining menus stay fresh.
-# Cloudflare Workers Builds does the building and deploying from main, on every push and whenever
-# its Deploy Hook is POSTed; all this does is the POST. The hook URL is the only secret, and all it can do
-# is start a build of main, so a plain repository secret is enough and the job needs no token at all.
-# GitHub pauses the schedule after 60 days without a commit, and the next commit resumes it
+# Rebuilds and redeploys notunh.app on demand, with `gh workflow run refresh.yml`. The nightly rebuild is the
+# Worker's own cron now (see wrangler.jsonc), so it no longer depends on GitHub's schedule, which pauses after
+# 60 days without a commit. Cloudflare Workers Builds does the building and deploying from main whenever its
+# Deploy Hook is POSTed; all this does is the POST. The hook URL can only start a build of main, so a plain
+# repository secret is enough and the job needs no token at all
 
 name: Refresh
 
 on:
-  schedule:
-    # 4:17 AM in Durham (EDT), before anyone's looking for a bus
-    - cron: "17 8 * * *"
   workflow_dispatch:
 
 permissions: {}

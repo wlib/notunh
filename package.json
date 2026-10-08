@@ -4,35 +4,55 @@
   "type": "module",
   "scripts": {
     "icons": "node scripts/icons.mts",
-    "data": "node scripts/map/gtfs.mts && node scripts/dining/menus.mts",
-    "data:missing": "node scripts/map/gtfs.mts --if-missing && node scripts/dining/menus.mts --if-missing",
+    "data": "node scripts/map/gtfs.mts && node scripts/map/model.mts && node scripts/dining/menus.mts && node scripts/laundry/rooms.mts && node scripts/map/places.mts && node scripts/laundry/model.mts",
+    "data:missing": "node scripts/map/gtfs.mts --if-missing && node scripts/map/model.mts --if-missing && node scripts/dining/menus.mts --if-missing && node scripts/laundry/rooms.mts --if-missing && node scripts/map/places.mts --if-missing && node scripts/laundry/model.mts --if-missing",
     "predev": "npm run data:missing",
     "dev": "vite",
     "prebuild": "npm run data:missing && npm run typecheck && npm test",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p worker",
     "test": "vitest run",
-    "deploy": "npm run data && npm run build && wrangler deploy"
+    "model": "node scripts/map/model.mts",
+    "db:generate": "drizzle-kit generate --config drizzle.config.mts",
+    "worker": "node scripts/laundry/rooms.mts --if-missing && wrangler d1 migrations apply notunh --local && wrangler dev --test-scheduled",
+    "deploy": "npm run data && npm run build && wrangler d1 migrations apply notunh --remote && wrangler deploy",
+    "places:refresh": "node scripts/map/places.mts --refresh"
   },
   "dependencies": {
     "@leeoniya/ufuzzy": "^1.0.19",
     "@turf/boolean-point-in-polygon": "^7.4.0",
     "bruh": "^2.0.0-beta.5",
+    "drizzle-orm": "^0.45.3",
+    "hono": "^4.13.13",
     "maplibre-gl": "^6.11.2"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261007.1",
+    "@mdn/browser-compat-data": "^8.1.4",
     "@types/geojson": "^7946.0.16",
     "@types/node": "^26.6.3",
+    "browserslist": "^4.29.3",
+    "browserslist-to-esbuild": "^2.1.1",
     "colorjs.io": "^0.7.1",
     "csv-parse": "^7.0.3",
+    "drizzle-kit": "^0.31.11",
     "fast-check": "^4.10.2",
     "fflate": "^0.8.3",
+    "lightningcss": "^1.33.0",
     "sharp": "^0.34.5",
     "typescript": "^7.0.2",
     "vite": "^7.3.6",
     "vite-plugin-bruh": "^2.0.0-beta.1",
     "vitest": "^5.0.3",
     "wrangler": "^4.146.0"
-  }
+  },
+  "browserslist": [
+    "safari >= 16.4",
+    "ios_saf >= 16.4",
+    "last 2 chrome versions",
+    "last 2 and_chr versions",
+    "last 2 firefox versions",
+    "last 2 edge versions"
+  ]
 }

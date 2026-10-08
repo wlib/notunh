@@ -88,6 +88,11 @@
   font-weight: 600;
 }
 
+.hall-hours .links {
+  display: flex;
+  gap: 0.75rem;
+}
+
 .hall-hours a {
   color: var(--muted);
   font-size: 0.8rem;
@@ -274,11 +279,6 @@ mark {
   border-radius: 0.2rem;
   background: var(--highlight);
   color: inherit;
-}
-
-.empty,
-.footnote {
-  margin-block: 1rem;
 }
 
 .dining > footer {

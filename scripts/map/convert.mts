@@ -152,6 +152,10 @@ export const smoothShape = (shape: Coordinates[]) => {
 
 const DAY_COLUMNS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
+/** GTFS's YYYYMMDD as a Day, or "" for none */
+const dayOf = (date = "") =>
+  date.replace(/^(\d{4})(\d\d)(\d\d)$/, "$1-$2-$3")
+
 const groupBy = <T,>(items: T[], key: (item: T) => string) => {
   const groups = new Map<string, T[]>()
   for (const item of items)
@@ -177,17 +181,17 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
   for (const service of table("calendar.txt"))
     services[service.service_id] = {
       days: DAY_COLUMNS.reduce((days, day, i) => days | (service[day] === "1" ? 1 << i : 0), 0),
-      start: +service.start_date,
-      end:   +service.end_date,
+      start: dayOf(service.start_date),
+      end:   dayOf(service.end_date),
       added:   [],
       removed: []
     }
   for (const exception of table("calendar_dates.txt")) {
-    const service = services[exception.service_id] ??= { days: 0, start: 0, end: 0, added: [], removed: [] }
+    const service = services[exception.service_id] ??= { days: 0, start: "", end: "", added: [], removed: [] }
     if (exception.exception_type === "1")
-      service.added.push(+exception.date)
+      service.added.push(dayOf(exception.date))
     else
-      service.removed.push(+exception.date)
+      service.removed.push(dayOf(exception.date))
   }
 
   const stopTimesByTrip = groupBy(table("stop_times.txt"), stopTime => stopTime.trip_id)
@@ -249,8 +253,8 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
 
   return {
     version: feedInfo?.feed_version ?? "",
-    start:   +(feedInfo?.feed_start_date ?? 0),
-    end:     +(feedInfo?.feed_end_date ?? 0),
+    start:   dayOf(feedInfo?.feed_start_date),
+    end:     dayOf(feedInfo?.feed_end_date),
     routes,
     stops,
     services,

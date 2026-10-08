@@ -2,6 +2,7 @@
 // scripts/dining/publish.mts into the files the dining page loads, and how to filter them
 
 import type { Ingredient } from "./ingredients.mts"
+import type { Day } from "../shared/time.mts"
 
 export type Hall = {
   id:   string,
@@ -13,10 +14,10 @@ export type Span = [open: number, close: number]
 
 /** A hall's usual hours, which breaks and holidays change */
 export type Hours = {
-  /** Sunday first: each day's open spans, with none when it's closed */
+  /** Monday first: each day's open spans, with none when it's closed */
   week: Span[][],
-  /** By YYYY-MM-DD: one-off hours this week, like an early close, and why */
-  special?: Record<string, { spans: Span[], note: string }>
+  /** By day: one-off hours this week, like an early close, and why */
+  special?: Record<Day, { spans: Span[], note: string }>
 }
 
 export type Nutrition = Partial<Record<typeof NUTRIENTS[number]["key"], number>>
@@ -43,8 +44,7 @@ export type Station = {
 
 export type Menu = {
   hall: string,
-  /** YYYY-MM-DD, local */
-  date: string,
+  day: Day,
   /** Like "breakfast" */
   meal: string,
   stations: Station[]
@@ -96,7 +96,7 @@ export type Meal = {
   stations: { name: string, foods: FoodSummary[] }[]
 }
 
-export type Serving = Pick<Menu, "hall" | "date" | "meal">
+export type Serving = Pick<Menu, "hall" | "day" | "meal">
 
 /** An upcoming food with what searching needs: its ingredients, and where and when it's served */
 export type SearchFood = FoodSummary & Pick<Food, "ingredients"> & {
@@ -114,8 +114,8 @@ export type MenusIndex = {
   diets: string[],
   /** Everything some food contains, most common first */
   contains: string[],
-  /** By hall, then YYYY-MM-DD: the file with that day's Meals, and which meals they are */
-  days: Record<string, Record<string, { file: string, meals: string[] }>>,
+  /** By hall, then day: the file with that day's Meals, and which meals they are */
+  days: Record<string, Record<Day, { file: string, meals: string[] }>>,
   /** The file with every SearchFood */
   search: string,
   /** Every file in use, so caches can drop the rest */
@@ -126,13 +126,6 @@ export const DATA_PATH = "/data/dining/"
 
 export const fileUrl = (file: string) =>
   `${DATA_PATH}${file}.json`
-
-export const loadJson = async <T,>(url: string): Promise<T> => {
-  const response = await fetch(url)
-  if (!response.ok)
-    throw new Error(`Failed to load ${url}: ${response.status}`)
-  return response.json()
-}
 
 //#endregion
 

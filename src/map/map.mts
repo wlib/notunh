@@ -3,12 +3,14 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
 import { Map as MapLibre, AttributionControl, NavigationControl, Marker, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature } from "maplibre-gl"
 import { r, watch, type Reactive, type SourceNode } from "bruh/reactive"
 import type { Feed } from "./feed.mts"
+import type { Model } from "./model.mts"
 import type { Vehicle } from "./umo.mts"
 import type { Itinerary, Place } from "./plan.mts"
 import { type Coordinates, type Padding, coveredPadding, ridePath } from "./geometry.mts"
 import { nameAt, walkPath, type MapHints } from "./osm.mts"
 import { animateBuses } from "./buses.mts"
 import { showYou } from "./you.mts"
+import { BUILDINGS, type Building } from "./places.mts"
 import { laneSlots, lanePieces, measureCorridors } from "./corridors.mts"
 
 // maplibre finds its worker with a computed URL that vite can't see, so bundle it as a worker explicitly
@@ -24,11 +26,14 @@ const SETTLE_MS = 1000 // the panel's size settles this soon after it changes wh
 const INK = "#23262e"
 const START = "#2f8f5b"
 const END = "#c8423b"
+// Laundry and dining buildings, muted to sit quietly beneath the buses
+const QUIET: Record<Building["kind"], string> = { laundry: "#71839b", dining: "#a1825c" }
 
 export type Tap =
-  | { kind: "bus",   id: string }
-  | { kind: "stop",  stop: number }
-  | { kind: "place", place: Place, hints: MapHints }
+  | { kind: "bus",      id: string }
+  | { kind: "stop",     stop: number }
+  | { kind: "building", place: Place }
+  | { kind: "place",    place: Place, hints: MapHints }
 
 // Bitmaps drawn at twice their size for sharp screens
 const icon = (size: number, draw: (context: OffscreenCanvasRenderingContext2D) => void) => {
@@ -83,6 +88,45 @@ const chevronIcon = (color: string) =>
     context.globalAlpha = 0.45
     context.strokeStyle = "white"
     context.stroke()
+  })
+
+// A small disc with a glyph in white: a washing machine's door for laundry, a fork and knife for dining
+const buildingIcon = (kind: Building["kind"]) =>
+  icon(16, context => {
+    context.beginPath()
+    context.arc(8, 8, 7.5, 0, 2 * Math.PI)
+    context.fillStyle = QUIET[kind]
+    context.fill()
+    context.strokeStyle = "white"
+    context.fillStyle = "white"
+    context.lineWidth = 1.2
+    context.lineCap = "round"
+    context.beginPath()
+    if (kind === "laundry") {
+      context.roundRect(4.5, 4, 7, 8, 1.2)
+      context.moveTo(10.6, 8.6)
+      context.arc(8, 8.6, 2.1, 0, 2 * Math.PI)
+      context.stroke()
+    }
+    else {
+      for (const x of [4.6, 6, 7.4]) {
+        context.moveTo(x, 4)
+        context.lineTo(x, 6.4)
+      }
+      context.moveTo(4.6, 6.4)
+      context.quadraticCurveTo(6, 8, 7.4, 6.4)
+      context.moveTo(6, 7.4)
+      context.lineTo(6, 12)
+      context.moveTo(10.4, 9)
+      context.lineTo(10.4, 12)
+      context.stroke()
+      context.beginPath()
+      context.moveTo(10.4, 9.4)
+      context.lineTo(10.4, 4)
+      context.quadraticCurveTo(12.2, 5.6, 11.6, 9.4)
+      context.closePath()
+      context.fill()
+    }
   })
 
 const collection = (features: GeoJSON.Feature[]): GeoJSON.FeatureCollection => ({
@@ -149,6 +193,7 @@ export const createMap = (
   panel: HTMLElement,
   feed: Feed,
   state: {
+    model:            Model,
     vehicles:         Reactive<Vehicle[]>,
     layovers:         Reactive<ReadonlySet<string>>,
     shownRoutes:      Reactive<ReadonlySet<string>>,
@@ -206,6 +251,13 @@ export const createMap = (
     geometry: { type: "Point", coordinates: [stop.lon, stop.lat] }
   }))
 
+  const buildingFeatures = BUILDINGS.map(({ kind, name, lat, lon }, i): GeoJSON.Feature => ({
+    type: "Feature",
+    id: i,
+    properties: { kind, name, color: QUIET[kind] },
+    geometry: { type: "Point", coordinates: [lon, lat] }
+  }))
+
   for (const [color, place] of [[START, state.from], [END, state.to]] as const) {
     const marker = new Marker({ color, draggable: true })
     marker.on("dragend", async () => {
@@ -258,7 +310,10 @@ export const createMap = (
       map.addImage(`bus-${route.id}`, busIcon(route.color), { pixelRatio: 2 })
       map.addImage(`chevron-${route.id}`, chevronIcon(route.color), { pixelRatio: 2 })
     }
+    for (const kind of ["laundry", "dining"] as const)
+      map.addImage(`building-${kind}`, buildingIcon(kind), { pixelRatio: 2 })
 
+    map.addSource("buildings", { type: "geojson", data: collection(buildingFeatures) })
     map.addSource("routes",    { type: "geojson", data: collection([]) })
     map.addSource("stops",     { type: "geojson", data: collection(stopFeatures) })
     map.addSource("itinerary", { type: "geojson", data: collection([]) })
@@ -266,6 +321,34 @@ export const createMap = (
 
     const rounded = { "line-join": "round", "line-cap": "round" } as const
     const isRide = ["==", ["get", "kind"], "ride"] as any
+
+    // Beneath everything of ours, faded in once the campus is close enough to tell buildings apart, and named
+    // closer still, where there's room
+    map.addLayer({
+      id: "buildings",
+      type: "symbol",
+      source: "buildings",
+      minzoom: 13.5,
+      layout: {
+        "icon-image": ["concat", "building-", ["get", "kind"]],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 13.5, 0.7, 17, 1],
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "text-field": ["step", ["zoom"], "", 16.5, ["get", "name"]],
+        "text-font": FONT,
+        "text-size": 10,
+        "text-offset": [0, 1],
+        "text-anchor": "top",
+        "text-max-width": 8,
+        "text-optional": true
+      },
+      paint: {
+        "icon-opacity": ["interpolate", ["linear"], ["zoom"], 13.5, 0, 14.5, 0.85],
+        "text-color": ["get", "color"],
+        "text-halo-color": "white",
+        "text-halo-width": 1.25
+      }
+    })
 
     map.addLayer({
       id: "routes-casing",
@@ -371,11 +454,11 @@ export const createMap = (
     })
 
     map.on("mousemove", event => {
-      const isTappable = nearestWithin(event.point, "vehicles") ?? nearestWithin(event.point, "stops")
+      const isTappable = ["vehicles", "stops", "buildings"].some(layer => nearestWithin(event.point, layer))
       map.getCanvas().style.cursor = isTappable ? "pointer" : ""
     })
 
-    // Buses first, then stops, else the spot itself
+    // Buses first, then stops, then laundry and dining, else the spot itself
     map.on("click", event => {
       const bus = nearestWithin(event.point, "vehicles")
       if (bus)
@@ -384,6 +467,12 @@ export const createMap = (
       const stop = nearestWithin(event.point, "stops")
       if (stop)
         return onTap({ kind: "stop", stop: stop.id as number })
+
+      const building = nearestWithin(event.point, "buildings")
+      if (building) {
+        const { lat, lon, name } = BUILDINGS[building.id as number]
+        return onTap({ kind: "building", place: { lat, lon, name } })
+      }
 
       const { lng, lat } = event.lngLat
       onTap({ kind: "place", place: { lon: lng, lat, name: "Dropped pin" }, hints: hintsAt(event.point) })
@@ -486,7 +575,7 @@ export const createMap = (
       show(padding => map.easeTo({ center: [lon, lat], zoom, padding }))
     })
 
-    busPosition = animateBuses(map, feed, state.vehicles, state.layovers, state.focusedBuses)
+    busPosition = animateBuses(map, feed, state.model, state.vehicles, state.layovers, state.focusedBuses)
     drawYou()
   })
 

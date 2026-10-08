@@ -2,15 +2,20 @@
 // shifted by Umo's predictions (their trip ids match the GTFS trip ids)
 // https://arxiv.org/abs/1703.05997
 //
-// Every boarding leaves slack for how unsure the bus's departure is, buses hold at timepoints for their scheduled
+// Every boarding leaves slack for how unsure the bus's departure is, buses hold where they wait for their scheduled
 // time, and nearer first stops are tried as well as whichever arrives first, so ranking can weigh walking against
-// waiting
+// waiting. What the model has learned replaces the constants below wherever it has data
 
-import { type Feed, type Trip, addDays, distance, isServiceActive, serviceDayStart } from "./feed.mts"
-import type { StopPredictions } from "./umo.mts"
+import { type Feed, type Trip, distance, isServiceActive, serviceDayStart } from "./feed.mts"
+import { STREET_DETOUR } from "./geometry.mts"
+import type { StopPredictions, Vehicle } from "./umo.mts"
+import {
+  type Estimate, type Model, context, dayType, deviationEstimate, driveEstimate, dwellEstimate, emptyModel, heldPositions, inflation,
+  layoverEstimate, leadIndex, probit, variance, LEADS
+} from "./model.mts"
+import { type Day, addDays } from "../shared/time.mts"
 
 const WALK_SPEED = 1.3               // m/s
-const WALK_DETOUR = 1.25             // straight line -> street distance
 const WALK_WIGGLE = 0.1              // a walk may take this much longer: a slow day, or a longer way round
 export const MAX_ACCESS_WALK = 1600  // m, to the first stop or from the last
 export const MAX_TRANSFER_WALK = 400 // m, between stops
@@ -21,8 +26,8 @@ const NEARER_STOPS = 8               // first stops nearer than the quickest one
 export const MIN_TIME_SAVED = 120    // s, a bus has to feel this much better than walking now
 export const MIN_TRANSFER_GAIN = 300 // s, changing buses has to arrive this much sooner than any option with fewer
 
-// How far off a predicted departure may be, growing with how far ahead it is. Live predictions were seen off by up
-// to a minute or two, and Umo's guesses for a connector's next loop by far more
+// How far off a predicted departure may be, growing with how far ahead it is, until the model knows better. Live
+// predictions were seen off by up to a minute or two, and Umo's guesses for a connector's next loop by far more
 const UNCERTAINTY_NOW = 60           // s, even for a bus due now
 const UNCERTAINTY_RATE = 5           // s more per minute ahead
 const UNCERTAINTY_MAX = 240          // s
@@ -31,6 +36,8 @@ export const BOARDING = 30           // s, to get on a bus waiting at the stop f
 // Connectors don't wait for their timetable at the end of a loop, only a couple of minutes, so a bus's next loop
 // starts this long after it gets in, when that's sooner than Umo says
 export const LAYOVER = 120           // s
+// How sure the slack before a bus should be that it hasn't left yet
+const SURE = probit(0.85)
 
 // How long an itinerary feels, relative to riding
 const WALK_RELUCTANCE = 2            // walking feels twice as long
@@ -41,7 +48,9 @@ const TRANSFER_PENALTY = 300         // s, the hassle of changing buses, on top 
 export type Place = {
   lat:  number,
   lon:  number,
-  name: string
+  name: string,
+  /** Where you are, moving with you */
+  isYou?: true
 }
 
 /** A trip running on a specific service day */
@@ -53,10 +62,23 @@ export type Run = {
   delays: number[],
   /** Seconds the bus is expected to wait at each stop for its scheduled time */
   holds: number[],
+  /** Whether the bus waits at each stop for its scheduled time when it's early */
+  held: boolean[],
+  /** What the model knows of how far off this run's times may be */
+  spread?: Spread,
   /** A tracked bus is on this trip, rather than Umo predicting from its schedule */
   isLive: boolean,
   /** The bus Umo expects to run this trip */
   vehicle?: string
+}
+
+export type Spread = {
+  /** s² that driving and stopping from its first stop up to leaving each one varies by, for routes with drives */
+  variance?: number[],
+  /** s the bus leaves each stop after its timetable, with no bus tracked, where the model knows */
+  deviation: (Estimate | undefined)[],
+  /** How many times wider than the variance says the forecasts in use turn out, at each of LEADS */
+  inflation: number[]
 }
 
 export type WalkLeg = {
@@ -96,7 +118,7 @@ export type Connection = {
 }
 
 export const walkSeconds = (meters: number) =>
-  Math.round(meters * WALK_DETOUR / WALK_SPEED)
+  Math.round(meters * STREET_DETOUR / WALK_SPEED)
 
 /** How long to allow for a walk, for a slow day or a longer way round */
 export const walkAllowance = (meters: number) =>
@@ -110,21 +132,69 @@ export const timeAt = (run: Run, position: number) =>
 export const uncertainty = (lead: number) =>
   Math.min(UNCERTAINTY_MAX, UNCERTAINTY_NOW + UNCERTAINTY_RATE * Math.max(0, lead) / 60)
 
-/** A bus waiting at a timepoint for its scheduled time can't leave early */
+/** A bus waiting at a stop for its scheduled time can't leave early */
 const isHeld = (run: Run, position: number) =>
-  run.trip.timepoints.includes(position) && run.delays[position] <= 0
+  run.held[position] && run.delays[position] <= 0
+
+const currentCache = new WeakMap<Run, { now: number, position: number }>()
+
+/** The first stop a run hasn't left yet */
+const currentPosition = (run: Run, now: number) => {
+  let current = currentCache.get(run)
+  if (current?.now !== now) {
+    const position = run.trip.stops.findIndex((_, position) => timeAt(run, position) >= now)
+    currentCache.set(run, current = { now, position: position === -1 ? run.trip.stops.length - 1 : position })
+  }
+  return current.position
+}
+
+/**
+ * How far off the model says a bus's time at a stop may be: for a tracked bus, by how much the stretch from where
+ * it is varies, scaled to how far off forecasts turn out; otherwise by how early, when boarding, or late, when getting
+ * off, it usually runs against its timetable
+ */
+const learnedSpread = (run: Run, position: number, time: number, now: number, isBoarding: boolean) => {
+  const { spread } = run
+  const deviation = spread?.deviation[position]
+  if (deviation && !run.isLive)
+    return isBoarding
+      ? Math.min(UNCERTAINTY_MAX * SCHEDULE_FACTOR, Math.max(BOARDING, SURE * deviation.sigma - deviation.mu))
+      : Math.min(UNCERTAINTY_MAX, Math.max(BOARDING, SURE * deviation.sigma + deviation.mu))
+  if (!spread?.variance || !run.isLive)
+    return
+  const from = Math.min(position, currentPosition(run, now))
+  const sd = Math.sqrt(Math.max(0, spread.variance[position] - spread.variance[from]))
+  return Math.min(UNCERTAINTY_MAX, Math.max(BOARDING, SURE * sd * spread.inflation[leadIndex(time - now)]))
+}
+
+/** How much later than expected a bus may get to a stop, for counting on catching another after it */
+export const spread = (run: Run, position: number, time: number, now: number) =>
+  learnedSpread(run, position, time, now, false) ?? uncertainty(time - now)
 
 /** How early to be at a stop for a bus leaving it at `departure` */
 export const slack = (run: Run, position: number, departure: number, now: number) =>
   isHeld(run, position)
     ? BOARDING
-    : uncertainty(departure - now) * (run.isLive ? 1 : SCHEDULE_FACTOR)
+    : learnedSpread(run, position, departure, now, true) ?? uncertainty(departure - now) * (run.isLive ? 1 : SCHEDULE_FACTOR)
 
-/** The trip a bus is on or about to start, from Umo's predictions: of those it's running, the one ending soonest */
-export const runOf = (runs: Run[], vehicle: string, now: number) =>
-  runs
-    .filter(run => run.vehicle === vehicle && timeAt(run, run.trip.stops.length - 1) >= now)
-    .sort((a, b) => timeAt(a, a.trip.stops.length - 1) - timeAt(b, b.trip.stops.length - 1))[0] as Run | undefined
+/** How long between trips a route's buses lay over */
+const layoverOf = (model: Model, route: string) => {
+  const estimate = layoverEstimate(model, route)
+  return estimate ? Math.exp(estimate.mu) : LAYOVER
+}
+
+/**
+ * The trip a bus is on or about to start: the one Umo tags it with, nearest now, else from Umo's predictions, of
+ * those it's running, the one ending soonest
+ */
+export const runOf = (runs: Run[], { id, tripTag }: Pick<Vehicle, "id" | "tripTag">, now: number) => {
+  const end = (run: Run) => timeAt(run, run.trip.stops.length - 1)
+  const offset = (run: Run) => Math.max(0, timeAt(run, 0) - now, now - end(run))
+  return (
+    runs.filter(run => run.trip.id === tripTag).sort((a, b) => offset(a) - offset(b))[0] ??
+    runs.filter(run => run.vehicle === id && end(run) >= now).sort((a, b) => end(a) - end(b))[0]
+  ) as Run | undefined
+}
 
 /** Identifies an itinerary across replans, changing only when its trips or times to the minute do */
 export const itineraryKey = (itinerary: Itinerary) =>
@@ -143,7 +213,7 @@ export const itineraryKey = (itinerary: Itinerary) =>
  * @returns the runs Umo has nothing to say about although it's predicting their route past their start,
  * so they aren't coming (connectors run by headway, not to the timetable)
  */
-const applyPredictions = (feed: Feed, predictions: StopPredictions[], runs: Run[]) => {
+const applyPredictions = (feed: Feed, model: Model, predictions: StopPredictions[], runs: Run[]) => {
   const runsByTripId = new Map<string, Run[]>()
   for (const run of runs)
     runsByTripId.set(run.trip.id, [...runsByTripId.get(run.trip.id) ?? [], run])
@@ -192,7 +262,7 @@ const applyPredictions = (feed: Feed, predictions: StopPredictions[], runs: Run[
     let held = 0
     for (let position = 0; position < run.delays.length; position++) {
       delay = delays.get(position) ?? delay
-      const hold = run.trip.timepoints.includes(position) ? Math.max(0, -(delay + held)) : 0
+      const hold = run.held[position] ? Math.max(0, -(delay + held)) : 0
       held += hold
       run.holds[position] = hold
       run.delays[position] = delay + held
@@ -201,7 +271,7 @@ const applyPredictions = (feed: Feed, predictions: StopPredictions[], runs: Run[
 
   // A bus's next loop, unless it waits for its scheduled start, begins a layover after the loop it's on ends
   for (const run of known.keys()) {
-    if (run.isLive || run.trip.timepoints.includes(0))
+    if (run.isLive || run.held[0])
       continue
     const start = timeAt(run, 0)
     const sameBus = [...known.keys()].filter(other => other.vehicle === run.vehicle)
@@ -210,7 +280,7 @@ const applyPredictions = (feed: Feed, predictions: StopPredictions[], runs: Run[
       continue
     const end = Math.max(...sameBus.filter(other => other.isLive).map(other => timeAt(other, other.trip.stops.length - 1)))
     if (Number.isFinite(end) && end <= start)
-      run.delays = run.delays.map(delay => delay + Math.min(0, end + LAYOVER - start))
+      run.delays = run.delays.map(delay => delay + Math.min(0, end + layoverOf(model, run.trip.route) - start))
   }
 
   return new Set(runs.filter(run =>
@@ -219,23 +289,51 @@ const applyPredictions = (feed: Feed, predictions: StopPredictions[], runs: Run[
   ))
 }
 
+const spreadCache = new WeakMap<Model, WeakMap<Trip, Spread[]>>()
+
+/** What the model knows of how far off a trip's times may be, on a weekday or a weekend */
+const spreadOf = (feed: Feed, model: Model, trip: Trip, day: Day): Spread => {
+  let byTrip = spreadCache.get(model)
+  if (!byTrip)
+    spreadCache.set(model, byTrip = new WeakMap())
+  const spreads = byTrip.get(trip) ?? []
+  byTrip.set(trip, spreads)
+  const type = dayType(day)
+  return spreads[type] ??= {
+    variance: model.paces[trip.route] && trip.stops.reduce((sums, stop, position) => {
+      if (position === 0)
+        return [0]
+      const [from, to] = [feed.stops[trip.stops[position - 1]], feed.stops[stop]]
+      const drive = driveEstimate(model, trip.route, `${from.id}>${to.id}`, distance(from, to) * STREET_DETOUR, context(day, trip.times[position - 1]))
+      const dwell = position < trip.stops.length - 1 ? dwellEstimate(model, to.id, type) : undefined
+      return [...sums, sums.at(-1)! + (drive ? variance(drive) : 0) + (dwell ? variance(dwell) : 0)]
+    }, [] as number[]),
+    deviation: trip.stops.map(stop => deviationEstimate(model, trip.route, feed.stops[stop].id, type)),
+    inflation: LEADS.map(minutes => inflation(model, minutes * 60))
+  }
+}
+
+const EMPTY = emptyModel()
+
 /** Every trip running yesterday (past midnight), today, or tomorrow (late night planning) */
-export const buildRuns = (feed: Feed, today: number, predictions: StopPredictions[]) => {
+export const buildRuns = (feed: Feed, today: Day, predictions: StopPredictions[], model = EMPTY) => {
   const runs: Run[] = []
-  for (const date of [addDays(today, -1), today, addDays(today, 1)]) {
-    const base = serviceDayStart(date) / 1000
+  for (const day of [addDays(today, -1), today, addDays(today, 1)]) {
+    const base = serviceDayStart(day) / 1000
     for (const trip of feed.trips)
-      if (isServiceActive(feed.services[trip.service], date))
+      if (isServiceActive(feed.services[trip.service], day))
         runs.push({
           trip,
           base,
           delays: trip.times.map(() => 0),
           holds:  trip.times.map(() => 0),
+          held:   heldPositions(model, feed, trip),
+          spread: model.through ? spreadOf(feed, model, trip, day) : undefined,
           isLive: false
         })
   }
 
-  const notComing = applyPredictions(feed, predictions, runs)
+  const notComing = applyPredictions(feed, model, predictions, runs)
   return runs.filter(run => !notComing.has(run))
 }
 
@@ -367,7 +465,7 @@ export const scan = (
       finishFrom(stop)
     }
     // Getting off is as unsure as when the bus gets there, and without changing buses only leads on to the destination
-    const readyAt = time + uncertainty(time - now)
+    const readyAt = time + spread(runs[connection.run], connection.position + 1, time, now)
     const isReadier = !direct && readyAt < ready[stop]
     if (isReadier) {
       ready[stop] = readyAt

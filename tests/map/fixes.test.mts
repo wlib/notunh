@@ -15,12 +15,12 @@ const fixes = fc.record({
   at:       fc.integer({ min: 1e12, max: 2e12 })
 })
 
-test("isWorthTaking keeps a good fix, and a poor one unless a good one came within 10 s", () => {
-  fc.assert(fc.property(fixes, fixes, fc.integer({ min: 0, max: 60_000 }), (last, next, gap) => {
+test("isWorthTaking keeps a good fix, and a poor one unless a good one came within 10 s, but never an older one", () => {
+  fc.assert(fc.property(fixes, fixes, fc.integer({ min: -60_000, max: 60_000 }), (last, next, gap) => {
     const later = { ...next, at: last.at + gap }
     const isPoor = (fix: Fix) => fix.accuracy > 50
     expect(isWorthTaking(undefined, later)).toBe(true)
-    expect(isWorthTaking(last, later)).toBe(!isPoor(later) || isPoor(last) || gap > 10_000)
+    expect(isWorthTaking(last, later)).toBe(gap >= 0 && (!isPoor(later) || isPoor(last) || gap > 10_000))
   }))
 })
 

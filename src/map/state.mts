@@ -2,56 +2,27 @@
 
 import { r, watch } from "bruh/reactive"
 import feedUrl from "./gtfs.json?url"
-import { distance, isServiceActive, loadFeed, localDate } from "./feed.mts"
+import modelUrl from "./model.json?url"
+import { distance, isServiceActive, loadFeed } from "./feed.mts"
+import { loadModel } from "./model.mts"
 import { type Vehicle, type Prediction, type StopPredictions, STALE_VEHICLE_SECONDS, fetchVehicles, fetchPredictions, fetchStopPredictions } from "./umo.mts"
 import { type Itinerary, type Place, buildRuns, itineraryKey, plan, timeAt, walkOnly, walkSeconds } from "./plan.mts"
-import { currentLocation, locationProblem } from "./location.mts"
+import { currentLocation, location, locationProblem } from "./location.mts"
+import { buildingAt } from "./places.mts"
+import { poll } from "../shell/poll.mts"
+import { TICK_MS, now as clock, today, visibleSince } from "../shell/lifecycle.mts"
+import { distinct, isSameList, isSameSet, store, stored } from "../shell/state.mts"
 
-const VEHICLE_POLL_MS = 5_000
+const VEHICLE_POLL_MS    = 5_000
 const PREDICTION_POLL_MS = 30_000
-const STOP_POLL_MS = 20_000
-const CLOCK_TICK_MS = 15_000
-// A request taking longer has stalled, and would hold up the next ones
-const REQUEST_TIMEOUT_MS = 15_000
+const STOP_POLL_MS       = 20_000
 
-/**
- * Runs f now and every interval while the page is visible, one run at a time,
- * until stopped, which cancels a run still going so it can't overwrite anything newer
- */
-const poll = (f: (signal: AbortSignal) => Promise<unknown>, interval: number, onError: (error: unknown) => void = console.error) => {
-  const controller = new AbortController()
-  let isRunning = false
-  const run = () => {
-    if (isRunning || document.visibilityState !== "visible")
-      return
-    isRunning = true
-    f(AbortSignal.any([controller.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]))
-      .catch(error => controller.signal.aborted || onError(error))
-      .finally(() => isRunning = false)
-  }
-  run()
-  const timer = setInterval(run, interval)
-  document.addEventListener("visibilitychange", run)
-  return () => {
-    controller.abort()
-    clearInterval(timer)
-    document.removeEventListener("visibilitychange", run)
-  }
-}
-
-export const feed = await loadFeed(feedUrl)
+export const [feed, model] = await Promise.all([loadFeed(feedUrl), loadModel(modelUrl)])
 
 //#region Time
 
-/** Epoch seconds, ticking */
-export const now = r(Date.now() / 1000)
-setInterval(() => now.value = Date.now() / 1000, CLOCK_TICK_MS)
-
-// A source so that dependents only rerun when the date actually changes
-export const today = r(localDate(Date.now()))
-watch(() => {
-  today.value = localDate(now.value * 1000)
-})
+/** The shell's clock in epoch seconds, as the planner compares it with the timetable */
+export const now = r(() => clock.value / 1000)
 
 export const runningToday = r(() =>
   new Set(
@@ -65,33 +36,65 @@ export const runningToday = r(() =>
 
 //#region Live data
 
-export const vehicles = r<Vehicle[]>([])
+/** Every vehicle as Umo last listed it */
+const reports = r<Vehicle[]>([])
 /** Epoch milliseconds of the last successful vehicles update */
 export const lastUpdate = r<number>()
 export const predictions = r<StopPredictions[]>([])
 
-/** Buses reporting lately on routes in the timetable, which are the ones drawn on the map, by route */
+/** Seconds since a vehicle reported, as of an epoch millisecond, counting on from when Umo said so */
+export const ageOf = (vehicle: Vehicle, at: number) =>
+  vehicle.secsSinceReport + Math.max(0, at - (lastUpdate.value ?? at)) / 1000
+
+/**
+ * Milliseconds Umo has gone unheard while we've been listening, which is only while the page is in view, so
+ * coming back gives it a moment to answer before anything is given up on
+ */
+const silence = r(() =>
+  visibleSince.value === undefined
+    ? 0
+    : clock.value - Math.max(lastUpdate.value ?? -Infinity, visibleSince.value)
+)
+
+const hasVehiclesFailed = r(false)
+
+/**
+ * Umo has failed to answer from the start, or stopped answering for a while since we've been looking, until it
+ * answers again, so that going away and coming back doesn't forget it
+ */
+export const isLiveDown = r(false)
+watch(() => {
+  if (lastUpdate.value === undefined ? hasVehiclesFailed.value : silence.value > 3 * VEHICLE_POLL_MS + TICK_MS)
+    isLiveDown.value = true
+})
+
+/**
+ * Buses still reporting; the rest are parked or off duty, and drop off as they age even when Umo can't be
+ * reached, though only once it's had a chance to answer. Only a change in which buses those are reaches what
+ * depends on them
+ */
+export const vehicles = distinct(() => {
+  // Silence is negative for a moment on coming back, before the clock catches up
+  const unheard = Math.max(0, silence.value) / 1000
+  return reports.value.filter(vehicle =>
+    (isLiveDown.value ? ageOf(vehicle, clock.value) : vehicle.secsSinceReport + unheard) < STALE_VEHICLE_SECONDS
+  )
+}, isSameList)
+
+/** Live buses on routes in the timetable, which are the ones drawn on the map, by route */
 export const liveCounts = r(() => {
   const counts = new Map<string, number>()
-  for (const { route, secsSinceReport } of vehicles.value)
-    if (route && feed.routesById.has(route.id) && secsSinceReport < STALE_VEHICLE_SECONDS)
+  for (const { route } of vehicles.value)
+    if (route && feed.routesById.has(route.id))
       counts.set(route.id, (counts.get(route.id) ?? 0) + 1)
   return counts
 })
 
-const hasVehiclesFailed = r(false)
-
-/** Umo has failed to answer from the start, or stopped answering for a while */
-export const isLiveDown = r(() =>
-  lastUpdate.value === undefined
-    ? hasVehiclesFailed.value
-    : now.value * 1000 - lastUpdate.value > 3 * VEHICLE_POLL_MS + CLOCK_TICK_MS
-)
-
 poll(
   async signal => {
-    vehicles.value = await fetchVehicles(signal)
+    reports.value = await fetchVehicles(signal)
     lastUpdate.value = Date.now()
+    isLiveDown.value = false
   },
   VEHICLE_POLL_MS,
   error => {
@@ -113,11 +116,8 @@ const predictionPairs = [
   ).values()
 ]
 
-// A source keyed by the sorted route ids, so that a new bus going out refreshes right away
-const liveRoutes = r<string>("")
-watch(() => {
-  liveRoutes.value = [...liveCounts.value.keys()].sort().join(" ")
-})
+// Keyed by the sorted route ids, so that a new bus going out refreshes right away, and nothing else does
+const liveRoutes = distinct(() => [...liveCounts.value.keys()].sort().join(" "))
 
 watch([liveRoutes], () => {
   const routes = new Set(liveRoutes.value.split(" "))
@@ -143,29 +143,36 @@ export const layovers = r(() => {
   return new Set([...soonest].filter(([, prediction]) => prediction.affectedByLayover).map(([id]) => id))
 })
 
-export const runs = r(() => buildRuns(feed, today.value, predictions.value))
+export const runs = r(() => buildRuns(feed, today.value, predictions.value, model))
 
 //#endregion
 
 //#region Planning
 
-export const from = r<Place>()
-export const to = r<Place>()
-/** The itineraryKey of the chosen itinerary, or "walk" */
-export const selected = r<string>()
+const isPlace = (value: unknown): value is Place => {
+  const { lat, lon, name }: { lat?: unknown, lon?: unknown, name?: unknown } = Object(value)
+  return typeof lat === "number" && typeof lon === "number" && typeof name === "string"
+}
 
-// A source with an equality cutoff, so cards only rerender when trips or times change
-export const itineraries = r<Itinerary[]>([], {
-  isEqual: (a, b) =>
-    a.length === b.length &&
-    a.every((itinerary, i) => itineraryKey(itinerary) === itineraryKey(b[i]))
-})
+// The trip being planned is kept for the rest of the day, so the page reloading, as it does after a while away,
+// picks it back up
+const TRIP = "map-trip"
+const trip: { day?: unknown, from?: unknown, to?: unknown, selected?: unknown } = Object(stored(TRIP))
+const isTripToday = trip.day === today.peek()
+
+export const from = r(isTripToday && isPlace(trip.from) ? trip.from : undefined)
+export const to = r(isTripToday && isPlace(trip.to) ? trip.to : undefined)
+/** The itineraryKey of the chosen itinerary, or "walk" */
+export const selected = r(isTripToday && typeof trip.selected === "string" ? trip.selected : undefined)
 watch(() => {
-  itineraries.value =
-    from.value && to.value
-      ? plan(feed, runs.value, from.value, to.value, now.value)
-      : []
+  store(TRIP, { day: today.peek(), from: from.value, to: to.value, selected: selected.value })
 })
+
+// Cards only rerender when trips or times change
+export const itineraries = distinct(
+  (): Itinerary[] => from.value && to.value ? plan(feed, runs.value, from.value, to.value, now.value) : [],
+  (a, b) => isSameList(a.map(itineraryKey), b.map(itineraryKey))
+)
 
 /** Minutes and meters to walk the whole way, if worth suggesting */
 export const walk = r(() => {
@@ -228,18 +235,14 @@ export const focusedBuses = r((): { vehicles?: ReadonlySet<string>, route?: stri
 
 const SOON = 3600 // s
 
-const isSameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>) =>
-  a.size === b.size && [...a].every(item => b.has(item))
-
-/** Routes with a bus out or one due within the hour, else all of today's; a source so the map only redraws on a change */
-export const activeRoutes = r<ReadonlySet<string>>(new Set<string>(), { isEqual: isSameSet })
-watch(() => {
+/** Routes with a bus out or one due within the hour, else all of today's, reaching the map only on a change */
+export const activeRoutes = distinct((): ReadonlySet<string> => {
   const active = new Set(liveCounts.value.keys())
   for (const run of runs.value)
     if (timeAt(run, 0) <= now.value + SOON && timeAt(run, run.trip.stops.length - 1) >= now.value)
       active.add(run.trip.route)
-  activeRoutes.value = active.size ? active : runningToday.value
-})
+  return active.size ? active : runningToday.value
+}, isSameSet)
 
 /** Routes the user chose to show, overriding the active ones */
 export const chosenRoutes = r<ReadonlySet<string>>()
@@ -268,6 +271,28 @@ watch(() => {
 
 //#endregion
 
+//#region You
+
+const REPLAN_M = 50 // m moved before a trip from or to you is planned again
+
+/** Where you are, as a place to plan from, moving only by enough to matter to a plan */
+const you = r<Place | undefined>(undefined, {
+  isEqual: (a, b) => a !== undefined && b !== undefined && distance(a, b) < REPLAN_M
+})
+watch(() => {
+  const fix = location.value
+  if (fix)
+    you.value = { lat: fix.lat, lon: fix.lon, name: "Your location", isYou: true }
+})
+
+// A trip from or to you moves with you, except while you're on a bus, which a plan from where you are would have
+// you get off
+for (const place of [from, to])
+  watch([you, riding], () => {
+    if (place.peek()?.isYou && you.value && !riding.peek())
+      place.value = you.value
+  })
+
 export const isLocating = r(false)
 
 /** The current location as a place, or undefined with locationProblem saying why, unless quiet */
@@ -276,7 +301,7 @@ export const useCurrentLocation = async ({ quiet = false } = {}): Promise<Place 
   isLocating.value = true
   try {
     const { lat, lon } = await currentLocation()
-    return { lat, lon, name: "Your location" }
+    return { lat, lon, name: "Your location", isYou: true }
   }
   catch (problem) {
     if (!quiet)
@@ -287,10 +312,48 @@ export const useCurrentLocation = async ({ quiet = false } = {}): Promise<Place 
   }
 }
 
-// Start from the current location if the user already allowed it
+/** Directions to a place, from where you are unless the trip already starts somewhere */
+export const directTo = async (place: Place) => {
+  to.value = place
+  selected.value = undefined
+  if (from.peek())
+    return
+  const here = await useCurrentLocation()
+  // Unless you've picked somewhere while waiting
+  if (here && !from.peek())
+    from.value = here
+}
+
+// A link from the laundry or dining pages, like /map/?to=laundry/stoke-hall-g05, gives directions from where you are
+// to the building, over any trip kept from earlier, and is then forgotten, so a reload keeps the trip as you've
+// changed it since. Links to anywhere unknown are ignored
+const link = new URLSearchParams(globalThis.location.search).get("to")
+if (link !== null) {
+  history.replaceState(history.state, "", globalThis.location.pathname)
+  const building = buildingAt(link)
+  if (building) {
+    from.value = undefined
+    directTo({ lat: building.lat, lon: building.lon, name: building.name })
+  }
+}
+
+// Start from the current location if the user already allowed it, and otherwise don't keep a trip from or to
+// where you were, as there's no following you from there. Browsers without the permissions API, before iOS 16,
+// keep it until you next locate yourself
 navigator.permissions?.query({ name: "geolocation" })
   .then(async status => {
-    if (status.state === "granted" && !from.peek())
-      from.value = await useCurrentLocation({ quiet: true })
+    if (status.state !== "granted") {
+      for (const place of [from, to])
+        if (place.peek()?.isYou)
+          place.value = undefined
+    }
+    else if (!from.peek()) {
+      const here = await useCurrentLocation({ quiet: true })
+      // Unless you've picked somewhere while waiting
+      if (!from.peek())
+        from.value = here
+    }
   })
   .catch(() => {})
+
+//#endregion

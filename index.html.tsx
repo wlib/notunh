@@ -11,14 +11,14 @@ export default () =>
     <html lang="en-US">
       <Head
         title="notunh"
-        description="An unofficial guide to UNH buses and dining."
+        description="An unofficial guide to UNH buses, dining, and laundry."
         script="/src/shell/page.mts"
       />
       <body>
         <main class="page">
           <header class="intro">
             <h1 class="wordmark"><span>not</span>unh</h1>
-            <p>An unofficial guide to UNH buses and dining.</p>
+            <p>An unofficial guide to UNH buses, dining, and laundry.</p>
           </header>
 
           <nav class="sections" aria-label="Sections">
@@ -30,6 +30,11 @@ export default () =>
             <a href="/dining/">
               <strong>Dining menus</strong>
               <span>Every meal at Holloway and Philbrook, with ingredients and allergens.</span>
+              <span class="icon icon-forward" aria-hidden="true" />
+            </a>
+            <a href="/laundry/">
+              <strong>Laundry</strong>
+              <span>Which washers and dryers are free in every residence hall, and when they usually aren't.</span>
               <span class="icon icon-forward" aria-hidden="true" />
             </a>
           </nav>
@@ -67,6 +72,8 @@ export default () =>
               </dd>
               <dt>Menus</dt>
               <dd>UNH Dining, through <a href="https://unh.nutrislice.com">Nutrislice</a></dd>
+              <dt>Laundry</dt>
+              <dd>The machines' own status, from <a href="https://laundryconnectlive.com">LaundryConnect</a> by Automatic Laundry</dd>
             </dl>
             <p class="muted">
               Menus and schedules are checked nightly. Built with <a href="https://github.com/Technical-Source/bruh">bruh</a> and <a href="https://vite.dev">Vite</a>,

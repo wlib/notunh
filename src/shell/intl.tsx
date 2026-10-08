@@ -7,7 +7,7 @@ import "bruh/components/intl/number"
 import "bruh/components/intl/plural"
 import "bruh/components/intl/list"
 import type { BruhChild } from "bruh/browser"
-import { TIME_ZONE } from "./time.mts"
+import { TIME_ZONE, type Day as CalendarDay } from "../shared/time.mts"
 
 // The reader's own English first, like en-GB for its 24-hour clock, as a plural or unit in another language would
 // read wrong among English words: "1 stop" for 8 under Russian's rules, or "15 мин"
@@ -27,8 +27,8 @@ export const DayTime = ({ at }: { at: Date }) =>
   <bruh-date-time locales={locales} date={at.toISOString()} time-zone={TIME_ZONE} weekday="short" hour="numeric" minute="2-digit" />
 
 /** A calendar day's parts, like weekday="short" for "Thu"; days are dates at noon UTC, so the zone can't shift them */
-export const Day = ({ date, ...parts }: { date: string } & Pick<Intl.DateTimeFormatOptions, "weekday" | "month" | "day">) =>
-  <bruh-date-time locales={locales} date={`${date}T12:00:00Z`} time-zone="UTC" {...parts} />
+export const Day = ({ of, ...parts }: { of: CalendarDay } & Pick<Intl.DateTimeFormatOptions, "weekday" | "month" | "day">) =>
+  <bruh-date-time locales={locales} date={`${of}T12:00:00Z`} time-zone="UTC" {...parts} />
 
 /** Like "5 min" or "640 mg" */
 export const Quantity = ({ value, unit, digits = 0 }: { value: number, unit: string, digits?: number }) =>
@@ -74,9 +74,11 @@ export const List = ({ items, type = "conjunction" }: { items: BruhChild[], type
     list => list.append(...items.map(item => <span>{item}</span>))
   )
 
+// bruh has no relative time element, so these are plain Intl
 const relative = new Intl.RelativeTimeFormat(ENGLISH, { numeric: "auto", style: "narrow" })
+const relativeDays = new Intl.RelativeTimeFormat(ENGLISH, { numeric: "auto" })
 
-/** Like "now", "12s ago", or "3 min. ago"; bruh has no relative time element, so this is plain Intl */
+/** Like "now", "12s ago", or "3 min. ago" */
 export const ago = (seconds: number) =>
   seconds < 10 ? relative.format(0, "second") :
   seconds < 60 ? relative.format(-Math.round(seconds), "second") :
@@ -84,6 +86,6 @@ export const ago = (seconds: number) =>
 
 /** Like "Today" or "Tomorrow", for days that have a name relative to today */
 export const relativeDay = (days: number) => {
-  const text = new Intl.RelativeTimeFormat(ENGLISH, { numeric: "auto" }).format(days, "day")
+  const text = relativeDays.format(days, "day")
   return text[0].toLocaleUpperCase() + text.slice(1)
 }

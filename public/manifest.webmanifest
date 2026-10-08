@@ -1,7 +1,7 @@
 {
   "name": "notunh",
   "short_name": "notunh",
-  "description": "An unofficial app for UNH's buses and dining hall menus",
+  "description": "An unofficial guide to UNH buses, dining, and laundry",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fcfaf7",

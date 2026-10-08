@@ -8,8 +8,9 @@ import { distance } from "./feed.mts"
 import { pointAt, routeLines, snapToLines, type Line, type Track } from "./geometry.mts"
 import { compare, fixAt, type Fix } from "./fixes.mts"
 import { location } from "./location.mts"
-import { STALE_VEHICLE_SECONDS, type Vehicle } from "./umo.mts"
+import type { Vehicle } from "./umo.mts"
 import { feed, vehicles, riding, suggested } from "./state.mts"
+import { isVisible } from "../shell/lifecycle.mts"
 
 // Fixes kept for lining up with buses' reports, which can be this old
 const HISTORY_MS = 3 * 60_000
@@ -40,7 +41,7 @@ watch([vehicles], () => {
   for (const vehicle of vehicles.value) {
     const streak = streaks.get(vehicle.id) ?? { with: 0, apart: 0, gpsTime: 0 }
     streaks.set(vehicle.id, streak)
-    if (vehicle.gpsTime <= streak.gpsTime || vehicle.secsSinceReport >= STALE_VEHICLE_SECONDS)
+    if (vehicle.gpsTime <= streak.gpsTime)
       continue
     // A report newer than your latest fix waits for one to catch up
     if ((history.at(-1)?.at ?? -Infinity) < vehicle.gpsTime)
@@ -79,6 +80,13 @@ watch([vehicles], () => {
     )
     .sort(([, a], [, b]) => b.with - a.with)
   suggested.value = best?.[0]
+})
+
+// A bus that's stopped reporting can't keep agreeing with you, so you're off it, though it isn't declined, in case
+// it was only quiet for a while
+watch(() => {
+  if (riding.value !== undefined && !vehicles.value.some(vehicle => vehicle.id === riding.value))
+    riding.value = undefined
 })
 
 /** Says you're on a bus, or with undefined that you got off */
@@ -148,17 +156,14 @@ const asBus = (vehicle: Vehicle, fix: Fix, { lat, lon }: { lat: number, lon: num
   secsSinceReport: Math.max(0, (Date.now() - fix.at) / 1000)
 })
 
-/**
- * Every bus, with the one you're on where your phone says it is, when that's newer than its own report and on
- * its route. A bus that's stopped reporting can't keep agreeing, so it isn't carried around on your phone's word alone
- */
+/** Every bus, with the one you're on where your phone says it is, when that's newer than its own report and on its route */
 export const fusedVehicles = r(() => {
   const id = riding.value
   const fix = location.value
   if (!id || !fix || !isInStep.value)
     return vehicles.value
   return vehicles.value.map(vehicle => {
-    if (vehicle.id !== id || fix.at <= vehicle.gpsTime || vehicle.secsSinceReport >= STALE_VEHICLE_SECONDS || !onRoute.value)
+    if (vehicle.id !== id || fix.at <= vehicle.gpsTime || !onRoute.value)
       return vehicle
     return asBus(vehicle, fix, onRoute.value)
   })
@@ -167,7 +172,7 @@ export const fusedVehicles = r(() => {
 // The screen stays on while you're riding, to watch for your stop
 let wakeLock: Promise<WakeLockSentinel | undefined> | undefined
 const holdScreen = () => {
-  if (riding.peek() && !wakeLock && document.visibilityState === "visible")
+  if (riding.peek() && !wakeLock && isVisible.peek())
     wakeLock = navigator.wakeLock?.request("screen").catch(() => undefined)
 }
 watch([riding], () => {
@@ -179,9 +184,9 @@ watch([riding], () => {
   }
 })
 // The lock is let go whenever the page is hidden, so it's taken again on coming back
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden")
-    wakeLock = undefined
-  else
+watch([isVisible], () => {
+  if (isVisible.value)
     holdScreen()
+  else
+    wakeLock = undefined
 })

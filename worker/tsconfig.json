@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "include": ["./", "../tests/worker/"],
+  // The root's leaves out its tests, which are this one's
+  "exclude": [],
+
+  "compilerOptions": {
+    // The Workers runtime rather than the browser's DOM
+    "types": ["@cloudflare/workers-types"],
+    "lib": ["ESNext"]
+  }
+}

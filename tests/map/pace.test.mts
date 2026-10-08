@@ -1,7 +1,7 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { toLine, type Coordinates, type Track } from "../../src/map/geometry.mts"
-import { ZONE, createPace, expectedDistance, observe, type Trace } from "../../src/map/pace.mts"
+import { DEFAULT_RATE, ZONE, createPace, expectedDistance, observe, type Trace } from "../../src/map/pace.mts"
 
 const CENTER = { lat: 43.135, lon: -70.93 }
 
@@ -61,11 +61,11 @@ test("a bus seen driving between stops teaches how long that stretch and each st
       const { pace, positions } = run(slots, speed, waits, ZONE / speed / 2)
 
       positions.slice(1).forEach((stop, i) => {
-        const drive = pace.drives.get(`s${i}>s${i + 1}`)
+        const drive = pace.drives.get(`s${i}>s${i + 1}`)?.seconds
         expect(drive).toBeCloseTo((stop - positions[i] - 2 * ZONE) / speed, 3)
       })
       positions.forEach((_, i) =>
-        expect(pace.zones.get(`s${i}`)).toBeCloseTo(2 * ZONE / speed + waits[i], 3)
+        expect(pace.zones.get(`s${i}`)?.seconds).toBeCloseTo(2 * ZONE / speed + waits[i], 3)
       )
     }
   ))
@@ -73,7 +73,8 @@ test("a bus seen driving between stops teaches how long that stretch and each st
 
 test("a bus that left a stop is expected where the last bus was that long after leaving it", () =>
   fc.assert(fc.property(
-    stopPositions,
+    // With a stop past the next, so it pulls out of that one at a pace learned too
+    stopPositions.filter(slots => slots.length > 2),
     fc.integer({ min: 3, max: 12 }),
     fc.array(fc.integer({ min: 0, max: 60 }), { minLength: 6, maxLength: 6 }),
     fc.double({ min: 0, max: 1, noNaN: true }),
@@ -83,6 +84,10 @@ test("a bus that left a stop is expected where the last bus was that long after 
       const start = positions[0] + ZONE
       const trace: Trace = { track: { line, distance: start }, at: 0, isStopped: false, left: { stop: 0, at: 0 } }
       const reach = (positions[1] - start) / speed
+      // This property checks travel and waiting at a fixed learned pace. Keep those observations fresh throughout
+      // the prediction; otherwise the intentional decay after arrival also changes the rate while it waits.
+      for (const seen of [...pace.drives.values(), ...pace.zones.values()])
+        seen.at = reach + waits[1]
 
       expect(expectedDistance(pace, trace, share * reach)).toBeCloseTo(start + share * reach * speed, 2)
       // Then it waits at the next stop as long as the last bus did
@@ -108,4 +113,48 @@ test("a bus is never expected to go backward as time passes", () =>
       expect(expectedDistance(pace, trace, later)).toBeLessThanOrEqual(line.length + 1e-9)
     }
   ))
+)
+
+test("a bus at a stop where its trip waits for its scheduled time is expected there until then", () =>
+  fc.assert(fc.property(
+    stopPositions.filter(slots => slots.length > 2),
+    fc.integer({ min: 3, max: 12 }),
+    fc.integer({ min: 10, max: 600 }),
+    fc.double({ min: 0, max: 1, noNaN: true }),
+    (slots, speed, hold, share) => {
+      const { line, pace, positions } = run(slots, speed, [0, 0, 0, 0, 0, 0], ZONE / speed / 2)
+      const trace: Trace = { track: { line, distance: positions[1] }, at: 0, isStopped: true, entered: { stop: 1, at: 0 }, holds: new Map([["s1", hold]]) }
+      expect(expectedDistance(pace, trace, share * hold)).toBeLessThanOrEqual(positions[1] + ZONE + 1e-9)
+      expect(expectedDistance(pace, { ...trace, holds: undefined }, hold + 60)).toBeGreaterThan(positions[1] + ZONE)
+    }
+  ))
+)
+
+test("how slow or quick buses have lately been on a line carries over, shrunk, to stretches nobody's driven", () =>
+  fc.assert(fc.property(
+    stopPositions.filter(slots => slots.length > 2),
+    fc.integer({ min: 2, max: 12 }).filter(speed => speed !== DEFAULT_RATE),
+    (slots, speed) => {
+      const { line, pace, positions } = run(slots, speed, [0, 0, 0, 0, 0, 0], ZONE / speed / 2)
+      // The first stretch, as if nobody had driven it
+      pace.drives.delete("s0>s1")
+      const start = positions[0] + ZONE
+      const trace: Trace = { track: { line, distance: start }, at: 0, isStopped: false, left: { stop: 0, at: 0 } }
+      const rate = (expectedDistance(pace, trace, 1) - start) / 1
+      expect(Math.min(speed, DEFAULT_RATE)).toBeLessThan(rate + 1e-9)
+      expect(rate).toBeLessThan(Math.max(speed, DEFAULT_RATE) + 1e-9)
+      expect(rate).not.toBeCloseTo(DEFAULT_RATE, 3)
+    }
+  ))
+)
+
+test("GPS wandering a little way back leaves a bus where it got to", () =>
+  fc.assert(fc.property(stopPositions, fc.integer({ min: 0, max: 1999 }), fc.double({ min: 0.1, max: 29, noNaN: true }), (slots, distance, back) => {
+    const line = lineWith(slots)
+    const pace = createPace()
+    const previous = observe(pace, undefined, { line, distance }, 0, true)
+    const next = observe(pace, previous, { line, distance: Math.max(0, distance - back) }, 10, true)
+    expect(next.track.distance).toBe(distance)
+    expect(next.at).toBe(10)
+  }))
 )

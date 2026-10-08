@@ -1,6 +1,7 @@
 // The static schedule, converted from GTFS by scripts/map/convert.mts
 
-import { TIME_ZONE, localDay } from "../shell/time.mts"
+import { getJson } from "../shared/json.mts"
+import { type Day, HOUR, addDays, localDay, offsetAt, weekday } from "../shared/time.mts"
 
 export type Route = {
   id:    string,
@@ -23,10 +24,11 @@ export type Stop = {
 export type Service = {
   /** Bitmask of weekdays, Monday = 1 << 0 */
   days:    number,
-  start:   number,
-  end:     number,
-  added:   number[],
-  removed: number[]
+  /** The first and last days it runs, or "" for a service that only runs on added days */
+  start:   Day,
+  end:     Day,
+  added:   Day[],
+  removed: Day[]
 }
 
 export type Trip = {
@@ -46,8 +48,8 @@ export type Trip = {
 /** The JSON written at build time */
 export type FeedData = {
   version:  string,
-  start:    number,
-  end:      number,
+  start:    Day,
+  end:      Day,
   routes:   Route[],
   stops:    Stop[],
   services: Record<string, Service>,
@@ -70,55 +72,39 @@ export const withIndexes = (data: FeedData): Feed => ({
   routesById: new Map(data.routes.map(route => [route.id, route]))
 })
 
-export const loadFeed = async (url: string) => {
-  const response = await fetch(url)
-  if (!response.ok)
-    throw new Error(`Failed to load schedule: ${response.status}`)
-  return withIndexes(await response.json())
-}
-
-const offsetFormat = new Intl.DateTimeFormat("en-US", {
-  timeZone: TIME_ZONE,
-  timeZoneName: "longOffset"
-})
-
-/** The local calendar date as YYYYMMDD */
-export const localDate = (ms: number) =>
-  +localDay(ms).replaceAll("-", "")
-
-const dateToUtc = (date: number, hours = 0) =>
-  Date.UTC(Math.floor(date / 10000), Math.floor(date / 100) % 100 - 1, date % 100, hours)
-
-export const addDays = (date: number, days: number) => {
-  const utc = new Date(dateToUtc(date) + days * 86_400_000)
-  return utc.getUTCFullYear() * 10000 + (utc.getUTCMonth() + 1) * 100 + utc.getUTCDate()
-}
+export const loadFeed = (url: string) =>
+  getJson<FeedData>(url).then(withIndexes)
 
 /**
  * GTFS times count from "noon minus 12h" so they stay correct across DST changes
  * @returns epoch milliseconds that the service day's times are relative to
  */
-export const serviceDayStart = (date: number) => {
-  const noonUtc = dateToUtc(date, 12)
-  const offset = offsetFormat.format(noonUtc).match(/GMT([+-])(\d+):(\d+)/)
-  const offsetMs =
-    offset
-      ? (offset[1] === "-" ? -1 : 1) * (+offset[2] * 60 + +offset[3]) * 60_000
-      : 0
-  return noonUtc - offsetMs - 12 * 3600_000
+export const serviceDayStart = (day: Day) => {
+  const noon = Date.parse(`${day}T12:00:00Z`)
+  return noon - offsetAt(noon) - 12 * HOUR
 }
 
-export const isServiceActive = (service: Service | undefined, date: number) => {
-  if (!service || service.removed.includes(date))
+/** Epoch seconds a trip's times count from, on whichever service day running it is nearest a time */
+export const tripBase = (feed: FeedData, trip: Trip, at: number) => {
+  const today = localDay(at * 1000)
+  const offset = (base: number) =>
+    Math.max(0, base + trip.times[0] - at, at - base - trip.times.at(-1)!)
+  return [addDays(today, -1), today]
+    .filter(day => isServiceActive(feed.services[trip.service], day))
+    .map(day => serviceDayStart(day) / 1000)
+    .sort((a, b) => offset(a) - offset(b))[0] as number | undefined
+}
+
+export const isServiceActive = (service: Service | undefined, day: Day) => {
+  if (!service || service.removed.includes(day))
     return false
-  if (service.added.includes(date))
+  if (service.added.includes(day))
     return true
 
-  const weekday = (new Date(dateToUtc(date)).getUTCDay() + 6) % 7
   return (
-    date >= service.start &&
-    date <= service.end &&
-    (service.days & (1 << weekday)) !== 0
+    day >= service.start &&
+    day <= service.end &&
+    (service.days & (1 << weekday(day))) !== 0
   )
 }
 

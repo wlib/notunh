@@ -105,8 +105,10 @@ const PlaceInput = ({ field, label, placeholder }: { field: Field, label: string
       }}
     />
 
+  // Not while typing, as a trip from or to you changes as you walk
   watch([place], () => {
-    input.value = place.value?.name ?? ""
+    if (editing.peek() !== field)
+      input.value = place.value?.name ?? ""
   })
 
   return (

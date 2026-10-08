@@ -83,6 +83,12 @@ export const bearing = (a: Coordinates, b: Coordinates) => {
 export const angleBetween = (a: number, b: number) =>
   Math.abs(((a - b) % 360 + 540) % 360 - 180)
 
+/** Streets wind this much more than the straight line between two places */
+export const STREET_DETOUR = 1.25
+
+// A shape ending this close to where it starts is a loop
+const LOOP_GAP = 30 // m
+
 /** A shape measured out for driving along */
 export type Line = {
   coordinates: Coordinates[],
@@ -92,7 +98,9 @@ export type Line = {
   /** Ends where it starts, so driving off the end carries on from the start */
   isLoop: boolean,
   /** Each stop the line's trips serve, by meters from the start, ascending */
-  stops: { id: string, distance: number }[]
+  stops: { id: string, distance: number }[],
+  /** The route whose trips follow it */
+  route?: string
 }
 
 /** A shape and the stops of each trip along it */
@@ -100,21 +108,27 @@ export const toLine = (coordinates: Coordinates[], trips: { id: string, lat: num
   const distances = [0]
   for (let i = 1; i < coordinates.length; i++)
     distances.push(distances[i - 1] + segmentMeters(coordinates[i - 1], coordinates[i]))
+  const length = distances.at(-1)!
+  const isLoop = coordinates.length > 2 && segmentMeters(coordinates[0], coordinates.at(-1)!) < LOOP_GAP
+  const stops = [
+    ...new Map(trips.flatMap(stops =>
+      indicesAlongShape(coordinates, stops).map((index, i) => {
+        const vertex = Math.floor(index)
+        const next = distances[vertex + 1] ?? distances[vertex]
+        const stop = { id: stops[i].id, distance: distances[vertex] + (index - vertex) * (next - distances[vertex]) }
+        return [`${stop.id}@${stop.distance}`, stop] as const
+      })
+    )).values()
+  ].sort((a, b) => a.distance - b.distance)
   return {
     coordinates,
     distances,
-    length: distances.at(-1)!,
-    isLoop: coordinates.length > 2 && segmentMeters(coordinates[0], coordinates.at(-1)!) < 30,
-    stops: [
-      ...new Map(trips.flatMap(stops =>
-        indicesAlongShape(coordinates, stops).map((index, i) => {
-          const vertex = Math.floor(index)
-          const next = distances[vertex + 1] ?? distances[vertex]
-          const stop = { id: stops[i].id, distance: distances[vertex] + (index - vertex) * (next - distances[vertex]) }
-          return [`${stop.id}@${stop.distance}`, stop] as const
-        })
-      )).values()
-    ].sort((a, b) => a.distance - b.distance)
+    length,
+    isLoop,
+    // A loop's trips end at the stop they start from, which driving on around the loop already comes back to
+    stops: isLoop
+      ? stops.filter(stop => length - stop.distance >= LOOP_GAP || !stops.some(other => other.id === stop.id && other.distance < LOOP_GAP))
+      : stops
   }
 }
 
@@ -128,14 +142,15 @@ export const routeLines = (feed: Feed) => {
       const trips = feed.trips.filter(trip => trip.route === route.id)
       return [
         route.id,
-        [...new Set(trips.map(trip => trip.shape))].map(shape =>
-          toLine(
+        [...new Set(trips.map(trip => trip.shape))].map(shape => ({
+          ...toLine(
             feed.shapes[shape],
             trips
               .filter(trip => trip.shape === shape)
               .map(trip => trip.stops.map(stop => feed.stops[stop]))
-          )
-        )
+          ),
+          route: route.id
+        }))
       ]
     }))
     linesCache.set(feed, lines)

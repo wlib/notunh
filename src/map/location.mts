@@ -1,8 +1,9 @@
 // Your location, watched with GPS while the map is in view, from when it's first asked for.
 // High accuracy is what makes it GPS at all on iOS, rather than Wi-Fi a hundred meters off
 
-import { r } from "bruh/reactive"
+import { r, watch } from "bruh/reactive"
 import { isWorthTaking, type Fix } from "./fixes.mts"
+import { isVisible } from "../shell/lifecycle.mts"
 
 /** The latest fix worth showing */
 export const location = r<Fix>()
@@ -52,7 +53,7 @@ const fail = (error: GeolocationPositionError) => {
 }
 
 const resume = () => {
-  if (watchId === undefined && isWanted && document.visibilityState === "visible")
+  if (watchId === undefined && isWanted && isVisible.peek())
     watchId = navigator.geolocation.watchPosition(take, fail, { enableHighAccuracy: true, maximumAge: 0 })
 }
 
@@ -63,7 +64,7 @@ const pause = () => {
 }
 
 // GPS is the battery's biggest drain, and a page out of view can't use it anyway
-document.addEventListener("visibilitychange", () => document.visibilityState === "visible" ? resume() : pause())
+watch([isVisible], () => isVisible.value ? resume() : pause())
 
 /** Starts watching, which shows the location from then on */
 export const watchLocation = () => {

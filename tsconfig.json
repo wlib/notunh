@@ -1,5 +1,7 @@
 {
   "include": ["./src/", "./scripts/", "./tests/", "./*.html.tsx", "./*/*.html.tsx"],
+  // The Worker and its tests have Cloudflare's runtime types instead of the DOM's, in worker/tsconfig.json
+  "exclude": ["./tests/worker/"],
 
   "compilerOptions": {
     "types": ["vite/client", "node", "geojson"],

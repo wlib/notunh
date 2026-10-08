@@ -2,7 +2,7 @@
 // which has every hall's usual hours but also keeps ones UNH has dropped, like Philbrook on weekends
 
 import type { Hours, Span } from "../../src/dining/menus.mts"
-import { addDays } from "../../src/dining/hours.mts"
+import { addDays, weekday, type Day } from "../../src/shared/time.mts"
 
 /** Each hall's page on unh.edu/dining/facility/ */
 export const UNH_PAGES: Record<string, string> = {
@@ -10,7 +10,7 @@ export const UNH_PAGES: Record<string, string> = {
   "philbrook-dining-hall":   "philbrook-dining-hall"
 }
 
-const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const
 const DAY = 1440
 
 /** A day's spans on UNH's page, and the note beside them when the hours are a one-off */
@@ -32,7 +32,7 @@ const parseTime = (text: string) => {
 const span = (open: number, close: number): Span =>
   [open, close <= open ? close + DAY : close]
 
-const weekday = (text: string) =>
+const parseWeekday = (text: string) =>
   WEEKDAYS.findIndex(day => text.toLowerCase().startsWith(day))
 
 const decode = (text: string) =>
@@ -44,7 +44,7 @@ const decode = (text: string) =>
     .trim()
 
 /**
- * The week in the Hours block on a hall's UNH Dining page, Sunday first: each day's label, like "Mon - Fri:",
+ * The week in the Hours block on a hall's UNH Dining page, Monday first: each day's label, like "Mon - Fri:",
  * then its hours, like "7:15 am-9:00 pm", or "Closed", and any note. Undefined unless it names every day once
  */
 export const parseUnhHours = (html: string): UnhDay[] | undefined => {
@@ -55,7 +55,7 @@ export const parseUnhHours = (html: string): UnhDay[] | undefined => {
     const text = decode(raw)
     if (part === "label") {
       const label = text.match(/^(\w{3})\w*(?:\s*[-–]\s*(\w{3})\w*)?:?$/)
-      const [first, last] = label ? [weekday(label[1]), weekday(label[2] ?? label[1])] : [-1, -1]
+      const [first, last] = label ? [parseWeekday(label[1]), parseWeekday(label[2] ?? label[1])] : [-1, -1]
       if (first < 0 || last < 0)
         return undefined
       current = []
@@ -95,7 +95,7 @@ const clockMinutes = (time: unknown) => {
   return match ? +match[1] * 60 + +match[2] : undefined
 }
 
-/** Nutrislice's week for a school, Sunday first; undefined when any open day is missing a time */
+/** Nutrislice's week for a school, Monday first; undefined when any open day is missing a time */
 export const nutrisliceHours = (school: NutrisliceSchool): Span[][] | undefined => {
   const week = WEEKDAYS.map((day): Span[] | undefined => {
     if (!school[`${day}_enabled`])
@@ -112,19 +112,20 @@ export const nutrisliceHours = (school: NutrisliceSchool): Span[][] | undefined 
  * A hall's hours: UNH's when its page could be read, else Nutrislice's. UNH's page shows this week, Sunday to Saturday,
  * where a day with a note, like an early close, is a one-off for that date, so that weekday's usual hours are Nutrislice's
  */
-export const hallHours = (unh: UnhDay[] | undefined, nutrislice: Span[][] | undefined, today: string): Hours | undefined => {
+export const hallHours = (unh: UnhDay[] | undefined, nutrislice: Span[][] | undefined, today: Day): Hours | undefined => {
   if (!unh)
     return nutrislice && { week: nutrislice }
 
-  const sunday = addDays(today, -new Date(`${today}T12:00:00Z`).getUTCDay())
+  // The page's week starts on the Sunday, which is last in ours
+  const sunday = addDays(today, -((weekday(today) + 1) % 7))
   const special: NonNullable<Hours["special"]> = {}
-  const week = unh.map(({ spans, note }, day) => {
+  const week = unh.map(({ spans, note }, i) => {
     if (!note)
       return spans
-    const date = addDays(sunday, day)
-    if (date >= today)
-      special[date] = { spans, note }
-    return nutrislice?.[day] ?? spans
+    const day = addDays(sunday, (i + 1) % 7)
+    if (day >= today)
+      special[day] = { spans, note }
+    return nutrislice?.[i] ?? spans
   })
   return Object.keys(special).length ? { week, special } : { week }
 }

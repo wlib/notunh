@@ -64,11 +64,11 @@ export const convert = (
   const menus = new Map<string, Menu>()
 
   for (const { hall, meal, week } of weeks)
-    for (const day of week.days) {
-      if (day.date < from)
+    for (const listed of week.days) {
+      if (listed.date < from)
         continue
       const stations: Menu["stations"] = []
-      for (const item of day.menu_items) {
+      for (const item of listed.menu_items) {
         if (item.is_station_header)
           stations.push({ name: clean(item.text) ?? "Other", foods: [] })
         else if (item.food?.name) {
@@ -83,9 +83,9 @@ export const convert = (
       }
 
       const filled = stations.filter(station => station.foods.length)
-      // The same week can come back for two requested dates, so key each meal to keep it once
+      // The same week can come back for two requested days, so key each meal to keep it once
       if (filled.length)
-        menus.set(`${hall} ${day.date} ${meal}`, { hall, date: day.date, meal, stations: filled })
+        menus.set(`${hall} ${listed.date} ${meal}`, { hall, day: listed.date, meal, stations: filled })
     }
 
   return {
@@ -93,7 +93,7 @@ export const convert = (
     halls,
     foods,
     menus: [...menus.values()].sort((a, b) =>
-      a.date.localeCompare(b.date) ||
+      a.day.localeCompare(b.day) ||
       a.hall.localeCompare(b.hall) ||
       MEALS.indexOf(a.meal) - MEALS.indexOf(b.meal)
     )

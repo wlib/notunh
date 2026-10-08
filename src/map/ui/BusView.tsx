@@ -5,7 +5,7 @@
 
 import { r } from "bruh/reactive"
 import { runOf, timeAt } from "../plan.mts"
-import { feed, now, runs, vehicles, lastUpdate, itinerary, selectedBus, riding, suggested, shownRoutes, chosenRoutes } from "../state.mts"
+import { feed, now, runs, vehicles, ageOf, itinerary, selectedBus, riding, suggested, shownRoutes, chosenRoutes } from "../state.mts"
 import { decline, ride } from "../riding.mts"
 import { Minutes, ago } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
@@ -23,7 +23,7 @@ setInterval(() => second.value = Date.now(), 1000)
 export const BusView = ({ id }: { id: string }) => {
   const vehicle = r(() => vehicles.value.find(vehicle => vehicle.id === id))
   const isRiding = r(() => riding.value === id)
-  const run = r(() => runOf(runs.value, id, now.value))
+  const run = r(() => runOf(runs.value, vehicle.value ?? { id }, now.value))
 
   return (
     <section class="bus-view">
@@ -32,7 +32,9 @@ export const BusView = ({ id }: { id: string }) => {
         if (!busRoute)
           return (
             <header>
-              <p class="muted">This bus stopped reporting.</p>
+              <p class="muted">
+                {vehicle.value ? "This bus is on a route the timetable doesn't have." : "This bus stopped reporting."}
+              </p>
               {isRiding.value
                 ? <button type="button" class="button" onclick={() => ride(undefined)}>I got off</button>
                 : <Close />}
@@ -57,7 +59,7 @@ export const BusView = ({ id }: { id: string }) => {
               {r(() =>
                 isRiding.value
                   ? "You're on this bus"
-                  : `Last seen ${ago((vehicle.value?.secsSinceReport ?? 0) + (second.value - (lastUpdate.value ?? second.value)) / 1000)}`
+                  : `Last seen ${ago(vehicle.value ? ageOf(vehicle.value, second.value) : 0)}`
               )}
             </p>
             <div class="bus-actions">

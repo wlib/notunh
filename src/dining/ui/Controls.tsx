@@ -5,7 +5,7 @@
 import { r, watch } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
 import { MEALS, type Filters } from "../menus.mts"
-import { index, dates, hall, date, meals, menu, preferredMeal, query, isSearching, filters, toggleFilter } from "../state.mts"
+import { index, days, hall, day, meals, menu, preferredMeal, query, isSearching, filters, toggleFilter } from "../state.mts"
 import { Day } from "../../shell/intl.tsx"
 import { DayName, mealName } from "./common.tsx"
 import { HallHours, OpenDot } from "./Hours.tsx"
@@ -53,14 +53,14 @@ const SearchInput = () => {
 
 const Days = () =>
   <div class="days" role="group" aria-label="Day">
-    {dates.map(day =>
+    {days.map(each =>
       <button
         type="button"
-        aria-pressed={r(() => date.value === day ? "true" : "false")}
-        onclick={() => date.value = day}
+        aria-pressed={r(() => day.value === each ? "true" : "false")}
+        onclick={() => day.value = each}
       >
-        <span><DayName date={day} /></span>
-        <span class="muted"><Day date={day} month="short" day="numeric" /></span>
+        <span><DayName of={each} /></span>
+        <span class="muted"><Day of={each} month="short" day="numeric" /></span>
       </button>
     )}
   </div>

@@ -3,6 +3,7 @@
 import { booleanPointInPolygon } from "@turf/boolean-point-in-polygon"
 import { distance } from "./feed.mts"
 import type { Place } from "./plan.mts"
+import { getJson } from "../shared/json.mts"
 
 const FOOT_ROUTER = "https://routing.openstreetmap.de/routed-foot/route/v1/foot"
 const PHOTON = "https://photon.komoot.io"
@@ -21,8 +22,7 @@ export const walkPath = (from: Place, to: Place) => {
 
   let path = walkCache.get(key)
   if (!path) {
-    path = fetch(`${FOOT_ROUTER}/${key}?overview=full&geometries=geojson`)
-      .then(response => response.json())
+    path = getJson<{ routes?: { geometry: { coordinates: [number, number][] } }[] }>(`${FOOT_ROUTER}/${key}?overview=full&geometries=geojson`)
       .then(result => result.routes?.[0]?.geometry.coordinates ?? straight)
       .catch(() => straight)
     walkCache.set(key, path)
@@ -46,8 +46,7 @@ type PhotonFeature = {
 }
 
 const photon = async (path: string, params: Record<string, string>, signal?: AbortSignal) => {
-  const response = await fetch(`${PHOTON}${path}?${new URLSearchParams({ lang: "en", ...params })}`, { signal })
-  const { features } = await response.json() as { features: PhotonFeature[] }
+  const { features } = await getJson<{ features: PhotonFeature[] }>(`${PHOTON}${path}?${new URLSearchParams({ lang: "en", ...params })}`, { signal })
   return features
 }
 

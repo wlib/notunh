@@ -5,7 +5,8 @@
 import { r } from "bruh/reactive"
 import { passes, type FoodSummary } from "../menus.mts"
 import { spansOn } from "../hours.mts"
-import { index, today, hall, date, dayMeals, menu, query, filters, searchable, hasFailed, goToFood, hallName } from "../state.mts"
+import { index, hall, day, dayMeals, menu, query, filters, searchable, hasFailed, goToFood, hallName } from "../state.mts"
+import { today } from "../../shell/lifecycle.mts"
 import { Count, Plural } from "../../shell/intl.tsx"
 import { FoodItem } from "./Food.tsx"
 import { DayName, mealName } from "./common.tsx"
@@ -29,7 +30,7 @@ export const MenuView = () =>
     if (!current)
       return (
         <p class="empty muted">
-          {hours && !spansOn(hours, date.value).length
+          {hours && !spansOn(hours, day.value).length
             ? `${hallName(hall.value)} is closed that day.`
             : `${hallName(hall.value)} hasn't posted a menu for that day yet.`
           }
@@ -75,7 +76,7 @@ export const SearchView = () =>
 
     const { foods, search } = searchable.value
     const found = search(query.value)
-      .map(match => ({ match, food: foods[match.food], servings: foods[match.food].servings.filter(serving => serving.date >= today) }))
+      .map(match => ({ match, food: foods[match.food], servings: foods[match.food].servings.filter(serving => serving.day >= today.value) }))
       .filter(({ food, servings }) => servings.length && passes(food, filters.value))
 
     if (!found.length)
@@ -103,7 +104,7 @@ export const SearchView = () =>
                       goToFood(food.file, serving)
                     }}
                   >
-                    <DayName date={serving.date} /> · {hallName(serving.hall).split(" ")[0]} · {mealName(serving.meal)}
+                    <DayName of={serving.day} /> · {hallName(serving.hall).split(" ")[0]} · {mealName(serving.meal)}
                   </button>
                 )}
               </span>

@@ -3,5 +3,11 @@ dist/
 .wrangler/
 # Generated from upstream data, by `npm run data` or on demand before dev and build
 src/map/gtfs.json
+src/map/model.json
+src/map/places.json
 src/dining/menus.json
 public/data/
+src/laundry/rooms.json
+src/laundry/usual.json
+# Wrangler's local secrets, like BUILD_TOKEN for `npm run worker`
+.dev.vars

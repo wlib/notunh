@@ -27,9 +27,12 @@ export const MIN_SPEED = 1 // m/s
 // How long past a fix the dot carries on at its speed, before it waits for the next
 const MAX_RECKON = 3_000 // ms
 
-/** Poor fixes, from the phone losing GPS for a moment, are dropped while a good one is recent */
+/**
+ * Poor fixes, from the phone losing GPS for a moment, are dropped while a good one is recent, and so are fixes
+ * older than the last, as a watch started afresh can hand back a cached one first
+ */
 export const isWorthTaking = (last: Fix | undefined, next: Fix) =>
-  !last || next.accuracy <= POOR || last.accuracy > POOR || next.at - last.at > GOOD_FOR
+  !last || next.at >= last.at && (next.accuracy <= POOR || last.accuracy > POOR || next.at - last.at > GOOD_FOR)
 
 /** Where you likely are at a time a little after a fix, carrying on as you were moving */
 export const reckon = (fix: Fix, at: number): Coordinates =>

@@ -2,12 +2,15 @@
 
 import { r, watch } from "bruh/reactive"
 import indexUrl from "./menus.json?url"
-import { fileUrl, loadJson, type Filters, type Food, type Meal, type MenusIndex, type SearchFood, type Serving } from "./menus.mts"
+import { fileUrl, type Filters, type Food, type Meal, type MenusIndex, type SearchFood, type Serving } from "./menus.mts"
 import { createSearch } from "./search.mts"
-import { status, type WallTime } from "./hours.mts"
-import { localDay, localHour, localMinutes } from "../shell/time.mts"
+import { status } from "./hours.mts"
+import { getJson } from "../shared/json.mts"
+import { localDay, localHour, localMinutes } from "../shared/time.mts"
+import { now as clock, today } from "../shell/lifecycle.mts"
+import { distinct, remembered, toggled } from "../shell/state.mts"
 
-export const index = await loadJson<MenusIndex>(indexUrl)
+export const index = await getJson<MenusIndex>(indexUrl)
 
 // Cached files the menus no longer use can go
 navigator.serviceWorker?.controller?.postMessage({ keep: index.files.map(fileUrl) })
@@ -16,7 +19,7 @@ navigator.serviceWorker?.controller?.postMessage({ keep: index.files.map(fileUrl
 const loaded = new Map<string, Promise<unknown>>()
 const load = <T,>(file: string) => {
   if (!loaded.has(file))
-    loaded.set(file, loadJson<T>(fileUrl(file)).catch(error => {
+    loaded.set(file, getJson<T>(fileUrl(file)).catch(error => {
       loaded.delete(file)
       throw error
     }))
@@ -27,91 +30,60 @@ const load = <T,>(file: string) => {
 export const loadFood = (file: string) =>
   load<Food>(file)
 
-/** YYYY-MM-DD in Durham */
-export const today = localDay(Date.now())
-/** The next calendar day, which isn't always 24 hours later around daylight saving */
-export const tomorrow = new Date(Date.parse(`${today}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
-
-/** Every day with a menu, from today on */
-export const dates = [...new Set(Object.values(index.days).flatMap(Object.keys))].filter(date => date >= today).sort()
+/** Every day with a menu, from the day the page loaded on */
+export const days = [...new Set(Object.values(index.days).flatMap(Object.keys))].filter(day => day >= today.peek()).sort()
 
 //#region Remembered between visits
 
-const stored = (key: string): unknown => {
-  try {
-    return JSON.parse(localStorage.getItem(key) ?? "null")
-  }
-  catch {
-    return null
-  }
-}
+// Most people eat at one hall
+export const hall = remembered("dining-hall", stored =>
+  index.halls.find(({ id }) => id === stored)?.id ?? index.halls[0]?.id ?? ""
+)
 
 /** A remembered list, keeping only items that still exist */
-const storedList = (key: string, known: readonly string[]) => {
-  const value = stored(key)
-  return new Set(Array.isArray(value) ? value.filter(item => known.includes(item)) : [])
-}
-
-const store = (key: string, value: unknown) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  }
-  catch {}
-}
-
-// Most people eat at one hall
-const storedHall = stored("dining-hall")
-export const hall = r(index.halls.find(({ id }) => id === storedHall)?.id ?? index.halls[0]?.id ?? "")
-watch([hall], () => store("dining-hall", hall.value))
+const rememberedSet = (key: string, known: readonly string[]) =>
+  remembered(key, stored => new Set(Array.isArray(stored) ? stored.filter(item => known.includes(item)) : []), set => [...set])
 
 // Dietary needs don't change from visit to visit
-export const filters = r<Filters>({
-  diets: storedList("dining-diets", index.diets),
-  avoid: storedList("dining-avoid", index.contains)
-})
-watch([filters], () => {
-  store("dining-diets", [...filters.value.diets])
-  store("dining-avoid", [...filters.value.avoid])
-})
+const chosen = {
+  diets: rememberedSet("dining-diets", index.diets),
+  avoid: rememberedSet("dining-avoid", index.contains)
+}
+export const filters = r((): Filters => ({ diets: chosen.diets.value, avoid: chosen.avoid.value }))
 
 export const toggleFilter = (kind: keyof Filters, item: string) => {
-  const next = new Set(filters.value[kind])
-  if (next.has(item))
-    next.delete(item)
-  else
-    next.add(item)
-  filters.value = { ...filters.value, [kind]: next }
+  chosen[kind].value = toggled(chosen[kind].value, item)
 }
 
 //#endregion
 
-export const date = r(dates[0] ?? today)
+export const day = r(days[0] ?? today.peek())
 
-const hour = localHour(Date.now())
+const hour = localHour(clock.peek())
 
 // The meal wanted, kept when it isn't served on a day, like breakfast on a day with brunch
 export const preferredMeal = r(
-  date.peek() !== today ? "breakfast" :
-  hour < 10             ? "breakfast" :
-  hour < 15             ? "lunch" :
-                          "dinner"
+  day.peek() !== today.peek()  ? "breakfast" :
+  hour < 10                    ? "breakfast" :
+  hour < 15                    ? "lunch" :
+                                 "dinner"
 )
 
 /** The meals the hall serves that day */
-export const meals = r(() => index.days[hall.value]?.[date.value]?.meals ?? [])
+export const meals = r(() => index.days[hall.value]?.[day.value]?.meals ?? [])
 
 /** The hall's meals that day, undefined while they load, and empty when there's no menu */
 export const dayMeals = r<Meal[]>()
 export const hasFailed = r(false)
-watch([hall, date], () => {
-  const day = index.days[hall.value]?.[date.value]
-  dayMeals.value = day ? undefined : []
+watch([hall, day], () => {
+  const listed = index.days[hall.value]?.[day.value]
+  dayMeals.value = listed ? undefined : []
   hasFailed.value = false
-  if (!day)
+  if (!listed)
     return
 
   let isCurrent = true
-  load<Meal[]>(day.file)
+  load<Meal[]>(listed.file)
     .then(meals => {
       if (isCurrent)
         dayMeals.value = meals
@@ -155,29 +127,19 @@ watch([isSearching], () => {
 export const focusedFood = r<string>()
 
 /** Shows a meal's menu with a food on it opened */
-export const goToFood = (file: string, { hall: servedAt, date: servedOn, meal }: Serving) => {
+export const goToFood = (file: string, { hall: servedAt, day: servedOn, meal }: Serving) => {
   hall.value = servedAt
-  date.value = servedOn
+  day.value = servedOn
   preferredMeal.value = meal
   focusedFood.value = file
   query.value = ""
 }
 
-/** Durham's wall clock, to the minute */
-export const now = r<WallTime>({ date: localDay(Date.now()), minute: localMinutes(Date.now()) })
-const tick = () => {
-  const date = localDay(Date.now())
-  const minute = localMinutes(Date.now())
-  if (date !== now.value.date || minute !== now.value.minute)
-    now.value = { date, minute }
-}
-// On each minute, and on coming back to the page, since phones pause timers in the background
-const everyMinute = () => {
-  tick()
-  setTimeout(everyMinute, 60_000 - Date.now() % 60_000)
-}
-everyMinute()
-document.addEventListener("visibilitychange", tick)
+/** Durham's wall clock, to the minute, as of the page's clock */
+export const now = distinct(
+  () => ({ day: localDay(clock.value), minute: localMinutes(clock.value) }),
+  (a, b) => a.day === b.day && a.minute === b.minute
+)
 
 /** Whether each hall is open now, by hall, for halls with hours */
 export const hallStatus = r(() =>

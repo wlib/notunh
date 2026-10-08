@@ -1,10 +1,45 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "notunh",
+  "main": "worker/index.mts",
   "compatibility_date": "2026-10-01",
   "routes": [{ "pattern": "notunh.app", "custom_domain": true }],
-  // Static assets only so far, no Worker script
   "assets": {
-    "directory": "./dist"
-  }
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Only the API and the laundry rooms' own addresses reach the Worker, so every other page and asset, the
+    // laundry page itself included, stays free and unlimited
+    "run_worker_first": ["/api/*", "/laundry/*", "!/laundry/"]
+  },
+  "triggers": {
+    // Five per account on the free plan, and each invocation gets its own 10 ms of CPU.
+    // worker/ matches these strings exactly, so change them there too
+    "crons": [
+      // Buses, polled six times
+      "* * * * *",
+      // Umo's predictions
+      "*/5 * * * *",
+      // Laundry machines, 2 minutes later, and only every third run overnight
+      "2-59/5 * * * *",
+      // Prune, then rebuild the site with a fresh timetable and menus (4:17 AM in Durham, EDT)
+      "17 8 * * *"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "notunh",
+      "database_id": "7825ba46-2d35-41d7-8e01-5c41f3f1af3c",
+      "migrations_dir": "worker/migrations"
+    }
+  ],
+  "vars": {
+    // Raw samples and laundry transitions are only kept long enough to extract them again, and the visits extracted
+    // from samples a year
+    "RETAIN_DAYS": 60,
+    "RETAIN_VISIT_DAYS": 365
+  },
+  // Secrets, set once with `wrangler secret put`: DEPLOY_HOOK, and BUILD_TOKEN, which the build reads and writes
+  // rows and models with (locally, in .dev.vars)
+  "observability": { "enabled": true }
 }

@@ -3,18 +3,36 @@
 // it, so a food served all week is one file, and anything unchanged from last night stays cached
 
 import { createHash } from "node:crypto"
+import * as v from "valibot"
 import { DIETS, type FoodSummary, type Meal, type MenusData, type MenusIndex, type SearchFood, type Serving, fileUrl } from "../../src/dining/menus.mts"
 import { HOUR } from "../../src/shared/time.mts"
 
-// How long an index's files stay published after it: two nights, for a tab still on last night's
+// How long a file stays published past the last index that named it, for a tab still on that index
 const CARRY_MS = 48 * HOUR
 
 /**
- * The files of the index the site serves now that tonight's must keep publishing, by URL: all it names that
- * tonight's doesn't, while it's less than two nights old, so a page still on it finds what it asks for
+ * The origin's record of the files published under /data/dining/ beyond the index's own, each by URL with when it
+ * stops being published, kept beside them as published.json and read back by the next build
  */
-export const carriedFiles = (serving: Pick<MenusIndex, "fetched" | "files"> | undefined, tonight: Pick<MenusIndex, "files">, now: number) =>
-  serving && now - serving.fetched < CARRY_MS ? serving.files.filter(url => !tonight.files.includes(url)) : []
+export const Published = v.record(v.string(), v.number())
+export type Published = v.InferOutput<typeof Published>
+
+/**
+ * What tonight's build publishes beyond its index's files: every file the index the site serves names, which stays
+ * one more build whatever its age, as the previous generation does everywhere, and every file published before
+ * whose time isn't up, each until two nights past the last index that named it
+ */
+export const carried = (serving: Pick<MenusIndex, "fetched" | "files"> | undefined, published: Published | undefined, tonight: Pick<MenusIndex, "files">, now: number): Published => {
+  const until: Published = {}
+  for (const [url, time] of Object.entries(published ?? {}))
+    if (time >= now)
+      until[url] = time
+  for (const url of serving?.files ?? [])
+    until[url] = Math.max(until[url] ?? 0, serving!.fetched + CARRY_MS, now)
+  for (const url of tonight.files)
+    delete until[url]
+  return until
+}
 
 export const publish = (data: MenusData, hours: MenusIndex["hours"] = {}) => {
   const files = new Map<string, string>()

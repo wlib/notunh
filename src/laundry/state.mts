@@ -6,7 +6,7 @@ import { ROOMS, pathOf, roomAtPath, roomName } from "./rooms.mts"
 import { KINDS, assessRoom, type Kind, type RoomLive, type RoomSummary, type Summaries } from "./infer.mts"
 import { Usual, emptyUsual, slotOf, unpack, type Week } from "./model.mts"
 import { getJson } from "../shared/json.mts"
-import { poll } from "../shell/poll.mts"
+import { type Live, live, poll } from "../shell/poll.mts"
 import { latest } from "../shell/build.mts"
 import { now } from "../shell/lifecycle.mts"
 import { distinct, remembered, toggled } from "../shell/state.mts"
@@ -15,6 +15,11 @@ import { distinct, remembered, toggled } from "../shell/state.mts"
 // room's counts from a 5 minute one
 const ROOM_POLL_MS = 30_000
 const SUMMARIES_POLL_MS = 5 * 60_000
+/**
+ * Counts made longer ago than this are shown as of when, whatever the asking says: the collector polls every 5
+ * minutes, 15 overnight, and its answer is shared for 5, so they're older only once something has fallen behind
+ */
+export const COUNTS_FRESH_MS = 30 * 60_000
 
 /** The hour of the week in Durham, reaching what depends on it only when it changes */
 export const hourOfWeek = distinct(() => slotOf(now.value))
@@ -52,37 +57,29 @@ watch([openRoom], () => {
 
 //#region Live
 
-/** Every room's counts as the collector last saw them, by id; empty until the first answer */
-export const summaries = r<Summaries["rooms"]>({})
-poll(async signal => summaries.value = (await getJson<Summaries>("/api/laundry/rooms", { signal })).rooms, SUMMARIES_POLL_MS)
+/** Every room's counts as the collector last saw them, as last answered, and how asking for them is going */
+export const counted = live<Summaries>()
+poll(signal => getJson<Summaries>("/api/laundry/rooms", { signal }), SUMMARIES_POLL_MS, state => counted.value = state)
+/** Every room's counts, by id; empty until the first answer */
+export const summaries = r(() => counted.value.value?.rooms ?? {})
 
-/** Each room as last fetched live, by id; rooms not opened yet are missing */
-export const rooms = r<Record<string, RoomLive>>({})
-/** Whether the open room's last fetch failed */
-export const isOpenFailed = r(false)
+/** Each room as last fetched live, by id, and how asking for it is going; rooms not opened yet are missing */
+export const rooms = r<Record<string, Live<RoomLive>>>({})
 
-// Only the open room is asked for live, so a visit costs the vendor a request a room opened rather than one a room
+// Only the open room is asked for live, so a visit costs the vendor a request a room opened rather than one a room.
+// What an earlier visit to the room learned stays its evidence until a newer answer comes
 watch([openRoom], () => {
   const id = openRoom.value
-  isOpenFailed.value = false
   if (id)
-    return poll(
-      async signal => {
-        rooms.value = { ...rooms.value, [id]: await getJson<RoomLive>(`/api/laundry/rooms/${encodeURIComponent(id)}`, { signal }) }
-        isOpenFailed.value = false
-      },
-      ROOM_POLL_MS,
-      error => {
-        isOpenFailed.value = true
-        console.error(error)
-      }
-    )
+    return poll(signal => getJson<RoomLive>(`/api/laundry/rooms/${encodeURIComponent(id)}`, { signal }), ROOM_POLL_MS, state => {
+      rooms.value = { ...rooms.value, [id]: { ...rooms.value[id], ...state } }
+    })
 })
 
 /** A room's counts: from its live answer while that's fresher than the collector's, else the collector's */
 export const summaryOf = (id: string, at: number): RoomSummary | undefined => {
-  const [live, summary] = [rooms.value[id], summaries.value[id]]
-  return live && (!summary || live.at >= summary.at) ? assessRoom(live, at).summary : summary
+  const [room, summary] = [rooms.value[id]?.value, summaries.value[id]]
+  return room && (!summary || room.at >= summary.at) ? assessRoom(room, at).summary : summary
 }
 
 //#endregion

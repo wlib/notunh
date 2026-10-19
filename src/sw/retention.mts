@@ -1,9 +1,9 @@
 // What the cache keeps: the closure of every generation still in use, which is each cached page's current and
 // previous, and whatever the open windows say they run, and nothing else. A data file can ask for more than itself,
-// by the Retain shape (src/shell/manifest.mts): the dining index names its files, and the tiles and style their
-// folders, so the worker needs to know nothing of any of them
+// by the Retain shape (src/shell/manifest.mts): the style requires its style.json, the dining index names its
+// files, and the tiles and style their folders, so the worker needs to know nothing of any of them
 
-import { type Generation, buildOf, isRetained, mergedRetain, retainOf } from "../shell/manifest.mts"
+import { type Build, type Generation, buildOf, isRetained, mergedRetain, retainOf } from "../shell/manifest.mts"
 
 /** The part of a Cache the worker uses, which tests stand in for */
 export type CacheLike = Pick<Cache, "keys" | "match" | "put" | "delete">
@@ -22,12 +22,15 @@ const isPage = (pathname: string) =>
 export const isBrandAsset = (pathname: string) =>
   pathname === "/manifest.webmanifest" || /^\/icon(-\d+(-maskable)?)?\.(svg|png)$/.test(pathname)
 
-export const pathOf = (request: Request) =>
+/** Where the build puts files named by what's in them, or by the version they're of, which never change */
+export const isHashed = (pathname: string) =>
+  pathname.startsWith("/assets/") || pathname.startsWith("/data/")
+
+const pathOf = (request: Request) =>
   new URL(request.url).pathname
 
-/** A cached page's generation: its build, and what the data files it names, as cached, ask to keep */
-export const generationOf = async (cache: CacheLike, html: string): Promise<Generation> => {
-  const build = buildOf(html)
+/** A build's generation: the build, and what the data files it names, as cached, ask of the cache */
+export const generationOf = async (cache: CacheLike, build: Build): Promise<Generation> => {
   const retains = await Promise.all(Object.values(build.data).map(async url =>
     retainOf(await (await cache.match(url, ANY))?.json().catch(() => undefined))
   ))
@@ -38,7 +41,7 @@ export const generationOf = async (cache: CacheLike, html: string): Promise<Gene
 export const prune = async (cache: CacheLike, live: () => Promise<Generation[]>) => {
   const requests = await cache.keys()
   const cached = await Promise.all(requests.filter(request => isPage(pathOf(request))).map(async request =>
-    generationOf(cache, await (await cache.match(request))!.text())
+    generationOf(cache, buildOf(await (await cache.match(request))!.text()))
   ))
   const keep = isRetained([...cached, ...await live()])
   await deleteWhere(cache, pathname => !isPage(pathname) && !isBrandAsset(pathname) && !keep(pathname))

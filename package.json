@@ -6,7 +6,7 @@
     "icons": "node scripts/icons.mts",
     "data": "node scripts/data.mts",
     "fixtures": "node tests/fixtures/make.mts",
-    "predev": "node scripts/data.mts --if-missing",
+    "predev": "node scripts/data.mts fetch --if-missing",
     "dev": "vite",
     "prebuild": "node scripts/data.mts fetch --if-missing && npm run typecheck && npm test && node scripts/data.mts learn --if-missing",
     "build": "vite build",

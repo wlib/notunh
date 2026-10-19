@@ -13,8 +13,12 @@ export type Build = {
   data:    Record<string, string>
 }
 
-/** What a data file asks the cache to keep for it, beyond itself: files by path, and whole folders by prefix */
-export const Retain = v.object({ files: v.optional(v.array(v.string())), folders: v.optional(v.array(v.string())) })
+/**
+ * What a data file asks the cache of, beyond itself: files it can't work without, fetched with it before its
+ * page is kept, as the map's style; files kept if they're there, as the dining index's, which are loaded as they're
+ * opened; and whole folders by prefix, as the tiles' and the style's
+ */
+export const Retain = v.object({ required: v.optional(v.array(v.string())), files: v.optional(v.array(v.string())), folders: v.optional(v.array(v.string())) })
 export type Retain = v.InferOutput<typeof Retain>
 
 /** A build and all it keeps, which is what one page in one release needs to work */
@@ -56,18 +60,18 @@ export const closureOf = ({ code, data }: Build) =>
 const strings = (value: unknown) =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
 
-/** What a data file asks to be kept, going by its shape, which is nothing for most */
+/** What a data file asks of the cache, going by its shape, which is nothing for most */
 export const retainOf = (value: unknown): Required<Retain> => {
-  const { files, folders } = Object(value) as Retain
-  return { files: strings(files), folders: strings(folders) }
+  const { required, files, folders } = Object(value) as Retain
+  return { required: strings(required), files: strings(files), folders: strings(folders) }
 }
 
 export const mergedRetain = (retains: Required<Retain>[]): Required<Retain> =>
-  ({ files: retains.flatMap(retain => retain.files), folders: retains.flatMap(retain => retain.folders) })
+  ({ required: retains.flatMap(retain => retain.required), files: retains.flatMap(retain => retain.files), folders: retains.flatMap(retain => retain.folders) })
 
 /** Whether a path is some generation's: in its build's closure, or kept by its data */
 export const isRetained = (generations: Generation[]) => {
-  const files = new Set(generations.flatMap(({ build, retain }) => [...closureOf(build), ...retain.files]))
+  const files = new Set(generations.flatMap(({ build, retain }) => [...closureOf(build), ...retain.required, ...retain.files]))
   const folders = new Set(generations.flatMap(({ retain }) => retain.folders))
   return (pathname: string) =>
     files.has(pathname) || [...folders].some(folder => pathname.startsWith(folder))

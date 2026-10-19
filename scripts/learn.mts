@@ -2,7 +2,11 @@
 // build, since menus and the timetable still need deploying: without BUILD_TOKEN or the Worker, the file written
 // last stays, or an empty one. Each whole day since the last one learned is folded in, within a budget of the
 // build's 20 minutes, and the next build carries on from wherever this one stopped. With --if-missing, a file
-// already there is kept; with --rebuild (or MODEL_REBUILD=1), learning starts over from the first day there is
+// already there is kept; with --rebuild (or MODEL_REBUILD=1), learning starts over from the first day there is.
+//
+// Learning writes what production has learned, so only a build of the branch production deploys from learns, as
+// Cloudflare's builds name it, or a command run by hand; any other, like a preview's, bundles what's stored as it
+// is, only reading
 
 import { writeFile } from "node:fs/promises"
 import type { Learned } from "../src/shared/learn.mts"
@@ -10,7 +14,10 @@ import { addDays, type Day } from "../src/shared/time.mts"
 import { exists, isKept } from "./files.mts"
 import { ApiError, readModel, writeModel } from "./worker.mts"
 
+const PRODUCTION_BRANCH = "main"
+
 export const isRebuild = process.argv.includes("--rebuild") || Boolean(process.env.MODEL_REBUILD)
+export const isLearning = (process.env.WORKERS_CI_BRANCH ?? PRODUCTION_BRANCH) === PRODUCTION_BRANCH
 
 const message = (error: unknown) =>
   error instanceof Error ? error.message : `${error}`
@@ -24,7 +31,7 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
   empty, first, last, fold, prepare, bundle = model => model as unknown as B, budgetMs = 3 * 60_000
 }: {
   empty:     () => M,
-  /** Required inputs fetched within the same failure boundary as the model */
+  /** Required inputs fetched within the same failure boundary as the model, whether learning or only reading it */
   prepare?:  () => Promise<void>,
   /** The first day there's anything to learn from, when nothing's been learned yet */
   first:     () => Promise<Day | undefined>,
@@ -43,12 +50,13 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
     if (!process.env.BUILD_TOKEN)
       throw new Error("no BUILD_TOKEN to reach the Worker with")
     const started = Date.now()
-    const { state: found } = await readModel<M>(name)
+    const { state: found, revision } = await readModel<M>(name)
     // A model of an older shape is learned again from the start
     const stored = found?.version === empty().version ? found : null
     await prepare?.()
-    let model = isRebuild ? empty() : stored ?? empty()
-    for (let day = model.through === null ? await first() : addDays(model.through, 1); day !== undefined && day <= last; day = addDays(day, 1)) {
+    let model = isRebuild && isLearning ? empty() : stored ?? empty()
+    const days = isLearning ? model.through === null ? await first() : addDays(model.through, 1) : undefined
+    for (let day = days; day !== undefined && day <= last; day = addDays(day, 1)) {
       if (Date.now() - started > budgetMs) {
         console.warn(`${name}: ran out of time at ${day}; the next build carries on`)
         break
@@ -62,9 +70,9 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
         break
       }
     }
-    if (model.through !== null && (isRebuild || model.through > (stored?.through ?? "")))
+    if (isLearning && model.through !== null && (isRebuild || model.through > (stored?.through ?? "")))
       try {
-        await writeModel(name, model, found?.through ?? null)
+        await writeModel(name, model, revision)
       }
       catch (error) {
         // Another build stored a model meanwhile, which went on from the same one, so its model is the one kept and bundled
@@ -74,7 +82,7 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
         model = (await readModel<M>(name)).state ?? model
       }
     await writeFile(output, JSON.stringify(bundle(model)))
-    console.log(`${name}: learned through ${model.through ?? "nothing yet"}`)
+    console.log(`${name}: ${isLearning ? "learned" : "as stored, not learning on this branch,"} through ${model.through ?? "nothing yet"}`)
     return model
   }
   catch (error) {

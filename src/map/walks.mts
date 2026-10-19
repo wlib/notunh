@@ -2,7 +2,7 @@
 // ends, from a building's nearest door where the gazetteer knows its doors, and otherwise an estimate: a straight
 // line a quarter longer, which the map draws as the guess it is
 
-import { type Following, follow } from "../geo/follow.mts"
+import { type Following, type Tracking, follow } from "../geo/follow.mts"
 import type { Line } from "../geo/lines.mts"
 import { type Coordinates, type Point, distance } from "../geo/projection.mts"
 import { type Anchor, type Graph, type Reach, anchors, componentOf, metersTo, pathTo, reach } from "./graph.mts"
@@ -10,7 +10,8 @@ import { type GazetteerPlace, buildingsAt } from "./gazetteer.mts"
 import type { Fix } from "./fixes.mts"
 
 const WALK_SPEED = 1.3                // m/s
-const WALK_WIGGLE = 0.1               // a walk may take this much longer: a slow day, or a longer way round
+const WALK_WIGGLE = 0.1               // a walk along the network may take this much longer: a slow day, or a longer way round
+const ESTIMATE_WIGGLE = 0.3           // an estimate may take this much longer, as the way round what's between is anyone's guess
 export const MAX_ACCESS_WALK = 2000   // m walked, to the first stop or from the last
 export const MAX_TRANSFER_WALK = 500  // m walked, between stops
 /** Streets wind this much more than the straight line between two places */
@@ -25,9 +26,12 @@ type Named = Point & { name?: string }
 export const walkSeconds = (meters: number) =>
   Math.round(meters / WALK_SPEED)
 
-/** How long to allow for a walk, for a slow day or a longer way round */
-export const walkAllowance = (meters: number) =>
-  Math.round(walkSeconds(meters) * (1 + WALK_WIGGLE))
+/** How a walk is known: along the network, or a straight line's estimate where the network doesn't join its ends */
+export type Via = "network" | "estimate"
+
+/** How long to allow for a walk, for a slow day or a longer way round, and more for an estimate, which may be a longer way round indeed */
+export const walkAllowance = (meters: number, via: Via) =>
+  Math.round(walkSeconds(meters) * (1 + (via === "estimate" ? ESTIMATE_WIGGLE : WALK_WIGGLE)))
 
 /** How far it is to walk in a straight line, allowing for the streets winding */
 export const straightMeters = (from: Point, to: Point) =>
@@ -36,15 +40,20 @@ export const straightMeters = (from: Point, to: Point) =>
 export type Walk = {
   meters: number,
   coordinates: Coordinates[],
-  /** Along the network, or a straight line's estimate where the network doesn't join the two */
-  via: "network" | "estimate"
+  via: Via
 }
 
+/** The walks from a place to every stop at once: meters walked to each, or Infinity beyond a limit, and how each is known */
+export type Reaches = { meters: Float64Array, via: Via[] }
+
+/** A walk from one stop to another, by its index */
+export type Transfer = { to: number, meters: number, via: Via }
+
 export type Walks = {
-  /** Meters walked from a place to each stop, or Infinity beyond MAX_ACCESS_WALK, the same either way */
-  toStops: (place: Named) => Float64Array,
-  /** For each stop, the others within MAX_TRANSFER_WALK and the meters walked to each */
-  transfers: () => [number, number][][],
+  /** The walks from a place to each stop, up to MAX_ACCESS_WALK, the same either way */
+  toStops: (place: Named) => Reaches,
+  /** For each stop, the walks to the others within MAX_TRANSFER_WALK */
+  transfers: () => Transfer[][],
   /** How far it is from one place to another, and which way */
   between: (from: Named, to: Named) => Walk
 }
@@ -96,31 +105,32 @@ export const createWalks = (stops: Named[], graph?: Graph, places: readonly Gaze
       .map(anchor => ({ anchor, meters: metersTo(graph!, reached, anchor) }))
       .reduce((a, b) => b.meters < a.meters ? b : a)
 
-  const toStopsCache = new WeakMap<Named, Float64Array>()
-  const metersToStops = (place: Named, limit: number) => {
+  const toStopsCache = new WeakMap<Named, Reaches>()
+  const reachesOf = (place: Named, limit: number): Reaches => {
     const from = anchorsOf(place)
     const reached = from.length ? reachOf(place, limit) : undefined
-    return Float64Array.from(stops, stop => {
-      const to = anchorsOf(stop)
-      const meters = reached && joins(from, to) ? nearest(reached, to).meters : straightMeters(place, stop)
-      return meters <= limit ? meters : Infinity
+    const via = stops.map((stop): Via => reached && joins(from, anchorsOf(stop)) ? "network" : "estimate")
+    const meters = Float64Array.from(stops, (stop, i) => {
+      const walked = via[i] === "network" ? nearest(reached!, anchorsOf(stop)).meters : straightMeters(place, stop)
+      return walked <= limit ? walked : Infinity
     })
+    return { meters, via }
   }
 
-  let transfers: [number, number][][] | undefined
+  let transfers: Transfer[][] | undefined
 
   return {
     toStops: place => {
-      let meters = toStopsCache.get(place)
-      if (!meters)
-        toStopsCache.set(place, meters = metersToStops(place, MAX_ACCESS_WALK))
-      return meters
+      let reaches = toStopsCache.get(place)
+      if (!reaches)
+        toStopsCache.set(place, reaches = reachesOf(place, MAX_ACCESS_WALK))
+      return reaches
     },
     transfers: () =>
-      transfers ??= stops.map((stop, i) =>
-        [...metersToStops(stop, MAX_TRANSFER_WALK)]
-          .flatMap((meters, j): [number, number][] => i !== j && meters < Infinity ? [[j, meters]] : [])
-      ),
+      transfers ??= stops.map((stop, i) => {
+        const { meters, via } = reachesOf(stop, MAX_TRANSFER_WALK)
+        return [...meters].flatMap((walked, to): Transfer[] => i !== to && walked < Infinity ? [{ to, meters: walked, via: via[to] }] : [])
+      }),
     between: (from, to) => {
       const ends = anchorsOf(to)
       if (!joins(anchorsOf(from), ends))
@@ -139,6 +149,18 @@ const MAX_WALK_SPEED = 3 // m/s
 // Fixes in a row off a walk that mean you've left it, rather than GPS wandering for a moment
 const OFF_PATH = 3
 
+/** How a walker keeps to the walk: within a street's width of it, heading along it, and a few fixes' walking on from where they were */
+const WALKER_TRACKING: Tracking = {
+  snap:      60,
+  heading:   50,
+  back:      30,
+  // Between fixes, a few seconds apart, not even a run gets further than this
+  ahead:     100,
+  switching: 25,
+  leeway:    30,
+  maxSkip:   30_000
+}
+
 /** How far along a walk you've got */
 export type Progress = {
   line: Line,
@@ -153,7 +175,7 @@ export type Progress = {
 /** How far along a walk a fix puts you, on from where you'd got along it, or from its start on another */
 export const walkOn = (line: Line, fix: Fix, previous?: Progress): Progress => {
   const before = previous?.line === line ? previous : undefined
-  const followed = follow([line], fix, before?.last, { within: Math.max(ON_PATH, fix.accuracy), speed: MAX_WALK_SPEED })
+  const followed = follow([line], fix, before?.last, { ...WALKER_TRACKING, within: Math.max(ON_PATH, fix.accuracy), speed: MAX_WALK_SPEED })
   return followed
     ? { line, last: followed, distance: Math.max(before?.distance ?? 0, followed.distance), missed: 0 }
     : { line, last: before?.last, distance: before?.distance ?? 0, missed: (before?.missed ?? 0) + 1 }

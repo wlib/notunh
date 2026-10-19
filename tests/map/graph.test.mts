@@ -196,18 +196,24 @@ test("a reach with a limit finds everything within it as a reach without one doe
   }))
 )
 
-test("walking along the network is never shorter than a straight line, and off it walks are a straight line's allowance", () =>
+test("walking along the network is never shorter than a straight line, and off it walks are a straight line's allowance, said to be estimates", () =>
   fc.assert(fc.property(network, fc.array(spot, { minLength: 1, maxLength: 5 }), spot, ({ graph }, stops, [lon, lat]) => {
     const place = { lat, lon }
     const stopPlaces = stops.map(([lon, lat]) => ({ lat, lon }))
     const [onNetwork, offNetwork] = [createWalks(stopPlaces, graph), createWalks(stopPlaces)]
     // Give or take the network's vertices being kept to the millionth of a degree, and flat frames at either latitude
-    onNetwork.toStops(place).forEach((meters, i) => expect(meters).toBeGreaterThanOrEqual(distance(place, stopPlaces[i]) * (1 - 1e-3) - 0.2))
-    offNetwork.toStops(place).forEach((meters, i) => {
+    onNetwork.toStops(place).meters.forEach((meters, i) => expect(meters).toBeGreaterThanOrEqual(distance(place, stopPlaces[i]) * (1 - 1e-3) - 0.2))
+    const off = offNetwork.toStops(place)
+    off.meters.forEach((meters, i) => {
       const straight = straightMeters(place, stopPlaces[i])
       expect(meters).toBe(straight <= 2000 ? straight : Infinity)
+      expect(off.via[i]).toBe("estimate")
     })
     expect(offNetwork.between(place, stopPlaces[0])).toMatchObject({ meters: straightMeters(place, stopPlaces[0]), via: "estimate" })
+    // Transfers among the stops carry the same word
+    for (const transfers of offNetwork.transfers())
+      for (const transfer of transfers)
+        expect(transfer).toMatchObject({ meters: expect.any(Number), via: "estimate" })
   }))
 )
 
@@ -232,9 +238,12 @@ test("places on parts of the network nothing joins are walked between in a strai
     const walks = createWalks([b, c], graph)
     expect(walks.between(a, b).via).toBe("network")
     expect(walks.between(a, c)).toMatchObject({ meters: straightMeters(a, c), via: "estimate" })
-    const [toNear, toFar] = walks.toStops(a)
+    const { meters: [toNear, toFar], via } = walks.toStops(a)
     expect(toNear).toBeGreaterThanOrEqual(distance(a, b) * (1 - 1e-3) - 0.2)
     expect(toFar).toBe(straightMeters(a, c) <= 2000 ? straightMeters(a, c) : Infinity)
+    expect(via).toEqual(["network", "estimate"])
+    // A transfer between the parts is an estimate too, as the planner is told
+    expect(walks.transfers()[0]).toEqual(straightMeters(b, c) <= 500 ? [{ to: 1, meters: straightMeters(b, c), via: "estimate" }] : [])
   }))
 )
 
@@ -272,7 +281,7 @@ test("a building is walked to and from by its nearest door, never further than b
       expect(walk.coordinates.at(-1)).toEqual([stopLon, stopLat])
       // The same either way, and to stops alike
       expect(walks.between(stop, place).meters).toBeCloseTo(walk.meters, 3)
-      const [toStop] = walks.toStops(place)
+      const { meters: [toStop] } = walks.toStops(place)
       expect(toStop).toEqual(walk.meters <= 2000 ? expect.closeTo(walk.meters, 6) : Infinity)
     }
   ))

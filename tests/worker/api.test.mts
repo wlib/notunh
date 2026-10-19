@@ -123,31 +123,36 @@ test("transitions and polls read by Durham's calendar day, polls an hour either 
 
 /** Stores a model as a build that read the latest first does */
 const store = async (name: string, state: { through: string, version?: string }) =>
-  writeModel(name, state, (await readModel<{ through: string }>(name)).state?.through ?? null)
+  writeModel(name, state, (await readModel(name)).revision)
 
 test("the latest model of a name is the one through the latest day, and only the last 30 are kept", async () => {
-  expect(await readModel("laundry")).toEqual({ state: null, throughs: [] })
+  expect(await readModel("laundry")).toEqual({ state: null, revision: null, throughs: [] })
   const days = fc.sample(fc.shuffledSubarray(Array.from({ length: 40 }, (_, i) => addDays(SUNDAY, i)), { minLength: 40 }), 1)[0]
   for (const through of days)
     await store("laundry", { through })
   await store("buses", { through: SUNDAY })
   const kept = Array.from({ length: 30 }, (_, i) => addDays(SUNDAY, 10 + i))
-  expect(await readModel("laundry")).toEqual({ state: { through: addDays(SUNDAY, 39) }, throughs: kept })
+  expect(await readModel("laundry")).toEqual({ state: { through: addDays(SUNDAY, 39) }, revision: expect.any(String), throughs: kept })
   expect((await health()).models).toEqual({ buses: SUNDAY, laundry: addDays(SUNDAY, 39), gtfs: null })
   await expect(writeModel("laundry", { through: null }, null)).rejects.toThrow("400")
   await expect(writeModel("laundry", { through: SUNDAY }, undefined as unknown as null)).rejects.toThrow("400")
   await expect(writeModel("anything", { through: SUNDAY }, null)).rejects.toThrow("404")
 })
 
-test("a model is only stored over the one its writer read, so of two builds learning at once the second's 409s", async () => {
+test("a model is only stored over the revision its writer read, so of two builds learning at once the second's 409s, even replacing the same day", async () => {
   await writeModel("buses", { through: SUNDAY, n: 1 }, null)
   // Both read SUNDAY's; the first to store wins, and the other learns that rather than overwriting it
-  await writeModel("buses", { through: addDays(SUNDAY, 1), n: 2 }, SUNDAY)
-  await expect(writeModel("buses", { through: addDays(SUNDAY, 1), n: 3 }, SUNDAY)).rejects.toThrow("409")
+  const { revision: first } = await readModel("buses")
+  await writeModel("buses", { through: addDays(SUNDAY, 1), n: 2 }, first)
+  await expect(writeModel("buses", { through: addDays(SUNDAY, 1), n: 3 }, first)).rejects.toThrow("409")
   await expect(writeModel("buses", { through: addDays(SUNDAY, 2), n: 3 }, null)).rejects.toThrow("409")
-  // The same day again, by a build that read it, replaces it, as a rebuild does
-  await writeModel("buses", { through: addDays(SUNDAY, 1), n: 4 }, addDays(SUNDAY, 1))
-  expect(await readModel("buses")).toEqual({ state: { through: addDays(SUNDAY, 1), n: 4 }, throughs: [SUNDAY, addDays(SUNDAY, 1)] })
+  // The same day again, by a build that read it, replaces it, as a rebuild does, under a new revision, so a second
+  // writer that read the same day's earlier revision can't replace it too (Astra's same-day probe)
+  const { revision: second } = await readModel("buses")
+  expect(second).not.toBe(first)
+  await writeModel("buses", { through: addDays(SUNDAY, 1), n: 4 }, second)
+  await expect(writeModel("buses", { through: addDays(SUNDAY, 1), n: 5 }, second)).rejects.toThrow("409")
+  expect(await readModel("buses")).toMatchObject({ state: { through: addDays(SUNDAY, 1), n: 4 }, throughs: [SUNDAY, addDays(SUNDAY, 1)] })
 })
 
 test("the timetable is read back by the day it was in force, as the version archived last at or before it", async () => {

@@ -30,7 +30,7 @@ const stopsOnLoop = fc
 
 test("stops on a loop are placed at their own vertices, in order, even where the loop returns to its start", () =>
   fc.assert(fc.property(stopsOnLoop, fc.boolean(), (indices, endsAtStart) => {
-    const line = toLine(loop(200))
+    const line = toLine(loop(200), true)
     const expected = endsAtStart ? [...indices, 200] : indices
     const stops = expected.map(i => ({ lon: line.coordinates[i][0], lat: line.coordinates[i][1] }))
     positionsAlong(line, stops).forEach((distance, i) => expect(distance).toBeCloseTo(line.distances[expected[i]], 4))
@@ -86,8 +86,7 @@ test("a distance along a line is that far along it, up to its end", () =>
 )
 
 test("driving around a loop wraps back to its start", () => {
-  const line = toLine(loop(200))
-  expect(line.isLoop).toBe(true)
+  const line = toLine(loop(200), true)
   expect(segmentMeters(pointAt(line, line.length + 50).point, pointAt(line, 50).point)).toBeLessThan(1)
 })
 

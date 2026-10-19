@@ -1,12 +1,14 @@
 // Finds the buildings UNH's laundry rooms and dining halls are in, from OpenStreetMap, into src/map/places.json. The
 // laundry vendor puts every room at the same spot, so rooms are matched to their residence halls by name instead,
 // against the campus's buildings in the gazetteer, which scripts/map/osm.mts refreshes. Run after the laundry rooms
-// and dining menus, whose names it reads. With --if-missing, places already there are kept
+// and dining menus, whose names it reads. With --if-missing, places already there are kept while they were derived
+// from the same gazetteer, rooms, menus, and code, which the file names by a hash
 
+import { createHash } from "node:crypto"
 import { readFile, writeFile } from "node:fs/promises"
 import { slug } from "../../src/shared/slug.mts"
-import type { Building } from "../../src/map/places.mts"
-import { isKept } from "../files.mts"
+import type { Building, Places } from "../../src/map/places.mts"
+import { exists } from "../files.mts"
 import type { Gazetteer } from "../../src/map/gazetteer.mts"
 import { type Box, holds } from "../../src/geo/boxes.mts"
 
@@ -28,11 +30,17 @@ const ALIASES: Record<string, string> = {
   "Woodside":        "Woodside Community Building"
 }
 
-if (await isKept(OUTPUT))
+const [gazetteerJson, roomsJson, menusJson] = await Promise.all([GAZETTEER, ROOMS, MENUS].map(url => readFile(url, "utf8")))
+const inputs = createHash("sha256")
+for (const input of [gazetteerJson, roomsJson, menusJson, await readFile(new URL(import.meta.url))])
+  inputs.update(input).update("\0")
+const derivedFrom = inputs.digest("base64url").slice(0, 16)
+
+if (process.argv.includes("--if-missing") && await exists(OUTPUT) && (JSON.parse(await readFile(OUTPUT, "utf8")) as Places).inputs === derivedFrom)
   process.exit(0)
 
 // The campus's buildings by name, each where OSM has its middle
-const { places: gazetteer }: Gazetteer = JSON.parse(await readFile(GAZETTEER, "utf8"))
+const { places: gazetteer }: Gazetteer = JSON.parse(gazetteerJson)
 const coordinates = new Map(gazetteer
   .filter(place => place.kind === "building" && holds(CAMPUS, { lon: place.at[0], lat: place.at[1] }))
   .map(({ name, at: [lon, lat] }) => [name, { lat, lon }])
@@ -53,9 +61,9 @@ const locate = (kind: Building["kind"], building: string, rooms?: string[]): Bui
 
 // A room's building is its name without the room or floor, as "Stoke Hall G05" is in Stoke Hall and "Hetzel 1st
 // Floor" in Hetzel. Room slugs are as the laundry page's paths have them, which the tests check
-const rooms: { name: string }[] = JSON.parse(await readFile(ROOMS, "utf8"))
+const rooms: { name: string }[] = JSON.parse(roomsJson)
 const buildings = Map.groupBy(rooms, room => room.name.replace(/ (G\d+|\d+(st|nd|rd|th) Floor)$/, ""))
-const { halls }: { halls: { name: string }[] } = JSON.parse(await readFile(MENUS, "utf8"))
+const { halls }: { halls: { name: string }[] } = JSON.parse(menusJson)
 
 const places = [
   ...[...buildings].flatMap(([building, rooms]) => locate("laundry", building, rooms.map(room => slug(room.name)))),
@@ -64,5 +72,5 @@ const places = [
 if (unresolved.length)
   throw new Error(`No building in OpenStreetMap for ${unresolved.join(", ")}; run npm run osm:refresh or add it to ALIASES`)
 
-await writeFile(OUTPUT, JSON.stringify(places, null, 2) + "\n")
+await writeFile(OUTPUT, JSON.stringify({ inputs: derivedFrom, buildings: places } satisfies Places, null, 2) + "\n")
 console.log(`${places.length} places`)

@@ -4,7 +4,7 @@
 // seem to be on
 
 import { r } from "bruh/reactive"
-import { runOf, timeAt } from "../plan.mts"
+import { runOf, timeAt } from "../forecast.mts"
 import { feed, now, runs, vehicles, ageOf, itinerary, selectedBus, riding, suggested, shownRoutes, chosenRoutes } from "../state.mts"
 import { decline, ride } from "../riding.mts"
 import { Minutes, ago } from "../../shell/intl.tsx"

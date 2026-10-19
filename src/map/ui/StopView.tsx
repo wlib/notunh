@@ -4,7 +4,8 @@
 
 import { r, type SourceNode } from "bruh/reactive"
 import { type Route, canBoard } from "../feed.mts"
-import { type Place, timeAt } from "../plan.mts"
+import { timeAt } from "../forecast.mts"
+import type { Place } from "../plan.mts"
 import { feed, now, runs, from, to, selectedStop, stopPredictions } from "../state.mts"
 import { Count, List } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"

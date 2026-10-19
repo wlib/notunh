@@ -1,32 +1,19 @@
 // How buses are running right now, learned from every bus's reports on top of what the model learned over weeks:
 // each stretch between stops and each stop takes as long as the model expects at this time of day, scaled by how
 // much slower or quicker buses on that line have been lately, and nudged toward what the last bus there took.
-// Where a bus should be now follows from that, rather than from its reported speed
+// Where a bus should be now follows from that, rather than from its reported speed. What a bus did between two
+// reports is read by crossings.mts, which the nightly extraction reads the same way
 
 import type { Track } from "../geo/follow.mts"
-import type { RouteLine } from "./shapes.mts"
+import { type RouteLine, firstAhead, lapOf, stopAt } from "./shapes.mts"
+import { type Trace, MIN_RATE, ZONE, cross, driven } from "./crossings.mts"
 import { contextAt, dayTypeOf, driveEstimate, dwellEstimate, type Estimate, type Model } from "./model.mts"
 
-/** m around a stop where a bus is at it, pulling in, waiting, or pulling out */
-export const ZONE = 25
 // Longer is a layover or a bus out of service, not a stop
 const MAX_ZONE_TIME = 300 // s
-// Implausible paces, from a bus that parked or a snap onto the wrong line
-const MIN_RATE = 0.5      // m/s
-const MAX_RATE = 30       // m/s
-// Further than this between reports, it's not the same trip
-const MAX_JUMP = 2000     // m
-// Longer than this between reports, there's no telling what it did in between, and moving, it could have stopped
-// anywhere on the way: moving buses report every 11 s or so, and stopped ones every 30
-const MAX_GAP = 120       // s
-const MAX_STEP = 45       // s
-// GPS wanders this far back along the street while a bus sits still
-const JITTER = 30         // m
 // Before anything's been learned
 export const DEFAULT_RATE = 6 // m/s
 export const DEFAULT_WAIT = 8 // s at a stop, or held up somewhere else
-// Slower is idling at a stop, with a meaningless heading
-export const MIN_MOVING_KPH = 3
 
 // How long the evidence of how a line is running lasts: weighed by half every FACTOR_HALF_LIFE, gone after
 // FACTOR_WINDOW, and worth as much as FACTOR_PRIOR drives that went exactly as expected
@@ -69,112 +56,6 @@ export type Pace = {
 
 export const createPace = (prior = NO_PRIOR): Pace =>
   ({ prior, drives: new Map(), zones: new Map(), recent: new WeakMap() })
-
-/** One bus's last report, and what it was last seen doing at stops */
-export type Trace = {
-  track: Track<RouteLine>,
-  /** Epoch seconds of the report */
-  at: number,
-  /** The bus wasn't moving */
-  isStopped: boolean,
-  /** It wasn't moving in the report before either, so it's parked or held up for a while */
-  isStill?: boolean,
-  /** The zone it's in, and when it entered */
-  entered?: { stop: number, at: number },
-  /** The last zone it left, and when */
-  left?: { stop: number, at: number },
-  /** Epoch seconds its trip is scheduled to leave stops where it waits for that, by stop id */
-  holds?: ReadonlyMap<string, number>
-}
-
-/** What a bus did between two reports: drove from one stop's zone to the next, or went through a stop's zone */
-export type Crossing =
-  | { kind: "drive", from: string, to: string, meters: number, start: number, end: number }
-  | { kind: "zone", stop: string, arrive: number, depart: number }
-
-/** A stop on a line, counting on around a loop: index n is the first stop on the second lap */
-const stopAt = ({ stops, length, isLoop }: RouteLine, lap: number, index: number) => {
-  const n = stops.length
-  const wrapped = ((index % n) + n) % n
-  return {
-    index: wrapped,
-    id: stops[wrapped].id,
-    distance: stops[wrapped].distance + (isLoop ? (lap + Math.floor(index / n)) * length : 0)
-  }
-}
-
-const lapOf = ({ length, isLoop }: RouteLine, distance: number) =>
-  isLoop ? Math.floor(distance / length) : 0
-
-/** The index of the first stop past a distance, which is the stop count past the end of a line that isn't a loop */
-const firstAhead = (line: RouteLine, distance: number) => {
-  const offset = distance - lapOf(line, distance) * (line.isLoop ? line.length : 0)
-  const i = line.stops.findIndex(stop => stop.distance > offset)
-  return i === -1 ? line.stops.length : i
-}
-
-/** m driven between the zones of two stops some distance apart */
-const driven = (from: { distance: number }, to: { distance: number }) =>
-  to.distance - from.distance - 2 * ZONE
-
-/**
- * The zone edges a bus crossed since its last report, timed by interpolating between the two reports
- * @returns its trace as of the new report, and the drives and stops it finished in between, in order
- */
-export const cross = (previous: Trace | undefined, track: Track<RouteLine>, at: number, isStopped: boolean) => {
-  const { line } = track
-  const crossings: Crossing[] = []
-  const isSameRun = previous?.track.line === line && at > previous.at && at - previous.at <= MAX_GAP
-  const isStill = isStopped && previous?.isStopped
-  if (!isSameRun || !line.stops.length)
-    return { trace: { track, at, isStopped, isStill } as Trace, crossings }
-
-  const from = previous.track.distance
-  const moved =
-    line.isLoop
-      ? ((track.distance - from) % line.length + line.length) % line.length
-      : track.distance - from
-  // A little way back is the GPS wandering, so the bus stays where it got to
-  if (moved < 0 ? moved >= -JITTER : line.isLoop && moved >= line.length - JITTER)
-    return { trace: { ...previous, at, isStopped, isStill }, crossings }
-  if (moved < 0 || moved > MAX_JUMP || (moved > JITTER && at - previous.at > MAX_STEP))
-    return { trace: { track, at, isStopped, isStill } as Trace, crossings }
-
-  const timeAt = (distance: number) => previous.at + (moved ? (distance - from) / moved : 1) * (at - previous.at)
-  // Every zone edge crossed, in order along the line, from the first stop whose zone ends past where the bus was
-  const lap = lapOf(line, from - ZONE)
-  let { entered, left } = previous
-  for (let i = firstAhead(line, from - ZONE); ; i++) {
-    if (!line.isLoop && i >= line.stops.length)
-      break
-    const stop = stopAt(line, lap, i)
-    if (stop.distance - ZONE > from + moved)
-      break
-
-    if (stop.distance - ZONE > from) {
-      const time = timeAt(stop.distance - ZONE)
-      const previousStop = stopAt(line, lap, i - 1)
-      if (left?.stop === previousStop.index && (line.isLoop || i > 0)) {
-        const meters = driven(previousStop, stop)
-        const rate = meters / (time - left.at)
-        // Stops whose zones overlap have nothing between them to drive, and a negative distance over a negative time
-        // would pass for a rate
-        if (meters > 0 && rate >= MIN_RATE && rate <= MAX_RATE)
-          crossings.push({ kind: "drive", from: previousStop.id, to: stop.id, meters, start: left.at, end: time })
-      }
-      entered = { stop: stop.index, at: time }
-    }
-    if (stop.distance + ZONE > from && stop.distance + ZONE <= from + moved) {
-      const time = timeAt(stop.distance + ZONE)
-      if (entered?.stop === stop.index)
-        crossings.push({ kind: "zone", stop: stop.id, arrive: entered.at, depart: time })
-      left = { stop: stop.index, at: time }
-      entered = undefined
-    }
-  }
-
-  return { trace: { track, at, isStopped, isStill, entered, left } as Trace, crossings }
-}
 
 // log s of a stop's zone, with nothing better to go on
 const ZONE_MU = Math.log(2 * ZONE / DEFAULT_RATE + DEFAULT_WAIT)

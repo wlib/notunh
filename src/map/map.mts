@@ -17,7 +17,7 @@ import { animateBuses } from "./buses.mts"
 import { showYou } from "./you.mts"
 import type { Building } from "./places.mts"
 import { laneSlots, lanePieces, measureCorridors } from "./corridors.mts"
-import { BASE, DRAWN_ICONS, type StyleManifest, glyphsFrom, hostedAt, upstreamGlyphs } from "./style.mts"
+import { BASE, DRAWN_ICONS, type LoadedStyle, glyphsFrom, hostedAt, upstreamGlyphs } from "./style.mts"
 import { PROTOCOL, tileLoader } from "./tiles.mts"
 
 // maplibre finds its worker with a computed URL that vite can't see, so bundle it as a worker explicitly
@@ -263,7 +263,7 @@ export const createMap = (
     gazetteer:        Reactive<readonly GazetteerPlace[]>,
     buildings:        Reactive<readonly Building[]>,
     tiles:            Reactive<{ version?: string }>,
-    style:            Reactive<StyleManifest>,
+    style:            Reactive<LoadedStyle>,
     model:            Reactive<Model>,
     vehicles:         Reactive<Vehicle[]>,
     layovers:         Reactive<ReadonlySet<string>>,
@@ -301,13 +301,15 @@ export const createMap = (
       layers: [...style.layers, ...previous?.layers.filter(layer => "source" in layer && ours.some(([id]) => id === layer.source)) ?? []]
     }, location.origin)
   }
-  // A newer build's style comes in as the differences from the one showing, so nothing flickers
+  // A newer build's style comes in as the differences from the one showing, so nothing flickers. It's loaded with
+  // its manifest, so what's applied is always what's had
   let styleUrl: string | undefined
   watch([state.style], () => {
-    if (state.style.value.url === styleUrl)
+    const { url, style } = state.style.value
+    if (url === styleUrl)
       return
-    styleUrl = state.style.value.url
-    map.setStyle(styleUrl, { transformStyle })
+    styleUrl = url
+    map.setStyle(style, { transformStyle })
   })
   // The points of interest Liberty's sprite has no icon for, drawn as they're needed
   map.on("styleimagemissing", ({ id }) => {

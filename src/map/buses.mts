@@ -1,6 +1,7 @@
 // Buses drawn where we expect them to be now: driven along their route from the last GPS fix at the pace the model
 // and buses lately have kept between stops and at them, waiting where their trip waits for its timetable, eased
-// into each new fix without backing up, and faded the longer it's been since one
+// into each new fix without backing up, and faded the longer it's been since one. The easing is the drawing's alone:
+// what's learned of how the buses run comes from each fix as it snaps to the route, never from where one was drawn
 
 import { r, watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, Map as MapLibre } from "maplibre-gl"
@@ -9,8 +10,9 @@ import type { Vehicle } from "./umo.mts"
 import { snapToLines } from "../geo/follow.mts"
 import { pointAt } from "../geo/lines.mts"
 import type { Coordinates } from "../geo/projection.mts"
-import { routeLines } from "./shapes.mts"
-import { MIN_MOVING_KPH, createPace, expectedDistance, learnedPrior, observe, type Pace, type Trace } from "./pace.mts"
+import { BUS_TRACKING, routeLines } from "./shapes.mts"
+import { MIN_MOVING_KPH, type Trace } from "./crossings.mts"
+import { createPace, expectedDistance, learnedPrior, observe, type Pace } from "./pace.mts"
 import { holdChances, isLikely, type Model } from "./model.mts"
 
 const MAX_EXTRAPOLATION = 45 // s of driving guessed past a fix
@@ -117,7 +119,7 @@ export const animateBuses = (
 
       // Speed is too rough to drive by, but tells a moving bus from a stopped one, whose heading means nothing
       const isMoving = (vehicle.kph ?? 0) >= MIN_MOVING_KPH
-      const track = snapToLines(linesByRoute.get(vehicle.route.id)!, vehicle, isMoving ? vehicle.heading ?? undefined : undefined, previous?.trace?.track)
+      const track = snapToLines(linesByRoute.get(vehicle.route.id)!, vehicle, isMoving ? vehicle.heading ?? undefined : undefined, previous?.trace?.track, BUS_TRACKING)
       const fix: Fix = {
         vehicle,
         at: now - vehicle.secsSinceReport * 1000,

@@ -7,16 +7,17 @@ import { mkdir, rm, writeFile } from "node:fs/promises"
 import * as v from "valibot"
 import { addDays, localDay } from "../../src/shared/time.mts"
 import { getJson, objectOf } from "../../src/shared/json.mts"
-import { MEALS, MenusIndex } from "../../src/dining/menus.mts"
+import { DATA_PATH, MEALS, MenusIndex } from "../../src/dining/menus.mts"
 import { NutrisliceWeek, convert } from "./convert.mts"
 import { hallHours, nutrisliceHours, parseUnhHours, UNH_PAGES, type NutrisliceSchool } from "./hours.mts"
-import { carriedFiles, publish } from "./publish.mts"
-import { isKept } from "../files.mts"
-import { ORIGIN, deployed } from "../site.mts"
+import { Published, carried, publish } from "./publish.mts"
+import { PUBLIC, isKept, keepServed } from "../files.mts"
+import { deployed, served } from "../site.mts"
 
 const API = "https://unh.api.nutrislice.com/menu/api"
 const INDEX = new URL("../../src/dining/menus.json", import.meta.url)
-const FILES = new URL("../../public/data/dining/", import.meta.url)
+const FILES = new URL(`.${DATA_PATH}`, PUBLIC)
+const PUBLISHED = `${DATA_PATH}published.json`
 const WEEKS = 3
 
 if (await isKept(INDEX))
@@ -77,19 +78,17 @@ const data = convert(halls.map(({ id, name }) => ({ id, name })), weeks, Date.no
 if (!data.menus.length)
   throw new Error("Nutrislice has no menus posted")
 
-// The index goes last, so it only ever names files that are there, and last night's files stay published one more
-// night for the tabs still on its index, fetched back from the site since a build starts from nothing
+// The index goes last, so it only ever names files that are there, and the files published before stay as long as
+// a tab still on an index naming them may ask (publish.mts), fetched back from the site since a build starts from
+// nothing, with the record of them beside them for the next build
 const { index, files } = publish(data, hours)
-const carried = carriedFiles(await deployed("/dining/", "menus", MenusIndex), index, Date.now())
+const [serving, published] = await Promise.all([deployed("/dining/", "menus", MenusIndex), served(PUBLISHED, Published)])
+const carrying = carried(serving, published, index, Date.now())
 await rm(FILES, { recursive: true, force: true })
 await mkdir(FILES, { recursive: true })
 await Promise.all([...files].map(([name, json]) => writeFile(new URL(`${name}.json`, FILES), json)))
-const kept = await Promise.all(carried.map(url =>
-  fetch(ORIGIN + url)
-    .then(response => response.ok ? response.arrayBuffer() : Promise.reject(new Error(`${response.status}`)))
-    .then(body => writeFile(new URL(`.${url.slice(url.lastIndexOf("/"))}`, FILES), new Uint8Array(body)).then(() => true))
-    .catch(error => void console.warn(`Not keeping ${url}: ${error.message}`))
-))
+const kept = await keepServed(Object.keys(carrying))
+await writeFile(new URL(`.${PUBLISHED}`, PUBLIC), JSON.stringify(Object.fromEntries(kept.map(url => [url, carrying[url]]))))
 await writeFile(INDEX, JSON.stringify(index))
 const days = [...new Set(data.menus.map(menu => menu.day))]
-console.log(`Wrote ${data.halls.length} halls (${Object.keys(hours).length} with hours), ${data.foods.length} foods, ${data.menus.length} meals (${days[0]}–${days.at(-1)}) in ${files.size} files, keeping ${kept.filter(Boolean).length} of last night's`)
+console.log(`Wrote ${data.halls.length} halls (${Object.keys(hours).length} with hours), ${data.foods.length} foods, ${data.menus.length} meals (${days[0]}–${days.at(-1)}) in ${files.size} files, keeping ${kept.length} published before`)

@@ -32,7 +32,7 @@ const FEED: FeedData = {
 
 // As the map's page names them in development
 const DATA = Object.fromEntries(["gtfs", "model", "walk", "gazetteer", "tiles", "style", "places"].map(name => [name, `/src/map/${name}.json`]))
-const BUILDINGS = places as Building[]
+const BUILDINGS = places.buildings as Building[]
 
 const bus = (id: string, secsSinceReport = 0): Vehicle => ({
   id, ...CENTER, heading: 0, kph: 0, secsSinceReport, gpsTime: NOON - secsSinceReport * 1000,
@@ -74,7 +74,7 @@ const load = async ({ at = NOON, saved = {} as Record<string, unknown>, permissi
     if (url.includes("style.json"))
       return Response.json({ url: "/data/map/AAAAAAAAAAAAAAAA/style.json", folders: ["/data/map/AAAAAAAAAAAAAAAA/"] })
     if (url.includes("places.json"))
-      return Response.json(BUILDINGS)
+      return Response.json(places)
     if (!url.endsWith("/vehicles"))
       return Response.json(FEED)
     if (!umo.vehicles)

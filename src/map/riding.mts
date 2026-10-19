@@ -6,7 +6,7 @@
 import { r, watch } from "bruh/reactive"
 import { type Following, follow } from "../geo/follow.mts"
 import { distance } from "../geo/projection.mts"
-import { type RouteLine, routeLines } from "./shapes.mts"
+import { BUS_TRACKING, type RouteLine, routeLines } from "./shapes.mts"
 import { compare, fixAt, type Fix } from "./fixes.mts"
 import { location } from "./location.mts"
 import type { Vehicle } from "./umo.mts"
@@ -124,7 +124,7 @@ watch(() => {
     onRoute.value = undefined
     return
   }
-  const followed = follow(routeLines(feed.peek()).get(route) ?? [], fix, last, { within: ON_ROUTE, speed: MAX_SPEED })
+  const followed = follow(routeLines(feed.peek()).get(route) ?? [], fix, last, { ...BUS_TRACKING, within: ON_ROUTE, speed: MAX_SPEED })
   if (followed)
     last = followed
   onRoute.value = followed && { lon: followed.point[0], lat: followed.point[1] }

@@ -1,14 +1,18 @@
 // A server that serves one release of the built site at a time, as the real origin does across deploys, and can be
 // told to publish another, to go offline, as a phone with no signal sees it, or to answer a path with an error. The
 // releases are made from one build: B renames the dining page's entry chunk and bumps the release, as newer code
-// would, C renames the dining index, as newer data would, and D is A published again, as a rollback would
+// would, C renames the dining index and changes a hall's name in it, as newer data would, and D is C with a service
+// worker of other bytes, as a release changing the worker itself would be
 
 import { createServer } from "node:http"
 import { readFileSync, existsSync } from "node:fs"
 import { join, extname } from "node:path"
 import type { AddressInfo } from "node:net"
 
-export const RELEASES = ["A", "B", "C"] as const
+export const RELEASES = ["A", "B", "C", "D"] as const
+
+/** How release C renames the first dining hall, so a page showing it has shown C's data */
+export const HALL_SUFFIX = " (C)"
 export type ReleaseName = typeof RELEASES[number]
 
 const TYPES: Record<string, string> = {
@@ -43,10 +47,15 @@ const deriveReleases = (dist: string): Record<ReleaseName, Release> => {
   const renamed = (path: string, hash: string) => path.replace(/-[\w-]+(\.\w+)$/, `-${hash}$1`)
   const entryB = renamed(entry, "BBBBBBBB")
   const indexC = renamed(index, "CCCCCCCC")
+  const menus = JSON.parse(readFileSync(join(dist, index), "utf8"))
+  menus.halls[0].name += HALL_SUFFIX
+  const pageC = withRelease(html.replace(entry, entryB).replace(index, indexC), "C")
+  const filesC: [string, Buffer][] = [[entryB, readFileSync(join(dist, entry))], [indexC, Buffer.from(JSON.stringify(menus))]]
   return {
     A: { pages: new Map([["/dining/index.html", withRelease(html, "A")]]), files: new Map() },
     B: { pages: new Map([["/dining/index.html", withRelease(html.replace(entry, entryB), "B")]]), files: new Map([[entryB, readFileSync(join(dist, entry))]]) },
-    C: { pages: new Map([["/dining/index.html", withRelease(html.replace(entry, entryB).replace(index, indexC), "C")]]), files: new Map([[entryB, readFileSync(join(dist, entry))], [indexC, readFileSync(join(dist, index))]]) }
+    C: { pages: new Map([["/dining/index.html", pageC]]), files: new Map(filesC) },
+    D: { pages: new Map([["/dining/index.html", withRelease(pageC, "D")]]), files: new Map([...filesC, ["/sw.js", Buffer.concat([Buffer.from("// Release D\n"), readFileSync(join(dist, "sw.js"))])]]) }
   }
 }
 
@@ -83,7 +92,7 @@ export const startFixture = async (dist: string) => {
 
     const release = releases[published]
     const file = pageFileOf(pathname)
-    const headers = { "content-type": TYPES[extname(file ?? pathname)] ?? "application/octet-stream", "cache-control": file ? "no-cache" : "public, max-age=31536000, immutable" }
+    const headers = { "content-type": TYPES[extname(file ?? pathname)] ?? "application/octet-stream", "cache-control": file || pathname === "/sw.js" ? "no-cache" : "public, max-age=31536000, immutable" }
     if (file && release.pages.has(file))
       return response.writeHead(200, headers).end(release.pages.get(file))
     if (release.files.has(pathname))

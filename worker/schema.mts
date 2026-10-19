@@ -44,11 +44,15 @@ export const visits = sqliteTable("visits", {
   index("visits_arrive").on(table.arrive)
 ])
 
-/** Each model the nightly build fitted, by name and the last day in it, read and written whole */
+/**
+ * Each model the nightly build fitted, by name and the last day in it, read and written whole, each write under a
+ * revision of its own, which a writer must have read the latest of to store over it
+ */
 export const models = sqliteTable("models", {
-  name:    text().notNull(),
-  through: text().notNull(),
-  state:   text({ mode: "json" }).$type<unknown>().notNull()
+  name:     text().notNull(),
+  through:  text().notNull(),
+  state:    text({ mode: "json" }).$type<unknown>().notNull(),
+  revision: text().notNull()
 }, table => [primaryKey({ columns: [table.name, table.through] })])
 
 /**

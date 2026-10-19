@@ -2,7 +2,7 @@
 // each test gets a fresh browser context, so a fresh cache and worker, against a fixture server of its own
 
 import { test as base, expect, type BrowserContext, type Page } from "@playwright/test"
-import { type Fixture, startFixture } from "./fixture.mts"
+import { type Fixture, HALL_SUFFIX, startFixture } from "./fixture.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
   fixture: async ({}, use) => {
@@ -33,7 +33,7 @@ const cachedRelease = (page: Page, path: string, cache = CACHE) =>
 const cachedFrom = (page: Page, path: string, release: string) =>
   expect.poll(() => cachedRelease(page, path), { timeout: 10_000 }).toBe(release)
 
-const RELEASE = { A: "2026-10-18T08:00:00.000Z", B: "2026-10-19T08:00:00.000Z", C: "2026-10-20T08:00:00.000Z" }
+const RELEASE = { A: "2026-10-18T08:00:00.000Z", B: "2026-10-19T08:00:00.000Z", C: "2026-10-20T08:00:00.000Z", D: "2026-10-21T08:00:00.000Z" }
 
 /** Every script and data file the page's head names */
 const named = (page: Page) =>
@@ -100,18 +100,47 @@ test("a release whose code differs reloads an open tab only once it's out of vie
   await expect.poll(() => page.evaluate(() => [...document.scripts].some(script => script.src.includes("index-BBBBBBBB"))).catch(() => false)).toBe(true)
 })
 
-test("a release whose data differs is loaded by an open tab without a reload", async ({ context, fixture }) => {
+test("a release whose data differs is loaded by an open tab and shown, without a reload", async ({ context, fixture }) => {
   await fixture.publish("B")
   const page = await open(context, `${fixture.origin}/dining/`)
   await cachedFrom(page, "/dining/", RELEASE.B)
   await page.evaluate(() => void ((window as unknown as { marker: boolean }).marker = true))
+  await expect(page.locator("main.dining")).not.toContainText(HALL_SUFFIX)
   await fixture.publish("C")
   await page.evaluate(() => navigator.serviceWorker.controller!.postMessage({ revalidate: location.pathname }))
   await cachedFrom(page, "/dining/", RELEASE.C)
-  await expect.poll(() => fixture.requests.some(path => path.includes("menus-CCCCCCCC"))).toBe(true)
-  await page.waitForTimeout(500)
+  // C's index names the first hall otherwise, which the page shows once it has swapped C's data in
+  await expect(page.locator("main.dining")).toContainText(HALL_SUFFIX)
   expect(await page.evaluate(() => (window as unknown as { marker?: boolean }).marker)).toBe(true)
-  await expect(page.locator("main.dining")).toBeVisible()
+})
+
+test("a release with a new worker takes over an open tab without losing its files, leaving the first worker's pages to be fetched afresh", async ({ context, fixture }) => {
+  const page = await open(context, `${fixture.origin}/dining/`)
+  await cachedFrom(page, "/dining/", RELEASE.A)
+  const assets = await named(page)
+  // What the first worker kept, under its own cache, for a tab on its page: the page, naming only its code as pages
+  // did then, the code, and the data that code loaded by URL
+  await page.evaluate(async () => {
+    const old = await caches.open("app-v1")
+    await old.put("/map/", new Response("<!doctype html><html><head><script type=\"module\" src=\"/assets/old-OLDOLDOL.js\"></script></head><body></body></html>", { headers: { "content-type": "text/html" } }))
+    await old.put("/assets/old-OLDOLDOL.js", new Response("old", { headers: { "content-type": "text/javascript" } }))
+    await old.put("/assets/gtfs-OLDOLDOL.json", new Response("{}", { headers: { "content-type": "application/json" } }))
+  })
+  await fixture.publish("D")
+  await page.evaluate(() => navigator.serviceWorker.getRegistration().then(registration => registration!.update()))
+  // The new worker installs, takes over the tab, which asks it to check its page, and keeps D whole
+  await expect.poll(() => page.evaluate(() => caches.keys()), { timeout: 15_000 }).toEqual([CACHE])
+  await cachedFrom(page, "/dining/", RELEASE.D)
+  // The first worker's page can't say what it needs, so it isn't served without its data, but fetched afresh
+  const kept = (path: string) => page.evaluate(([cache, path]) => caches.open(cache).then(c => c.match(path)).then(copy => copy?.text()), [CACHE, path])
+  expect(await kept("/map/")).toBeUndefined()
+  expect(await kept("/assets/gtfs-OLDOLDOL.json")).toBeUndefined()
+  await fixture.setOffline(true)
+  for (const url of assets)
+    expect(await isFetchable(page, url), url).toBe(true)
+  const again = await context.newPage()
+  await again.goto(`${fixture.origin}/dining/`)
+  await expect(again.locator("main.dining")).toContainText(HALL_SUFFIX)
 })
 
 test("an older release served again, as by an edge not yet caught up or a rollback, is left alone", async ({ context, fixture }) => {

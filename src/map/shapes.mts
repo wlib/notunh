@@ -1,10 +1,10 @@
 // The street geometry of the timetable: each route's shapes as lines with the stops of its trips along them, which
 // buses are followed along and rides are drawn along
 
+import type { Tracking } from "../geo/follow.mts"
 import { type Line, positionsAlong, sliceLine, toLine } from "../geo/lines.mts"
-import type { Coordinates } from "../geo/projection.mts"
+import { type Coordinates, segmentMeters } from "../geo/projection.mts"
 import type { Feed, Trip } from "./feed.mts"
-import type { RideLeg } from "./plan.mts"
 
 /** A shape with the stops of the trips along it */
 export type RouteLine = Line & {
@@ -14,12 +14,26 @@ export type RouteLine = Line & {
   route: string
 }
 
-// A loop's trips end at the stop they start from, which driving on around the loop already comes back to
+// A shape ending this close to where it starts is a loop: its buses drive on around it, and its trips end at the
+// stop they start from, which driving on around already comes back to
 const LOOP_GAP = 30 // m
+
+/** How a bus keeps to its route's shapes: within the street's width of one, the way it's heading, and on along the pass it was on */
+export const BUS_TRACKING: Tracking = {
+  // Further off every shape, it's on a detour or at the depot
+  snap:      60,
+  heading:   50,
+  // Between fixes, GPS jitters back a little, and a bus gets no further than a few blocks on
+  back:      30,
+  ahead:     300,
+  switching: 25,
+  leeway:    30,
+  maxSkip:   30_000
+}
 
 /** A shape and the stops of each trip along it */
 export const toRouteLine = (route: string, coordinates: Coordinates[], trips: { id: string, lat: number, lon: number }[][]): RouteLine => {
-  const line = toLine(coordinates)
+  const line = toLine(coordinates, coordinates.length > 2 && segmentMeters(coordinates[0], coordinates.at(-1)!) < LOOP_GAP)
   const stops = [
     ...new Map(trips.flatMap(stops =>
       positionsAlong(line, stops).map((distance, i) => {
@@ -35,6 +49,27 @@ export const toRouteLine = (route: string, coordinates: Coordinates[], trips: { 
       ? stops.filter(stop => line.length - stop.distance >= LOOP_GAP || !stops.some(other => other.id === stop.id && other.distance < LOOP_GAP))
       : stops
   }
+}
+
+/** A stop on a line, counting on around a loop: index n is the first stop on the second lap */
+export const stopAt = ({ stops, length, isLoop }: RouteLine, lap: number, index: number) => {
+  const n = stops.length
+  const wrapped = ((index % n) + n) % n
+  return {
+    index: wrapped,
+    id: stops[wrapped].id,
+    distance: stops[wrapped].distance + (isLoop ? (lap + Math.floor(index / n)) * length : 0)
+  }
+}
+
+export const lapOf = ({ length, isLoop }: RouteLine, distance: number) =>
+  isLoop ? Math.floor(distance / length) : 0
+
+/** The index of the first stop past a distance, which is the stop count past the end of a line that isn't a loop */
+export const firstAhead = (line: RouteLine, distance: number) => {
+  const offset = distance - lapOf(line, distance) * (line.isLoop ? line.length : 0)
+  const i = line.stops.findIndex(stop => stop.distance > offset)
+  return i === -1 ? line.stops.length : i
 }
 
 const linesCache = new WeakMap<Feed, Map<string, RouteLine[]>>()
@@ -63,8 +98,8 @@ export const routeLines = (feed: Feed) => {
 
 const tripPositions = new WeakMap<Trip, number[]>()
 
-/** The street geometry a ride follows, from its boarding stop to where it gets off */
-export const ridePath = (feed: Feed, leg: RideLeg): Coordinates[] => {
+/** The street geometry a ride follows, from its boarding stop to where it gets off, by their positions in its trip */
+export const ridePath = (feed: Feed, leg: { run: { trip: Trip }, fromPosition: number, toPosition: number }): Coordinates[] => {
   const { trip } = leg.run
   const [first, last] = [leg.fromPosition, leg.toPosition]
     .map(position => feed.stops[trip.stops[position]])

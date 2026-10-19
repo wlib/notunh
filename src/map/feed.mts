@@ -77,8 +77,8 @@ export const withIndexes = (data: FeedData): Feed => ({
   routesById: new Map(data.routes.map(route => [route.id, route]))
 })
 
-export const loadFeed = (url: string) =>
-  getJson(url, { schema: FeedData }).then(withIndexes)
+export const loadFeed = (url: string, init?: RequestInit) =>
+  getJson(url, { ...init, schema: FeedData }).then(withIndexes)
 
 /** Seconds into the service day a trip gets to a stop, which is when it leaves unless it waits there */
 export const arrivalTime = (trip: Trip, position: number) =>

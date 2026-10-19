@@ -11,17 +11,14 @@ export type Line = {
   /** Meters from the start to each vertex */
   distances: number[],
   length: number,
-  /** Ends where it starts, so moving off the end carries on from the start */
+  /** Travelled round and round, so moving off the end carries on from the start, which is for whoever makes the line to say */
   isLoop: boolean,
   /** Laid at the middle of the line, for measuring from points beside it, as a line is no wider than a town */
   ruler: CheapRuler
 }
 
-// A line ending this close to where it starts is a loop
-const LOOP_GAP = 30 // m
-
 /** A line measured out, each segment at its own latitude as every distance is, so its length adds up to them */
-export const toLine = (coordinates: Coordinates[]): Line => {
+export const toLine = (coordinates: Coordinates[], isLoop = false): Line => {
   const distances = [0]
   for (let i = 1; i < coordinates.length; i++)
     distances.push(distances[i - 1] + segmentMeters(coordinates[i - 1], coordinates[i]))
@@ -30,7 +27,7 @@ export const toLine = (coordinates: Coordinates[]): Line => {
     coordinates,
     distances,
     length: distances.at(-1)!,
-    isLoop: coordinates.length > 2 && segmentMeters(coordinates[0], coordinates.at(-1)!) < LOOP_GAP,
+    isLoop,
     ruler: ruler((south + north) / 2)
   }
 }

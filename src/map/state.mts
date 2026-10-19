@@ -9,15 +9,16 @@ import { type Line, sliceLine, toLine } from "../geo/lines.mts"
 import { type Coordinates, distance } from "../geo/projection.mts"
 import { ridePath } from "./shapes.mts"
 import { Model, emptyModel } from "./model.mts"
-import { StyleManifest } from "./style.mts"
+import { loadStyle } from "./style.mts"
 import { TilesManifest } from "./tiles.mts"
-import { type Vehicle, type Prediction, type StopPredictions, STALE_VEHICLE_SECONDS, fetchVehicles, fetchPredictions, fetchStopPredictions } from "./umo.mts"
-import { type Itinerary, type Place, type WalkLeg, buildRuns, isSameItinerary, itineraryKey, plan, timeAt, walkOnly } from "./plan.mts"
+import { type Vehicle, type StopPredictions, STALE_VEHICLE_SECONDS, fetchVehicles, fetchPredictions, fetchStopPredictions, forecastOf } from "./umo.mts"
+import { type Observation, NO_FORECAST, buildRuns, timeAt } from "./forecast.mts"
+import { type Itinerary, type Place, type WalkLeg, isSameItinerary, itineraryKey, plan, walkOnly } from "./plan.mts"
 import { currentLocation, location, locationProblem } from "./location.mts"
-import { Building, buildingAt } from "./places.mts"
+import { Places, buildingAt } from "./places.mts"
 import { Gazetteer } from "./gazetteer.mts"
 import { createPlaceSearch } from "./search.mts"
-import { poll } from "../shell/poll.mts"
+import { live, poll } from "../shell/poll.mts"
 import { latest } from "../shell/build.mts"
 import { TICK_MS, isBusy, now as clock, today, visibleSince } from "../shell/lifecycle.mts"
 import { distinct, isSameList, isSameSet, remembered, store, stored } from "../shell/state.mts"
@@ -34,17 +35,18 @@ const CAMPUS = { lat: 43.1365, lon: -70.9345 }
 
 // The bundled data, each swapped for a newer build's as it comes, which everything derived from it follows. The
 // map works without a model, so it starts with an empty one if its own can't load
-export const [feed, model, network, gazetteerData, tiles, style, buildings] = await Promise.all([
+export const [feed, model, network, gazetteerData, tiles, style, places] = await Promise.all([
   latest("gtfs", loadFeed),
   latest("model", Model, emptyModel),
   latest("walk", WalkData),
   latest("gazetteer", Gazetteer),
   latest("tiles", TilesManifest),
-  latest("style", StyleManifest),
-  latest("places", v.array(Building))
+  latest("style", loadStyle),
+  latest("places", Places)
 ])
 const graph = r(() => loadGraph(network.value))
 export const gazetteer = r(() => gazetteerData.value.places)
+export const buildings = r(() => places.value.buildings)
 export const walks = r(() => createWalks(feed.value.stops, graph.value, gazetteer.value))
 
 /** Places by name, laundry and dining first, then the stops buses pick up at, then the rest of Durham */
@@ -74,14 +76,20 @@ export const runningToday = r(() =>
 
 //#region Live data
 
+/** Umo's vehicles as last listed, and how asking for them is going */
+const listed = live<Vehicle[]>()
+poll(fetchVehicles, VEHICLE_POLL_MS, state => listed.value = state)
 /** Every vehicle as Umo last listed it */
-const reports = r<Vehicle[]>([])
+const reports = r(() => listed.value.value ?? [])
 /** Epoch milliseconds of the last successful vehicles update */
-export const lastUpdate = r<number>()
-/** Umo's predictions as last fetched, and when */
-const fetched = r<{ at: number, predictions: StopPredictions[] }>({ at: -Infinity, predictions: [] })
-/** Umo's predictions while they're fresh, and none once they've gone stale, so the schedule stands in */
-export const predictions = r(() => clock.value - fetched.value.at <= PREDICTIONS_FRESH_MS ? fetched.value.predictions : [])
+export const lastUpdate = r(() => listed.value.received)
+/** Umo's predictions as last answered, for the routes with a bus out */
+const asked = live<StopPredictions[]>()
+/** What Umo forecasts while its predictions are fresh, and nothing once they've gone stale, so the schedule stands in */
+export const forecast = r(() => {
+  const { value, received } = asked.value
+  return value && received !== undefined && clock.value - received <= PREDICTIONS_FRESH_MS ? forecastOf(value, received / 1000) : NO_FORECAST
+})
 
 /** Seconds since a vehicle reported, as of an epoch millisecond, counting on from when Umo said so */
 export const ageOf = (vehicle: Vehicle, at: number) =>
@@ -97,16 +105,18 @@ const silence = r(() =>
     : clock.value - Math.max(lastUpdate.value ?? -Infinity, visibleSince.value)
 )
 
-const hasVehiclesFailed = r(false)
-
 /**
  * Umo has failed to answer from the start, or stopped answering for a while since we've been looking, until it
  * answers again, so that going away and coming back doesn't forget it
  */
 export const isLiveDown = r(false)
 watch(() => {
-  if (lastUpdate.value === undefined ? hasVehiclesFailed.value : silence.value > 3 * VEHICLE_POLL_MS + TICK_MS)
+  if (lastUpdate.value === undefined ? listed.value.isFailing : silence.value > 3 * VEHICLE_POLL_MS + TICK_MS)
     isLiveDown.value = true
+})
+watch([listed], () => {
+  if (!listed.value.isFailing && listed.value.received !== undefined)
+    isLiveDown.value = false
 })
 
 /**
@@ -131,19 +141,6 @@ export const liveCounts = r(() => {
   return counts
 })
 
-poll(
-  async signal => {
-    reports.value = await fetchVehicles(signal)
-    lastUpdate.value = Date.now()
-    isLiveDown.value = false
-  },
-  VEHICLE_POLL_MS,
-  error => {
-    hasVehiclesFailed.value = true
-    console.error(error)
-  }
-)
-
 // Predictions only matter for routes with a bus out; the schedule covers the rest
 const predictionPairs = r(() => [
   ...new Map(
@@ -164,27 +161,24 @@ watch([liveRoutes, predictionPairs], () => {
   const routes = new Set(liveRoutes.value.split(" "))
   const pairs = predictionPairs.value.filter(pair => routes.has(pair.route))
   if (!pairs.length) {
-    fetched.value = { at: -Infinity, predictions: [] }
+    asked.value = { isFailing: false }
     return
   }
-  return poll(async signal => {
-    fetched.value = { at: Date.now(), predictions: await fetchPredictions(pairs, signal) }
-  }, PREDICTION_POLL_MS)
+  return poll(signal => fetchPredictions(pairs, signal), PREDICTION_POLL_MS, state => asked.value = state)
 })
 
-/** Buses waiting out a layover: their soonest prediction is from the schedule, not from them driving */
+/** Buses waiting out a layover: their soonest observation is from the schedule, not from them driving */
 export const layovers = r(() => {
-  const soonest = new Map<string, Prediction>()
-  for (const entry of predictions.value)
-    for (const prediction of entry.values) {
-      const current = soonest.get(prediction.vehicleId)
-      if (!current || prediction.timestamp < current.timestamp)
-        soonest.set(prediction.vehicleId, prediction)
-    }
-  return new Set([...soonest].filter(([, prediction]) => prediction.affectedByLayover).map(([id]) => id))
+  const soonest = new Map<string, Observation>()
+  for (const observation of forecast.value.observations) {
+    const current = soonest.get(observation.vehicleId)
+    if (!current || observation.time < current.time)
+      soonest.set(observation.vehicleId, observation)
+  }
+  return new Set([...soonest].filter(([, observation]) => !observation.isLive).map(([id]) => id))
 })
 
-export const runs = r(() => buildRuns(feed.value, today.value, predictions.value, model.value))
+export const runs = r(() => buildRuns(feed.value, today.value, forecast.value, model.value))
 
 //#endregion
 
@@ -317,25 +311,15 @@ export const activeRoutes = distinct((): ReadonlySet<string> => {
 export const chosenRoutes = r<ReadonlySet<string>>()
 export const shownRoutes = r(() => chosenRoutes.value ?? activeRoutes.value)
 
-/** The selected stop's predictions, undefined until they first load, and empty if they can't */
-export const stopPredictions = r<StopPredictions[]>()
+/** The selected stop's predictions as last answered */
+const stopAsked = live<StopPredictions[]>()
+/** The selected stop's predictions, undefined until they first load, and empty if they can't, as the schedule still says when buses should come */
+export const stopPredictions = r(() => stopAsked.value.value ?? (stopAsked.value.isFailing ? [] : undefined))
 watch([selectedStopId], () => {
   const stop = selectedStopId.value
-  stopPredictions.value = undefined
-  if (stop === undefined)
-    return
-
-  return poll(
-    async signal => {
-      stopPredictions.value = await fetchStopPredictions(stop, signal)
-    },
-    STOP_POLL_MS,
-    error => {
-      // The schedule still says when buses should come
-      stopPredictions.value ??= []
-      console.error(error)
-    }
-  )
+  stopAsked.value = { isFailing: false }
+  if (stop !== undefined)
+    return poll(signal => fetchStopPredictions(stop, signal), STOP_POLL_MS, state => stopAsked.value = state)
 })
 
 //#endregion

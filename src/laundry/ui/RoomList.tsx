@@ -6,9 +6,9 @@
 import { r } from "bruh/reactive"
 import { KINDS, type Counts, type Kind } from "../infer.mts"
 import { ROOMS, pathOf } from "../rooms.mts"
-import { favorites, open, summaryOf } from "../state.mts"
+import { COUNTS_FRESH_MS, counted, favorites, open, summaryOf } from "../state.mts"
 import { now } from "../../shell/lifecycle.mts"
-import { Count } from "../../shell/intl.tsx"
+import { ClockTime, Count } from "../../shell/intl.tsx"
 import { Next, Star, Usually, plural } from "./common.tsx"
 
 /** "6 of 7" with the free count lit, and under it when none is, when the next should be */
@@ -64,6 +64,12 @@ export const RoomList = () =>
       )}
     </ul>
     <footer class="muted">
-      Counts update every few minutes. Select a room to see the latest machine status and remaining times.
+      {r(() => {
+        // As fresh as when the counts were made, which a failing ask, or one not made for a while, leaves behind
+        const { value, isFailing } = counted.value
+        return value && (isFailing || now.value - value.at > COUNTS_FRESH_MS)
+          ? <>{isFailing ? "Couldn't refresh the counts. " : ""}Showing counts from <ClockTime at={new Date(value.at)} />. Select a room to see its machines.</>
+          : <>Counts update every few minutes. Select a room to see the latest machine status and remaining times.</>
+      })}
     </footer>
   </>

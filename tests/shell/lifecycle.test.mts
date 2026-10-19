@@ -1,7 +1,7 @@
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
 import { HOUR, localDay } from "../../src/shared/time.mts"
-import { fakePage, leavePage } from "./page.mts"
+import { fakePage, headOf, leavePage } from "./page.mts"
 
 afterEach(leavePage)
 
@@ -144,7 +144,7 @@ test("newer code waits while the page is busy, as on a bus, and comes in once it
   const { receive } = await import("../../src/shell/build.mts")
   page.isBusy.value = true
   page.setVisibility("hidden")
-  receive(`<head><script type="module" src="/assets/index-BBBBBBBB.js"></script></head>`)
+  receive(headOf({}, ["/assets/index-BBBBBBBB.js"]))
   await vi.advanceTimersByTimeAsync(0)
   expect(page.reload).not.toHaveBeenCalled()
   page.isBusy.value = false
@@ -158,7 +158,7 @@ test("newer code reloads the page once it's out of view, whether it came in view
     const { receive } = await import("../../src/shell/build.mts")
     if (isHiddenFirst)
       page.setVisibility("hidden")
-    receive(`<head><script type="module" src="/assets/index-BBBBBBBB.js"></script></head>`)
+    receive(headOf({}, ["/assets/index-BBBBBBBB.js"]))
     await vi.advanceTimersByTimeAsync(0)
     let isHidden = isHiddenFirst
     for (const isVisible of visibility) {

@@ -8,14 +8,27 @@ import type { FilterSpecification, LayerSpecification, StyleSpecification } from
 import * as v from "valibot"
 import { TILE_SETS, tileTemplate } from "./tiles.mts"
 import { Retain } from "../shell/manifest.mts"
+import { getJson, objectOf } from "../shared/json.mts"
 
 export const LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
 /** Where each style's folder is, beside the tiles' */
 export const STYLE_ROOT = "/data/map/"
 
-/** What the map's page names as its style: where the style is, and its folder to keep with it */
+/** What the map's page names as its style: where the style is, which is required with the page, and its folder to keep with it */
 export const StyleManifest = v.object({ ...Retain.entries, url: v.string() })
 export type StyleManifest = v.InferOutput<typeof StyleManifest>
+
+/** The manifest with the style it names, which the map applies as it is, so it never wants a style it doesn't have */
+export type LoadedStyle = StyleManifest & { style: StyleSpecification }
+
+/**
+ * The manifest and its style, loaded as one, so a style that can't be had is a load of the manifest that failed,
+ * tried again like any other (src/shell/build.mts) rather than wanted by the map and never come
+ */
+export const loadStyle = async (url: string, init: RequestInit): Promise<LoadedStyle> => {
+  const manifest = await getJson(url, { ...init, schema: StyleManifest })
+  return { ...manifest, style: await getJson(manifest.url, { ...init, schema: objectOf<StyleSpecification>() }) }
+}
 // Liberty's vector tiles, and ours of what they leave out
 export const BASE = "openmaptiles"
 export const CAMPUS = "campus"

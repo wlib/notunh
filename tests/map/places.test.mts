@@ -8,7 +8,7 @@ import menus from "../../src/dining/menus.json"
 import places from "../../src/map/places.json"
 
 const { halls }: Pick<MenusIndex, "halls"> = menus
-const BUILDINGS = places as Building[]
+const BUILDINGS = places.buildings as Building[]
 const buildingAt = (id: string) => buildingLinked(BUILDINGS, id)
 
 // Every id a link can lead to a building by, which for a building with one room may be the room's as well

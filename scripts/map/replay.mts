@@ -9,7 +9,8 @@ import { distance } from "../../src/geo/projection.mts"
 import { extract, type Visit } from "../../src/map/events.mts"
 import { decode, fromHex, unpackFixes, unpackPredictions, type RawFix, type RawPrediction, type SampledPrediction } from "../../src/map/raw.mts"
 import { STREET_DETOUR } from "../../src/map/walks.mts"
-import { DEFAULT_RATE, DEFAULT_WAIT, FACTOR_WINDOW, ZONE, factorOf, type Seen } from "../../src/map/pace.mts"
+import { ZONE } from "../../src/map/crossings.mts"
+import { DEFAULT_RATE, DEFAULT_WAIT, FACTOR_WINDOW, factorOf, type Seen } from "../../src/map/pace.mts"
 import {
   LEADS, asModel, context, contextAt, dayType, deviationEstimate, driveEstimate, dwellEstimate, emptyScores,
   holdChances, inflation, isLikely, probit, variance, type Estimate, type Model, type Scores, type Tally

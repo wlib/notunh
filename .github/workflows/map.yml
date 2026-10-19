@@ -60,14 +60,18 @@ jobs:
       - run: |
           cp tests/fixtures/data/src/laundry/rooms.json src/laundry/ && cp tests/fixtures/data/src/dining/menus.json src/dining/
           node scripts/map/places.mts
-      # A release left by a run that failed before moving the pointer is filled in again, as nothing has read it
+      # A generation is immutable once its manifest is up, so one published before, as the pointer moved on past it,
+      # is pointed at again as it is, never replaced. A release a run left without its manifest was never read, and
+      # is filled in again
       - name: Publish
         id: publish
         run: |
           [ -f release/latest.json ] || { echo "Nothing new to publish"; exit 0; }
           VERSION=$(jq -r .version release/latest.json)
           EXTRACT=$(jq -r .extract release/manifest.json)
-          if gh release view "map-data-$VERSION" >/dev/null 2>&1; then
+          if gh release download "map-data-$VERSION" -p manifest.json -O published.json 2>/dev/null; then
+            echo "map-data-$VERSION is published already, and is pointed at as it is"
+          elif gh release view "map-data-$VERSION" >/dev/null 2>&1; then
             gh release upload "map-data-$VERSION" release/map-data.tar.gz release/manifest.json --clobber
           else
             gh release create "map-data-$VERSION" release/map-data.tar.gz release/manifest.json --latest=false \

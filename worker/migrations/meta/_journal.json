@@ -15,6 +15,13 @@
       "when": 1791419698697,
       "tag": "0001_room_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792378581992,
+      "tag": "0002_model_revisions",
+      "breakpoints": true
     }
   ]
 }

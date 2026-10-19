@@ -5,8 +5,8 @@
 
 import { tripBase, type Feed, type Trip } from "./feed.mts"
 import { snapToLines } from "../geo/follow.mts"
-import { routeLines } from "./shapes.mts"
-import { MIN_MOVING_KPH, cross, type Trace } from "./pace.mts"
+import { BUS_TRACKING, routeLines } from "./shapes.mts"
+import { MIN_MOVING_KPH, cross, type Trace } from "./crossings.mts"
 import type { BusFix } from "./raw.mts"
 
 // Longer at a stop, or between the end of one trip and the start of the next, is a bus out of service
@@ -145,7 +145,7 @@ const extractBus = (feed: Feed, trips: ReadonlyMap<string, Trip>, fixes: readonl
     if (!routeLinesOf)
       continue
     const isMoving = fix.kph !== null && fix.kph >= MIN_MOVING_KPH
-    const track = snapToLines(routeLinesOf, fix, isMoving ? fix.heading ?? undefined : undefined, trace?.track)
+    const track = snapToLines(routeLinesOf, fix, isMoving ? fix.heading ?? undefined : undefined, trace?.track, BUS_TRACKING)
     // Off its route, it could be anywhere until it's back
     if (!track) {
       trace = drive = undefined

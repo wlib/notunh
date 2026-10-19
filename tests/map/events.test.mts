@@ -4,7 +4,7 @@ import { serviceDayStart, withIndexes, type Feed } from "../../src/map/feed.mts"
 import { pointAt } from "../../src/geo/lines.mts"
 import type { Coordinates } from "../../src/geo/projection.mts"
 import { routeLines } from "../../src/map/shapes.mts"
-import { ZONE } from "../../src/map/pace.mts"
+import { ZONE } from "../../src/map/crossings.mts"
 import { extract } from "../../src/map/events.mts"
 import type { BusFix } from "../../src/map/raw.mts"
 

@@ -1,8 +1,13 @@
 // What the Worker keeps of the live API, one row per source per minute, and how anything reads it back.
 // Rows hold tuples rather than objects to keep the Worker's stringify cheap and the gzip small; ids repeat
-// across a minute's fixes and gzip takes care of that without a dictionary
+// across a minute's fixes and gzip takes care of that without a dictionary. What's kept is a normalization of
+// Umo's answers, not the answers: fields are dropped, times made relative, and predictions cut to the soonest per
+// key, and each row names the version of it it was packed by, so a later reader knows what it's reading
 
 import type { StopPredictions, Vehicle } from "./umo.mts"
+
+/** The version of this normalization, named in every row: 1 is the tuples below; rows from before they were versioned are bare arrays of them */
+export const RAW_VERSION = 1
 
 /** A vehicle's fix as stored, at seconds relative to the start of the row's minute */
 export type RawFix = [
@@ -100,12 +105,20 @@ export const unpackPredictions = (at: number, body: readonly RawPrediction[]): S
 const pipe = (bytes: BodyInit, stream: CompressionStream | DecompressionStream) =>
   new Response(new Response(bytes).body!.pipeThrough(stream))
 
-/** A row's body: gzipped JSON */
+/** A row's body: gzipped JSON of the version and the samples */
 export const encode = async (samples: readonly unknown[]) =>
-  new Uint8Array(await pipe(JSON.stringify(samples), new CompressionStream("gzip")).arrayBuffer())
+  new Uint8Array(await pipe(JSON.stringify({ version: RAW_VERSION, samples }), new CompressionStream("gzip")).arrayBuffer())
 
-export const decode = async <T,>(body: Uint8Array<ArrayBuffer>): Promise<T[]> =>
-  JSON.parse(await pipe(body, new DecompressionStream("gzip")).text())
+/** A row's samples, if it was packed by a version this reads, which fails for any later one rather than misread it */
+export const decode = async <T,>(body: Uint8Array<ArrayBuffer>): Promise<T[]> => {
+  const row: unknown = JSON.parse(await pipe(body, new DecompressionStream("gzip")).text())
+  if (Array.isArray(row))
+    return row
+  const { version, samples } = Object(row) as { version?: unknown, samples?: unknown }
+  if (version !== RAW_VERSION || !Array.isArray(samples))
+    throw new Error(`Samples of version ${version}, not ${RAW_VERSION}`)
+  return samples
+}
 
 /** A body as SQLite's hex() writes it, which is how rows travel as JSON */
 export const fromHex = (hex: string) =>

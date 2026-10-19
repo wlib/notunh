@@ -2,7 +2,7 @@ import { test, expect } from "vitest"
 import fc from "fast-check"
 import * as v from "valibot"
 import { convert, type NutrisliceFood, type NutrisliceWeek } from "../../scripts/dining/convert.mts"
-import { carriedFiles, publish } from "../../scripts/dining/publish.mts"
+import { carried, publish } from "../../scripts/dining/publish.mts"
 import { HOUR } from "../../src/shared/time.mts"
 import { DIETS, MenusIndex, fileUrl, passes, type Food, type Meal, type SearchFood } from "../../src/dining/menus.mts"
 import { createSearch } from "../../src/dining/search.mts"
@@ -147,16 +147,36 @@ test("every food is found by its own name", () => {
     expect(searchMenu(name).map(({ food }) => food)).toContain(i)
 })
 
-test("last night's files stay published for the tabs still on its index, two nights at most, and only those tonight's doesn't name", () =>
+const url = fc.stringMatching(/^\/data\/dining\/[\w-]{16}\.json$/)
+
+test("the files published before stay published while the index the site serves names them, and two nights past the last index that did, bar those tonight names itself", () =>
   fc.assert(fc.property(
-    fc.uniqueArray(fc.stringMatching(/^\/data\/dining\/[\w-]{16}\.json$/), { maxLength: 6 }),
-    fc.uniqueArray(fc.stringMatching(/^\/data\/dining\/[\w-]{16}\.json$/), { maxLength: 6 }),
+    fc.uniqueArray(url, { maxLength: 6 }),
+    fc.dictionary(url, fc.integer({ min: -96 * HOUR, max: 96 * HOUR }), { maxKeys: 6 }),
+    fc.uniqueArray(url, { maxLength: 6 }),
     fc.integer({ min: 0, max: 96 * HOUR }),
-    (before, tonight, age) => {
+    (before, record, tonight, age) => {
       const now = Date.parse("2026-10-18T08:00:00Z")
-      const carried = carriedFiles({ fetched: now - age, files: before }, { files: tonight }, now)
-      expect(carried).toEqual(age < 48 * HOUR ? before.filter(url => !tonight.includes(url)) : [])
-      expect(carriedFiles(undefined, { files: tonight }, now)).toEqual([])
+      const published = Object.fromEntries(Object.entries(record).map(([url, offset]) => [url, now + offset]))
+      const carrying = carried({ fetched: now - age, files: before }, published, { files: tonight }, now)
+      for (const url of new Set([...before, ...Object.keys(published)])) {
+        const until = Math.max(before.includes(url) ? Math.max(now - age + 48 * HOUR, now) : -Infinity, published[url] ?? -Infinity)
+        expect(carrying[url], url).toBe(!tonight.includes(url) && until >= now ? until : undefined)
+      }
+      expect(carried(undefined, undefined, { files: tonight }, now)).toEqual({})
     }
   ))
 )
+
+test("a build an hour after the last still carries the files of the index before it, two nights on, which one carry alone wouldn't", () => {
+  // Astra's sequence: A, then B an hour later, then C an hour after that, with a tab still on A
+  const night = Date.parse("2026-10-18T04:00:00Z")
+  const a = { fetched: night, files: ["/data/dining/a.json", "/data/dining/shared.json"] }
+  const b = { fetched: night + HOUR, files: ["/data/dining/b.json", "/data/dining/shared.json"] }
+  const c = { files: ["/data/dining/c.json"] }
+  const afterB = carried(a, undefined, b, b.fetched)
+  const afterC = carried(b, afterB, c, b.fetched + HOUR)
+  expect(Object.keys(afterC).sort()).toEqual(["/data/dining/a.json", "/data/dining/b.json", "/data/dining/shared.json"])
+  expect(afterC["/data/dining/a.json"]).toBe(night + 48 * HOUR)
+  expect(afterC["/data/dining/shared.json"]).toBe(b.fetched + 48 * HOUR)
+})

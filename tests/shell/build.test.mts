@@ -64,15 +64,16 @@ test("a page's build is read from our own code in its head, whatever else the ho
 
 test("a data file keeps what it names, by its shape, and anything else keeps nothing", () => {
   fc.assert(fc.property(fc.anything(), value => {
-    const { files, folders } = retainOf(value)
-    const { files: named = [], folders: namedFolders = [] } = Object(value)
-    expect(files).toEqual(Array.isArray(named) ? named.filter(item => typeof item === "string") : [])
-    expect(folders).toEqual(Array.isArray(namedFolders) ? namedFolders.filter(item => typeof item === "string") : [])
+    const retain = retainOf(value)
+    for (const key of ["required", "files", "folders"] as const) {
+      const named: unknown = Object(value)[key]
+      expect(retain[key]).toEqual(Array.isArray(named) ? named.filter(item => typeof item === "string") : [])
+    }
   }))
   const keep = isRetained([
-    { build: { release: RELEASE, code: ["/assets/a.js"], data: { tiles: "/assets/tiles.json" } }, retain: { files: ["/data/dining/x.json"], folders: ["/data/map/tiles/2026-10-17/"] } }
+    { build: { release: RELEASE, code: ["/assets/a.js"], data: { tiles: "/assets/tiles.json" } }, retain: { required: ["/data/map/s/style.json"], files: ["/data/dining/x.json"], folders: ["/data/map/tiles/2026-10-17/"] } }
   ])
-  expect(["/assets/a.js", "/assets/tiles.json", "/data/dining/x.json", "/data/map/tiles/2026-10-17/campus/16/1/1.pbf"].map(keep)).toEqual([true, true, true, true])
+  expect(["/assets/a.js", "/assets/tiles.json", "/data/map/s/style.json", "/data/dining/x.json", "/data/map/tiles/2026-10-17/campus/16/1/1.pbf"].map(keep)).toEqual([true, true, true, true, true])
   expect(["/assets/b.js", "/data/dining/y.json", "/data/map/tiles/2026-10-10/campus/16/1/1.pbf", "/data/map/tiles/2026-10-17"].map(keep)).toEqual([false, false, false, false])
 })
 
@@ -136,6 +137,24 @@ test("data is loaded again when a newer build names newer, swapped in once loade
   expect(tries()).toBe(9)
 })
 
+test("a file that failed is tried again at once on coming back into view, whatever the wait since", async () => {
+  const page = await load({ gtfs: "/assets/gtfs-AAAAAAAA.json" })
+  page.answers.set("/assets/gtfs-AAAAAAAA.json", async () => "A")
+  const gtfs = await page.latest<string>("gtfs")
+  page.receive(headOf({ gtfs: "/assets/gtfs-BBBBBBBB.json" }))
+  await vi.advanceTimersByTimeAsync(0)
+  const tries = () => page.fetches.filter(url => url.includes("BBBBBBBB")).length
+  expect(tries()).toBe(1)
+  page.answers.set("/assets/gtfs-BBBBBBBB.json", async () => "B")
+  ;(document as unknown as { visibilityState: string }).visibilityState = "hidden"
+  document.dispatchEvent(new Event("visibilitychange"))
+  ;(document as unknown as { visibilityState: string }).visibilityState = "visible"
+  document.dispatchEvent(new Event("visibilitychange"))
+  await vi.advanceTimersByTimeAsync(0)
+  expect(tries()).toBe(2)
+  expect(gtfs.peek()).toBe("B")
+})
+
 test("of builds coming faster than their data loads, only the newest's is swapped in", async () => {
   await fc.assert(fc.asyncProperty(fc.uniqueArray(hash, { minLength: 2, maxLength: 6 }), fc.func(fc.integer()), async (hashes, order) => {
     const page = await load({ gtfs: `/assets/gtfs-${hashes[0]}.json` })
@@ -158,8 +177,8 @@ test("of builds coming faster than their data loads, only the newest's is swappe
   }))
 })
 
-test("the data files of a newer build are swapped in together, once all of them have loaded, so what depends on several never sees a mix", async () => {
-  await fc.assert(fc.asyncProperty(fc.uniqueArray(fc.constantFrom("gtfs", "model", "walk"), { minLength: 2, maxLength: 3 }), fc.func(fc.integer()), async (names, order) => {
+test("each file of a newer build is swapped in as it loads, as the files join by stable ids and positions alone, so one that fails holds no other back", async () => {
+  await fc.assert(fc.asyncProperty(fc.uniqueArray(fc.constantFrom("gtfs", "model", "walk"), { minLength: 2, maxLength: 3 }), fc.func(fc.integer()), fc.nat(2), async (names, order, failing) => {
     const page = await load(dataOf(names, ["AAAAAAAA"]))
     const pending = new Map<string, () => void>()
     for (const name of names) {
@@ -167,33 +186,65 @@ test("the data files of a newer build are swapped in together, once all of them 
       page.answers.set(`/assets/${name}-BBBBBBBB.json`, () => new Promise(resolve => pending.set(name, () => resolve(`${name} B`))))
     }
     const values = Object.fromEntries(await Promise.all(names.map(async name => [name, await page.latest<string>(name)])))
-    const { r } = await import("bruh/reactive")
-    const seen: string[] = []
-    const together = r(() => names.map(name => values[name].value.split(" ")[1]).join(""))
+    const failed = names[failing % names.length]
+    page.answers.delete(`/assets/${failed}-BBBBBBBB.json`)
     page.receive(headOf(dataOf(names, ["BBBBBBBB"])))
-    for (const name of [...names].sort((a, b) => order(a) - order(b))) {
-      seen.push(together.value)
+    await vi.advanceTimersByTimeAsync(0)
+    const loaded = () => Object.fromEntries(names.map(name => [name, values[name].peek().split(" ")[1]]))
+    expect(loaded()).toEqual(Object.fromEntries(names.map(name => [name, "A"])))
+    for (const name of [...names].filter(name => name !== failed).sort((a, b) => order(a) - order(b))) {
       pending.get(name)!()
       await vi.advanceTimersByTimeAsync(0)
+      expect(loaded()[name]).toBe("B")
     }
-    seen.push(together.value)
-    expect(seen).toEqual([...names.map(() => "A".repeat(names.length)), "B".repeat(names.length)])
+    expect(loaded()[failed]).toBe("A")
+    // The one that failed is tried again on its own, past every cache, and comes through
+    page.answers.set(`/assets/${failed}-BBBBBBBB.json`, async () => `${failed} B`)
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(loaded()).toEqual(Object.fromEntries(names.map(name => [name, "B"])))
+    expect(page.fetches.filter(url => url.includes("BBBBBBBB")).length).toBe(names.length + 1)
   }))
 })
 
-test("a build with a member that fails keeps every old value and loads the rest once it comes through", async () => {
-  const page = await load(dataOf(["gtfs", "model"], ["AAAAAAAA"]))
-  page.answers.set("/assets/gtfs-AAAAAAAA.json", async () => "gtfs A")
-  page.answers.set("/assets/model-AAAAAAAA.json", async () => "model A")
-  page.answers.set("/assets/gtfs-BBBBBBBB.json", async () => "gtfs B")
-  const [gtfs, model] = await Promise.all([page.latest<string>("gtfs"), page.latest<string>("model")])
-  page.receive(headOf(dataOf(["gtfs", "model"], ["BBBBBBBB"])))
+test("a newer build announced while a file first loads is loaded right after it, and one announced from an older release is ignored", async () => {
+  // Astra's sequence: A is loading when B is announced, and A completes
+  const page = await load({ gtfs: "/assets/gtfs-AAAAAAAA.json" })
+  let answerA: (value: string) => void = () => {}
+  page.answers.set("/assets/gtfs-AAAAAAAA.json", () => new Promise(resolve => answerA = resolve))
+  page.answers.set("/assets/gtfs-BBBBBBBB.json", async () => "B")
+  const loading = page.latest<string>("gtfs")
   await vi.advanceTimersByTimeAsync(0)
-  expect([gtfs.peek(), model.peek()]).toEqual(["gtfs B", "model A"])
-  page.answers.set("/assets/model-BBBBBBBB.json", async () => "model B")
+  page.receive(headOf({ gtfs: "/assets/gtfs-BBBBBBBB.json" }, undefined, "2026-10-19T08:00:00.000Z"))
+  await vi.advanceTimersByTimeAsync(0)
+  answerA("A")
+  const gtfs = await loading
+  expect(gtfs.peek()).toBe("B")
+  // A late message from the release before changes nothing
+  page.answers.set("/assets/gtfs-CCCCCCCC.json", async () => "C")
+  page.receive(headOf({ gtfs: "/assets/gtfs-CCCCCCCC.json" }))
+  await vi.advanceTimersByTimeAsync(60_000)
+  expect(gtfs.peek()).toBe("B")
+  expect(page.fetches).toEqual(["/assets/gtfs-AAAAAAAA.json", "/assets/gtfs-BBBBBBBB.json"])
+})
+
+test("a load that hangs is given up on after a minute, so it holds up nothing after it, and a retry asks past every cache", async () => {
+  const page = await load({ gtfs: "/assets/gtfs-AAAAAAAA.json" })
+  const inits: RequestInit[] = []
+  vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+    page.fetches.push(url)
+    inits.push(init)
+    if (url.includes("BBBBBBBB"))
+      return new Promise((_, reject) => init.signal!.addEventListener("abort", () => reject(init.signal!.reason)))
+    return Response.json("A")
+  })
+  const gtfs = await page.latest<string>("gtfs")
+  page.receive(headOf({ gtfs: "/assets/gtfs-BBBBBBBB.json" }))
+  await vi.advanceTimersByTimeAsync(60_000)
+  expect(gtfs.peek()).toBe("A")
+  expect(console.error).toHaveBeenLastCalledWith(expect.objectContaining({ name: "TimeoutError" }))
   await vi.advanceTimersByTimeAsync(5_000)
-  expect([gtfs.peek(), model.peek()]).toEqual(["gtfs B", "model B"])
-  expect(page.fetches.filter(url => url.includes("gtfs-BBBBBBBB")).length).toBe(1)
+  expect(page.fetches.filter(url => url.includes("BBBBBBBB")).length).toBe(2)
+  expect(inits.map(init => init.cache)).toEqual(["default", "default", "reload"])
 })
 
 test("a page starts with a fallback when its data can't load the first time, if it has one, and loads the data behind it", async () => {
@@ -254,7 +305,7 @@ test("the page asks for its copy to be checked on coming back into view and ever
   received.dispatchEvent(Object.assign(new Event("message"), { data: { census: true }, ports: [port2] }))
   expect(await answer).toEqual({
     build: { release: RELEASE, code: ["/assets/index-AAAAAAAA.js"], data },
-    retain: { files: [], folders: ["/data/map/tiles/2026-10-17/"] }
+    retain: { required: [], files: [], folders: ["/data/map/tiles/2026-10-17/"] }
   })
   port1.close()
 
@@ -267,7 +318,7 @@ test("the page asks for its copy to be checked on coming back into view and ever
   received.dispatchEvent(Object.assign(new Event("message"), { data: { census: true }, ports: [again2] }))
   expect(await later).toEqual({
     build: { release: RELEASE, code: ["/assets/index-AAAAAAAA.js"], data },
-    retain: { files: [slow], folders: ["/data/map/tiles/2026-10-17/"] }
+    retain: { required: [], files: [slow], folders: ["/data/map/tiles/2026-10-17/"] }
   })
   again1.close()
 })

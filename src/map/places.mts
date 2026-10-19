@@ -3,6 +3,10 @@
 
 import * as v from "valibot"
 
+/** Every building, with a hash of the gazetteer, rooms, menus, and code they were derived from, which a build keeps them by */
+export const Places = v.object({ inputs: v.string(), buildings: v.array(v.lazy(() => Building)) })
+export type Places = v.InferOutput<typeof Places>
+
 export const Building = v.object({
   /** Like "laundry/stoke-hall" or "dining/holloway-commons" */
   id:    v.string(),

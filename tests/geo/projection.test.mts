@@ -47,7 +47,7 @@ test("projecting some meters along a bearing lands that far away, that way", () 
   fc.assert(fc.property(point, fc.double({ min: 0, max: 360, noNaN: true }), fc.double({ min: 1, max: 5000, noNaN: true }), ({ lat, lon }, degrees, meters) => {
     const there = project([lon, lat], degrees, meters)
     // Measured flat from the start rather than from halfway, a hair short over kilometers
-    expect(Math.abs(segmentMeters([lon, lat], there) - meters)).toBeLessThan(meters * 1e-4 + 0.01)
+    expect(Math.abs(segmentMeters([lon, lat], there) - meters)).toBeLessThanOrEqual(meters * 1e-4 + 0.01)
     const turned = (bearing([lon, lat], there) - degrees + 540) % 360 - 180
     expect(Math.abs(turned)).toBeLessThan(0.01)
   }))

@@ -1,10 +1,11 @@
-import { test, expect } from "vitest"
+import { test, expect, vi } from "vitest"
 import fc from "fast-check"
 import { readFileSync } from "node:fs"
 import { gunzipSync } from "node:zlib"
 import { createExpression, featureFilter, validateStyleMin } from "@maplibre/maplibre-gl-style-spec"
 import type { FilterSpecification, LayerSpecification, StyleSpecification } from "maplibre-gl"
-import { BASE, CAMPUS, GLYPH_RANGES, fontsOf, glyphsFrom, hostedAt, restyle, upstreamGlyphs } from "../../src/map/style.mts"
+import { BASE, CAMPUS, GLYPH_RANGES, fontsOf, glyphsFrom, hostedAt, loadStyle, restyle, upstreamGlyphs } from "../../src/map/style.mts"
+import { pathsOf } from "../../scripts/map/style.mts"
 import { TILE_SETS, tileTemplate } from "../../src/map/tiles.mts"
 
 // Liberty as OpenFreeMap served it in October 2026
@@ -41,6 +42,11 @@ test("tiles are ours where we have them, else from one planet build, and the spr
   expect(style.glyphs).toBe(`${FOLDER}fonts/{fontstack}/{range}.pbf`)
   expect(upstreamGlyphs(style)).toBe(liberty.glyphs)
   expect(fontsOf(style).sort()).toEqual(["Noto Sans Bold", "Noto Sans Italic", "Noto Sans Regular"])
+  // Which, with the style and sprite, is every file of the folder, as the build writes it and as a later one fetches it back
+  expect(pathsOf(fontsOf(style))).toEqual([
+    "style.json", "sprite.json", "sprite.png", "sprite@2x.json", "sprite@2x.png",
+    ...fontsOf(style).flatMap(font => GLYPH_RANGES.map(range => `fonts/${encodeURIComponent(font)}/${range}.pbf`))
+  ])
 
   const hosted = hostedAt(style, "https://notunh.app")
   expect(hosted.sprite).toBe(`https://notunh.app${FOLDER}sprite`)
@@ -168,4 +174,23 @@ test("campus details are drawn from our tiles, each from the zoom there's room f
     expect(ids.indexOf(id)).toBeLessThan(ids.indexOf("poi_r20"))
   }
   expect(fontsOf(style)).toContain("Noto Sans Regular")
+})
+
+test("the style is loaded with its manifest, so one that can't be had fails the load, to be tried again past the caches, rather than wanted by the map and never come", async () => {
+  const manifest = { url: `${FOLDER}style.json`, required: [`${FOLDER}style.json`], folders: [FOLDER] }
+  const answers = new Map<string, unknown>([["/assets/style-AAAAAAAA.json", manifest]])
+  const asked: [string, RequestCache | undefined][] = []
+  vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+    asked.push([url, init.cache])
+    return answers.has(url) ? Response.json(answers.get(url)) : new Response("Not found", { status: 404 })
+  })
+  try {
+    await expect(loadStyle("/assets/style-AAAAAAAA.json", { cache: "default" })).rejects.toThrow(`404 from ${manifest.url}`)
+    answers.set(manifest.url, style)
+    expect(await loadStyle("/assets/style-AAAAAAAA.json", { cache: "reload" })).toEqual({ ...manifest, style })
+    expect(asked.slice(-2)).toEqual([["/assets/style-AAAAAAAA.json", "reload"], [manifest.url, "reload"]])
+  }
+  finally {
+    vi.unstubAllGlobals()
+  }
 })

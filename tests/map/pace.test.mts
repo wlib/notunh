@@ -3,7 +3,8 @@ import fc from "fast-check"
 import type { Track } from "../../src/geo/follow.mts"
 import { type Coordinates, ruler } from "../../src/geo/projection.mts"
 import { toRouteLine } from "../../src/map/shapes.mts"
-import { DEFAULT_RATE, ZONE, createPace, expectedDistance, observe, type Trace } from "../../src/map/pace.mts"
+import { ZONE, type Trace } from "../../src/map/crossings.mts"
+import { DEFAULT_RATE, createPace, expectedDistance, observe } from "../../src/map/pace.mts"
 
 const CENTER = { lat: 43.135, lon: -70.93 }
 const EAST = ruler(CENTER.lat).kx

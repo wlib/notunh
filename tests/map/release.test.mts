@@ -1,7 +1,7 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { readFileSync } from "node:fs"
-import { POINTER, fetchPointer, manifestOf, mismatches, sha256 } from "../../scripts/map/release.mts"
+import { POINTER, fetchPointer, lockedClosure, manifestOf, mismatches, sha256 } from "../../scripts/map/release.mts"
 import { walkGraph } from "../../scripts/map/walkable.mts"
 import { gazetteerOf } from "../../scripts/map/gazetteer.mts"
 import type { OsmElement } from "../../scripts/map/pbf.mts"
@@ -17,6 +17,26 @@ const files = fc.dictionary(fc.stringMatching(/^(tiles\/\w+\/\d+\/\d+\/\d+\.pbf|
 test("a generation's version is its extract and the start of its generator, so new code on the same extract is a new one", () => {
   expect(versionOf(MADE)).toBe("2026-10-13-3fa880d8")
   expect(versionOf({ ...MADE, generator: "4" + MADE.generator.slice(1) })).not.toBe(versionOf(MADE))
+})
+
+test("the generator's packages are as package-lock.json resolves them, with all they depend on, nested installs before those above", () => {
+  const packages = {
+    "": { dependencies: { a: "^1.0.0", b: "^1.0.0" } },
+    "node_modules/a": { version: "1.0.0", integrity: "sha512-a", dependencies: { c: "^2.0.0", d: "^1.0.0" } },
+    "node_modules/a/node_modules/c": { version: "2.0.0", integrity: "sha512-c2" },
+    "node_modules/b": { version: "1.0.0", integrity: "sha512-b" },
+    "node_modules/c": { version: "1.0.0", integrity: "sha512-c1" },
+    "node_modules/d": { version: "1.1.0", integrity: "sha512-d", dependencies: { c: "^1.0.0" } }
+  }
+  expect(lockedClosure(packages, ["a"])).toEqual([
+    "node_modules/a 1.0.0 sha512-a",
+    "node_modules/a/node_modules/c 2.0.0 sha512-c2",
+    "node_modules/c 1.0.0 sha512-c1",
+    "node_modules/d 1.1.0 sha512-d"
+  ])
+  // A dependency's own update changes what's hashed, though the package named didn't change
+  expect(lockedClosure({ ...packages, "node_modules/d": { ...packages["node_modules/d"], version: "1.2.0" } }, ["a"])).not.toEqual(lockedClosure(packages, ["a"]))
+  expect(() => lockedClosure(packages, ["e"])).toThrow("isn't in package-lock.json")
 })
 
 test("an archive is as its manifest says only when every file it names has exactly those bytes", () =>

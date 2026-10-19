@@ -1,6 +1,7 @@
 // Where the map's OpenStreetMap data came from, which every file of a generation carries: the walk, the gazetteer,
 // and the tiles' folder are made together from one extract by one version of the code (scripts/map/osm.mts), and
-// are only ever used together
+// published and built from together. A page may still run one generation's walk beside another's gazetteer for a
+// while, as each data file loads on its own, which is fine, as they meet only by coordinates
 
 import * as v from "valibot"
 import { Day } from "../shared/time.mts"

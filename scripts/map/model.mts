@@ -9,7 +9,7 @@ import { serviceDayStart } from "../../src/map/feed.mts"
 import type { Visit } from "../../src/map/events.mts"
 import { emptyModel, update } from "../../src/map/model.mts"
 import { type Day, addDays, localDay } from "../../src/shared/time.mts"
-import { isRebuild, learn } from "../learn.mts"
+import { isLearning, isRebuild, learn } from "../learn.mts"
 import { ApiError, health, readModel, readRows, writeModel, writeRows } from "../worker.mts"
 import { type ArchivedFeed, describe, extractDay, feedFor, localFeed, score } from "./replay.mts"
 
@@ -22,10 +22,10 @@ const today = localDay(Date.now())
 /** Archives this build's timetable if its version is new, as of today; another build archiving it first is fine */
 const archiveFeed = async () => {
   const feed = await localFeed()
-  const { state } = await readModel<ArchivedFeed>("gtfs")
+  const { state, revision } = await readModel<ArchivedFeed>("gtfs")
   if (state?.version === feed.version)
     return
-  await writeModel("gtfs", { ...feed, through: today } satisfies ArchivedFeed, state?.through ?? null)
+  await writeModel("gtfs", { ...feed, through: today } satisfies ArchivedFeed, revision)
     .catch(error => error instanceof ApiError && error.status === 409 ? undefined : Promise.reject(error))
   console.log(`buses: archived timetable ${feed.version}`)
 }
@@ -40,7 +40,8 @@ const firstDays = () =>
 
 const model = await learn("buses", OUTPUT, {
   empty: emptyModel,
-  prepare: archiveFeed,
+  // The timetable is archived as of the day it's first learned with, which a build only reading doesn't
+  prepare: isLearning ? archiveFeed : undefined,
   first: async () => {
     const { sampled, stored } = await firstDays()
     return [sampled, isRebuild ? stored : undefined].filter(day => day !== undefined).sort()[0]

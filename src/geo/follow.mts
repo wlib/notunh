@@ -10,23 +10,33 @@ export type Track<L extends Line = Line> = {
   distance: number
 }
 
-/** Up to this far from every line, a thing isn't on them (detours, the depot) */
-const MAX_SNAP = 60 // m
-/** Meters of distance that heading the opposite way along a segment is worth */
-const HEADING_WEIGHT = 50
-/** How far along its line a thing plausibly gets between fixes, back (GPS jitter) and forward */
-const STEP_BACK = 30    // m
-const STEP_AHEAD = 300  // m
-/** Meters of distance that switching to another of the lines is worth */
-const SWITCH_WEIGHT = 25
+/**
+ * How a kind of thing keeps to its lines, which a bus along its route and a walker along a path don't alike: what
+ * the geometry here weighs, with the weights its callers' to say
+ */
+export type Tracking = {
+  /** Up to this far from every line, the thing isn't on them */
+  snap:      number,
+  /** Meters of distance that heading the opposite way along a segment is worth */
+  heading:   number,
+  /** How far along its line it plausibly gets between fixes, back and forward */
+  back:      number,
+  ahead:     number,
+  /** Meters of distance that switching to another of the lines is worth */
+  switching: number,
+  /** Further along than its speed could take it, plus this, a fix has found some other stretch of a line, like the other side of the street */
+  leeway:    number,
+  /** Fixes further apart than this many milliseconds start afresh */
+  maxSkip:   number
+}
 
 /** Meters of distance worth an implausible move along the lines since the last fix */
-const continuity = (previous: Track, line: Line, distance: number) => {
+const continuity = (previous: Track, line: Line, distance: number, { back, ahead, switching }: Tracking) => {
   if (previous.line !== line)
-    return SWITCH_WEIGHT
+    return switching
   const moved = along(line, distance - previous.distance)
   // Slightly preferring less movement settles ties between two passes over the same spot
-  return Math.max(0, -STEP_BACK - moved, moved - STEP_AHEAD) / 2 + Math.abs(moved) / 100
+  return Math.max(0, -back - moved, moved - ahead) / 2 + Math.abs(moved) / 100
 }
 
 /**
@@ -34,21 +44,21 @@ const continuity = (previous: Track, line: Line, distance: number) => {
  * directions along one street stay apart, and that follow on from where it last was so it doesn't jump to another
  * pass along the same street
  */
-export const snapToLines = <L extends Line>(lines: readonly L[], point: Point, heading?: number, previous?: Track<L>) => {
+export const snapToLines = <L extends Line>(lines: readonly L[], point: Point, heading: number | undefined, previous: Track<L> | undefined, tracking: Tracking) => {
   let best: Track<L> | undefined
   let bestScore = Infinity
 
   for (const line of lines)
     for (let index = 0; index + 1 < line.coordinates.length; index++) {
       const { t, meters } = nearestOnSegment(line, index, point)
-      if (meters > MAX_SNAP)
+      if (meters > tracking.snap)
         continue
 
       const distance = distanceAt(line, index, t)
       const score =
         meters +
-        (heading === undefined ? 0 : angleBetween(heading, bearing(line.coordinates[index], line.coordinates[index + 1])) / 180 * HEADING_WEIGHT) +
-        (previous ? continuity(previous, line, distance) : 0)
+        (heading === undefined ? 0 : angleBetween(heading, bearing(line.coordinates[index], line.coordinates[index + 1])) / 180 * tracking.heading) +
+        (previous ? continuity(previous, line, distance, tracking) : 0)
       if (score < bestScore) {
         bestScore = score
         best = { line, distance }
@@ -61,29 +71,23 @@ export const snapToLines = <L extends Line>(lines: readonly L[], point: Point, h
 /** Where along some lines a moving thing was, and when */
 export type Following<L extends Line = Line> = Track<L> & { at: number }
 
-// Further along than its speed could take it, plus this, a fix has found some other stretch of a line, like the
-// other side of the street
-const LEEWAY = 30 // m
-// Fixes further apart than this start afresh
-const MAX_SKIP = 30_000 // ms
-
 /**
  * Where along some lines a fix puts something that keeps to them, if it's within some meters of one and following
- * on from where it was at no more than some speed
+ * on from where it was at no more than some speed, in meters a second
  */
 export const follow = <L extends Line>(
   lines: readonly L[],
   fix: Point & { heading?: number, at: number },
   previous: Following<L> | undefined,
-  { within, speed }: { within: number, speed: number }
+  tracking: Tracking & { within: number, speed: number }
 ): (Following<L> & { point: Coordinates }) | undefined => {
-  const recent = previous && fix.at - previous.at <= MAX_SKIP ? previous : undefined
-  const track = snapToLines(lines, fix, fix.heading, recent)
+  const recent = previous && fix.at - previous.at <= tracking.maxSkip ? previous : undefined
+  const track = snapToLines(lines, fix, fix.heading, recent, tracking)
   if (!track)
     return
   const { point } = pointAt(track.line, track.distance)
-  const isOn = distance(fix, { lon: point[0], lat: point[1] }) <= within
+  const isOn = distance(fix, { lon: point[0], lat: point[1] }) <= tracking.within
   const isFollowing = !recent || track.line === recent.line &&
-    Math.abs(along(track.line, track.distance - recent.distance)) <= LEEWAY + speed * (fix.at - recent.at) / 1000
+    Math.abs(along(track.line, track.distance - recent.distance)) <= tracking.leeway + tracking.speed * (fix.at - recent.at) / 1000
   return isOn && isFollowing ? { ...track, at: fix.at, point } : undefined
 }

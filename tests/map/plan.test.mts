@@ -2,18 +2,19 @@ import { test, expect } from "vitest"
 import fc from "fast-check"
 import { canAlight, canBoard, serviceDayStart, withIndexes, type Feed, type FeedData, type Trip } from "../../src/map/feed.mts"
 import { distance } from "../../src/geo/projection.mts"
-import type { StopPredictions } from "../../src/map/umo.mts"
+import { type StopPredictions, forecastOf } from "../../src/map/umo.mts"
+import { BOARDING, LAYOVER, type Run, arrivalAt, buildRuns as runsOf, slack, spread, timeAt, uncertainty } from "../../src/map/forecast.mts"
 import {
-  ALTERNATIVES, BOARDING, HORIZON, LAYOVER, MIN_TIME_SAVED, MIN_TRANSFER_GAIN,
-  arrivalAt, buildConnections, buildRuns, cost, itineraryKey, plan, rides, scan, slack, spread, timeAt, uncertainty, walkOnly,
-  type Itinerary, type Place, type Run
+  ALTERNATIVES, HORIZON, MIN_TIME_SAVED, MIN_TRANSFER_GAIN,
+  buildConnections, cost, itineraryKey, plan, rides, scan, walkOnly,
+  type Itinerary, type Place
 } from "../../src/map/plan.mts"
 import {
   MAX_ACCESS_WALK, MAX_TRANSFER_WALK, createWalks, straightMeters, walkAllowance, walkSeconds, type Walks
 } from "../../src/map/walks.mts"
 import { emptyModel, holdProbability, isLikely, probit, update } from "../../src/map/model.mts"
 import type { Visit } from "../../src/map/events.mts"
-import { addDays } from "../../src/shared/time.mts"
+import { type Day, addDays } from "../../src/shared/time.mts"
 
 // The planner properties are cheap and the interesting cases are rare, so look harder
 fc.configureGlobal({ numRuns: 1000 })
@@ -140,7 +141,7 @@ const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: numb
 
   const access = (stop: number) =>
     straightMeters(from, stops[stop]) <= MAX_ACCESS_WALK
-      ? start + walkAllowance(straightMeters(from, stops[stop]))
+      ? start + walkAllowance(straightMeters(from, stops[stop]), "estimate")
       : Infinity
 
   for (const first of rides(access)) {
@@ -153,7 +154,7 @@ const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: numb
       const meters = straightMeters(stops[first.alight], stops[stop])
       return (
         stop === first.alight       ? ready :
-        meters <= MAX_TRANSFER_WALK ? ready + walkAllowance(meters) :
+        meters <= MAX_TRANSFER_WALK ? ready + walkAllowance(meters, "estimate") :
                                       Infinity
       )
     }
@@ -179,7 +180,7 @@ const expectValid = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, s
       expect(distance(at, leg.from)).toBe(0)
       expect(leg.meters).toBeCloseTo(straightMeters(leg.from, leg.to), 3)
       expect(leg.end - leg.start).toBe(walkSeconds(leg.meters))
-      ready += walkAllowance(leg.meters)
+      ready += walkAllowance(leg.meters, "estimate")
       at = leg.to
     }
     else {
@@ -308,6 +309,10 @@ test("plan's best option feels no worse than catching a bus from a nearer stop",
   }))
 )
 
+/** The day's runs, as Umo's predictions forecast them, answered at an epoch second, by default before anything here */
+const buildRuns = (feed: Feed, today: Day, predictions: StopPredictions[], model?: Parameters<typeof runsOf>[3], at = -Infinity) =>
+  runsOf(feed, today, forecastOf(predictions, at), model)
+
 /** Umo predicting a trip's bus at one of its stops */
 const predict = (stop: { id: string }, tripId: string, at: number, isLive = true): StopPredictions => ({
   route: { id: "R" },
@@ -380,7 +385,7 @@ test("live delays shift a trip's times", () =>
   }))
 )
 
-test("trips Umo skips over while predicting their route aren't coming", () =>
+test("trips Umo skips over at a stop it's predicting aren't coming, and only those, as a far look ahead at one stop says nothing of another", () =>
   fc.assert(fc.property(feed, fc.nat(), (feed, pick) => {
     const trip = feed.trips[pick % feed.trips.length]
     const stop = feed.stops[trip.stops[0]]
@@ -391,10 +396,34 @@ test("trips Umo skips over while predicting their route aren't coming", () =>
       for (const base of [BASE - 86400, BASE, BASE + 86400]) {
         const isKept = runs.some(run => run.trip === other && run.base === base)
         const isPredicted = other === trip && base === BASE
-        expect(isKept).toBe(isPredicted || base + other.times[0] > predicted)
+        // Answered before anything here, so each run may be off by the most a time can be
+        const isMissed = other.stops.some((at, position) => feed.stops[at].id === stop.id && base + other.times[position] <= predicted - uncertainty(Infinity))
+        expect(isKept).toBe(isPredicted || !isMissed)
       }
   }))
 )
+
+test("a bus due at a stop before Umo answered for it isn't taken as not coming for being missing there, as it's been and gone", () => {
+  const feed = lineFeed([0, 1].map(hour => ({ times: [8 + hour, 8.1 + hour, 8.2 + hour].map(time => time * 3600), timepoints: [] })))
+  // Umo answers at 8:05, after T0 left stop 0, with T1 there at 9:00
+  const runs = buildRuns(feed, TODAY, [predict(feed.stops[0], "T1", BASE + 9 * 3600)], undefined, BASE + 8 * 3600 + 300)
+  expect(runOn(runs, "T0")).toBeDefined()
+  // Answered before T0 was due, its missing there is news
+  expect(runOn(buildRuns(feed, TODAY, [predict(feed.stops[0], "T1", BASE + 9 * 3600)], undefined, BASE + 7 * 3600), "T0")).toBeUndefined()
+})
+
+test("Umo looking ahead at a stop says a run isn't coming only through a trip it names, and only for a run due there sooner than it may be running late", () => {
+  const feed = lineFeed([8, 8 + 58 / 60, 9].map(hour => ({ times: [hour * 3600, hour * 3600 + 600], timepoints: [] })))
+  const answered = BASE + 7 * 3600
+  const tripless = predict(feed.stops[0], "T2", BASE + 9 * 3600)
+  tripless.values[0].tripId = null
+  // A prediction without a trip says nothing of which runs aren't coming
+  expect(runOn(buildRuns(feed, TODAY, [tripless], undefined, answered), "T0")).toBeDefined()
+  // T2 at 9:00 is news that T0, due an hour before, isn't coming, but T1, due two minutes before, may just be late
+  const runs = buildRuns(feed, TODAY, [predict(feed.stops[0], "T2", BASE + 9 * 3600)], undefined, answered)
+  expect(runOn(runs, "T0")).toBeUndefined()
+  expect(runOn(runs, "T1")).toBeDefined()
+})
 
 test("an early bus waits at a timepoint for its scheduled time, and a late one goes straight on", () =>
   fc.assert(fc.property(fc.integer({ min: 1, max: 4 }), fc.integer({ min: -600, max: 600 }), (timepoint, delay) => {

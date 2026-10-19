@@ -13,9 +13,9 @@ export const MODELS = ["buses", "laundry", "gtfs"]
 // Kept of each name, one per night, or per feed version
 const KEEP = 30
 
-/** The latest of a name, or the latest through a day, as the only row if there is one */
+/** The latest of a name, or the latest through a day, as the only row if there is one, with its revision */
 export const latestModel = (db: DrizzleD1Database, name: string, through?: Day) =>
-  db.select({ state: models.state }).from(models)
+  db.select({ state: models.state, revision: models.revision }).from(models)
     .where(and(eq(models.name, name), through === undefined ? undefined : lte(models.through, through)))
     .orderBy(desc(models.through)).limit(1)
 
@@ -25,15 +25,16 @@ export const throughsOf = (db: DrizzleD1Database, name: string) =>
 
 /**
  * Stores a state through a day, replacing one through the same day, if the latest stored is still the one the
- * writer read, by its day, or none: whether it was, which two builds learning at once settle by, as the one that
- * reads the other's work is the one that goes on from it. Old ones go when a new one is kept
+ * writer read, by its revision, or none: whether it was, which two builds learning at once settle by, as the one
+ * that reads the other's work is the one that goes on from it. Every write is a new revision, so two writers
+ * replacing the same day can't both succeed. Old ones go when a new one is kept
  */
-export const saveModel = async (db: DrizzleD1Database, name: string, through: Day, state: unknown, expect: Day | null) => {
+export const saveModel = async (db: DrizzleD1Database, name: string, through: Day, state: unknown, expect: string | null) => {
   const { meta } = await db.run(sql`
-    insert into ${models} (name, through, state)
-    select ${name}, ${through}, ${JSON.stringify(state)}
-    where coalesce((select max(through) from ${models} where name = ${name}), '') = ${expect ?? ""}
-    on conflict (name, through) do update set state = excluded.state
+    insert into ${models} (name, through, state, revision)
+    select ${name}, ${through}, ${JSON.stringify(state)}, ${crypto.randomUUID()}
+    where coalesce((select revision from ${models} where name = ${name} order by through desc limit 1), '') = ${expect ?? ""}
+    on conflict (name, through) do update set state = excluded.state, revision = excluded.revision
   `)
   if (!meta.changes)
     return false

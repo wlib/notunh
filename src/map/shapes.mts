@@ -96,7 +96,16 @@ export const routeLines = (feed: Feed) => {
   return lines
 }
 
-const tripPositions = new WeakMap<Trip, number[]>()
+const tripPositions = new WeakMap<Trip, number[] | undefined>()
+
+/** Meters along its shape each of a trip's stops is at, if its route has the shape */
+export const positionsOf = (feed: Feed, trip: Trip) => {
+  if (!tripPositions.has(trip)) {
+    const line = feed.shapes[trip.shape] && routeLines(feed).get(trip.route)?.find(line => line.coordinates === feed.shapes[trip.shape])
+    tripPositions.set(trip, line && positionsAlong(line, trip.stops.map(stop => feed.stops[stop])))
+  }
+  return tripPositions.get(trip)
+}
 
 /** The street geometry a ride follows, from its boarding stop to where it gets off, by their positions in its trip */
 export const ridePath = (feed: Feed, leg: { run: { trip: Trip }, fromPosition: number, toPosition: number }): Coordinates[] => {
@@ -105,12 +114,9 @@ export const ridePath = (feed: Feed, leg: { run: { trip: Trip }, fromPosition: n
     .map(position => feed.stops[trip.stops[position]])
     .map(({ lon, lat }): Coordinates => [lon, lat])
   const line = routeLines(feed).get(trip.route)?.find(line => line.coordinates === feed.shapes[trip.shape])
-  if (!line)
+  const positions = positionsOf(feed, trip)
+  if (!line || !positions)
     return [first, last]
-
-  let positions = tripPositions.get(trip)
-  if (!positions)
-    tripPositions.set(trip, positions = positionsAlong(line, trip.stops.map(stop => feed.stops[stop])))
   // The line between the two stops, from one to the other rather than from where each projects onto it
   return [first, ...sliceLine(line, positions[leg.fromPosition], positions[leg.toPosition]).slice(1, -1), last]
 }

@@ -165,7 +165,7 @@ type Harness = ReturnType<typeof createHarness>
 
 /**
  * What a revalidation, by what it saw as it began, makes of the page's copy: nothing, for an older release, as from
- * an edge not yet caught up or a rollback, or offline; a newer release of the same build, which only renames it; or
+ * an edge not yet caught up or a platform rollback, or offline; a newer release of the same build, which only renames it; or
  * a newer build, which it takes in, fetching what's missing of it
  */
 const changeOf = (m: Model, h: Harness, page: string, seen: Seen) => {
@@ -304,7 +304,7 @@ const publish = command<{ shared: boolean, changes: Record<string, "code" | "dat
   }
 )
 
-/** An edge serving an earlier release again, as before a deploy has reached it, or after a rollback */
+/** An edge serving an earlier release again, as before a deploy has reached it, or after a platform rollback */
 const rollback = command<number>(back => `Rollback(${back})`, (m, back) => m.published >= back, async (m, h, back) => {
   h.world.published = m.published = m.published - back
   await verify(m, h)

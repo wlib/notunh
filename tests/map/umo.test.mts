@@ -24,7 +24,7 @@ test("whatever Umo answers, fetchVehicles gives only vehicles with a fix, or fai
 )
 
 test("a prediction with a time and a bus is kept whatever else it lacks, as the Worker stores no more of it", async () => {
-  const prediction = { timestamp: 1_760_000_000_000, minutes: 3, vehicleId: "1201", affectedByLayover: false }
+  const prediction = { timestamp: 1_760_000_000_000, vehicleId: "1201", affectedByLayover: false }
   vi.stubGlobal("fetch", async () => Response.json([{ route: { id: "3B" }, stop: { id: "12" }, values: [prediction, { ...prediction, vehicleId: 7 }] }]))
   expect(await fetchPredictions([{ route: "3B", stop: "12" }])).toEqual([{ route: { id: "3B" }, stop: { id: "12" }, values: [prediction] }])
 })

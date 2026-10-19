@@ -7,11 +7,11 @@ import { r, watch } from "bruh/reactive"
 import { Popup } from "maplibre-gl"
 import { createMap } from "./map.mts"
 import {
-  feed, gazetteer, buildings, model, tiles, style, layovers, from, to, selected, itinerary, legPaths, selectedStop,
+  feed, gazetteer, buildings, tiles, style, followed, lately, layovers, from, to, selected, itinerary, legPaths, selectedStop,
   selectedStopId, selectedBus, riding, suggested, viewedBus, highlightedRoute, focusedBuses, shownRoutes, directTo
 } from "./state.mts"
 import { locationProblem } from "./location.mts"
-import { fusedVehicles } from "./riding.mts"
+import "./riding.mts"
 import { AppTitle, Icon } from "../shell/ui.tsx"
 import { Planner, Suggestions, editing } from "./ui/Planner.tsx"
 import { Itineraries } from "./ui/Itineraries.tsx"
@@ -85,7 +85,7 @@ const { map } = createMap(
   mapElement,
   panel,
   {
-    feed, gazetteer, buildings, tiles, style, model, vehicles: fusedVehicles, layovers, shownRoutes, highlightedRoute, from, to,
+    feed, gazetteer, buildings, tiles, style, followed, lately, layovers, shownRoutes, highlightedRoute, from, to,
     selectedStopId, itinerary, legPaths, focusedBuses, riding
   },
   tap => {

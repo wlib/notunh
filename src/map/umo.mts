@@ -42,13 +42,10 @@ export type Vehicle = v.InferOutput<typeof Vehicle>
 const Prediction = v.object({
   /** Epoch milliseconds */
   timestamp:         v.number(),
-  minutes:           v.number(),
   vehicleId:         v.string(),
   tripId:            v.nullish(v.string()),
   /** The bus hasn't started this trip yet, so this comes from Umo's schedule */
-  affectedByLayover: v.boolean(),
-  /** Where the bus is headed, for the stop's panel */
-  direction:         v.nullish(v.object({ name: v.string() }))
+  affectedByLayover: v.boolean()
 })
 export type Prediction = v.InferOutput<typeof Prediction>
 
@@ -91,9 +88,6 @@ export const fetchVehicles = (signal?: AbortSignal, headers?: HeadersInit) =>
 
 export const fetchRouteStops = (routeId: string, signal?: AbortSignal, headers?: HeadersInit) =>
   get(`/routes/${encodeURIComponent(routeId)}/stops`, usable(RouteStop), signal, headers)
-
-export const fetchStopPredictions = (stopId: string, signal?: AbortSignal) =>
-  get(`/stopcodes/${encodeURIComponent(stopId)}/predictions`, usable(StopPredictions), signal)
 
 export const fetchPredictions = async (pairs: Iterable<{ route: string, stop: string }>, signal?: AbortSignal, headers?: HeadersInit) => {
   const chunks: string[][] = [[]]

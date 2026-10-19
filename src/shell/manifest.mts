@@ -5,12 +5,17 @@
 import * as v from "valibot"
 
 export type Build = {
-  /** When the page was built, as the head's release meta says, which orders releases; empty for a page without one */
-  release: string,
+  /** When the page was built, as the head's release meta says; empty for a page without one */
+  release:    string,
+  /**
+   * When it was published again after it was built, as a rollback is, by scripts/republish.mts, as the head's
+   * published meta says
+   */
+  published?: string,
   /** Everything else of ours the head names, in order: scripts, stylesheets, workers, icons, and the manifest, which a page can only take in by reloading */
-  code:    string[],
+  code:       string[],
   /** Each data file's URL, by its name */
-  data:    Record<string, string>
+  data:       Record<string, string>
 }
 
 /**
@@ -38,6 +43,8 @@ export const buildOf = (html: string): Build => {
     if (tag.startsWith("<meta")) {
       if (name === "release" && content)
         build.release = content
+      else if (name === "published" && content)
+        build.published = content
     }
     else if (dataName && href)
       build.data[dataName] = href
@@ -46,6 +53,14 @@ export const buildOf = (html: string): Build => {
   }
   return build
 }
+
+/**
+ * Whether a copy of a page was published before another, which orders them: a copy from an edge not yet caught up
+ * is older than the one it replaced, while a build published again, as a rollback is, is newer than any built
+ * before it was published, so a page and its worker go back to it, and not forward again from a stale edge
+ */
+export const isOlder = (a: Build, b: Build) =>
+  (a.published ?? a.release) < (b.published ?? b.release)
 
 export const isSameCode = (a: Build, b: Build) =>
   a.code.join(" ") === b.code.join(" ")

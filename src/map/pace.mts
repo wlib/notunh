@@ -1,136 +1,117 @@
 // How buses are running right now, learned from every bus's reports on top of what the model learned over weeks:
-// each stretch between stops and each stop takes as long as the model expects at this time of day, scaled by how
-// much slower or quicker buses on that line have been lately, and nudged toward what the last bus there took.
-// Where a bus should be now follows from that, rather than from its reported speed. What a bus did between two
-// reports is read by crossings.mts, which the nightly extraction reads the same way
+// each bus's own pace, how much slower or quicker than the model it has lately been driving, which drifts back to
+// usual as it goes unseen, and the last time each stretch and stop took, which the next bus there is nudged toward.
+// Where a bus should be now follows from that, rather than from its reported speed, and so does when it'll leave
+// each stop ahead (chain.mts). What a bus did between two reports is read by crossings.mts, which the nightly
+// extraction reads the same way
 
 import type { Track } from "../geo/follow.mts"
 import { type RouteLine, firstAhead, lapOf, stopAt } from "./shapes.mts"
 import { type Trace, MIN_RATE, ZONE, cross, driven } from "./crossings.mts"
-import { contextAt, dayTypeOf, driveEstimate, dwellEstimate, type Estimate, type Model } from "./model.mts"
+import { type Model, emptyModel, legMu, zoneEstimate } from "./model.mts"
 
 // Longer is a layover or a bus out of service, not a stop
 const MAX_ZONE_TIME = 300 // s
 // Before anything's been learned
 export const DEFAULT_RATE = 6 // m/s
-export const DEFAULT_WAIT = 8 // s at a stop, or held up somewhere else
+const DEFAULT_WAIT = 8 // s at a stop, or held up somewhere else
+export const DEFAULT_ZONE = 2 * ZONE / DEFAULT_RATE + DEFAULT_WAIT
 
-// How long the evidence of how a line is running lasts: weighed by half every FACTOR_HALF_LIFE, gone after
-// FACTOR_WINDOW, and worth as much as FACTOR_PRIOR drives that went exactly as expected
-const FACTOR_HALF_LIFE = 900     // s
-export const FACTOR_WINDOW = 2700 // s
-const FACTOR_PRIOR = 3
-// How long the last bus's time for a stretch or stop outweighs the rest, halving every this long
-const NUDGE_HALF_LIFE = 600       // s
+// A bus's pace drifts back to usual over about PACE_MEMORY, and strays from it by about PACE_SIGMA, while a leg
+// strays from what the bus's pace makes it by about LEG_SIGMA, all in log s; fitted on Oct 7 to 19, all three
+// stable from one held-out day to the next
+export const PACE_MEMORY = 3600 // s
+const PACE_SIGMA = 0.064
+export const LEG_SIGMA = 0.17
+// Further off than this, a leg says nothing of the bus's pace
+const MAX_EXCESS = 1
+// How long the last bus's time for a stretch or stop outweighs what's expected, halving every this long
+const NUDGE_HALF_LIFE = 600 // s
 
-/** What the model expects of a stretch or stop, by stop ids, at an epoch second */
-export type Prior = {
-  drive: (route: string | undefined, from: string, to: string, meters: number, at: number) => Estimate | undefined,
-  zone:  (stop: string, at: number) => Estimate | undefined
+/** How much longer than expected a bus has lately taken to drive, in log terms, with its variance, as of an epoch second */
+export type Pace = { mean: number, variance: number, at: number }
+
+export const NO_PACE: Pace = { mean: 0, variance: PACE_SIGMA ** 2, at: -Infinity }
+
+/** A bus's pace as of a later epoch second, drifted back toward usual */
+export const drifted = ({ mean, variance, at }: Pace, now: number): Pace => {
+  const decay = Math.exp(-Math.max(0, now - at) / PACE_MEMORY)
+  return { mean: mean * decay, variance: variance * decay ** 2 + PACE_SIGMA ** 2 * (1 - decay ** 2), at: Math.max(at, now) }
 }
 
-const NO_PRIOR: Prior = { drive: () => undefined, zone: () => undefined }
-
-export const learnedPrior = (model: Model): Prior => ({
-  drive: (route, from, to, meters, at) => driveEstimate(model, route, `${from}>${to}`, meters, contextAt(at)),
-  zone:  (stop, at) => dwellEstimate(model, stop, dayTypeOf(contextAt(at)))
-})
-
-/** How long something took, and how much longer than expected in log terms */
-export type Seen = {
-  seconds: number,
-  /** Epoch seconds it ended */
-  at:      number,
-  excess:  number
+/** A bus's pace having finished a leg some log s longer than expected at an epoch second: a Kalman filter's step */
+export const paced = (pace: Pace, excess: number, at: number): Pace => {
+  const { mean, variance } = drifted(pace, at)
+  const gain = variance / (variance + LEG_SIGMA ** 2)
+  return { mean: mean + gain * (Math.min(MAX_EXCESS, Math.max(-MAX_EXCESS, excess)) - mean), variance: (1 - gain) * variance, at }
 }
 
-export type Pace = {
-  prior: Prior,
+/** Mean log s a leg some meters long between two stops is expected to take at an epoch second */
+export const expectedMu = (model: Model, route: string, from: string, to: string, meters: number, at: number) =>
+  legMu(model, route, from, to, meters, at) ?? Math.log(Math.max(1, meters) / DEFAULT_RATE)
+
+/** How long something took, and when it ended, in epoch seconds */
+export type Took = { seconds: number, at: number }
+
+/** What the map has seen of how buses run, shared by them all: the model, and the last time each stretch and stop took */
+export type Lately = {
+  model: Model,
   /** The last drive from leaving one stop's zone to entering the next's, keyed "from>to" by stop id */
-  drives: Map<string, Seen>,
+  drives: Map<string, Took>,
   /** The last time from entering a stop's zone to leaving it, by stop id */
-  zones: Map<string, Seen>,
-  /** Every line's recent drives and zones, the evidence for how it's running */
-  recent: WeakMap<RouteLine, { drives: Seen[], zones: Seen[] }>
+  zones: Map<string, Took>
 }
 
-export const createPace = (prior = NO_PRIOR): Pace =>
-  ({ prior, drives: new Map(), zones: new Map(), recent: new WeakMap() })
-
-// log s of a stop's zone, with nothing better to go on
-const ZONE_MU = Math.log(2 * ZONE / DEFAULT_RATE + DEFAULT_WAIT)
-
-const driveMu = (pace: Pace, line: RouteLine, from: string, to: string, meters: number, at: number) =>
-  pace.prior.drive(line.route, from, to, meters, at)?.mu ?? Math.log(Math.max(1, meters) / DEFAULT_RATE)
-
-const zoneMu = (pace: Pace, stop: string, at: number) =>
-  pace.prior.zone(stop, at)?.mu ?? ZONE_MU
+export const createLately = (model = emptyModel()): Lately =>
+  ({ model, drives: new Map(), zones: new Map() })
 
 const weight = (age: number, halfLife: number) =>
   0.5 ** (Math.max(0, age) / halfLife)
 
-/** How much slower than expected things have lately been, in log terms, shrunk toward as expected */
-export const factorOf = (seen: readonly Seen[], now: number) => {
-  let [sum, total] = [0, FACTOR_PRIOR]
-  for (const { excess, at } of seen)
-    if (now - at <= FACTOR_WINDOW) {
-      const w = weight(now - at, FACTOR_HALF_LIFE)
-      sum += w * excess
-      total += w
-    }
-  return sum / total
-}
-
-/** s something is expected to take: as the model has it, scaled by how the line's running, and nudged toward the last one */
-const expected = (mu: number, factor: number, last: Seen | undefined, now: number) => {
-  const usual = mu + factor
-  return Math.exp(last ? usual + (Math.log(last.seconds) - usual) * weight(now - last.at, NUDGE_HALF_LIFE) : usual)
-}
-
-const remember = (seen: Seen[], next: Seen) =>
-  [...seen.filter(old => next.at - old.at <= FACTOR_WINDOW), next]
+/** s something is expected to take, from its mean log s, nudged toward the last one */
+const expected = (mu: number, last: Took | undefined, now: number) =>
+  Math.exp(last ? mu + (Math.log(last.seconds) - mu) * weight(now - last.at, NUDGE_HALF_LIFE) : mu)
 
 /**
- * Learns from a bus's new report: the zones it entered and left since its last one
+ * Learns from a bus's new report: the stretches it drove and the zones it went through since its last one, which
+ * tell its pace, and the stop it's at or last left
  * @returns the bus's trace as of the new report
  */
-export const observe = (pace: Pace, previous: Trace | undefined, track: Track<RouteLine>, at: number, isStopped: boolean): Trace => {
+export const observe = (lately: Lately, previous: Trace | undefined, track: Track<RouteLine>, at: number, isStopped: boolean): Trace => {
   const { trace, crossings } = cross(previous, track, at, isStopped)
   const { line } = track
-  let recent = pace.recent.get(line)
-  if (!recent)
-    pace.recent.set(line, recent = { drives: [], zones: [] })
+  // A bus put on another route starts afresh, as the nightly extraction has it
+  const isSameRoute = previous?.track.line.route === line.route
+  let [pace, seen] = isSameRoute ? [previous.pace, previous.seen] : []
   for (const crossing of crossings)
     if (crossing.kind === "drive") {
       const seconds = crossing.end - crossing.start
-      const mu = driveMu(pace, line, crossing.from, crossing.to, crossing.meters, crossing.start)
-      const seen = { seconds, at: crossing.end, excess: Math.log(seconds) - mu }
-      pace.drives.set(`${crossing.from}>${crossing.to}`, seen)
-      recent.drives = remember(recent.drives, seen)
+      lately.drives.set(`${crossing.from}>${crossing.to}`, { seconds, at: crossing.end })
+      pace = paced(pace ?? NO_PACE, Math.log(seconds) - expectedMu(lately.model, line.route, crossing.from, crossing.to, crossing.meters, crossing.end), crossing.end)
     }
-    else if (crossing.depart - crossing.arrive <= MAX_ZONE_TIME) {
-      const seconds = crossing.depart - crossing.arrive
-      const seen = { seconds, at: crossing.depart, excess: Math.log(seconds) - zoneMu(pace, crossing.stop, crossing.arrive) }
-      pace.zones.set(crossing.stop, seen)
-      recent.zones = remember(recent.zones, seen)
+    else {
+      seen = { stop: crossing.stop, arrive: crossing.arrive, depart: crossing.depart }
+      if (crossing.depart - crossing.arrive <= MAX_ZONE_TIME)
+        lately.zones.set(crossing.stop, { seconds: crossing.depart - crossing.arrive, at: crossing.depart })
     }
-  return trace
+  if (trace.entered)
+    seen = { stop: line.stops[trace.entered.stop].id, arrive: trace.entered.at }
+  return { ...trace, pace, seen }
 }
 
 /**
  * Meters along its line a bus has likely reached some seconds after its last report: driving each stretch and
  * waiting at each stop as long as expected now, and at a stop where it waits for its scheduled time, until then
  */
-export const expectedDistance = (pace: Pace, trace: Trace, seconds: number) => {
+export const expectedDistance = (lately: Lately, trace: Trace, seconds: number) => {
   const { line, distance } = trace.track
   // Reported stopped twice running, there's no telling when it'll go, so it stays put until it does
   if (!line.stops.length || trace.isStill)
     return distance
 
   const now = trace.at + seconds
-  const recent = pace.recent.get(line)
-  const [driveFactor, zoneFactor] = [factorOf(recent?.drives ?? [], now), factorOf(recent?.zones ?? [], now)]
-  const typical = DEFAULT_RATE / Math.exp(driveFactor)
+  const bias = drifted(trace.pace ?? NO_PACE, now).mean
+  const typical = DEFAULT_RATE / Math.exp(bias)
   const lap = lapOf(line, distance)
   const rateBetween = (i: number) => {
     if (!line.isLoop && (i <= 0 || i >= line.stops.length))
@@ -139,11 +120,11 @@ export const expectedDistance = (pace: Pace, trace: Trace, seconds: number) => {
     const meters = driven(from, to)
     if (meters <= 0)
       return typical
-    const drive = expected(driveMu(pace, line, from.id, to.id, meters, now), driveFactor, pace.drives.get(`${from.id}>${to.id}`), now)
+    const drive = expected(expectedMu(lately.model, line.route, from.id, to.id, meters, now) + bias, lately.drives.get(`${from.id}>${to.id}`), now)
     return Math.max(MIN_RATE, meters / drive)
   }
   const zoneTime = (id: string) =>
-    expected(zoneMu(pace, id, now), zoneFactor, pace.zones.get(id), now)
+    expected(Math.log(zoneEstimate(lately.model, line.route, id, false)?.mean || DEFAULT_ZONE), lately.zones.get(id), now)
   // Waiting at a stop is its time in the zone, less pulling in and out, and for a bus that holds there, at least
   // until its scheduled time, having got there `elapsed` seconds after its report
   const waitAt = (i: number, rateIn: number, rateOut: number, elapsed: number) => {

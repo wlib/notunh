@@ -1,6 +1,7 @@
-// The service worker run against a world of its own: in-memory caches, a network that answers as told and can
-// be offline, a quota that can be full, for every put or only some, windows open at paths that say what they run
-// when asked, and timers faked, so the worker can be restarted, driven step by step, and left to settle
+// The service worker run against a world of its own: in-memory caches, which read a body whole to keep it, a
+// network that answers as told, can be offline, and gives up on a request when it's aborted, a quota that can be
+// full, for every put or only some, windows open at paths that say what they run when asked, and timers faked, so
+// the worker can be restarted, driven step by step, and left to settle
 
 import { vi } from "vitest"
 import type { Generation } from "../../src/shell/manifest.mts"
@@ -71,9 +72,10 @@ export const worker = (network: Network, windows: Window[] = [], { isFull = () =
     keys:   async () => (listings++, [...entries.keys()].map(key => new Request(ORIGIN + key))),
     match:  async (request: RequestInfo | URL) => entries.get(keyOf(request))?.clone(),
     put:    async (request: RequestInfo | URL, response: Response) => {
+      const body = await response.arrayBuffer()
       if (isFull(keyOf(request)))
         throw new DOMException("The quota has been exceeded", "QuotaExceededError")
-      entries.set(keyOf(request), response)
+      entries.set(keyOf(request), new Response(body, response))
     },
     delete: async (request: RequestInfo | URL) => entries.delete(keyOf(request))
   })
@@ -124,7 +126,12 @@ export const worker = (network: Network, windows: Window[] = [], { isFull = () =
       fetch: (input: Request | string, init?: RequestInit) => whileRunning(() => {
         const path = keyOf(input)
         fetched.push(path)
-        return network(path, typeof input === "string" ? init : { cache: input.cache, ...init })
+        const { signal } = init ?? {}
+        signal?.throwIfAborted()
+        return Promise.race([
+          network(path, typeof input === "string" ? init : { cache: input.cache, ...init }),
+          new Promise<never>((_, reject) => signal?.addEventListener("abort", () => reject(signal.reason)))
+        ])
       }),
       location: { origin: ORIGIN }
     }

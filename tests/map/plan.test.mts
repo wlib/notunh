@@ -3,7 +3,7 @@ import fc from "fast-check"
 import { canAlight, canBoard, serviceDayStart, withIndexes, type Feed, type FeedData, type Trip } from "../../src/map/feed.mts"
 import { distance } from "../../src/geo/projection.mts"
 import { type StopPredictions, forecastOf } from "../../src/map/umo.mts"
-import { BOARDING, LAYOVER, type Run, arrivalAt, buildRuns as runsOf, slack, spread, timeAt, uncertainty } from "../../src/map/forecast.mts"
+import { BOARDING, type Run, arrivalAt, buildRuns as runsOf, slack, spread, timeAt, uncertainty } from "../../src/map/forecast.mts"
 import {
   ALTERNATIVES, HORIZON, MIN_TIME_SAVED, MIN_TRANSFER_GAIN,
   buildConnections, cost, itineraryKey, plan, rides, scan, walkOnly,
@@ -317,14 +317,7 @@ const buildRuns = (feed: Feed, today: Day, predictions: StopPredictions[], model
 const predict = (stop: { id: string }, tripId: string, at: number, isLive = true): StopPredictions => ({
   route: { id: "R" },
   stop:  { id: stop.id },
-  values: [{
-    timestamp: at * 1000,
-    minutes: 0,
-    vehicleId: "V",
-    tripId,
-    affectedByLayover: !isLive,
-    direction: { name: "" }
-  }]
+  values: [{ timestamp: at * 1000, vehicleId: "V", tripId, affectedByLayover: !isLive }]
 })
 
 /** A feed of trips along the same stops, at their own times and timepoints, and whatever else each says */
@@ -438,21 +431,6 @@ test("an early bus waits at a timepoint for its scheduled time, and a late one g
   }))
 )
 
-test("a connector's next loop starts a layover after its bus gets in, unless it waits for its scheduled start", () =>
-  fc.assert(fc.property(fc.integer({ min: 0, max: 1800 }), fc.boolean(), (gap, waits) => {
-    // The bus is on T0, which ends at 9:00, and Umo has its next loop, T1, starting on schedule
-    const feed = lineFeed([
-      { times: [8 * 3600, 9 * 3600], timepoints: [] },
-      { times: [9 * 3600 + LAYOVER + gap, 10 * 3600 + LAYOVER + gap], timepoints: waits ? [0] : [] }
-    ])
-    const runs = buildRuns(feed, TODAY, [
-      predict(feed.stops[1], "T0", BASE + 9 * 3600),
-      predict(feed.stops[0], "T1", BASE + 9 * 3600 + LAYOVER + gap, false)
-    ])
-    expect(timeAt(runOn(runs, "T1"), 0)).toBe(BASE + 9 * 3600 + LAYOVER + (waits ? gap : 0))
-  }))
-)
-
 test("with an empty model, how far off a bus may be is as it always was, less the chance it waits for its time", () =>
   fc.assert(fc.property(feed, fc.integer({ min: -600, max: 4 * 3600 }), fc.boolean(), (feed, lead, isLive) => {
     const runs = buildRuns(feed, TODAY, [])
@@ -483,47 +461,12 @@ test("a bus as likely as not to wait for its time gets the slack of one that doe
   expect(at([0, 0.9, 0], [60, 60, 60])).toBe(at([0, 0, 0], [60, 60, 60]))
 })
 
-/** A model that's seen a day of buses on route R drive between each pair of its stops in some seconds */
-const learned = (feed: Feed, seconds: number[], extra: Visit[] = []) =>
-  update(emptyModel(), addDays(TODAY, -1), [
-    ...feed.trips[0].stops.slice(1).map((stop, i): Visit => ({
-      vehicle: "V", route: "R", stop: feed.stops[stop].id, arrive: BASE + seconds[i % seconds.length], depart: BASE + seconds[i % seconds.length] + 10,
-      from: feed.stops[feed.trips[0].stops[i]].id, meters: 1000, left: BASE
-    })),
-    ...extra
-  ])
-
-test("for a tracked bus, a learned model leaves more slack the further along its trip the stop is", () =>
-  fc.assert(fc.property(fc.array(fc.integer({ min: 30, max: 600 }), { minLength: 1, maxLength: 5 }), fc.integer({ min: 0, max: 3 }), (seconds, delay) => {
-    const times = [8, 9, 10, 11, 12, 13].map(hour => hour * 3600)
-    const feed = lineFeed([{ times, timepoints: [] }])
-    const model = learned(feed, seconds)
-    const run = runOn(buildRuns(feed, TODAY, [predict(feed.stops[0], "T0", BASE + times[0] + delay)], model), "T0")
-    const now = BASE + times[0] - 60
-    const spreads = times.map((_, position) => spread(run, position, timeAt(run, position), now))
-    spreads.slice(1).forEach((value, i) => expect(value).toBeGreaterThanOrEqual(spreads[i]))
-    for (const value of spreads) {
-      expect(value).toBeGreaterThanOrEqual(BOARDING)
-      expect(value).toBeLessThanOrEqual(uncertainty(Infinity))
-    }
+test("a stop where buses turn out to wait for their time is held at", () => {
+  const times = [8, 9, 10].map(hour => hour * 3600)
+  const feed = lineFeed([{ times, timepoints: [] }])
+  const waited = Array.from({ length: 20 }, (_, i): Visit => ({
+    vehicle: `V${i}`, route: "R", stop: "1", arrive: BASE - 600, depart: BASE, trip: "T0", position: 1, isEnd: false, scheduled: BASE
   }))
-)
-
-test("a stop where buses turn out to wait for their time is held at, and the layover learned replaces the default", () =>
-  fc.assert(fc.property(fc.integer({ min: 30, max: 900 }), layover => {
-    const times = [8, 9, 10].map(hour => hour * 3600)
-    const feed = lineFeed([{ times, timepoints: [] }, { times: times.map(time => time + 3 * 3600), timepoints: [] }])
-    const waited = Array.from({ length: 20 }, (_, i): Visit => ({
-      vehicle: `V${i}`, route: "R", stop: "1", arrive: BASE - 600, depart: BASE, trip: "T0", position: 1, isEnd: false, scheduled: BASE
-    }))
-    const model = learned(feed, [60], [...waited, { vehicle: "W", route: "R", stop: "0", arrive: BASE, depart: BASE, gotIn: BASE - layover }])
-    const [run] = buildRuns(feed, TODAY, [], model)
-    expect(run.holdChance.map(isLikely)).toEqual([false, true, false])
-    // The bus on T0 gets in at 10:00, and Umo has T1 starting on schedule much later
-    const runs = buildRuns(feed, TODAY, [
-      predict(feed.stops[2], "T0", BASE + times[2]),
-      predict(feed.stops[0], "T1", BASE + times[0] + 3 * 3600, false)
-    ], model)
-    expect(timeAt(runOn(runs, "T1"), 0)).toBeCloseTo(BASE + times[2] + layover, -1)
-  }))
-)
+  const [run] = buildRuns(feed, TODAY, [], update(emptyModel(), addDays(TODAY, -1), waited))
+  expect(run.holdChance.map(isLikely)).toEqual([false, true, false])
+})

@@ -1,99 +1,131 @@
 // What weeks of the Worker's samples show of how the buses run, folded together in the nightly build a service
-// day at a time: how long each stretch between stops takes at each time of day, how long buses spend at each stop,
-// whether they wait there for their scheduled time, how long they lay over between trips, and how far off the
-// timetable they run. Every statistic decays by half every HALF_LIFE days, so a new semester takes over within a
-// month, and every estimate leans on a broader one while it has little data of its own. An empty model has no
-// estimates at all, so everything using it falls back on the constants it had before there was a model.
+// day at a time: how long each leg between stops a bus visits one after the other takes at each time of day, how
+// long buses spend at each stop and lay over at the start of a trip, how much longer a bus already there still
+// stays, whether buses wait at a stop for its scheduled time, how far off the timetable each route runs, and how
+// often its buses come.
+// Every statistic decays by half every HALF_LIFE days, so a new semester takes over within a month, and every
+// estimate leans on a broader one while it has little data of its own. An empty model has no estimates at all, so
+// everything using it falls back on the constants it had before there was a model. Held out a day at a time on
+// Oct 7 to 19, chaining these along a bus's trip beat Umo by half at every lead to 20 minutes
+// (notunh-model-research/2026-10-19_heldout/IMPLEMENTED.md).
 // Keys are stop and route ids, which last across timetables, never trip ids, which don't
 
 import * as v from "valibot"
-import { serviceDayStart, type FeedData, type Trip } from "./feed.mts"
+import { type FeedData, type Trip } from "./feed.mts"
 import type { Visit } from "./events.mts"
 import { foldDay } from "../shared/learn.mts"
 import { objectOf } from "../shared/json.mts"
-import { Day, localDay, weekday } from "../shared/time.mts"
+import { groupBy } from "../shared/group.mts"
+import { Day, localDay, localHour, weekday } from "../shared/time.mts"
 
-// How many observations a broader estimate is worth to a narrower one
-const DRIVE_KAPPA = 8
-const KAPPA = 4
-// Typical spreads, which a statistic's own leans on while it has few observations, as one observation has none
-const DRIVE_SIGMA = 0.3     // log s
-const DWELL_SIGMA = 0.6     // log s
-const LAYOVER_SIGMA = 0.5   // log s
-const DEVIATION_SIGMA = 120 // s
+// How many observations a leg's own mean is worth against how long legs that far usually take, and a time of day's
+// against the leg's
+const LEG_KAPPA = 5
+const CONTEXT_KAPPA = 8
+// A bus not driven between two stops it visited, off its route or lost to its GPS, took longer than this doing
+// something else than driving the leg
+const MAX_GAP = 600      // s
+// Longer at a stop is out of service, and longer still not a visit at all
+const MAX_ZONE = 900     // s
+const MAX_LINGER = 1800  // s
+// Further off its timetable, a bus is on another trip than the one it's tagged with
+const MAX_OFFSET = 900   // s
+// Seconds already at a stop that how much longer it stays is learned from, and how many visits that takes
+const LINGERED = [0, 5, 10, 20, 40, 80, 160, 320]
+const MIN_LINGERS = 5
 // The Beta prior on whether a bus early at a stop waits there, from whether the timetable says it does
 const TIMEPOINT_PRIOR: [number, number] = [4, 1]
 const OTHER_PRIOR: [number, number] = [1, 4]
-// Observations further out than this many standard deviations count as this far, once a cell has MIN_CLIP of them
-const CLIP_SIGMAS = 3
-const MIN_CLIP = 10
 // Cells decayed below this are dropped, keeping the model to what's still running
 const MIN_N = 0.01
 
 /** Minutes ahead that forecasts are scored at, each scoring those nearest it */
-export const LEADS = [1, 3, 5, 10, 20]
+export const LEADS = [1, 3, 5, 10, 20, 30, 60]
 
 /** A decayed count, sum, and sum of squares of observations */
 export type Cell = [n: number, sum: number, sum2: number]
 
-/**
- * How a forecast did at a lead: a decayed count, the sum of how far off it was, the sum of how far off the model's
- * spread said it would be, and how many fell within the model's 10 to 90 % band
- */
-export type Tally = [n: number, error: number, expected: number, inside: number]
+/** How a way of forecasting did at a lead: a decayed count and the sum of how far off it was, in s */
+type Tally = [n: number, error: number]
 
 export type Scores = {
-  /** From where the bus was and the model */
+  /** From where the map would have seen the bus, chained along its trip */
   model:    Tally[],
   /** Umo's own predictions */
   umo:      Tally[],
-  /** The timetable as is */
-  schedule: Tally[]
+  /** The timetable, shifted by how late its route runs */
+  schedule: Tally[],
+  /** How many times the chain's standard deviation it was off by, as decayed counts in RATIOS bins, at each lead */
+  ratios:   number[][]
 }
 
 /** The model as the build writes it, its statistics taken on trust once its version says what shape they're in */
 export const Model = v.object({
-  version:    v.literal(1),
-  through:    v.nullable(Day),
-  /** log s between stops' zones, by "from>to" stop ids, by context */
-  drives:     objectOf<Record<string, (Cell | null)[]>>(),
-  /** log s per m of every drive, by route, for stretches nobody's driven */
-  paces:      objectOf<Record<string, Cell>>(),
-  /** log s in a stop's zone without waiting for a scheduled time, by stop id, by day type */
-  dwells:     objectOf<Record<string, (Cell | null)[]>>(),
+  version:  v.literal(2),
+  through:  v.nullable(Day),
+  /** log s from leaving one stop's zone to entering the next's zone, by "route:from>to" stop ids, by context */
+  legs:     objectOf<Record<string, (Cell | null)[]>>(),
+  /** Sums of log m and log s over every leg driven a known distance: n, Σx, Σy, Σx², Σxy */
+  lengths:  v.array(v.number()),
+  /** s in a stop's zone, by zoneKey */
+  zones:    objectOf<Record<string, Cell>>(),
+  /** How long a bus some while at a stop still stays there, by zoneKey: for each of LINGERED, a count and the sum of s */
+  lingers:  objectOf<Record<string, number[]>>(),
   /** Visits arriving early that waited for their scheduled time, and that didn't, by "route@stop" */
-  holds:      objectOf<Record<string, [held: number, left: number]>>(),
-  /** log s from getting in at the end of a trip to leaving on the next, by route */
-  layovers:   objectOf<Record<string, Cell>>(),
-  /** s leaving after the scheduled time, by "route@stop" and by route, by day type */
-  deviations: objectOf<Record<string, (Cell | null)[]>>(),
-  scores:     objectOf<Scores>()
+  holds:    objectOf<Record<string, [held: number, left: number]>>(),
+  /** s leaving after the scheduled time, by route, by day type */
+  offsets:  objectOf<Record<string, (Cell | null)[]>>(),
+  /** s between one bus leaving a stop and the next of its route's leaving it, by route, by day type and hour */
+  headways: objectOf<Record<string, (Cell | null)[]>>(),
+  scores:   objectOf<Scores>()
 })
 export type Model = v.InferOutput<typeof Model>
 
-export type Estimate = { mu: number, sigma: number, n: number }
+/** s something takes on average, and its variance */
+export type Estimate = { mean: number, variance: number }
+
+/** Bins of how many standard deviations off a forecast was, a quarter of a doubling each, from 1/64 to 64 */
+const RATIOS = 48
+const ratioBin = (ratio: number) =>
+  Math.min(RATIOS - 1, Math.max(0, Math.floor(4 * Math.log2(ratio)) + RATIOS / 2))
 
 const tallies = () =>
-  LEADS.map((): Tally => [0, 0, 0, 0])
+  LEADS.map((): Tally => [0, 0])
 
 export const emptyScores = (): Scores =>
-  ({ model: tallies(), umo: tallies(), schedule: tallies() })
+  ({ model: tallies(), umo: tallies(), schedule: tallies(), ratios: LEADS.map(() => Array(RATIOS).fill(0)) })
 
 export const emptyModel = (): Model => ({
-  version:    1,
-  through:    null,
-  drives:     {},
-  paces:      {},
-  dwells:     {},
-  holds:      {},
-  layovers:   {},
-  deviations: {},
-  scores:     emptyScores()
+  version:  2,
+  through:  null,
+  legs:     {},
+  lengths:  [0, 0, 0, 0, 0],
+  zones:    {},
+  lingers:  {},
+  holds:    {},
+  offsets:  {},
+  headways: {},
+  scores:   emptyScores()
 })
 
 /** A model as stored, or an empty one for anything that isn't one, like one of an older shape */
 export const asModel = (value: unknown): Model =>
   v.is(Model, value) ? value : emptyModel()
+
+/** Which of LEADS a forecast some seconds ahead is scored with */
+export const leadIndex = (seconds: number) => {
+  const i = LEADS.findIndex((minutes, i) => seconds / 60 <= (minutes + (LEADS[i + 1] ?? Infinity)) / 2)
+  return i === -1 ? LEADS.length - 1 : i
+}
+
+/** A forecast scored at a lead: how far off it was, and by how many of its own standard deviations */
+export const scored = (scores: Scores, kind: keyof Omit<Scores, "ratios">, lead: number, off: number, sd?: number) => {
+  const i = leadIndex(lead)
+  const [n, error] = scores[kind][i]
+  scores[kind][i] = [n + 1, error + Math.abs(off)]
+  if (sd)
+    scores.ratios[i][ratioBin(Math.abs(off) / sd)]++
+}
 
 //#region Contexts
 
@@ -101,39 +133,24 @@ export const asModel = (value: unknown): Model =>
 export const dayType = (day: Day) =>
   weekday(day) >= 5 ? 1 : 0
 
-// Hours of the service day each band ends: early, midday, the afternoon peak, and evening, with night the rest
-const BANDS = [9, 15, 19, 24]
+// Hours past midnight that a service day runs on into, belonging to the day before
 const NIGHT_ENDS = 5
+// Hours each context of a day covers
+const HOURS = 2
+/** How many contexts there are: each two hours of the clock, on weekdays and on weekends */
+const CONTEXTS = 2 * 24 / HOURS
 
-/** How many contexts there are: each band of the day, on weekdays and on weekends */
-const CONTEXTS = 2 * (BANDS.length + 1)
+/** The day type of an epoch second, in its service day in Durham, which runs on past midnight into the night */
+export const dayTypeAt = (at: number) =>
+  dayType(localDay((at - NIGHT_ENDS * 3600) * 1000))
 
-/** The context of a time some seconds into a service day */
-export const context = (day: Day, seconds: number) => {
-  const hour = seconds / 3600
-  const band = BANDS.findIndex(end => hour < end)
-  return dayType(day) * (BANDS.length + 1) + (hour < NIGHT_ENDS || band === -1 ? BANDS.length : band)
-}
+/** An epoch second's day type and hour of the clock in Durham, as one index */
+const hourAt = (at: number) =>
+  dayTypeAt(at) * 24 + localHour(at * 1000)
 
-let last = { minute: NaN, index: 0 }
-
-/**
- * The context of an epoch second, in its service day in Durham, which runs on past midnight into the night, as the
- * timetable's times do
- */
-export const contextAt = (at: number) => {
-  // Asked for every stretch of every bus's route every frame, and only changing by the hour
-  const minute = Math.floor(at / 60)
-  if (minute !== last.minute) {
-    const day = localDay((at - NIGHT_ENDS * 3600) * 1000)
-    last = { minute, index: context(day, at - serviceDayStart(day) / 1000) }
-  }
-  return last.index
-}
-
-/** 0 for weekdays, 1 for weekends, in a context */
-export const dayTypeOf = (index: number) =>
-  Math.floor(index / (BANDS.length + 1))
+/** The context of an epoch second: its day type, and its two hours of the clock in Durham */
+export const contextAt = (at: number) =>
+  dayTypeAt(at) * 24 / HOURS + Math.floor(localHour(at * 1000) / HOURS)
 
 //#endregion
 
@@ -151,74 +168,119 @@ const scaledEach = <T,>(record: Record<string, T>, scale: (value: T) => T | null
 /** Every statistic scaled by how much it still counts, dropping those that no longer do */
 const scale = (model: Model, by: number): Model => {
   const cells = (cells: (Cell | null)[]) => cells.map(cell => scaled(cell, by))
+  const sums = (sums: number[]) => sums[0] * by >= MIN_N ? sums.map(x => x * by) : null
   return {
     ...model,
-    drives:     scaledEach(model.drives, cells),
-    paces:      scaledEach(model.paces, cell => scaled(cell, by)),
-    dwells:     scaledEach(model.dwells, cells),
-    holds:      scaledEach(model.holds, ([held, left]) => (held + left) * by >= MIN_N ? [held * by, left * by] : null),
-    layovers:   scaledEach(model.layovers, cell => scaled(cell, by)),
-    deviations: scaledEach(model.deviations, cells),
-    scores: Object.fromEntries(
-      Object.entries(model.scores).map(([kind, tallies]) => [kind, tallies.map(tally => tally.map(x => x * by))])
-    ) as Scores
+    legs:    scaledEach(model.legs, cells),
+    lengths: model.lengths.map(x => x * by),
+    zones:   scaledEach(model.zones, cell => scaled(cell, by)),
+    lingers: scaledEach(model.lingers, sums),
+    holds:   scaledEach(model.holds, ([held, left]) => (held + left) * by >= MIN_N ? [held * by, left * by] : null),
+    offsets: scaledEach(model.offsets, cells),
+    headways: scaledEach(model.headways, cells),
+    scores: {
+      model:    model.scores.model.map(tally => tally.map(x => x * by) as Tally),
+      umo:      model.scores.umo.map(tally => tally.map(x => x * by) as Tally),
+      schedule: model.scores.schedule.map(tally => tally.map(x => x * by) as Tally),
+      ratios:   model.scores.ratios.map(counts => counts.map(x => x * by))
+    }
   }
 }
 
-/** A cell with an observation added, clipped to the cell's range as it was before the day */
-const added = (cell: Cell | null | undefined, x: number, before: Cell | null | undefined): Cell => {
-  if (before && before[0] >= MIN_CLIP) {
-    const { mu, sigma } = own(before)
-    x = Math.min(mu + CLIP_SIGMAS * sigma, Math.max(mu - CLIP_SIGMAS * sigma, x))
-  }
+const added = (cell: Cell | null | undefined, x: number): Cell => {
   const [n, sum, sum2] = cell ?? [0, 0, 0]
   return [n + 1, sum + x, sum2 + x * x]
 }
 
 /** Adds an observation to a record's cell for a context or day type */
-const addTo = (record: Record<string, (Cell | null)[]>, before: Record<string, (Cell | null)[]>, key: string, size: number, index: number, x: number) => {
+const addTo = (record: Record<string, (Cell | null)[]>, key: string, size: number, index: number, x: number) => {
   const cells = record[key] ??= Array.from({ length: size }, () => null)
-  cells[index] = added(cells[index], x, before[key]?.[index])
+  cells[index] = added(cells[index], x)
 }
+
+/** The key a stop's zone times are kept by: the stop on its route, or where a trip starts, the route's layover */
+const zoneKey = (route: string, stop: string, isFirst: boolean) =>
+  isFirst ? `${route}^` : `${route}@${stop}`
+// Every stop's, and every layover's, for routes the model knows nothing of yet
+const ANY_STOP = "@"
+const ANY_LAYOVER = "^"
+
+// Longer between buses at a stop is a gap in service, not a headway, and fewer of them at a time of day say little
+const MAX_HEADWAY = 3 * 3600 // s
+const MIN_HEADWAYS = 20
+const MAX_SHAPE = 10
 
 // A visit this much ahead of its timetable could have waited for it, and one leaving this close to its scheduled
 // time did
 const EARLY = 60 // s
 const GRACE = 30 // s
-// Further off the timetable than this, a bus counts as this far off
-const MAX_DEVIATION = 900 // s
 
 /** What a service day's visits add to a model, and how forecasts did that day */
 const add = (before: Model, visits: readonly Visit[], scores: Scores): Model => {
   const next = structuredClone(before)
-  for (const { stop, route, isEnd, arrive, depart, scheduled, from, meters, left, gotIn } of visits) {
-    const type = dayTypeOf(contextAt(arrive))
-    if (from !== undefined && left !== undefined) {
-      addTo(next.drives, before.drives, `${from}>${stop}`, CONTEXTS, contextAt(left), Math.log(arrive - left))
-      if (meters! > 0)
-        next.paces[route] = added(next.paces[route], Math.log((arrive - left) / meters!), before.paces[route])
-    }
-    if (gotIn !== undefined)
-      next.layovers[route] = added(next.layovers[route], Math.log(Math.max(1, depart - gotIn)), before.layovers[route])
-    if (scheduled === undefined)
-      continue
+  const linger = (key: string, seconds: number) => {
+    const sums = next.lingers[key] ??= Array(2 * LINGERED.length).fill(0)
+    LINGERED.forEach((elapsed, i) => {
+      if (seconds > elapsed) {
+        sums[2 * i]++
+        sums[2 * i + 1] += seconds - elapsed
+      }
+    })
+  }
 
-    const isEarly = arrive < scheduled - EARLY
-    const hasLeft = depart < scheduled - GRACE
-    if (isEarly) {
-      const [waited, went] = next.holds[`${route}@${stop}`] ?? [0, 0]
-      next.holds[`${route}@${stop}`] = hasLeft ? [waited, went + 1] : [waited + 1, went]
-    }
-    // Only where it couldn't have been waiting for the timetable, and not at either end, where it lays over
-    if ((!isEarly || hasLeft) && !isEnd)
-      addTo(next.dwells, before.dwells, stop, 2, type, Math.log(Math.max(1, depart - arrive)))
-    const deviation = Math.min(MAX_DEVIATION, Math.max(-MAX_DEVIATION, depart - scheduled))
-    for (const key of [`${route}@${stop}`, route])
-      addTo(next.deviations, before.deviations, key, 2, type, deviation)
+  const byVehicle = groupBy(visits, visit => visit.vehicle)
+  for (const own of byVehicle.values()) {
+    own.sort((a, b) => a.arrive - b.arrive)
+    own.forEach(({ stop, route, arrive, depart, scheduled, position, from, meters, left }, i) => {
+      // Every leg between stops visited one after the other: driven, or where the bus was lost between them, the
+      // time from leaving one to getting to the other, as long as that could have been driving
+      const previous = own[i - 1]
+      if (from !== undefined && left !== undefined && arrive > left) {
+        addTo(next.legs, `${route}:${from}>${stop}`, CONTEXTS, contextAt(arrive), Math.log(arrive - left))
+        if (meters! > 0) {
+          const [x, y] = [Math.log(meters!), Math.log(arrive - left)]
+          next.lengths = [next.lengths[0] + 1, next.lengths[1] + x, next.lengths[2] + y, next.lengths[3] + x * x, next.lengths[4] + x * y]
+        }
+      }
+      else if (previous && previous.stop !== stop && arrive - previous.depart < MAX_GAP)
+        addTo(next.legs, `${route}:${previous.stop}>${stop}`, CONTEXTS, contextAt(arrive), Math.log(Math.max(1, arrive - previous.depart)))
+
+      const dwell = depart - arrive
+      if (dwell >= 0 && dwell < MAX_ZONE && position !== undefined)
+        for (const key of [zoneKey(route, stop, position === 0), position === 0 ? ANY_LAYOVER : ANY_STOP])
+          next.zones[key] = added(next.zones[key], dwell)
+      if (dwell >= 0 && dwell < MAX_LINGER) {
+        linger(zoneKey(route, stop, false), dwell)
+        if (position !== undefined)
+          linger(position === 0 ? zoneKey(route, stop, true) : ANY_STOP, dwell)
+      }
+
+      if (scheduled === undefined)
+        return
+      const isEarly = arrive < scheduled - EARLY
+      if (isEarly) {
+        const [waited, went] = next.holds[`${route}@${stop}`] ?? [0, 0]
+        next.holds[`${route}@${stop}`] = depart < scheduled - GRACE ? [waited, went + 1] : [waited + 1, went]
+      }
+      if (Math.abs(depart - scheduled) < MAX_OFFSET)
+        addTo(next.offsets, route, 2, dayTypeAt(arrive), depart - scheduled)
+    })
+  }
+
+  // Each bus leaving a stop after another of its route did
+  const byStop = groupBy(visits, ({ route, stop }) => `${route}@${stop}`)
+  for (const own of byStop.values()) {
+    own.sort((a, b) => a.depart - b.depart)
+    own.forEach(({ route, vehicle, depart }, i) => {
+      const previous = own[i - 1]
+      if (previous && previous.vehicle !== vehicle && depart - previous.depart < MAX_HEADWAY)
+        addTo(next.headways, route, 2 * 24, hourAt(depart), depart - previous.depart)
+    })
   }
 
   for (const kind of ["model", "umo", "schedule"] as const)
     next.scores[kind] = next.scores[kind].map((tally, i) => tally.map((x, j) => x + scores[kind][i][j]) as Tally)
+  next.scores.ratios = next.scores.ratios.map((counts, i) => counts.map((x, j) => x + scores.ratios[i][j]))
   return next
 }
 
@@ -230,51 +292,133 @@ export const update = (model: Model, day: Day, visits: readonly Visit[], scores 
 
 //#region Estimates
 
-/** A cell's own mean and spread */
-const own = ([n, sum, sum2]: Cell): Estimate => {
-  const mu = sum / n
-  return { mu, sigma: Math.sqrt(Math.max(0, sum2 / n - mu * mu)), n }
+const mean = ([n, sum]: Cell) =>
+  sum / n
+
+const pooled = (cells: readonly (Cell | null)[]) =>
+  cells.reduce<Cell | null>((sum, cell) => cell && sum ? [sum[0] + cell[0], sum[1] + cell[1], sum[2] + cell[2]] : cell ?? sum, null)
+
+/** What's derived from a model's legs as a whole: how long legs take by their length, and by the time of day */
+type Fitted = {
+  /** log s at log m 0, and per log m */
+  length?: [number, number],
+  /** How much longer than its leg's mean, in log s, legs take in each context */
+  contexts: number[]
 }
 
-/** Empirical Bayes: a cell's mean and spread pooled with a broader estimate's, weighed by how much data it has */
-export const shrink = (cell: Cell | null | undefined, parent: Estimate, kappa: number): Estimate => {
-  if (!cell || cell[0] <= 0)
-    return parent
-  const { mu, sigma, n } = own(cell)
-  return {
-    mu:    (n * mu + kappa * parent.mu) / (n + kappa),
-    sigma: Math.sqrt((n * sigma ** 2 + kappa * parent.sigma ** 2) / (n + kappa)),
-    n
+const fits = new WeakMap<Model, Fitted>()
+
+const fitted = (model: Model) => {
+  let fit = fits.get(model)
+  if (!fit) {
+    const [n, x, y, xx, xy] = model.lengths
+    const slope = (n * xy - x * y) / (n * xx - x * x)
+    const [sums, counts] = [Array(CONTEXTS).fill(0), Array(CONTEXTS).fill(0)]
+    for (const cells of Object.values(model.legs)) {
+      const legMean = mean(pooled(cells)!)
+      cells.forEach((cell, i) => {
+        if (cell) {
+          sums[i] += cell[1] - cell[0] * legMean
+          counts[i] += cell[0]
+        }
+      })
+    }
+    fits.set(model, fit = {
+      length:   n >= 2 && Number.isFinite(slope) ? [(y - slope * x) / n, slope] : undefined,
+      contexts: sums.map((sum, i) => counts[i] ? sum / counts[i] : 0)
+    })
+  }
+  return fit
+}
+
+/**
+ * Mean log s for a bus to get from leaving one stop's zone to entering the next's, some meters apart, at an epoch
+ * second: that leg's own mean, leaning on how long legs that long take while it's seen few buses, shifted by how
+ * much slower legs are at that time of day, and by how much this leg is, as far as it's been seen then
+ */
+export const legMu = (model: Model, route: string, from: string, to: string, meters: number, at: number) => {
+  const { length, contexts } = fitted(model)
+  const prior = length && length[0] + length[1] * Math.log(Math.max(1, meters))
+  const cells = model.legs[`${route}:${from}>${to}`]
+  const all = cells && pooled(cells)
+  if (!all && prior === undefined)
+    return
+  const base = !all ? prior! : prior === undefined ? mean(all) : (all[0] * mean(all) + LEG_KAPPA * prior) / (all[0] + LEG_KAPPA)
+  const context = contextAt(at)
+  const cell = cells?.[context]
+  return base + contexts[context] + (cell ? (mean(cell) - base - contexts[context]) * cell[0] / (cell[0] + CONTEXT_KAPPA) : 0)
+}
+
+const estimate = (cell: Cell | undefined): Estimate | undefined =>
+  cell && { mean: mean(cell), variance: Math.max(0, cell[2] / cell[0] - mean(cell) ** 2) }
+
+/** s in a stop's zone, or laying over at the start of a trip: on that route, else at any stop, or any layover */
+export const zoneEstimate = (model: Model, route: string, stop: string, isFirst: boolean) =>
+  estimate(model.zones[zoneKey(route, stop, isFirst)] ?? model.zones[isFirst ? ANY_LAYOVER : ANY_STOP])
+
+/**
+ * s more a bus some seconds into its time at a stop stays there: as buses that long there did at that stop, else
+ * at that route's layovers or at any stop
+ */
+export const lingerEstimate = (model: Model, route: string, stop: string, isFirst: boolean, elapsed: number) => {
+  const i = LINGERED.findLastIndex(seconds => seconds <= elapsed)
+  for (const key of [zoneKey(route, stop, false), isFirst ? zoneKey(route, stop, true) : ANY_STOP]) {
+    const sums = model.lingers[key]
+    if (sums && sums[2 * i] >= MIN_LINGERS)
+      return sums[2 * i + 1] / sums[2 * i]
   }
 }
 
-/** A cell's own mean, with a spread that leans on a typical one while it has few observations */
-const alone = (cell: Cell, sigma: number, kappa: number) =>
-  shrink(cell, { ...own(cell), sigma }, kappa)
-
-const pooled = (cells: readonly (Cell | null)[] | undefined) =>
-  cells?.reduce<Cell | null>((sum, cell) => cell && sum ? [sum[0] + cell[0], sum[1] + cell[1], sum[2] + cell[2]] : cell ?? sum, null)
-
-/**
- * log s to drive from one stop's zone to the next's, some meters apart, in a context: from that stretch at that
- * time, else that stretch at any time, else the route's pace over that distance
- */
-export const driveEstimate = (model: Model, route: string | undefined, pair: string, meters: number, index: number) => {
-  const pace = route === undefined ? undefined : model.paces[route]
-  const routeLevel = pace && alone(pace, DRIVE_SIGMA, DRIVE_KAPPA)
-  const parent = routeLevel && { ...routeLevel, mu: routeLevel.mu + Math.log(Math.max(1, meters)) }
-  const cells = model.drives[pair]
-  const all = pooled(cells)
-  if (!all)
-    return parent
-  const pairLevel = parent ? shrink(all, parent, DRIVE_KAPPA) : alone(all, DRIVE_SIGMA, DRIVE_KAPPA)
-  return shrink(cells![index], pairLevel, DRIVE_KAPPA)
+/** s a route's buses leave after their scheduled time on a day type, and how much that varies */
+export const offsetEstimate = (model: Model, route: string, type: number) => {
+  const cells = model.offsets[route]
+  return estimate(cells?.[type] ?? (cells && pooled(cells)) ?? undefined)
 }
 
-/** log s in a stop's zone on a day type: from that stop on that kind of day, else on any */
-export const dwellEstimate = (model: Model, stop: string, type: number) => {
-  const all = pooled(model.dwells[stop])
-  return all ? shrink(model.dwells[stop][type], alone(all, DWELL_SIGMA, KAPPA), KAPPA) : undefined
+/** The regularized lower incomplete gamma function P(k, x), by its series, for the k of headways (2 to 20 or so) */
+const gammaP = (k: number, x: number) => {
+  if (x <= 0)
+    return 0
+  let [term, sum] = [1 / k, 1 / k]
+  for (let n = 1; n < 500 && term > sum * 1e-10; n++)
+    sum += term *= x / (k + n)
+  return Math.min(1, sum * Math.exp(-x + k * Math.log(x) - lnGamma(k)))
+}
+
+/** ln Γ(x), Lanczos */
+const lnGamma = (x: number): number => {
+  const g = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5]
+  let [y, sum] = [x, 1.000000000190015]
+  for (const c of g)
+    sum += c / ++y
+  return -(x + 5.5) + (x + 0.5) * Math.log(x + 5.5) + Math.log(2.5066282746310005 * sum / x)
+}
+
+/**
+ * How long until the next of a route's buses leaves a stop, from an epoch second, knowing nothing of where its
+ * buses are: buses that come every so often, gamma distributed as they were at that time of day, are next half the
+ * time within this, and on average every this often. For a route that runs by headway, not by its timetable, this
+ * beat the timetable's next departure by 50 s held out (fitted moments, rather than every headway seen, cost 10 s)
+ */
+export const waitEstimate = (model: Model, route: string, at: number) => {
+  const cell = model.headways[route]?.[hourAt(at)]
+  if (!cell || cell[0] < MIN_HEADWAYS)
+    return
+  const { mean: headway, variance } = estimate(cell)!
+  // Buses coming like clockwork are as good as evenly spaced, which the series below would take forever to say
+  const spread = Math.max(variance, (headway / MAX_SHAPE) ** 2)
+  const [k, theta] = [headway ** 2 / spread, spread / headway]
+  // The chance the wait is within w is how much of the time a bus is due within w: E[min(H, w)] / E[H]
+  const within = (w: number) => (w * (1 - gammaP(k, w / theta)) + headway * gammaP(k + 1, w / theta)) / headway
+  let [low, high] = [0, 4 * headway]
+  for (let i = 0; i < 40; i++) {
+    const middle = (low + high) / 2
+    if (within(middle) < 0.5)
+      low = middle
+    else
+      high = middle
+  }
+  return { wait: (low + high) / 2, headway }
 }
 
 /** How likely a bus early at a stop is to wait there for its scheduled time, starting from what the timetable says */
@@ -303,18 +447,6 @@ export const holdChances = (model: Model, feed: FeedData, trip: Trip) => {
 export const isLikely = (chance: number) =>
   chance > 0.5
 
-/** log s a route's buses lay over between trips */
-export const layoverEstimate = (model: Model, route: string) => {
-  const cell = model.layovers[route]
-  return cell && alone(cell, LAYOVER_SIGMA, KAPPA)
-}
-
-/** s a bus leaves a stop after its scheduled time on a day type: from that stop, else the route */
-export const deviationEstimate = (model: Model, route: string, stop: string, type: number) => {
-  const routeLevel = model.deviations[route]?.[type]
-  return routeLevel ? shrink(model.deviations[`${route}@${stop}`]?.[type], alone(routeLevel, DEVIATION_SIGMA, KAPPA), KAPPA) : undefined
-}
-
 /** The standard normal quantile, to within 5e-4 (Abramowitz and Stegun 26.2.23) */
 export const probit = (p: number): number => {
   if (p === 0.5)
@@ -325,31 +457,27 @@ export const probit = (p: number): number => {
   return -(t - (2.515517 + 0.802853 * t + 0.010328 * t * t) / (1 + 1.432788 * t + 0.189269 * t * t + 0.001308 * t * t * t))
 }
 
-/** s that a lognormal estimate is under with probability p */
-export const quantile = ({ mu, sigma }: Estimate, p: number) =>
-  Math.exp(mu + sigma * probit(p))
-
-/** The variance in s² of a lognormal estimate */
-export const variance = ({ mu, sigma }: Estimate) =>
-  Math.expm1(sigma * sigma) * Math.exp(2 * mu + sigma * sigma)
-
-/** Which of LEADS a forecast some seconds ahead is scored with */
-export const leadIndex = (seconds: number) => {
-  const i = LEADS.findIndex((minutes, i) => seconds / 60 <= (minutes + (LEADS[i + 1] ?? Infinity)) / 2)
-  return i === -1 ? LEADS.length - 1 : i
-}
-
 // Fewer forecasts scored than this at a lead say nothing yet
 const MIN_SCORED = 20
 
 /**
- * How many times the model's own spread the forecasts actually used turn out to be off by, at a lead: Umo's
- * predictions, or with none scored, the model's own forecasts
+ * How many of its own standard deviations a forecast some seconds ahead is off by no more than with probability p,
+ * as the model's forecasts at that lead turned out, or with too few of them scored, as a normal one would be
  */
-export const inflation = (model: Model, lead: number) => {
-  const i = leadIndex(lead)
-  const tally = [model.scores.umo[i], model.scores.model[i]].find(([n, , expected]) => n >= MIN_SCORED && expected > 0)
-  return tally ? tally[1] / tally[2] : 1
+export const bandScale = (model: Model, lead: number, p: number) => {
+  if (p <= 0)
+    return 0
+  const counts = model.scores.ratios[leadIndex(lead)]
+  const total = counts.reduce((sum, n) => sum + n, 0)
+  if (total < MIN_SCORED)
+    return probit((1 + p) / 2)
+  let below = 0
+  for (let bin = 0; bin < RATIOS; bin++) {
+    if (below + counts[bin] >= p * total)
+      return 2 ** ((bin - RATIOS / 2 + (p * total - below) / counts[bin]) / 4)
+    below += counts[bin]
+  }
+  return 2 ** (RATIOS / 8)
 }
 
 //#endregion

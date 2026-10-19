@@ -45,8 +45,9 @@ test("real fixes show every bus going through its trip's stops in order, at plau
 // How far off the model's forecasts were on the recording, in seconds at each lead, which changes to extraction or
 // the model should only bring down, or explain: measuring the ground on the WGS84 ellipsoid rather than three
 // flat-earth guesses moved every stop along its line by a few parts in a thousand, which took a second or two off
-// the shorter leads and put less than one on the longest
-const MAE = [100, 145, 180, 260, 410]
+// the shorter leads and put less than one on the longest; chaining from each bus's latest visit, along its shape's
+// meters and on through its layover, took them from 100, 145, 180, 260 and 410 to these
+const MAE = [75, 125, 180, 230, 265]
 
 test("forecasts from the model do no worse on the recording than they did", () => {
   const scored = score(emptyModel(), feed, visits)

@@ -3,6 +3,7 @@ import fc from "fast-check"
 import { buildOf, isRetained, retainOf } from "../../src/shell/manifest.mts"
 import { Model, emptyModel } from "../../src/map/model.mts"
 import { RELEASE, fakePage, headOf, leavePage } from "./page.mts"
+import { republished } from "../../scripts/republish.mts"
 
 afterEach(leavePage)
 
@@ -227,6 +228,19 @@ test("a newer build announced while a file first loads is loaded right after it,
   expect(page.fetches).toEqual(["/assets/gtfs-AAAAAAAA.json", "/assets/gtfs-BBBBBBBB.json"])
 })
 
+test("a build published again, as a rollback is, is taken in however long before it was built, and what it rolled back from isn't again", async () => {
+  const page = await load({ gtfs: "/assets/gtfs-BBBBBBBB.json" })
+  page.answers.set("/assets/gtfs-BBBBBBBB.json", async () => "B")
+  page.answers.set("/assets/gtfs-AAAAAAAA.json", async () => "A")
+  const gtfs = await page.latest<string>("gtfs")
+  page.receive(republished(headOf({ gtfs: "/assets/gtfs-AAAAAAAA.json" }, undefined, "2026-10-17T08:00:00.000Z"), new Date("2026-10-19T08:00:00.000Z")))
+  await vi.advanceTimersByTimeAsync(0)
+  expect(gtfs.peek()).toBe("A")
+  page.receive(headOf({ gtfs: "/assets/gtfs-BBBBBBBB.json" }))
+  await vi.advanceTimersByTimeAsync(60_000)
+  expect(gtfs.peek()).toBe("A")
+})
+
 test("a load that hangs is given up on after a minute, so it holds up nothing after it, and a retry asks past every cache", async () => {
   const page = await load({ gtfs: "/assets/gtfs-AAAAAAAA.json" })
   const inits: RequestInit[] = []
@@ -259,18 +273,18 @@ test("a page starts with a fallback when its data can't load the first time, if 
 
 test("a data file that doesn't fit its schema fails to load as any other would: first for the fallback, later keeping what was there", async () => {
   const page = await load(dataOf(["model"], ["AAAAAAAA"]))
-  page.answers.set("/assets/model-AAAAAAAA.json", async () => ({ version: 2, through: null }))
+  page.answers.set("/assets/model-AAAAAAAA.json", async () => ({ version: 3, through: null }))
   const model = await page.latest("model", Model, emptyModel)
   expect(model.peek()).toEqual(emptyModel())
   const learned = { ...emptyModel(), through: "2026-10-06" }
   page.answers.set("/assets/model-AAAAAAAA.json", async () => learned)
   await vi.advanceTimersByTimeAsync(5_000)
   expect(model.peek()).toEqual(learned)
-  page.answers.set("/assets/model-BBBBBBBB.json", async () => ({ ...learned, drives: [] }))
+  page.answers.set("/assets/model-BBBBBBBB.json", async () => ({ ...learned, legs: [] }))
   page.receive(headOf(dataOf(["model"], ["BBBBBBBB"])))
   await vi.advanceTimersByTimeAsync(60_000)
   expect(model.peek()).toEqual(learned)
-  expect(console.error).toHaveBeenLastCalledWith(new Error("Unexpected JSON from /assets/model-BBBBBBBB.json: drives: Expected an object"))
+  expect(console.error).toHaveBeenLastCalledWith(new Error("Unexpected JSON from /assets/model-BBBBBBBB.json: legs: Expected an object"))
 })
 
 test("a page without a name throws for it", async () => {

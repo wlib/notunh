@@ -128,6 +128,13 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "written": {
+          "name": "written",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         }
       },
       "indexes": {},

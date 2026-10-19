@@ -91,7 +91,7 @@ export const usual = await latest("usual", Usual, emptyUsual)
 
 const unpacked = new WeakMap<Week, ReturnType<typeof unpack>>()
 
-/** A room's usual week for a kind, by hour, with hours we know too little about undefined */
+/** A room's usual week for a kind, by hour, each leaning on the room's usual at any hour, or nothing for a room never watched */
 export const usualWeek = (id: string, kind: Kind) => {
   const week = usual.value.rooms[id]?.[kind]
   if (week && !unpacked.has(week))
@@ -106,7 +106,7 @@ const BUSY = 0.4
 /** "quiet" or "busy" when a room usually is in an hour of the week, going by whichever kind is tighter */
 export const usually = (id: string, slot: number) => {
   const chances = KINDS
-    .map(kind => usualWeek(id, kind)?.[slot]?.any)
+    .map(kind => usualWeek(id, kind)?.[slot].any)
     .filter(any => any !== undefined)
   if (!chances.length)
     return undefined

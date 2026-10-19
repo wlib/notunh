@@ -1,15 +1,17 @@
 // A server that serves one release of the built site at a time, as the real origin does across deploys, and can be
 // told to publish another, to go offline, as a phone with no signal sees it, or to answer a path with an error. The
 // releases are made from one build: B renames the dining page's entry chunk and bumps the release, as newer code
-// would, C renames the dining index and changes a hall's name in it, as newer data would, and D is C with a service
-// worker of other bytes, as a release changing the worker itself would be
+// would, C renames the dining index and changes a hall's name in it, as newer data would, D is C with a service
+// worker of other bytes, as a release changing the worker itself would be, and R is A published again after them
+// all, as rolling back to it is (scripts/republish.mts)
 
 import { createServer } from "node:http"
 import { readFileSync, existsSync } from "node:fs"
 import { join, extname } from "node:path"
 import type { AddressInfo } from "node:net"
+import { republished } from "../../scripts/republish.mts"
 
-export const RELEASES = ["A", "B", "C", "D"] as const
+export const RELEASES = ["A", "B", "C", "D", "R"] as const
 
 /** How release C renames the first dining hall, so a page showing it has shown C's data */
 export const HALL_SUFFIX = " (C)"
@@ -55,7 +57,8 @@ const deriveReleases = (dist: string): Record<ReleaseName, Release> => {
     A: { pages: new Map([["/dining/index.html", withRelease(html, "A")]]), files: new Map() },
     B: { pages: new Map([["/dining/index.html", withRelease(html.replace(entry, entryB), "B")]]), files: new Map([[entryB, readFileSync(join(dist, entry))]]) },
     C: { pages: new Map([["/dining/index.html", pageC]]), files: new Map(filesC) },
-    D: { pages: new Map([["/dining/index.html", withRelease(pageC, "D")]]), files: new Map([...filesC, ["/sw.js", Buffer.concat([Buffer.from("// Release D\n"), readFileSync(join(dist, "sw.js"))])]]) }
+    D: { pages: new Map([["/dining/index.html", withRelease(pageC, "D")]]), files: new Map([...filesC, ["/sw.js", Buffer.concat([Buffer.from("// Release D\n"), readFileSync(join(dist, "sw.js"))])]]) },
+    R: { pages: new Map([["/dining/index.html", republished(withRelease(html, "A"), new Date(releaseAt("R")))]]), files: new Map() }
   }
 }
 

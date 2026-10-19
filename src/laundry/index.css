@@ -320,12 +320,6 @@
   fill: var(--positive);
 }
 
-.sparkline .unknown {
-  fill: none;
-  stroke: var(--border);
-  vector-effect: non-scaling-stroke;
-}
-
 .axis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

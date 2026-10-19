@@ -3,6 +3,7 @@ import fc from "fast-check"
 import { type Generation, type Retain, buildOf } from "../../src/shell/manifest.mts"
 import { RELEASE } from "./page.mts"
 import { type Network, type Window, OLD_CACHE, file, page, worker } from "./sw.mts"
+import { republished } from "../../scripts/republish.mts"
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
@@ -69,7 +70,7 @@ test("a page we have comes from the cache at once, however long the network take
   sw.entries.set("/map/", page(["/assets/old-AAAAAAAA.js"], { gtfs: "/assets/gtfs-AAAAAAAA.json" }))
   const { response, done } = sw.navigate("/map/?to=dining/philbrook")
   expect(await textOf(response)).toContain("old-AAAAAAAA")
-  expect(inits).toEqual([{ cache: "no-cache" }])
+  expect(inits).toEqual([{ cache: "no-cache", signal: expect.any(AbortSignal) }])
 
   // The network's newer copy is kept once everything it names is, with the one before as the page's previous
   // generation, and only then sent to the page's windows
@@ -125,6 +126,22 @@ test("a copy from an older release, as from an edge not yet caught up, is left a
   expect(await html(sw.entries.get("/map/")!)).toContain("map-BBBBBBBB")
   expect(sw.messages).toEqual([])
   expect(sw.has("/assets/map-AAAAAAAA.js")).toBe(false)
+})
+
+test("a build published again, as a rollback is, is taken in over a newer one, and the newer one again, as from an edge not yet caught up, is left alone", async () => {
+  const LATEST = "2026-10-20T08:00:00.000Z"
+  const rolledBack = page(["/assets/map-AAAAAAAA.js"])
+  let served = new Response(republished(await rolledBack.text(), new Date(LATEST)), rolledBack)
+  const sw = worker(async path => path === "/map/" ? served.clone() : file(path), [{ path: "/map/" }])
+  sw.entries.set("/map/", page(["/assets/map-BBBBBBBB.js"], {}, LATER))
+  await sw.navigate("/map/").done
+  expect(buildOf(await html(sw.entries.get("/map/")!))).toMatchObject({ release: RELEASE, published: LATEST, code: ["/assets/map-AAAAAAAA.js"] })
+  expect(buildOf(await html(sw.entries.get("/map/?gen=prev")!)).release).toBe(LATER)
+  expect(sw.messages.length).toBe(1)
+  served = page(["/assets/map-BBBBBBBB.js"], {}, LATER)
+  await sw.navigate("/map/").done
+  expect(await html(sw.entries.get("/map/")!)).toContain("map-AAAAAAAA")
+  expect(sw.messages.length).toBe(1)
 })
 
 test("a newer laundry page is sent to every room's window, and no other", async () => {
@@ -584,6 +601,34 @@ test("a worker killed in the middle of taking a page in leaves the copy we have,
   for (const path of next)
     expect(sw.has(path)).toBe(true)
   expect(sw.messages.length).toBe(1)
+})
+
+test("a file that stalls, before it answers, partway through its body, or kept behind an answer, is given up on at a deadline, keeping the copy we have, so other pages and files are still taken in", async () => {
+  await fc.assert(fc.asyncProperty(fc.constantFrom("answer", "body", "kept"), async stall => {
+    const stalled = "/assets/map-BBBBBBBB.js"
+    // A body that never ends, unless the request is aborted, as a browser's does
+    const endless = (signal?: AbortSignal | null) =>
+      new Response(new ReadableStream({ start: body => signal?.addEventListener("abort", () => body.error(signal.reason)) }), { headers: { "content-type": "text/javascript" } })
+    const sw = worker(async (path, init) =>
+      path === "/map/"    ? page([stalled], {}, LATER) :
+      path === "/dining/" ? page(["/assets/dining-BBBBBBBB.js"], {}, LATER) :
+      path !== stalled    ? file(path) :
+      stall === "answer"  ? never() :
+                            endless(init?.signal)
+    )
+    sw.entries.set("/map/", page(["/assets/map-AAAAAAAA.js"]))
+    sw.entries.set("/dining/", page(["/assets/dining-AAAAAAAA.js"]))
+    // The map's page names the file, or a window asks for it, and it's kept behind the answer
+    const first = stall === "kept" ? sw.request(stalled) : sw.navigate("/map/")
+    await vi.advanceTimersByTimeAsync(0)
+    const dining = sw.navigate("/dining/")
+    const other = sw.request("/assets/other-AAAAAAAA.js")
+    await Promise.all([dining.done, other.done, stall === "kept" ? undefined : first.done])
+    expect(await html(sw.entries.get("/dining/")!)).toContain("dining-BBBBBBBB")
+    expect(sw.has("/assets/other-AAAAAAAA.js")).toBe(true)
+    expect(await html(sw.entries.get("/map/")!)).toContain("map-AAAAAAAA")
+    expect(sw.has(stalled)).toBe(false)
+  }))
 })
 
 test("a page that names an asset the network no longer serves is never kept, and its windows aren't told", async () => {

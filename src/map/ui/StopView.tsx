@@ -1,17 +1,23 @@
 /** @jsxImportSource bruh/browser */
 
-// A stop's next buses: Umo's predictions, with the schedule for routes it isn't predicting
+// A stop's next buses, as forecast: each route's next departures, live where the map is following the bus, and for
+// a route that runs by headway with none followed, how often its buses come and how soon the next likely does, as
+// its timetable says nothing of when they actually will
 
 import { r, type SourceNode } from "bruh/reactive"
-import { type Route, canBoard } from "../feed.mts"
-import { timeAt } from "../forecast.mts"
+import { canBoard } from "../feed.mts"
+import { type Run, timeAt } from "../forecast.mts"
+import { waitEstimate } from "../model.mts"
 import type { Place } from "../plan.mts"
-import { feed, now, runs, from, to, selectedStop, stopPredictions } from "../state.mts"
-import { Count, List } from "../../shell/intl.tsx"
+import { feed, model, now, runs, from, to, selectedStop } from "../state.mts"
+import { List, Minutes } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
-import { RouteBadge, Time, route } from "./common.tsx"
+import { RouteBadge, Time, minutes, route } from "./common.tsx"
 
 const SCHEDULE_HOURS = 3
+// Sooner than this, a departure shows how many minutes away it is rather than when
+const SOON = 30 * 60 // s
+const SHOWN = 3
 
 export const StopView = ({ stop }: { stop: number }) => {
   const { id, name, lat, lon } = feed.peek().stops[stop]
@@ -21,15 +27,25 @@ export const StopView = ({ stop }: { stop: number }) => {
     selectedStop.value = undefined
   }
 
-  const scheduled = r(() => {
-    const departures: { route: Route, time: number, headsign: string }[] = []
+  /** Each route's departures from here in the next few hours, soonest first, its soonest route first */
+  const departures = r(() => {
+    const byRoute = new Map<string, { time: number, run: Run }[]>()
     for (const run of runs.value)
       run.trip.stops.forEach((s, position) => {
         const time = timeAt(run, position)
         if (s === stop && canBoard(run.trip, position) && time >= now.value && time < now.value + SCHEDULE_HOURS * 3600)
-          departures.push({ route: route(run.trip.route), time, headsign: run.trip.headsign })
+          byRoute.set(run.trip.route, [...byRoute.get(run.trip.route) ?? [], { time, run }])
       })
-    return departures.sort((a, b) => a.time - b.time)
+    return [...byRoute]
+      .map(([id, times]) => {
+        const sorted = times.sort((a, b) => a.time - b.time)
+        const isHeadway = !sorted[0].run.trip.timepoints.length
+        const live = sorted.filter(({ run }) => run.isLive)
+        // A route running by headway with no bus followed here soon has only its usual frequency to go on
+        const wait = isHeadway && !live.length ? waitEstimate(model.value, id, now.value) : undefined
+        return { route: route(id), headsign: sorted[0].run.trip.headsign, shown: isHeadway && wait ? [] : sorted.slice(0, SHOWN), wait }
+      })
+      .sort((a, b) => (a.shown[0]?.time ?? now.value + (a.wait?.wait ?? 0)) - (b.shown[0]?.time ?? now.value + (b.wait?.wait ?? 0)))
   })
 
   return (
@@ -48,39 +64,29 @@ export const StopView = ({ stop }: { stop: number }) => {
         <button type="button" class="button" onclick={pick(to)}>Directions to here</button>
       </div>
       {r(() => {
-        if (!stopPredictions.value)
-          return <p class="muted">Loading arrivals…</p>
-
-        const predicted = stopPredictions.value.filter(entry => entry.values.length && feed.value.routesById.has(entry.route.id))
-        const predictedRoutes = new Set(predicted.map(entry => entry.route.id))
-        const fallback = scheduled.value.filter(departure => !predictedRoutes.has(departure.route.id)).slice(0, 6)
-
-        if (!predicted.length && !fallback.length)
+        if (!departures.value.length)
           return <p class="muted">No buses in the next few hours.</p>
-
         return (
           <>
             <ul class="arrivals">
-              {predicted.map(({ route: { id }, values }) =>
+              {departures.value.map(({ route, headsign, shown, wait }) =>
                 <li>
-                  <RouteBadge route={route(id)} />
-                  <span class="arrival-direction">{values[0].direction?.name}</span>
-                  <span class={{ "arrival-times": true, muted: values[0].affectedByLayover }}>
-                    {!values[0].affectedByLayover && <span class="dot" title="Live" />}
-                    <List type="unit" items={values.slice(0, 3).map(value => value.minutes === 0 ? "Now" : <Count value={value.minutes} />)} />
-                    {values.some(value => value.minutes > 0) && " min"}
-                  </span>
-                </li>
-              )}
-              {fallback.map(departure =>
-                <li>
-                  <RouteBadge route={departure.route} />
-                  <span class="arrival-direction">{departure.headsign}</span>
-                  <span class="arrival-times muted"><Time seconds={departure.time} /></span>
+                  <RouteBadge route={route} />
+                  <span class="arrival-direction">{headsign}</span>
+                  {wait
+                    ? <span class="arrival-times muted">
+                      Every <Minutes value={minutes(wait.headway)} />, half the time within <Minutes value={minutes(wait.wait)} />
+                    </span>
+                    : <span class={{ "arrival-times": true, muted: !shown[0].run.isLive }}>
+                      {shown[0].run.isLive && <span class="dot" title="Live" />}
+                      <List type="unit" items={shown.map(({ time }) =>
+                        time - now.value < SOON ? <Minutes value={Math.max(1, minutes(time - now.value))} /> : <Time seconds={time} />
+                      )} />
+                    </span>}
                 </li>
               )}
             </ul>
-            <p class="muted legend"><span class="dot" /> Live from the bus, the rest from the schedule</p>
+            <p class="muted legend"><span class="dot" /> Live from the bus, the rest from the schedule or how often buses come</p>
           </>
         )
       })}

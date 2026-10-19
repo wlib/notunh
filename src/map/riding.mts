@@ -10,7 +10,7 @@ import { BUS_TRACKING, type RouteLine, routeLines } from "./shapes.mts"
 import { compare, fixAt, type Fix } from "./fixes.mts"
 import { location } from "./location.mts"
 import type { Vehicle } from "./umo.mts"
-import { feed, lastUpdate, vehicles, riding, suggested } from "./state.mts"
+import { feed, fused, lastUpdate, vehicles, riding, suggested } from "./state.mts"
 import { isVisible } from "../shell/lifecycle.mts"
 
 // Fixes kept for lining up with buses' reports, which can be this old
@@ -141,17 +141,15 @@ const asBus = (vehicle: Vehicle, fix: Fix, { lat, lon }: { lat: number, lon: num
   secsSinceReport: Math.max(0, (Date.now() - fix.at) / 1000)
 })
 
-/** Every bus, with the one you're on where your phone says it is, when that's newer than its own report and on its route */
-export const fusedVehicles = r(() => {
+// Every bus, with the one you're on where your phone says it is, when that's newer than its own report and on its route
+watch(() => {
   const id = riding.value
   const fix = location.value
-  if (!id || !fix || !isInStep.value)
-    return vehicles.value
-  return vehicles.value.map(vehicle => {
-    if (vehicle.id !== id || fix.at <= vehicle.gpsTime || !onRoute.value)
-      return vehicle
-    return asBus(vehicle, fix, onRoute.value)
-  })
+  fused.value = !id || !fix || !isInStep.value
+    ? vehicles.value
+    : vehicles.value.map(vehicle =>
+      vehicle.id !== id || fix.at <= vehicle.gpsTime || !onRoute.value ? vehicle : asBus(vehicle, fix, onRoute.value)
+    )
 })
 
 // The screen stays on while you're riding, to watch for your stop

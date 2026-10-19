@@ -5,17 +5,13 @@
 
 import { readFile } from "node:fs/promises"
 import { withIndexes, type Feed, type FeedData } from "../../src/map/feed.mts"
-import { distance } from "../../src/geo/projection.mts"
 import { extract, type Visit } from "../../src/map/events.mts"
 import { decode, fromHex, unpackFixes, unpackPredictions, type RawFix, type RawPrediction, type SampledPrediction } from "../../src/map/raw.mts"
-import { STREET_DETOUR } from "../../src/map/walks.mts"
-import { ZONE } from "../../src/map/crossings.mts"
-import { DEFAULT_RATE, DEFAULT_WAIT, FACTOR_WINDOW, factorOf, type Seen } from "../../src/map/pace.mts"
-import {
-  LEADS, asModel, context, contextAt, dayType, deviationEstimate, driveEstimate, dwellEstimate, emptyScores,
-  holdChances, inflation, isLikely, probit, variance, type Estimate, type Model, type Scores, type Tally
-} from "../../src/map/model.mts"
+import { NO_PACE, expectedMu, paced } from "../../src/map/pace.mts"
+import { NO_FORECAST, type Sighting, buildRuns, timeAt } from "../../src/map/forecast.mts"
+import { LEADS, asModel, dayTypeAt, emptyScores, offsetEstimate, scored, type Model, type Scores } from "../../src/map/model.mts"
 import { type Day, localDay } from "../../src/shared/time.mts"
+import { groupBy } from "../../src/shared/group.mts"
 import { readModel, readRows } from "../worker.mts"
 
 export const FEED = new URL("../../src/map/gtfs.json", import.meta.url)
@@ -51,12 +47,8 @@ export const feedFor = async (day: Day): Promise<Feed> => {
 
 // Umo's predictions are sampled on minutes divisible by 5, so forecasts are made then
 const SAMPLED = 300 // s
-// How much a stretch or stop the model knows nothing of varies
-const DEFAULT_SIGMA = 0.3 // log s
-// How far either side of a forecast its 10 to 90 % band goes, in standard deviations
-const BAND = probit(0.9)
-// The mean absolute deviation of a normal distribution, per standard deviation
-const MEAN_ABSOLUTE = Math.sqrt(2 / Math.PI)
+// A bus last seen at a stop longer ago than this, without leaving the route, is out of service
+const OUT_OF_SERVICE = 1800 // s
 
 /** When forecasts of a departure are made at each of LEADS: the last sample at least that long before it */
 const forecastTimes = (depart: number) =>
@@ -86,122 +78,71 @@ export const attachPredictions = (visits: readonly Visit[], samples: readonly { 
   })
 }
 
-const tally = ([n, error, expected, inside]: Tally, off: number, spread: number, isInside: boolean): Tally =>
-  [n + 1, error + Math.abs(off), expected + spread * MEAN_ABSOLUTE, inside + (isInside ? 1 : 0)]
-
-/** Seconds and their variance of a lognormal estimate's median, or of a default with a typical spread */
-const timed = (estimate: Estimate | undefined, fallback: number) =>
-  estimate
-    ? { seconds: Math.exp(estimate.mu), variance: variance(estimate) }
-    : { seconds: fallback, variance: variance({ mu: Math.log(fallback), sigma: DEFAULT_SIGMA, n: 0 }) }
+/**
+ * What the map would have seen of the buses at any epoch second of a day, from its visits: each bus's trip, the
+ * stop it was at or last left, and its pace from the legs it drove before, as pace.mts learns them live
+ */
+export const sightingsOf = (model: Model, visits: readonly Visit[]) => {
+  const buses = [...groupBy(visits, visit => visit.vehicle).entries()].map(([vehicle, own]) => {
+    own = own.toSorted((a, b) => a.arrive - b.arrive)
+    let pace = NO_PACE
+    const paces = own.map(({ route, stop, from, meters, left, arrive }) =>
+      pace = from !== undefined && left !== undefined && arrive > left
+        ? paced(pace, Math.log(arrive - left) - expectedMu(model, route, from, stop, meters!, arrive), arrive)
+        : pace
+    )
+    return { vehicle, own, paces }
+  })
+  return (at: number): Sighting[] => buses.flatMap(({ vehicle, own, paces }) => {
+    const i = own.findLastIndex(visit => visit.arrive <= at)
+    const visit = own[i]
+    if (!visit?.trip || (visit.depart <= at ? visit.depart : at) < at - OUT_OF_SERVICE)
+      return []
+    return [{
+      vehicleId: vehicle, tripId: visit.trip, stop: visit.stop, arrive: visit.arrive,
+      ...visit.depart <= at && { depart: visit.depart },
+      // Its pace as of the last leg it drove, which it finished getting there
+      pace: paces[i], at
+    }]
+  })
+}
 
 /**
- * How each way of forecasting did on a day's visits, as scores to fold into the model: each forecast is made at a
- * sample time, from what was known then, by the model as it stood before the day
+ * How each way of forecasting did on a day's visits, as scores to fold into the model: at each sample time, every
+ * departure still to come at a lead is forecast as the map would have from what it would have seen then, by the
+ * model as it stood before the day, against Umo's prediction sampled then and the timetable shifted by how late its
+ * route runs
  */
 export const score = (model: Model, feed: Feed, visits: readonly Visit[]): Scores => {
   const scores = emptyScores()
   const trips = new Map(feed.trips.map(trip => [trip.id, trip]))
-  const stopsById = new Map(feed.stops.map(stop => [stop.id, stop]))
-  // The meters between stops' zones as driven, else as the crow flies and then some
-  const meters = new Map<string, number>()
-  for (const { from, stop, meters: driven } of visits)
-    if (from !== undefined)
-      meters.set(`${from}>${stop}`, driven!)
-  const metersOf = (from: string, to: string) =>
-    meters.get(`${from}>${to}`) ?? distance(stopsById.get(from)!, stopsById.get(to)!) * STREET_DETOUR
-
-  // Every drive by route in order, as evidence of how each was running
-  const drives = new Map<string, Seen[]>()
+  const sightingsAt = sightingsOf(model, visits)
+  const due = new Map<number, { visit: Visit, lead: number, umo?: number | null }[]>()
   for (const visit of visits)
-    if (visit.from !== undefined) {
-      const seconds = visit.arrive - visit.left!
-      const estimate = driveEstimate(model, visit.route, `${visit.from}>${visit.stop}`, visit.meters!, contextAt(visit.left!))
-      const mu = estimate?.mu ?? Math.log(Math.max(1, visit.meters!) / DEFAULT_RATE)
-      const seen = drives.get(visit.route) ?? []
-      seen.push({ seconds, at: visit.arrive, excess: Math.log(seconds) - mu })
-      drives.set(visit.route, seen)
-    }
-  for (const seen of drives.values())
-    seen.sort((a, b) => a.at - b.at)
-  // The drives on a route that had ended by a time, recent enough to count
-  const drivesBy = (route: string, at: number) => {
-    const seen = drives.get(route) ?? []
-    let [end, high] = [0, seen.length]
-    while (end < high) {
-      const middle = (end + high) >> 1
-      if (seen[middle].at <= at)
-        end = middle + 1
-      else
-        high = middle
-    }
-    let start = end
-    while (start > 0 && at - seen[start - 1].at <= FACTOR_WINDOW)
-      start--
-    return seen.slice(start, end)
-  }
+    if (visit.trip !== undefined && trips.has(visit.trip) && visit.position !== undefined && visit.scheduled !== undefined)
+      forecastTimes(visit.depart).forEach((at, i) => due.set(at, [...due.get(at) ?? [], { visit, lead: visit.depart - at, umo: visit.umo?.[i] }]))
 
-  const byVehicle = Map.groupBy(visits, visit => visit.vehicle)
-  for (const visit of visits) {
-    const trip = visit.trip === undefined ? undefined : trips.get(visit.trip)
-    if (!trip || visit.position === undefined || visit.scheduled === undefined)
-      continue
-    const base = visit.scheduled - trip.times[visit.position]
-    // Its service day, by noon on it
-    const day = localDay((base + 43_200) * 1000)
-    const holds = holdChances(model, feed, trip)
-    const deviation = deviationEstimate(model, trip.route, visit.stop, dayType(day))
-
-    forecastTimes(visit.depart).forEach((at, i) => {
-      // Where the bus was: the last stop on this trip it had got to by then, which it may not have left yet. Which trip
-      // that was comes from the whole day's tags, a little more than was known then, as Umo's predictions had too
-      const last = byVehicle.get(visit.vehicle)!.findLast(other =>
-        other.trip === visit.trip && other.arrive <= at && other.position! < visit.position! && visit.depart - other.depart < 3 * 3600
-      )
-      if (!last)
-        return
-      const factor = factorOf(drivesBy(trip.route, at), at)
-      const dwellAt = (stop: string) =>
-        timed(dwellEstimate(model, stop, dayType(day)), 2 * ZONE / DEFAULT_RATE + DEFAULT_WAIT)
-      const still = last.depart > at ? dwellAt(last.stop) : undefined
-      let [time, spread] = still ? [Math.max(at, last.arrive + still.seconds), still.variance] : [last.depart, 0]
-      for (let position = last.position! + 1; position <= visit.position!; position++) {
-        const [from, to] = [feed.stops[trip.stops[position - 1]].id, feed.stops[trip.stops[position]].id]
-        const length = metersOf(from, to)
-        const drive = timed(driveEstimate(model, trip.route, `${from}>${to}`, length, context(day, time - base)), Math.max(1, length) / DEFAULT_RATE)
-        const dwell = dwellAt(to)
-        time += drive.seconds * Math.exp(factor)
-        // It hadn't got to the next stop yet
-        if (position === last.position! + 1)
-          time = Math.max(time, at)
-        time += dwell.seconds
-        spread += drive.variance + dwell.variance
-        if (isLikely(holds[position]))
-          time = Math.max(time, base + trip.times[position])
-      }
-      time = Math.max(time, at)
-      const sd = Math.sqrt(spread)
-      const band = BAND * sd * inflation(model, visit.depart - at)
-      scores.model[i] = tally(scores.model[i], visit.depart - time, sd, Math.abs(visit.depart - time) <= band)
-
-      const umo = visit.umo?.[i]
+  for (const [at, departures] of due) {
+    const runs = groupBy(buildRuns(feed, localDay(at * 1000), NO_FORECAST, model, sightingsAt(at)), run => `${run.trip.id}@${run.base}`)
+    for (const { visit, lead, umo } of departures) {
+      const trip = trips.get(visit.trip!)!
+      const run = runs.get(`${trip.id}@${visit.scheduled! - trip.times[visit.position!]}`)?.[0]
+      if (run?.tracked)
+        scored(scores, "model", lead, visit.depart - timeAt(run, visit.position!), Math.sqrt(run.tracked.variances[visit.position!]))
       if (umo !== null && umo !== undefined)
-        scores.umo[i] = tally(scores.umo[i], visit.depart - umo, sd, Math.abs(visit.depart - umo) <= band)
-
-      // The timetable, shifted by how late the model has the route running there
-      const off = visit.depart - visit.scheduled! - (deviation?.mu ?? 0)
-      scores.schedule[i] = tally(scores.schedule[i], off, deviation?.sigma ?? 0, deviation !== undefined && Math.abs(off) <= BAND * deviation.sigma)
-    })
+        scored(scores, "umo", lead, visit.depart - umo)
+      scored(scores, "schedule", lead, visit.depart - visit.scheduled! - (offsetEstimate(model, visit.route, dayTypeAt(visit.depart))?.mean ?? 0))
+    }
   }
   return scores
 }
 
-/** Each lead's scores as a line: how far off each forecast was on average, and how often within the model's band */
+/** Each lead's scores as a line: how far off each way of forecasting was on average */
 export const describe = (scores: Scores) =>
   LEADS.map((minutes, i) => {
     const kinds = (["model", "umo", "schedule"] as const).map(kind => {
-      const [n, error, , inside] = scores[kind][i]
-      return n ? `${kind} ${Math.round(error / n)} s off (${Math.round(100 * inside / n)} % in band, n ${Math.round(n)})` : `${kind} -`
+      const [n, error] = scores[kind][i]
+      return n ? `${kind} ${Math.round(error / n)} s off (n ${Math.round(n)})` : `${kind} -`
     })
     return `${String(minutes).padStart(2)} min: ${kinds.join(", ")}`
   }).join("\n")

@@ -5,10 +5,11 @@
 // the icons and the manifest keep their names, so they're fetched fresh; live data is never cached.
 //
 // Two contracts, kept apart: answering a request is best effort about the cache, so a put that fails, a full quota,
-// or a cache that won't open never fails a response; staging a release is strict, so a file that can't be kept, or
-// that answers as something other than what its name says, keeps the release from being promoted
+// or a cache that won't open never fails a response; staging a release is strict, so a file that can't be kept, that
+// answers as something other than what its name says, or that doesn't arrive in time, keeps the release from being
+// promoted. Neither holds up the other's writes for long: whatever stalls is given up on at a deadline
 
-import { type Build, type Generation, buildOf, closureOf, isSameBuild, retainOf } from "../shell/manifest.mts"
+import { type Build, type Generation, buildOf, closureOf, isOlder, isSameBuild, retainOf } from "../shell/manifest.mts"
 import { TILES_FOLDER } from "../map/tiles.mts"
 import { STYLE_ROOT } from "../map/style.mts"
 import { type CacheLike, ANY, deleteWhere, generationOf, isBrandAsset, isHashed, pageOf, prune } from "./retention.mts"
@@ -38,6 +39,15 @@ const CACHE = "app-v2"
 const PREVIOUS = "?gen=prev"
 /** How long windows get to say what they run; one that can't, as frozen or in the back-forward cache, is covered by its page's previous generation */
 const CENSUS_MS = 1000
+/** How long a page, a staging's files, or a file kept behind an answer may take, bodies and all, as the page's own loads may */
+const DEADLINE_MS = 60_000
+
+/** A controller that aborts at the deadline, if nothing aborts it first */
+const deadline = () => {
+  const controller = new AbortController()
+  setTimeout(() => controller.abort(new DOMException("It took too long", "TimeoutError")), DEADLINE_MS)
+  return controller
+}
 
 /**
  * What a file's name says its type must be, which what answers in its place with a 200, a sign-in page or a host's
@@ -45,7 +55,10 @@ const CENSUS_MS = 1000
  */
 const TYPE_OF: [name: RegExp, type: RegExp][] = [[/\.m?js$/, /javascript/], [/\.css$/, /css/], [/\.json$/, /json/]]
 
-/** Whether a response is the file its name says, whole enough to keep at a URL that never changes */
+/**
+ * Whether a response passes for the file its name says, by its status and type, to keep at a URL that never changes:
+ * a check of the transport, against what answers in a file's place, not of its bytes
+ */
 const isKeepable = (pathname: string, response: Response) => {
   if (!response.ok)
     return false
@@ -137,10 +150,17 @@ export const start = (scope: Scope) => {
   const serially = (task: () => Promise<unknown>) =>
     queue = queue.then(task, task)
 
-  /** Keeps a response behind the answer, if it's whole and the cache allows, which never fails the answer */
+  /**
+   * Keeps a response behind the answer, if it's whole and the cache allows, which never fails the answer. A body
+   * that stalls holds the queue only until the deadline: a put that lands after it only adds a file that never
+   * changes, for pruning to let go of if nothing needs it
+   */
   const store = (request: Request, response: Response) =>
     isKeepable(new URL(request.url).pathname, response)
-      ? serially(() => open().then(cache => keep(cache, request, response))).catch(() => {})
+      ? serially(() => open().then(cache => Promise.race([
+        keep(cache, request, response),
+        new Promise(resolve => setTimeout(resolve, DEADLINE_MS))
+      ]))).catch(() => {})
       : Promise.resolve()
 
   /**
@@ -159,18 +179,24 @@ export const start = (scope: Scope) => {
     return response
   }
 
-  /** Every task done, failing with the first failure once all have settled, so nothing of a failed staging outlives it */
-  const all = async (tasks: Promise<unknown>[]) => {
-    const failed = (await Promise.allSettled(tasks)).find(result => result.status === "rejected")
-    if (failed)
-      throw failed.reason
+  /**
+   * Every task done, the rest called off at the first failure, which is thrown once all have settled, so nothing of
+   * a failed staging outlives it
+   */
+  const all = async (tasks: Promise<unknown>[], controller: AbortController) => {
+    await Promise.allSettled(tasks.map(task => task.catch(error => controller.abort(error))))
+    if (controller.signal.aborted)
+      throw controller.signal.reason
   }
 
-  /** A file in the cache, fetched and confirmed kept if it isn't, failing if it can't be, or isn't what its name says */
-  const ensure = async (cache: CacheLike, asset: string) => {
+  /**
+   * A file in the cache, fetched and confirmed kept if it isn't, failing if it can't be, isn't what its name says,
+   * or is called off before it's kept
+   */
+  const ensure = async (cache: CacheLike, asset: string, signal: AbortSignal) => {
     if (await cache.match(asset, ANY))
       return
-    const response = await scope.fetch(asset)
+    const response = await scope.fetch(asset, { signal })
     if (!isKeepable(asset, response))
       throw new Error(`${response.status} ${response.headers.get("content-type")} from ${asset}`)
     if (!await keep(cache, asset, response))
@@ -179,22 +205,24 @@ export const start = (scope: Scope) => {
 
   /**
    * Everything a generation needs in the cache: its build's code and data, and what its data files say they can't
-   * work without, which it then retains, so no pruning meanwhile lets go of any of it
+   * work without, which it then retains, so no pruning meanwhile lets go of any of it, all by the deadline
    */
   const stage = async (cache: CacheLike, generation: Generation) => {
-    await all(closureOf(generation.build).map(asset => ensure(cache, asset)))
+    const controller = deadline()
+    const ensureAll = (assets: string[]) => all(assets.map(asset => ensure(cache, asset, controller.signal)), controller)
+    await ensureAll(closureOf(generation.build))
     generation.retain = (await generationOf(cache, generation.build)).retain
-    await all(generation.retain.required.map(asset => ensure(cache, asset)))
+    await ensureAll(generation.retain.required)
   }
 
   /**
    * The network's own copy of a page, asked past the browser's cache, with its HTML and build if it's one of ours.
    * Anything that isn't a page, like an error, passes through, as does one of ours reached by a redirect, like /map
    * to /map/, which is kept under its own path when that's visited; but a page without a release is a captive
-   * portal's sign-in or the like, answering in place of ours
+   * portal's sign-in or the like, answering in place of ours. One that hasn't arrived whole by the deadline failed
    */
   const fetchPage = async (url: string) => {
-    const response = await scope.fetch(url, { cache: "no-cache" })
+    const response = await scope.fetch(url, { cache: "no-cache", signal: deadline().signal })
     if (!response.ok || !/^text\/html/.test(response.headers.get("content-type") ?? ""))
       return { response }
     const html = await response.clone().text()
@@ -205,8 +233,8 @@ export const start = (scope: Scope) => {
   }
 
   /**
-   * Takes in the network's copy of a page, fetched behind the one served. One of an older release than the copy
-   * kept, as from an edge not yet caught up, is left alone, and the same build again changes nothing. A newer copy
+   * Takes in the network's copy of a page, fetched behind the one served. One published before the copy kept, as
+   * from an edge not yet caught up, is left alone, and the same build again changes nothing. A newer copy
    * is kept only once everything it needs is confirmed kept, with the copy before it as the page's previous
    * generation, and then sent to the page's open windows, which swap in its data, or reload for its code once out of
    * view, and what no generation needs any more is let go
@@ -218,12 +246,12 @@ export const start = (scope: Scope) => {
     const cache = await open()
     const cached = await cache.match(page)
     const current = cached && buildOf(await cached.clone().text())
-    if (current && build.release < current.release)
+    if (current && isOlder(build, current))
       return
     // Taking a page in is a fresh try at making room, whatever a storm before it gave up on
     storm = []
     if (current && isSameBuild(current, build)) {
-      if (build.release !== current.release)
+      if (isOlder(current, build))
         await keep(cache, page, copy)
       return
     }

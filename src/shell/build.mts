@@ -13,7 +13,7 @@
 import { r, type DerivativeNode, type SourceNode } from "bruh/reactive"
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { getJson } from "../shared/json.mts"
-import { type Generation, buildOf, isSameCode, mergedRetain, retainOf } from "./manifest.mts"
+import { type Generation, buildOf, isOlder, isSameCode, mergedRetain, retainOf } from "./manifest.mts"
 
 const REVALIDATE_MS = 15 * 60_000
 // A load that failed is tried again after these, the last over and over, and at once when something newer is named
@@ -95,12 +95,13 @@ const sync = () => {
 }
 
 /**
- * Takes in a newer copy of the page, newer data to load or newer code to reload for; one from a release older than
- * the newest announced, as a message that arrived late, changes nothing
+ * Takes in a newer copy of the page, newer data to load or newer code to reload for; one published before the newest
+ * announced, as a message that arrived late, changes nothing, while one published again since, as a rollback is,
+ * however long ago it was built, is newer
  */
 export const receive = (html: string) => {
   const next = buildOf(html)
-  if (next.release < announced.release)
+  if (isOlder(next, announced))
     return
   if (!isSameCode(next, running)) {
     isNewBuild.value = true

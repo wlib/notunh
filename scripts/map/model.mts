@@ -9,7 +9,7 @@ import { serviceDayStart } from "../../src/map/feed.mts"
 import type { Visit } from "../../src/map/events.mts"
 import { emptyModel, update } from "../../src/map/model.mts"
 import { type Day, addDays, localDay } from "../../src/shared/time.mts"
-import { isLearning, isRebuild, learn } from "../learn.mts"
+import { isRebuild, learn } from "../learn.mts"
 import { ApiError, health, readModel, readRows, writeModel, writeRows } from "../worker.mts"
 import { type ArchivedFeed, describe, extractDay, feedFor, localFeed, score } from "./replay.mts"
 
@@ -25,7 +25,7 @@ const archiveFeed = async () => {
   const { state, revision } = await readModel<ArchivedFeed>("gtfs")
   if (state?.version === feed.version)
     return
-  await writeModel("gtfs", { ...feed, through: today } satisfies ArchivedFeed, revision)
+  await writeModel("gtfs", { ...feed, through: today } satisfies ArchivedFeed, revision ?? null)
     .catch(error => error instanceof ApiError && error.status === 409 ? undefined : Promise.reject(error))
   console.log(`buses: archived timetable ${feed.version}`)
 }
@@ -41,20 +41,23 @@ const firstDays = () =>
 const model = await learn("buses", OUTPUT, {
   empty: emptyModel,
   // The timetable is archived as of the day it's first learned with, which a build only reading doesn't
-  prepare: isLearning ? archiveFeed : undefined,
+  prepare: async learning => {
+    if (learning)
+      await archiveFeed()
+  },
   first: async () => {
     const { sampled, stored } = await firstDays()
     return [sampled, isRebuild ? stored : undefined].filter(day => day !== undefined).sort()[0]
   },
   last:  addDays(today, serviceDayStart(today) + SETTLE_MS <= Date.now() ? -1 : -2),
-  fold:  async (model, day, stored) => {
+  fold:  async (model, day, storedThrough) => {
     const { sampled } = await firstDays()
     const isSampled = sampled !== undefined && day >= sampled
     const feed = await feedFor(day)
     const visits = isSampled ? await extractDay(feed, day) : await readRows<Visit>("visits", day)
-    // Days the stored model covers were stored then, and a rebuild leaves them be, as storing them all again would
-    // take far more than D1's writes for a day
-    if (isSampled && day > (stored?.through ?? ""))
+    // Days the stored model covers were stored then, and a rebuild, or a refit of a model of an older shape, leaves
+    // them be, as storing them all again would take far more than D1's writes for a day
+    if (isSampled && day > (storedThrough ?? ""))
       await writeRows("visits", visits, day)
     console.log(`buses: ${day}, ${visits.length} visits`)
     return update(model, day, visits, score(model, feed, visits))

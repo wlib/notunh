@@ -11,8 +11,9 @@ import { ridePath } from "./shapes.mts"
 import { Model, emptyModel } from "./model.mts"
 import { loadStyle } from "./style.mts"
 import { TilesManifest } from "./tiles.mts"
-import { type Vehicle, type StopPredictions, STALE_VEHICLE_SECONDS, fetchVehicles, fetchPredictions, fetchStopPredictions, forecastOf } from "./umo.mts"
+import { type Vehicle, type StopPredictions, STALE_VEHICLE_SECONDS, fetchVehicles, fetchPredictions, forecastOf } from "./umo.mts"
 import { type Observation, NO_FORECAST, buildRuns, timeAt } from "./forecast.mts"
+import { follow } from "./tracking.mts"
 import { type Itinerary, type Place, type WalkLeg, isSameItinerary, itineraryKey, plan, walkOnly } from "./plan.mts"
 import { currentLocation, location, locationProblem } from "./location.mts"
 import { Places, buildingAt } from "./places.mts"
@@ -26,7 +27,6 @@ import { HOUR } from "../shared/time.mts"
 
 const VEHICLE_POLL_MS    = 5_000
 const PREDICTION_POLL_MS = 30_000
-const STOP_POLL_MS       = 20_000
 // Predictions older than this, from a poll that's been failing, say nothing about where buses are now
 const PREDICTIONS_FRESH_MS = 3 * PREDICTION_POLL_MS
 
@@ -178,7 +178,12 @@ export const layovers = r(() => {
   return new Set([...soonest].filter(([, observation]) => !observation.isLive).map(([id]) => id))
 })
 
-export const runs = r(() => buildRuns(feed.value, today.value, forecast.value, model.value))
+/** Every bus with the one you're on where your phone puts it, when riding.mts has it there */
+export const fused = r<Vehicle[]>()
+/** The buses as the map follows them, and what they've shown lately of how stretches and stops take */
+export const { followed, lately, sightings } = follow(feed, model, r(() => fused.value ?? vehicles.value))
+
+export const runs = r(() => buildRuns(feed.value, today.value, forecast.value, model.value, sightings.value))
 
 //#endregion
 
@@ -310,17 +315,6 @@ export const activeRoutes = distinct((): ReadonlySet<string> => {
 /** Routes the user chose to show, overriding the active ones */
 export const chosenRoutes = r<ReadonlySet<string>>()
 export const shownRoutes = r(() => chosenRoutes.value ?? activeRoutes.value)
-
-/** The selected stop's predictions as last answered */
-const stopAsked = live<StopPredictions[]>()
-/** The selected stop's predictions, undefined until they first load, and empty if they can't, as the schedule still says when buses should come */
-export const stopPredictions = r(() => stopAsked.value.value ?? (stopAsked.value.isFailing ? [] : undefined))
-watch([selectedStopId], () => {
-  const stop = selectedStopId.value
-  stopAsked.value = { isFailing: false }
-  if (stop !== undefined)
-    return poll(signal => fetchStopPredictions(stop, signal), STOP_POLL_MS, state => stopAsked.value = state)
-})
 
 //#endregion
 

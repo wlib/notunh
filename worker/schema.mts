@@ -46,13 +46,15 @@ export const visits = sqliteTable("visits", {
 
 /**
  * Each model the nightly build fitted, by name and the last day in it, read and written whole, each write under a
- * revision of its own, which a writer must have read the latest of to store over it
+ * revision of its own, which a writer must have read the latest of to store over it, and numbered in the order
+ * stored, which is what makes it the latest: a refit's checkpoint can run through an earlier day than what it replaces
  */
 export const models = sqliteTable("models", {
   name:     text().notNull(),
   through:  text().notNull(),
   state:    text({ mode: "json" }).$type<unknown>().notNull(),
-  revision: text().notNull()
+  revision: text().notNull(),
+  written:  integer().notNull()
 }, table => [primaryKey({ columns: [table.name, table.through] })])
 
 /**

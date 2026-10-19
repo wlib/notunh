@@ -20,13 +20,13 @@ const svg = (name: string, attributes: Record<string, string | number>, ...child
   return element
 }
 
-/** Bars of the usual free count each hour of a day, hollow where we haven't watched enough, with this hour marked */
+/** Bars of the usual free count each hour of a day, with this hour marked */
 const Sparkline = ({ week, total, slot }: { week: Week, total: number, slot: number }) => {
   const day = slot - slot % 24
   return svg("svg", { class: "sparkline", viewBox: "0 0 240 40", preserveAspectRatio: "none", "aria-hidden": "true" },
     ...week.slice(day, day + 24).map((hour, i) => {
-      const height = hour ? Math.max(1, 40 * Math.min(1, hour.free / total)) : 40
-      return svg("rect", { x: i * 10 + 1, y: 40 - height, width: 8, height, class: !hour ? "unknown" : day + i === slot ? "now" : "bar" })
+      const height = Math.max(1, 40 * Math.min(1, hour.free / total))
+      return svg("rect", { x: i * 10 + 1, y: 40 - height, width: 8, height, class: day + i === slot ? "now" : "bar" })
     })
   )
 }
@@ -34,7 +34,7 @@ const Sparkline = ({ week, total, slot }: { week: Week, total: number, slot: num
 const kindsWithData = (id: string) =>
   KINDS
     .map(kind => ({ kind, week: usualWeek(id, kind), total: usual.value.rooms[id]?.[kind]?.total ?? 0 }))
-    .filter((entry): entry is { kind: Kind, week: Week, total: number } => entry.total > 0 && (entry.week?.some(Boolean) ?? false))
+    .filter((entry): entry is { kind: Kind, week: Week, total: number } => entry.total > 0 && entry.week !== undefined)
 
 const Usual = ({ id, slot }: { id: string, slot: number }) => {
   const kinds = kindsWithData(id)

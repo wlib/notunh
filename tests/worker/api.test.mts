@@ -1,14 +1,18 @@
 /// <reference types="node" />
+import { readFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { pathToFileURL } from "node:url"
 import { test, expect, vi, beforeEach, afterEach } from "vitest"
 import fc from "fast-check"
 import type { Visit } from "../../src/map/events.mts"
 import { serviceDayStart } from "../../src/map/feed.mts"
-import { HOUR, addDays, dayStart } from "../../src/shared/time.mts"
+import { type Day, HOUR, addDays, dayStart } from "../../src/shared/time.mts"
 import { app } from "../../worker/api.mts"
 import { prune } from "../../worker/rows.mts"
 import type { Env } from "../../worker/collect.mts"
 import { ROOMS } from "../../src/laundry/rooms.mts"
 import { health, readModel, readRows, request, storage, writeModel, writeRows } from "../../scripts/worker.mts"
+import { learn } from "../../scripts/learn.mts"
 import { d1 } from "./d1.mts"
 
 const TOKEN = "secret"
@@ -123,35 +127,93 @@ test("transitions and polls read by Durham's calendar day, polls an hour either 
 
 /** Stores a model as a build that read the latest first does */
 const store = async (name: string, state: { through: string, version?: string }) =>
-  writeModel(name, state, (await readModel(name)).revision)
+  writeModel(name, state, (await readModel(name)).revision ?? null)
 
-test("the latest model of a name is the one through the latest day, and only the last 30 are kept", async () => {
+test("the latest model of a name is the last stored, whatever day it's through, and only the last 30 stored are kept", async () => {
   expect(await readModel("laundry")).toEqual({ state: null, revision: null, throughs: [] })
   const days = fc.sample(fc.shuffledSubarray(Array.from({ length: 40 }, (_, i) => addDays(SUNDAY, i)), { minLength: 40 }), 1)[0]
   for (const through of days)
     await store("laundry", { through })
   await store("buses", { through: SUNDAY })
-  const kept = Array.from({ length: 30 }, (_, i) => addDays(SUNDAY, 10 + i))
-  expect(await readModel("laundry")).toEqual({ state: { through: addDays(SUNDAY, 39) }, revision: expect.any(String), throughs: kept })
-  expect((await health()).models).toEqual({ buses: SUNDAY, laundry: addDays(SUNDAY, 39), gtfs: null })
+  expect(await readModel("laundry")).toEqual({ state: { through: days.at(-1) }, revision: expect.any(String), throughs: days.slice(10).sort() })
+  expect((await health()).models).toEqual({ buses: SUNDAY, laundry: days.at(-1), gtfs: null })
   await expect(writeModel("laundry", { through: null }, null)).rejects.toThrow("400")
   await expect(writeModel("laundry", { through: SUNDAY }, undefined as unknown as null)).rejects.toThrow("400")
   await expect(writeModel("anything", { through: SUNDAY }, null)).rejects.toThrow("404")
+})
+
+test("a refit's checkpoint through an earlier day than the model it replaces is what's read back, kept however old, and only stored over by a writer that read it (Astra's checkpoint probe)", async () => {
+  for (let i = 0; i < 40; i++)
+    await store("buses", { through: addDays(SUNDAY, i), version: "1" })
+  const { revision: old } = await readModel("buses")
+  await writeModel("buses", { through: SUNDAY, version: "2" }, old!)
+  expect(await readModel("buses")).toMatchObject({ state: { through: SUNDAY, version: "2" }, throughs: expect.arrayContaining([SUNDAY]) })
+  expect((await health()).models.buses).toBe(SUNDAY)
+  // A build that read the model before the checkpoint can't replace the checkpoint, or store past it
+  await expect(writeModel("buses", { through: SUNDAY, version: "1" }, old!)).rejects.toThrow("409")
+  await expect(writeModel("buses", { through: addDays(SUNDAY, 40), version: "1" }, old!)).rejects.toThrow("409")
+  expect((await readModel("buses")).state).toEqual({ through: SUNDAY, version: "2" })
+})
+
+/** Learns a model of a version through a day as a build does, failing to read one day if asked, with the days it folded and what it bundled */
+const learnThrough = async (version: number, last: Day, unreadable?: Day) => {
+  type Model = { version: number, through: Day | null }
+  const folded: Day[] = []
+  const output = pathToFileURL(`${tmpdir()}/notunh-learn-${crypto.randomUUID()}.json`)
+  await learn<Model>("buses", output, {
+    empty: () => ({ version, through: null }),
+    first: async () => SUNDAY,
+    last,
+    fold:  async (model, day) => {
+      if (day === unreadable)
+        throw new Error("unreadable")
+      folded.push(day)
+      return { ...model, through: day }
+    }
+  })
+  return { folded, bundled: JSON.parse(await readFile(output, "utf8")) as Model }
+}
+
+const daysFrom = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, i) => addDays(SUNDAY, from + i))
+
+test("a refit of a new version stopped partway is stored, and the next build carries on from it rather than starting over", async () => {
+  await learnThrough(1, addDays(SUNDAY, 18))
+  expect((await learnThrough(2, addDays(SUNDAY, 18), addDays(SUNDAY, 11))).folded).toEqual(daysFrom(0, 10))
+  const { folded, bundled } = await learnThrough(2, addDays(SUNDAY, 18))
+  expect(folded).toEqual(daysFrom(11, 18))
+  expect(bundled).toEqual({ version: 2, through: addDays(SUNDAY, 18) })
+})
+
+test("against a Worker from before model revisions, a build only reads, storing nothing, and bundles what's stored if it's of this version", async () => {
+  const stored = { version: 1, through: addDays(SUNDAY, 3) }
+  const posts: unknown[] = []
+  // As main's Worker answers: the latest state alone, and a POST of a state itself stored over whatever's there
+  vi.stubGlobal("fetch", async (_: string, init?: RequestInit) => {
+    if (init?.method !== "POST")
+      return Response.json({ state: stored })
+    const { through } = JSON.parse(`${init.body}`)
+    posts.push(through)
+    return new Response(null, { status: typeof through === "string" ? 204 : 400 })
+  })
+  expect(await learnThrough(1, addDays(SUNDAY, 18))).toEqual({ folded: [], bundled: stored })
+  expect((await learnThrough(2, addDays(SUNDAY, 18))).bundled).toEqual({ version: 2, through: null })
+  expect(posts).toEqual([])
 })
 
 test("a model is only stored over the revision its writer read, so of two builds learning at once the second's 409s, even replacing the same day", async () => {
   await writeModel("buses", { through: SUNDAY, n: 1 }, null)
   // Both read SUNDAY's; the first to store wins, and the other learns that rather than overwriting it
   const { revision: first } = await readModel("buses")
-  await writeModel("buses", { through: addDays(SUNDAY, 1), n: 2 }, first)
-  await expect(writeModel("buses", { through: addDays(SUNDAY, 1), n: 3 }, first)).rejects.toThrow("409")
+  await writeModel("buses", { through: addDays(SUNDAY, 1), n: 2 }, first!)
+  await expect(writeModel("buses", { through: addDays(SUNDAY, 1), n: 3 }, first!)).rejects.toThrow("409")
   await expect(writeModel("buses", { through: addDays(SUNDAY, 2), n: 3 }, null)).rejects.toThrow("409")
   // The same day again, by a build that read it, replaces it, as a rebuild does, under a new revision, so a second
   // writer that read the same day's earlier revision can't replace it too (Astra's same-day probe)
   const { revision: second } = await readModel("buses")
   expect(second).not.toBe(first)
-  await writeModel("buses", { through: addDays(SUNDAY, 1), n: 4 }, second)
-  await expect(writeModel("buses", { through: addDays(SUNDAY, 1), n: 5 }, second)).rejects.toThrow("409")
+  await writeModel("buses", { through: addDays(SUNDAY, 1), n: 4 }, second!)
+  await expect(writeModel("buses", { through: addDays(SUNDAY, 1), n: 5 }, second!)).rejects.toThrow("409")
   expect(await readModel("buses")).toMatchObject({ state: { through: addDays(SUNDAY, 1), n: 4 }, throughs: [SUNDAY, addDays(SUNDAY, 1)] })
 })
 

@@ -4,8 +4,8 @@ import { Map as MapLibre, AttributionControl, NavigationControl, Marker, addProt
 import { r, watch, type Reactive, type SourceNode } from "bruh/reactive"
 import type { StyleSpecification } from "maplibre-gl"
 import type { Feed } from "./feed.mts"
-import type { Model } from "./model.mts"
-import type { Vehicle } from "./umo.mts"
+import type { Followed } from "./tracking.mts"
+import type { Lately } from "./pace.mts"
 import { type Itinerary, type Place, wayKey } from "./plan.mts"
 import type { LegPath } from "./state.mts"
 import { nearestOnLine, toLine } from "../geo/lines.mts"
@@ -264,8 +264,8 @@ export const createMap = (
     buildings:        Reactive<readonly Building[]>,
     tiles:            Reactive<{ version?: string }>,
     style:            Reactive<LoadedStyle>,
-    model:            Reactive<Model>,
-    vehicles:         Reactive<Vehicle[]>,
+    followed:         Reactive<ReadonlyMap<string, Followed>>,
+    lately:           Reactive<Lately>,
     layovers:         Reactive<ReadonlySet<string>>,
     shownRoutes:      Reactive<ReadonlySet<string>>,
     highlightedRoute: Reactive<string | undefined>,
@@ -692,7 +692,7 @@ export const createMap = (
       show(padding => map.easeTo({ center: [stop.lon, stop.lat], zoom, padding }))
     })
 
-    busPosition = animateBuses(map, state.feed, state.model, state.vehicles, state.layovers, state.focusedBuses)
+    busPosition = animateBuses(map, state.feed, state.followed, state.lately, state.layovers, state.focusedBuses)
     drawYou()
   })
 

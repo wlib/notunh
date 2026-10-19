@@ -4,7 +4,7 @@ import type { Track } from "../../src/geo/follow.mts"
 import { type Coordinates, ruler } from "../../src/geo/projection.mts"
 import { toRouteLine } from "../../src/map/shapes.mts"
 import { ZONE, type Trace } from "../../src/map/crossings.mts"
-import { DEFAULT_RATE, createPace, expectedDistance, observe } from "../../src/map/pace.mts"
+import { DEFAULT_RATE, NO_PACE, createLately, drifted, expectedDistance, observe, paced } from "../../src/map/pace.mts"
 
 const CENTER = { lat: 43.135, lon: -70.93 }
 const EAST = ruler(CENTER.lat).kx
@@ -23,11 +23,11 @@ const lineWith = (positions: number[]) =>
 
 /**
  * Drives a bus down the street at a steady speed, stopping at each stop for its wait,
- * reporting every few seconds, and lets the pace learn from every report
+ * reporting every few seconds, and lets what's learned of buses lately learn from every report
  */
 const run = (slots: number[], speed: number, waits: number[], every: number) => {
   const line = lineWith(slots)
-  const pace = createPace()
+  const pace = createLately()
   // Measured along the line itself
   const positions = line.stops.map(stop => stop.distance)
 
@@ -52,7 +52,7 @@ const run = (slots: number[], speed: number, waits: number[], every: number) => 
   let trace: Trace | undefined
   for (let t = 0; t <= time; t += every)
     trace = observe(pace, trace, { line, distance: positionAt(t) } satisfies Track, t, false)
-  return { line, pace, positions }
+  return { line, pace, positions, trace: trace! }
 }
 
 test("a bus seen driving between stops teaches how long that stretch and each stop take", () =>
@@ -83,8 +83,8 @@ test("stops close enough that their zones overlap teach no drive between them, a
     (slot, gap, speed) => {
       const { pace } = run([slot * 100, slot * 100 + gap], speed, [10, 10], ZONE / speed / 2)
       expect(pace.drives.has("s0>s1")).toBe(false)
-      for (const { seconds, excess } of [...pace.drives.values(), ...pace.zones.values()])
-        expect(seconds > 0 && Number.isFinite(excess)).toBe(true)
+      for (const { seconds } of [...pace.drives.values(), ...pace.zones.values()])
+        expect(seconds).toBeGreaterThan(0)
     }
   ))
 )
@@ -148,16 +148,16 @@ test("a bus at a stop where its trip waits for its scheduled time is expected th
   ))
 )
 
-test("how slow or quick buses have lately been on a line carries over, shrunk, to stretches nobody's driven", () =>
+test("how slow or quick a bus has lately been carries over, shrunk, to stretches nobody's driven", () =>
   fc.assert(fc.property(
     stopPositions.filter(slots => slots.length > 2),
     fc.integer({ min: 2, max: 12 }).filter(speed => speed !== DEFAULT_RATE),
     (slots, speed) => {
-      const { line, pace, positions } = run(slots, speed, [0, 0, 0, 0, 0, 0], ZONE / speed / 2)
-      // The first stretch, as if nobody had driven it
+      const { line, pace, positions, trace: driven } = run(slots, speed, [0, 0, 0, 0, 0, 0], ZONE / speed / 2)
+      // The first stretch, as if nobody had driven it, by the same bus just now
       pace.drives.delete("s0>s1")
       const start = positions[0] + ZONE
-      const trace: Trace = { track: { line, distance: start }, at: 0, isStopped: false, left: { stop: 0, at: 0 } }
+      const trace: Trace = { track: { line, distance: start }, at: 0, isStopped: false, left: { stop: 0, at: 0 }, pace: { ...driven.pace!, at: 0 } }
       const rate = (expectedDistance(pace, trace, 1) - start) / 1
       expect(Math.min(speed, DEFAULT_RATE)).toBeLessThan(rate + 1e-9)
       expect(rate).toBeLessThan(Math.max(speed, DEFAULT_RATE) + 1e-9)
@@ -169,10 +169,41 @@ test("how slow or quick buses have lately been on a line carries over, shrunk, t
 test("GPS wandering a little way back leaves a bus where it got to", () =>
   fc.assert(fc.property(stopPositions, fc.integer({ min: 0, max: 1999 }), fc.double({ min: 0.1, max: 29, noNaN: true }), (slots, distance, back) => {
     const line = lineWith(slots)
-    const pace = createPace()
+    const pace = createLately()
     const previous = observe(pace, undefined, { line, distance }, 0, true)
     const next = observe(pace, previous, { line, distance: Math.max(0, distance - back) }, 10, true)
     expect(next.track.distance).toBe(distance)
     expect(next.at).toBe(10)
+  }))
+)
+
+test("a bus's pace follows how much longer than expected its legs take, and drifts back to usual while it's unseen", () =>
+  fc.assert(fc.property(fc.array(fc.double({ min: -0.5, max: 0.5, noNaN: true }), { minLength: 1, maxLength: 20 }), fc.double({ min: 0, max: 1e5, noNaN: true }), (excesses, later) => {
+    let pace = NO_PACE
+    excesses.forEach((excess, i) => {
+      const next = paced(pace, excess, i * 60)
+      // A step toward what it saw, and surer for it
+      expect(Math.abs(next.mean - excess)).toBeLessThanOrEqual(Math.abs(drifted(pace, i * 60).mean - excess) + 1e-12)
+      expect(next.variance).toBeLessThan(drifted(pace, i * 60).variance)
+      pace = next
+    })
+    const unseen = drifted(pace, pace.at + later)
+    expect(Math.abs(unseen.mean)).toBeLessThanOrEqual(Math.abs(pace.mean) + 1e-12)
+    expect(unseen.variance).toBeLessThanOrEqual(NO_PACE.variance + 1e-12)
+    expect(drifted(pace, pace.at + 1e7).mean).toBeCloseTo(0, 9)
+  }))
+)
+
+test("a bus is seen at the stop it's in, else the last it went through, and starts afresh on another route", () =>
+  fc.assert(fc.property(stopPositions, fc.integer({ min: 3, max: 12 }), (slots, speed) => {
+    const { line, trace } = run(slots, speed, [5, 5, 5, 5, 5, 5], ZONE / speed / 2)
+    // Driven past the last stop, it was last seen leaving it
+    expect(trace.seen).toMatchObject({ stop: line.stops.at(-1)!.id })
+    expect(trace.seen!.depart).toBeGreaterThan(trace.seen!.arrive)
+    // Lost for a while, it's still where it was last seen until it's seen somewhere else
+    expect(observe(createLately(), trace, { line, distance: line.stops[0].distance }, trace.at + 1000, true).seen).toEqual(trace.seen)
+    const elsewhere = observe(createLately(), trace, { line: { ...line, route: "other" }, distance: line.stops[0].distance }, trace.at + 5, true)
+    expect(elsewhere.seen).toBeUndefined()
+    expect(elsewhere.pace).toBeUndefined()
   }))
 )

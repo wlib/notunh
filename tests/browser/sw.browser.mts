@@ -143,7 +143,7 @@ test("a release with a new worker takes over an open tab without losing its file
   await expect(again.locator("main.dining")).toContainText(HALL_SUFFIX)
 })
 
-test("an older release served again, as by an edge not yet caught up or a rollback, is left alone", async ({ context, fixture }) => {
+test("an older release served again, as by an edge not yet caught up or a platform rollback, is left alone", async ({ context, fixture }) => {
   await fixture.publish("B")
   const page = await open(context, `${fixture.origin}/dining/`)
   await cachedFrom(page, "/dining/", RELEASE.B)
@@ -152,6 +152,33 @@ test("an older release served again, as by an edge not yet caught up or a rollba
   await page.waitForTimeout(1000)
   expect(await cachedRelease(page, "/dining/")).toBe(RELEASE.B)
   expect(await page.evaluate(() => [...document.scripts].some(script => script.src.includes("index-BBBBBBBB")))).toBe(true)
+})
+
+test("a release rolled back to by publishing it again replaces a newer one in an open tab, which reloads into it out of view, and an edge still serving the newer one is left alone", async ({ context, fixture }) => {
+  await fixture.publish("C")
+  const page = await open(context, `${fixture.origin}/dining/`)
+  await cachedFrom(page, "/dining/", RELEASE.C)
+  await expect(page.locator("main.dining")).toContainText(HALL_SUFFIX)
+  await fixture.publish("R")
+  await page.evaluate(() => navigator.serviceWorker.controller!.postMessage({ revalidate: location.pathname }))
+  await cachedFrom(page, "/dining/", RELEASE.A)
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { get: () => "hidden" })
+    document.dispatchEvent(new Event("visibilitychange"))
+  }).catch(() => {})
+  await expect.poll(() => page.evaluate(() => [...document.scripts].some(script => script.src.includes("index-BBBBBBBB"))).catch(() => true)).toBe(false)
+  await expect(page.locator("main.dining")).toBeVisible()
+  await expect(page.locator("main.dining")).not.toContainText(HALL_SUFFIX)
+
+  await fixture.publish("C")
+  await page.evaluate(() => navigator.serviceWorker.controller!.postMessage({ revalidate: location.pathname }))
+  await page.waitForTimeout(1000)
+  expect(await cachedRelease(page, "/dining/")).toBe(RELEASE.A)
+  await fixture.setOffline(true)
+  const again = await context.newPage()
+  await again.goto(`${fixture.origin}/dining/`)
+  await expect(again.locator("main.dining")).toBeVisible()
+  await expect(again.locator("main.dining")).not.toContainText(HALL_SUFFIX)
 })
 
 test("a newer page that names a file the network can't serve is never kept, so the copy we have still opens offline", async ({ context, fixture }) => {

@@ -2,6 +2,8 @@
 // fixtures that stand in for upstream when there's no network
 
 import { access, cp, mkdir, writeFile } from "node:fs/promises"
+// Node's own, which its file functions take, whatever the global one is where this is checked
+import { URL } from "node:url"
 import { ORIGIN } from "./site.mts"
 
 /** The build's public folder, served as it is */

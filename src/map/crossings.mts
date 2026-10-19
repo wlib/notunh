@@ -5,6 +5,7 @@
 
 import type { Track } from "../geo/follow.mts"
 import { type RouteLine, firstAhead, lapOf, stopAt } from "./shapes.mts"
+import type { Pace } from "./pace.mts"
 
 /** m around a stop where a bus is at it, pulling in, waiting, or pulling out */
 export const ZONE = 25
@@ -36,8 +37,15 @@ export type Trace = {
   /** The last zone it left, and when */
   left?: { stop: number, at: number },
   /** Epoch seconds its trip is scheduled to leave stops where it waits for that, by stop id */
-  holds?: ReadonlyMap<string, number>
+  holds?: ReadonlyMap<string, number>,
+  /** How it's been driving lately, which outlasts the trace while it stays on its route (pace.mts) */
+  pace?: Pace,
+  /** The stop it's at or last went through */
+  seen?: Seen
 }
+
+/** A stop a bus was seen at, by id, when it got into its zone, and when it left, unless it's still there */
+export type Seen = { stop: string, arrive: number, depart?: number }
 
 /** What a bus did between two reports: drove from one stop's zone to the next, or went through a stop's zone */
 export type Crossing =

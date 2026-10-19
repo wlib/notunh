@@ -11,10 +11,13 @@ import { KINDS, type Kind, type Known, type Poll, type Status, type Transition }
 /** Hours in a week, Monday midnight in Durham first */
 export const SLOTS = 168
 /**
- * With less watching than this of an hour of the week, decayed, we say nothing about it: two weeks of it. A slot
- * gains at most an hour a week, so it levels off near 6
+ * How many hours of watching the room at any hour of the week its hour of the week is worth: each hour leans on the
+ * room's all-hours average until it's been watched this long, decayed. A slot gains at most an hour a week, so it
+ * levels off near 6, and an hour of the week then counts as much as the rest of the week. Held out on Oct 8 to 18,
+ * with at most two weeks of any hour, this tied the room's all-hours average, which beat the hours alone by 0.007 to
+ * 0.02 in Brier score, and the hours with no average beneath them said nothing at all
  */
-const MIN_EVIDENCE_HOURS = 1.5
+const POOLED_HOURS = 6
 // A room doing less than this share of its usual business that day is on a break, and would teach us nothing
 const QUIET_SHARE = 0.15
 const TRAILING_DAYS = 28
@@ -141,12 +144,23 @@ export const quantize = (stats: Stats, total: number): Week => {
   }
 }
 
-/** Each hour of the week's usual free count and chance of any free, or undefined where we haven't watched enough */
+/**
+ * Each hour of the week's usual free count and chance of any free, as watched then and leaning on the room's
+ * all-hours average, or nothing for a room never watched
+ */
 export const unpack = (week: Week) => {
   const [free, any, known] = [week.free, week.any, week.known].map(fromBase64)
-  return Array.from({ length: SLOTS }, (_, h) =>
-    known[h] / 2 >= MIN_EVIDENCE_HOURS ? { free: free[h] / 16, any: any[h] / 255 } : undefined
-  )
+  const hours = [...known].map(halves => halves / 2)
+  const watched = hours.reduce((sum, h) => sum + h, 0)
+  if (!watched)
+    return
+  const average = (values: Uint8Array, scale: number) =>
+    values.reduce((sum, value, h) => sum + value / scale * hours[h], 0) / watched
+  const [freeAll, anyAll] = [average(free, 16), average(any, 255)]
+  return hours.map((h, slot) => {
+    const own = h / (h + POOLED_HOURS)
+    return { free: own * free[slot] / 16 + (1 - own) * freeAll, any: own * any[slot] / 255 + (1 - own) * anyAll }
+  })
 }
 
 /**

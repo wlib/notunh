@@ -64,9 +64,16 @@ export const writeRows = async (name: string, rows: readonly unknown[], clear?: 
     await request(`/api/rows/${name}`, { rows: rows.slice(i, i + ROWS_PER_REQUEST), ...i === 0 && clear && { clear } })
 }
 
-/** The latest stored under a name, or the latest through a day, null if there's none, with its revision, and every day it's stored through */
-export const readModel = <M,>(name: string, through?: Day) =>
-  request<{ state: M | null, revision: string | null, throughs: Day[] }>(`/api/models/${name}${through ? `?through=${through}` : ""}`)
+/**
+ * The latest stored under a name, or the latest through a day, null if there's none, with its revision, undefined
+ * from a Worker that predates them, and every day it's stored through
+ */
+export const readModel = async <M,>(name: string, through?: Day) => {
+  const { state, revision, throughs = [] } = await request<{ state: M | null, revision?: string | null, throughs?: Day[] }>(
+    `/api/models/${name}${through ? `?through=${through}` : ""}`
+  )
+  return { state, revision, throughs }
+}
 
 /** Stores a state, if the latest stored is still the revision read, or null for none, else fails with a 409 */
 export const writeModel = (name: string, state: unknown, expect: string | null) =>

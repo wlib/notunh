@@ -6,9 +6,11 @@
 //
 // Learning writes what production has learned, so only a build of the branch production deploys from learns, as
 // Cloudflare's builds name it, or a command run by hand; any other, like a preview's, bundles what's stored as it
-// is, only reading
+// is, only reading. So does a build reaching a Worker from before models had revisions, as the first build of this
+// version does, since it runs before its Worker deploys: the next build, against the new Worker, learns
 
 import { writeFile } from "node:fs/promises"
+import type { URL } from "node:url"
 import type { Learned } from "../src/shared/learn.mts"
 import { addDays, type Day } from "../src/shared/time.mts"
 import { exists, isKept } from "./files.mts"
@@ -32,13 +34,16 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
 }: {
   empty:     () => M,
   /** Required inputs fetched within the same failure boundary as the model, whether learning or only reading it */
-  prepare?:  () => Promise<void>,
+  prepare?:  (isLearning: boolean) => Promise<void>,
   /** The first day there's anything to learn from, when nothing's been learned yet */
   first:     () => Promise<Day | undefined>,
   /** The last whole day there is */
   last:      Day,
-  /** The model with a day folded in, given what was stored before the build for what it may skip */
-  fold:      (model: M, day: Day, stored: M | null) => Promise<M>,
+  /**
+   * The model with a day folded in, given the last day any model stored before the build ran through, of whatever
+   * shape, for what it may skip
+   */
+  fold:      (model: M, day: Day, storedThrough: Day | null) => Promise<M>,
   /** What the page loads, when that isn't the model itself */
   bundle?:   (model: M) => B,
   budgetMs?: number
@@ -50,12 +55,16 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
     if (!process.env.BUILD_TOKEN)
       throw new Error("no BUILD_TOKEN to reach the Worker with")
     const started = Date.now()
-    const { state: found, revision } = await readModel<M>(name)
-    // A model of an older shape is learned again from the start
-    const stored = found?.version === empty().version ? found : null
-    await prepare?.()
-    let model = isRebuild && isLearning ? empty() : stored ?? empty()
-    const days = isLearning ? model.through === null ? await first() : addDays(model.through, 1) : undefined
+    const { state: found, revision, throughs } = await readModel<M>(name)
+    const learning = isLearning && revision !== undefined
+    if (isLearning && !learning)
+      console.warn(`${name}: the Worker predates model revisions, so this build only reads`)
+    // A model of an older shape is learned again from the start, carrying on from where a refit stopped
+    const ofThisShape = (state: M | null) => state?.version === empty().version ? state : null
+    const stored = ofThisShape(found)
+    await prepare?.(learning)
+    let model = isRebuild && learning ? empty() : stored ?? empty()
+    const days = learning ? model.through === null ? await first() : addDays(model.through, 1) : undefined
     for (let day = days; day !== undefined && day <= last; day = addDays(day, 1)) {
       if (Date.now() - started > budgetMs) {
         console.warn(`${name}: ran out of time at ${day}; the next build carries on`)
@@ -63,26 +72,27 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
       }
       // A day that can't be read stops learning there, keeping the days before it, and the next build tries again
       try {
-        model = await fold(model, day, stored)
+        model = await fold(model, day, throughs.at(-1) ?? null)
       }
       catch (error) {
         console.warn(`${name}: stopped at ${day}: ${message(error)}`)
         break
       }
     }
-    if (isLearning && model.through !== null && (isRebuild || model.through > (stored?.through ?? "")))
+    if (learning && model.through !== null && (isRebuild || model.through > (stored?.through ?? "")))
       try {
-        await writeModel(name, model, revision)
+        await writeModel(name, model, revision!)
       }
       catch (error) {
-        // Another build stored a model meanwhile, which went on from the same one, so its model is the one kept and bundled
+        // Another build stored a model meanwhile, which went on from the same one, so its model is the one kept and
+        // bundled, if it's of this shape: one another version of the build stored isn't this one's to bundle
         if (!(error instanceof ApiError && error.status === 409))
           throw error
-        console.warn(`${name}: stored by another build meanwhile, whose model is bundled`)
-        model = (await readModel<M>(name)).state ?? model
+        console.warn(`${name}: stored by another build meanwhile, whose model is bundled if it's of this shape`)
+        model = ofThisShape((await readModel<M>(name)).state) ?? model
       }
     await writeFile(output, JSON.stringify(bundle(model)))
-    console.log(`${name}: ${isLearning ? "learned" : "as stored, not learning on this branch,"} through ${model.through ?? "nothing yet"}`)
+    console.log(`${name}: ${learning ? "learned" : "as stored, not learning,"} through ${model.through ?? "nothing yet"}`)
     return model
   }
   catch (error) {

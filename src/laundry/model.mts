@@ -3,8 +3,9 @@
 // of whether any was free, folded a day at a time as src/shared/learn.mts does, so this semester's pattern takes
 // over within a month
 
+import * as v from "valibot"
 import { foldDay, type Learned as Folded } from "../shared/learn.mts"
-import { HOUR, localDay, localHour, weekday, addDays, dayStart, type Day } from "../shared/time.mts"
+import { HOUR, localDay, localHour, weekday, addDays, dayStart, Day } from "../shared/time.mts"
 import { KINDS, type Kind, type Known, type Poll, type Status, type Transition } from "./infer.mts"
 
 /** Hours in a week, Monday midnight in Durham first */
@@ -100,21 +101,23 @@ export const accumulate = (stats: Stats, steps: readonly Step[], covered: readon
 }
 
 /** A room and kind's week as the page gets it: 168 bytes each, in base64 */
-export type Week = {
-  total: number,
+const Week = v.object({
+  total: v.number(),
   /** Mean free count times 16, at most 255 */
-  free:  string,
+  free:  v.string(),
   /** Share of the hour with any free, times 255 */
-  any:   string,
+  any:   v.string(),
   /** Half-hours of watching behind each, decayed */
-  known: string
-}
+  known: v.string()
+})
+export type Week = v.InferOutput<typeof Week>
 
 /** What the page loads */
-export type Usual = {
-  through: Day | null,
-  rooms:   Record<string, Partial<Record<Kind, Week>>>
-}
+export const Usual = v.object({
+  through: v.nullable(Day),
+  rooms:   v.record(v.string(), v.record(v.picklist(KINDS), Week))
+})
+export type Usual = v.InferOutput<typeof Usual>
 
 export const emptyUsual = (): Usual =>
   ({ through: null, rooms: {} })

@@ -12,7 +12,7 @@ export const RouteList = () =>
   <section class="routes">
     <h2 class="eyebrow">Routes</h2>
     <ul>
-      {feed.routes.map(({ id, long }) => {
+      {r(() => feed.value.routes.map(({ id, long }) => {
         const count = r(() => liveCounts.value.get(id) ?? 0)
         const isRunning = r(() => runningToday.value.has(id))
         const isPicked = r(() => pickedRoute.value === id)
@@ -46,7 +46,7 @@ export const RouteList = () =>
             </button>
           </li>
         )
-      })}
+      }))}
     </ul>
   </section>
 

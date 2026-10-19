@@ -2,8 +2,7 @@
 // on a bus. iOS has already blended GPS, Wi-Fi, and motion into each fix, so they're used as they come rather
 // than filtered again, which would only lag behind real turns
 
-import { distance } from "./feed.mts"
-import { angleBetween, project, type Coordinates } from "./geometry.mts"
+import { type Coordinates, angleBetween, distance, project } from "../geo/projection.mts"
 
 export type Fix = {
   lat: number,
@@ -68,12 +67,12 @@ const MAX_TURN = 60 // degrees
  * Whether you were on a bus when it reported, from where you were at that same moment:
  * "with" it, "apart" from it, or undefined when it's too close to tell
  */
-export const compare = (bus: { lat: number, lon: number, heading: number, kph: number }, you: Fix) => {
+export const compare = (bus: { lat: number, lon: number, heading?: number | null, kph?: number | null }, you: Fix) => {
   const meters = distance(bus, you)
   if (meters > APART)
     return "apart"
   const isTurnedAway =
-    bus.kph * 1000 / 3600 >= MIN_SPEED && (you.speed ?? 0) >= MIN_SPEED && you.heading !== undefined &&
+    (bus.kph ?? 0) * 1000 / 3600 >= MIN_SPEED && (you.speed ?? 0) >= MIN_SPEED && bus.heading != null && you.heading !== undefined &&
     angleBetween(bus.heading, you.heading) > MAX_TURN
   if (meters <= WITH && !isTurnedAway)
     return "with"

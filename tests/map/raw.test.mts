@@ -1,10 +1,14 @@
-import { test, expect } from "vitest"
+import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
-import type { StopPredictions, Vehicle } from "../../src/map/umo.mts"
+import { type StopPredictions, type Vehicle, fetchVehicles } from "../../src/map/umo.mts"
 import { decode, encode, fromHex, packFixes, packPredictions, unpackFixes, unpackPredictions } from "../../src/map/raw.mts"
 
 // The epoch millisecond a row's minute starts
 const AT = 1_791_360_000_000
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 const id = fc.stringMatching(/^[A-Za-z0-9 _-]{1,12}$/)
 
@@ -59,10 +63,11 @@ test("unpackFixes gives back every vehicle's fix exactly, through a row body", a
   }))
 )
 
-test("packFixes stores nulls for missing fields, and nothing for a vehicle with no position, never throwing", () =>
-  fc.assert(fc.property(vehicle, fc.subarray(["heading", "kph", "tripTag", "route", "vehiclePosition", "lat", "gpsTime"]), (vehicle, missing) => {
-    const partial = Object.fromEntries(Object.entries(vehicle).filter(([key]) => !missing.includes(key))) as Vehicle
-    const packed = packFixes(AT, [partial, null as unknown as Vehicle])
+test("a vehicle Umo lists without some fields is stored with nulls for them, and one with no position not at all", () =>
+  fc.assert(fc.asyncProperty(vehicle, fc.subarray(["heading", "kph", "tripTag", "route", "vehiclePosition", "lat", "gpsTime"]), async (vehicle, missing) => {
+    const partial = Object.fromEntries(Object.entries(vehicle).filter(([key]) => !missing.includes(key)))
+    vi.stubGlobal("fetch", async () => Response.json([partial, null]))
+    const packed = packFixes(AT, await fetchVehicles())
     if (missing.includes("lat") || missing.includes("gpsTime")) {
       expect(packed).toEqual([])
       return

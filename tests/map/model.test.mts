@@ -1,9 +1,10 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
+import * as v from "valibot"
 import { withIndexes, type Trip } from "../../src/map/feed.mts"
 import type { Visit } from "../../src/map/events.mts"
 import {
-  LEADS, contextAt, driveEstimate, dwellEstimate, emptyModel, heldPositions, holdProbability, layoverEstimate,
+  LEADS, Model, asModel, contextAt, driveEstimate, dwellEstimate, emptyModel, holdChances, holdProbability, isLikely, layoverEstimate,
   leadIndex, quantile, shrink, update, deviationEstimate, type Cell
 } from "../../src/map/model.mts"
 import { addDays } from "../../src/shared/time.mts"
@@ -38,7 +39,7 @@ test("an empty model has nothing to say, so everything falls back on its own con
   fc.assert(fc.property(fc.uniqueArray(fc.nat(9), { maxLength: 10 }), timepoints => {
     const trip: Trip = { id: "T", route: "R", service: "", headsign: "", shape: "", stops: Array(10).fill(0), times: Array(10).fill(0), timepoints }
     const feed = withIndexes({ version: "", start: "", end: "", routes: [], stops: [{ id: "a", name: "", lat: 0, lon: 0 }], services: {}, trips: [trip], shapes: {} })
-    expect(heldPositions(model, feed, trip)).toEqual(trip.stops.map((_, i) => timepoints.includes(i)))
+    expect(holdChances(model, feed, trip).map(isLikely)).toEqual(trip.stops.map((_, i) => timepoints.includes(i)))
   }))
 })
 
@@ -102,6 +103,15 @@ test("layovers are learned by route, and each lead is scored at its own", () => 
   expect(Math.exp(layoverEstimate(model, "R")!.mu)).toBeCloseTo(300, 1)
   LEADS.forEach((minutes, i) => expect(leadIndex(minutes * 60)).toBe(i))
 })
+
+test("a model the build folds, as it's stored, always fits the schema the page loads it by, and one of another shape doesn't", () =>
+  fc.assert(fc.property(fc.array(fc.array(lognormal(4, 0.3), { maxLength: 10 }), { minLength: 1, maxLength: 10 }), days => {
+    const stored = JSON.parse(JSON.stringify(fold(days)))
+    expect(v.is(Model, stored)).toBe(true)
+    expect(asModel(stored)).toBe(stored)
+    expect(asModel({ ...stored, version: 2 })).toEqual(emptyModel())
+  }))
+)
 
 test("the model's size is bounded by the stops and routes it's seen, not by how long it's been learning", () =>
   fc.assert(fc.property(fc.array(fc.array(lognormal(4, 0.3), { maxLength: 10 }), { minLength: 1, maxLength: 30 }), days => {

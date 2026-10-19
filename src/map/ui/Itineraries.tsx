@@ -94,14 +94,16 @@ const Leave = ({ start }: { start: number }) =>
   })
 
 const ItineraryCard = ({ itinerary: it }: { itinerary: Itinerary }) => {
-  const isSelected = r(() => itinerary.value === it)
+  // By key rather than by object, as a replan's fresher copy of the chosen itinerary is still the chosen one
+  const key = itineraryKey(it)
+  const isSelected = r(() => itinerary.value !== undefined && itineraryKey(itinerary.value) === key)
   return (
     <li class={{ itinerary: true, selected: isSelected }}>
       <button
         type="button"
         class="itinerary-summary"
         aria-expanded={r(() => isSelected.value ? "true" : "false")}
-        onclick={() => selected.value = itineraryKey(it)}
+        onclick={() => selected.value = key}
       >
         <span class="itinerary-times">
           <strong><ClockRange from={new Date(it.start * 1000)} to={new Date(it.end * 1000)} /></strong>

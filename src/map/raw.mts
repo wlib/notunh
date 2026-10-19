@@ -52,18 +52,6 @@ export type SampledPrediction = {
   isLayover: boolean
 }
 
-const isNumber = (value: unknown): value is number =>
-  typeof value === "number" && Number.isFinite(value)
-
-const isString = (value: unknown): value is string =>
-  typeof value === "string"
-
-const numberOrNull = (value: unknown) =>
-  isNumber(value) ? value : null
-
-const stringOrNull = (value: unknown) =>
-  isString(value) ? value : null
-
 // Each row is at the epoch millisecond its minute starts
 const relative = (at: number, ms: number) =>
   (ms - at) / 1000
@@ -71,21 +59,19 @@ const relative = (at: number, ms: number) =>
 const absolute = (at: number, seconds: number) =>
   at + Math.round(seconds * 1000)
 
-/** Every vehicle with a usable fix, and nothing for one without, so a change upstream stores less rather than garbage */
+/** Every vehicle's fix, with null for whatever else Umo didn't say of it */
 export const packFixes = (at: number, vehicles: readonly Vehicle[]): RawFix[] =>
-  vehicles
-    .filter(vehicle => isString(vehicle?.id) && isNumber(vehicle.gpsTime) && isNumber(vehicle.lat) && isNumber(vehicle.lon))
-    .map(vehicle => [
-      vehicle.id,
-      relative(at, vehicle.gpsTime),
-      vehicle.lat,
-      vehicle.lon,
-      numberOrNull(vehicle.heading),
-      numberOrNull(vehicle.kph),
-      stringOrNull(vehicle.tripTag),
-      stringOrNull(vehicle.route?.id),
-      vehicle.vehiclePosition?.atCurrentStop === true ? stringOrNull(vehicle.vehiclePosition.currentStopTag) : null
-    ])
+  vehicles.map(vehicle => [
+    vehicle.id,
+    relative(at, vehicle.gpsTime),
+    vehicle.lat,
+    vehicle.lon,
+    vehicle.heading ?? null,
+    vehicle.kph ?? null,
+    vehicle.tripTag ?? null,
+    vehicle.route?.id ?? null,
+    vehicle.vehiclePosition?.atCurrentStop === true ? vehicle.vehiclePosition.currentStopTag ?? null : null
+  ])
 
 export const unpackFixes = (at: number, body: readonly RawFix[]): BusFix[] =>
   body.map(([vehicle, seconds, lat, lon, heading, kph, trip, route, stop]) =>
@@ -96,14 +82,12 @@ export const unpackFixes = (at: number, body: readonly RawFix[]): BusFix[] =>
 export const packPredictions = (at: number, entries: readonly StopPredictions[]): RawPrediction[] => {
   const soonest = new Map<string, RawPrediction>()
   for (const { route, stop, values } of entries)
-    for (const { vehicleId, tripId, timestamp, affectedByLayover } of values ?? []) {
-      if (!isString(route?.id) || !isString(stop?.id) || !isString(vehicleId) || !isNumber(timestamp))
-        continue
+    for (const { vehicleId, tripId, timestamp, affectedByLayover } of values) {
       const key = `${route.id}:${stop.id}:${vehicleId}`
       const seconds = relative(at, timestamp)
       const current = soonest.get(key)
       if (!current || seconds < current[4])
-        soonest.set(key, [route.id, stop.id, vehicleId, stringOrNull(tripId), seconds, affectedByLayover ? 1 : 0])
+        soonest.set(key, [route.id, stop.id, vehicleId, tripId ?? null, seconds, affectedByLayover ? 1 : 0])
     }
   return [...soonest.values()]
 }

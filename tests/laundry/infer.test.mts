@@ -1,15 +1,16 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
+import * as v from "valibot"
 import { readFileSync } from "node:fs"
 import { DEAD_AFTER, QUIET_RUNNING, STATUS_IDS, assess, assessRoom, statusOf, summarize, type History, type Machine } from "../../src/laundry/infer.mts"
-import { normalize, parseMachines, type UpstreamMachine } from "../../src/laundry/upstream.mts"
+import { machinesIn, normalize, type UpstreamMachine } from "../../src/laundry/upstream.mts"
 
 const NOW = Date.parse("2026-10-07T16:33:02Z")
 const DAY = 86_400_000
 const STATES = ["free", "running", "done", "out"]
 
 const snapshot = (time: string) =>
-  parseMachines("loc_ffa038", JSON.parse(readFileSync(new URL(`fixtures/stoke-g05-${time}.json`, import.meta.url), "utf8")))
+  v.parse(machinesIn("loc_ffa038"), JSON.parse(readFileSync(new URL(`fixtures/stoke-g05-${time}.json`, import.meta.url), "utf8")))
 
 const machine: fc.Arbitrary<Machine> = fc
   .record({
@@ -121,7 +122,7 @@ test("a room's machines come by number with out-of-order ones last, so a stacked
 
 test("which of a stacked pair a machine is comes from the vendor's type name, and a single one is neither", () => {
   const upstream = (name: string): UpstreamMachine =>
-    ({ id: "x", machineNumber: "07", modelNumber: "SDG", machineType: { name, isWasher: false, isDryer: true }, status: { statusId: "AVAILABLE", receivedAt: "2026-10-07T16:00:00Z", remainingSeconds: 0 } })
+    ({ id: "x", machineNumber: "07", modelNumber: "SDG", machineType: { name, isDryer: true }, status: { statusId: "AVAILABLE", receivedAt: "2026-10-07T16:00:00Z", remainingSeconds: 0 } })
   expect(normalize("r", upstream("Stack Dryer Upper")).stack).toBe("upper")
   expect(normalize("r", upstream("Stack Dryer Lower")).stack).toBe("lower")
   expect(normalize("r", upstream("Single Dryer")).stack).toBeUndefined()

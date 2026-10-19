@@ -4,7 +4,7 @@ import "../shell/index.mts"
 import "./index.css"
 
 import { r } from "bruh/reactive"
-import { openRoom } from "./state.mts"
+import { isUnknownRoom, openRoom } from "./state.mts"
 import { AppTitle } from "../shell/ui.tsx"
 import { RoomList } from "./ui/RoomList.tsx"
 import { RoomView } from "./ui/RoomView.tsx"
@@ -14,7 +14,11 @@ const App = () =>
     <header>
       <AppTitle page="Laundry" />
     </header>
-    {r(() => openRoom.value ? <RoomView id={openRoom.value} /> : <RoomList />)}
+    {r(() =>
+      isUnknownRoom.value ? <p class="empty muted">There's no such room. <a href="/laundry/">All rooms</a></p> :
+      openRoom.value      ? <RoomView id={openRoom.value} /> :
+                            <RoomList />
+    )}
   </main>
 
 document.getElementById("app")!.replaceChildren(<App />)

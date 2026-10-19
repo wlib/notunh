@@ -1,9 +1,10 @@
 // How build steps reach the Worker: through its token-gated /api/ routes, so the build needs no D1 credentials of
 // its own, only BUILD_TOKEN. With --local, from `wrangler dev` on localhost:8787, which takes the BUILD_TOKEN in
-// .dev.vars; otherwise from WORKER_ORIGIN, or notunh.app. Run directly to look:
-// BUILD_TOKEN=… node scripts/worker.mts health | rows <name> [day] [--local]
+// .dev.vars; otherwise from WORKER_ORIGIN, or notunh.app (site.mts). Run directly to look:
+// BUILD_TOKEN=… node scripts/worker.mts health | storage | rows <name> [day] [--local]
 
 import type { Day } from "../src/shared/time.mts"
+import { ORIGIN } from "./site.mts"
 
 /** When each table's rows start and end, in its own unit, and the last day each model has learned through */
 export type Health = {
@@ -12,11 +13,22 @@ export type Health = {
   models: Record<string, Day | null>
 }
 
-const ORIGIN = process.argv.includes("--local") ? "http://localhost:8787" : process.env.WORKER_ORIGIN ?? "https://notunh.app"
+/** How big the database is: bytes, and rows of each table */
+export type Storage = { bytes: number, rows: Record<string, number> }
+
 // A request taking longer has stalled
 const TIMEOUT_MS = 30_000
 // Rows a POST carries, within what the Worker takes in one
 const ROWS_PER_REQUEST = 200
+
+/** What the Worker answered a request with, when that wasn't success */
+export class ApiError extends Error {
+  readonly status: number
+  constructor(path: string, status: number) {
+    super(`${path} ${status}`)
+    this.status = status
+  }
+}
 
 /** A /api/ route's JSON, or with a body, what it says to a POST of it, which is nothing for most */
 export const request = async <T,>(path: string, body?: unknown): Promise<T> => {
@@ -27,7 +39,7 @@ export const request = async <T,>(path: string, body?: unknown): Promise<T> => {
     signal:  AbortSignal.timeout(TIMEOUT_MS)
   })
   if (!response.ok)
-    throw new Error(`${path} ${response.status}`)
+    throw new ApiError(path, response.status)
   return response.status === 204 ? undefined as T : response.json()
 }
 
@@ -52,15 +64,19 @@ export const writeRows = async (name: string, rows: readonly unknown[], clear?: 
     await request(`/api/rows/${name}`, { rows: rows.slice(i, i + ROWS_PER_REQUEST), ...i === 0 && clear && { clear } })
 }
 
-/** The model last stored under a name, or null if there's none */
-export const readModel = <M,>(name: string) =>
-  request<{ state: M | null }>(`/api/models/${name}`).then(({ state }) => state)
+/** The latest stored under a name, or the latest through a day, null if there's none, and every day it's stored through */
+export const readModel = <M,>(name: string, through?: Day) =>
+  request<{ state: M | null, throughs: Day[] }>(`/api/models/${name}${through ? `?through=${through}` : ""}`)
 
-export const writeModel = (name: string, state: unknown) =>
-  request<void>(`/api/models/${name}`, state)
+/** Stores a state, if what's stored is still what was read, through the day it was or null for none, else fails with a 409 */
+export const writeModel = (name: string, state: unknown, expect: Day | null) =>
+  request<void>(`/api/models/${name}`, { expect, state })
 
 export const health = () =>
   request<Health>("/api/health")
+
+export const storage = () =>
+  request<Storage>("/api/storage")
 
 if (import.meta.main) {
   const [command, name = "", day] = process.argv.slice(2).filter(arg => !arg.startsWith("--"))
@@ -70,5 +86,5 @@ if (import.meta.main) {
     console.log(`${name}${day ? ` ${day}` : ""}: ${rows.length} rows` + (ats.length ? `, at ${Math.min(...ats)} to ${Math.max(...ats)}` : ""))
   }
   else
-    console.log(JSON.stringify(await health(), null, 2))
+    console.log(JSON.stringify(await (command === "storage" ? storage() : health()), null, 2))
 }

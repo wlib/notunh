@@ -4,12 +4,16 @@
 import { Hono } from "hono/tiny"
 import { bearerAuth } from "hono/bearer-auth"
 import { timingSafeEqual } from "hono/utils/buffer"
+import { sValidator } from "@hono/standard-validator"
+import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { drizzle } from "drizzle-orm/d1"
+import * as v from "valibot"
 import { ROOMS, roomAtSlug } from "../src/laundry/rooms.mts"
-import type { Day } from "../src/shared/time.mts"
+import { Day } from "../src/shared/time.mts"
+import { describeIssues } from "../src/shared/json.mts"
 import type { Env } from "./collect.mts"
-import { ROWS, health, maxRows, read, write } from "./rows.mts"
-import { MODELS, latestModel, saveModel } from "./models.mts"
+import { ROWS, health, maxRows, read, storage, write } from "./rows.mts"
+import { MODELS, latestModel, saveModel, throughsOf } from "./models.mts"
 import { room, rooms } from "./laundry.mts"
 
 type Worker = { Bindings: Env }
@@ -23,12 +27,22 @@ const isBuild = bearerAuth<Worker>({
 
 app.use("/api/rows/*", isBuild)
 app.use("/api/models/*", isBuild)
+app.use("/api/storage", isBuild)
+
+/** A body as a schema makes it, or a 400 saying what's wrong with it */
+const body = <S extends StandardSchemaV1,>(schema: S) =>
+  sValidator("json", schema, (result, c) => result.success ? undefined : c.text(describeIssues(result.error), 400))
 
 const entryOf = (name: string) =>
   Object.hasOwn(ROWS, name) ? ROWS[name] : undefined
 
 app.get("/api/health", async c =>
   c.json(await health(c.env), 200, { "cache-control": "no-store" })
+)
+
+// Counting every row reads every row, so only on demand, and only the build's
+app.get("/api/storage", async c =>
+  c.json(await storage(c.env), 200, { "cache-control": "no-store" })
 )
 
 app.get("/api/rows/:name", async c => {
@@ -38,35 +52,34 @@ app.get("/api/rows/:name", async c => {
     : c.notFound()
 })
 
-app.post("/api/rows/:name", async c => {
-  const entry = entryOf(c.req.param("name"))
-  if (!entry?.canWrite)
-    return c.notFound()
-  const { rows, clear } = await c.req.json<{ rows: Record<string, unknown>[], clear?: Day }>()
-  if (!Array.isArray(rows) || rows.length > maxRows(entry))
-    return c.text(`Needs up to ${maxRows(entry)} rows`, 400)
-  await write(c.env, entry, rows, clear)
-  return c.body(null, 204)
-})
+// Rows to store, as many as a write takes, and the day to clear first, if any, for each table the build writes
+for (const [name, entry] of Object.entries(ROWS))
+  if (entry.row)
+    app.post(`/api/rows/${name}`, body(v.object({ rows: v.pipe(v.array(entry.row), v.maxLength(maxRows(entry))), clear: v.optional(Day) })), async c => {
+      const { rows, clear } = c.req.valid("json")
+      await write(c.env, entry, rows, clear)
+      return c.body(null, 204)
+    })
 
+// The latest stored, or the latest through a day, and every day the name is stored through
 app.get("/api/models/:name", async c => {
   const name = c.req.param("name")
   if (!MODELS.includes(name))
     return c.notFound()
-  const [model] = await latestModel(drizzle(c.env.DB), name)
-  return c.json({ state: model?.state ?? null })
+  const db = drizzle(c.env.DB)
+  const [[model], days] = await db.batch([latestModel(db, name, c.req.query("through") as Day | undefined), throughsOf(db, name)])
+  return c.json({ state: model?.state ?? null, throughs: days.map(({ through }) => through) })
 })
 
-app.post("/api/models/:name", async c => {
+// Stores a state through a day if the latest is still the one the writer expects, by its day or null for none, else 409
+app.post("/api/models/:name", body(v.object({ expect: v.nullable(Day), state: v.looseObject({ through: Day }) })), async c => {
   const name = c.req.param("name")
   if (!MODELS.includes(name))
     return c.notFound()
-  const state = await c.req.json<{ through?: unknown }>()
-  if (typeof state?.through !== "string")
-    return c.text("Needs a model through a day", 400)
-  const db = drizzle(c.env.DB)
-  await db.batch(saveModel(db, name, state.through, state))
-  return c.body(null, 204)
+  const { expect, state } = c.req.valid("json")
+  return await saveModel(drizzle(c.env.DB), name, state.through, state, expect)
+    ? c.body(null, 204)
+    : c.text("Stored by another build since it was read", 409)
 })
 
 app.get("/api/laundry/rooms", c =>

@@ -4,13 +4,15 @@
 // and the site rebuilds nightly. With --if-missing, menus already there are kept
 
 import { mkdir, rm, writeFile } from "node:fs/promises"
+import * as v from "valibot"
 import { addDays, localDay } from "../../src/shared/time.mts"
-import { getJson } from "../../src/shared/json.mts"
-import { MEALS, type MenusIndex } from "../../src/dining/menus.mts"
-import { convert, type NutrisliceWeek } from "./convert.mts"
+import { getJson, objectOf } from "../../src/shared/json.mts"
+import { MEALS, MenusIndex } from "../../src/dining/menus.mts"
+import { NutrisliceWeek, convert } from "./convert.mts"
 import { hallHours, nutrisliceHours, parseUnhHours, UNH_PAGES, type NutrisliceSchool } from "./hours.mts"
-import { publish } from "./publish.mts"
+import { carriedFiles, publish } from "./publish.mts"
 import { isKept } from "../files.mts"
+import { ORIGIN, deployed } from "../site.mts"
 
 const API = "https://unh.api.nutrislice.com/menu/api"
 const INDEX = new URL("../../src/dining/menus.json", import.meta.url)
@@ -23,10 +25,14 @@ if (await isKept(INDEX))
 // Durham's, as UTC's is already tomorrow by a summer evening
 const today = localDay(Date.now())
 
-type School = NutrisliceSchool & { slug: string, name: string, active_menu_types: { slug: string }[] }
+// A school, its hours taken as they come, as nutrisliceHours reads them for what they turn out to be
+const School = v.intersect([
+  objectOf<NutrisliceSchool>(),
+  v.object({ slug: v.string(), name: v.string(), active_menu_types: v.array(v.object({ slug: v.string() })) })
+])
 
 // Dining halls are the schools serving meals, unlike stadium concessions
-const halls = (await getJson<School[]>(`${API}/schools/`))
+const halls = (await getJson(`${API}/schools/`, { schema: v.array(School) }))
   .map(school => ({
     id: school.slug,
     name: school.name.replace(/^Dining - /, "").replace(/ Menus$/, ""),
@@ -41,7 +47,7 @@ const weeks = await Promise.all(
       Array.from({ length: WEEKS }, async (_, week) => ({
         hall: hall.id,
         meal,
-        week: await getJson<NutrisliceWeek>(`${API}/weeks/school/${hall.id}/menu-type/${meal}/${addDays(today, week * 7).replaceAll("-", "/")}/`)
+        week: await getJson(`${API}/weeks/school/${hall.id}/menu-type/${meal}/${addDays(today, week * 7).replaceAll("-", "/")}/`, { schema: NutrisliceWeek })
       }))
     )
   )
@@ -71,11 +77,19 @@ const data = convert(halls.map(({ id, name }) => ({ id, name })), weeks, Date.no
 if (!data.menus.length)
   throw new Error("Nutrislice has no menus posted")
 
-// The index goes last, so it only ever names files that are there
+// The index goes last, so it only ever names files that are there, and last night's files stay published one more
+// night for the tabs still on its index, fetched back from the site since a build starts from nothing
 const { index, files } = publish(data, hours)
+const carried = carriedFiles(await deployed("/dining/", "menus", MenusIndex), index, Date.now())
 await rm(FILES, { recursive: true, force: true })
 await mkdir(FILES, { recursive: true })
 await Promise.all([...files].map(([name, json]) => writeFile(new URL(`${name}.json`, FILES), json)))
+const kept = await Promise.all(carried.map(url =>
+  fetch(ORIGIN + url)
+    .then(response => response.ok ? response.arrayBuffer() : Promise.reject(new Error(`${response.status}`)))
+    .then(body => writeFile(new URL(`.${url.slice(url.lastIndexOf("/"))}`, FILES), new Uint8Array(body)).then(() => true))
+    .catch(error => void console.warn(`Not keeping ${url}: ${error.message}`))
+))
 await writeFile(INDEX, JSON.stringify(index))
 const days = [...new Set(data.menus.map(menu => menu.day))]
-console.log(`Wrote ${data.halls.length} halls (${Object.keys(hours).length} with hours), ${data.foods.length} foods, ${data.menus.length} meals (${days[0]}–${days.at(-1)}) in ${files.size} files`)
+console.log(`Wrote ${data.halls.length} halls (${Object.keys(hours).length} with hours), ${data.foods.length} foods, ${data.menus.length} meals (${days[0]}–${days.at(-1)}) in ${files.size} files, keeping ${kept.filter(Boolean).length} of last night's`)

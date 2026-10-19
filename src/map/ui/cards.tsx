@@ -4,11 +4,11 @@
 
 import { r, type SourceNode } from "bruh/reactive"
 import type { Place } from "../plan.mts"
-import { nameAt, type MapHints } from "../osm.mts"
-import { from, to } from "../state.mts"
+import { nameAt, type MapHints } from "../gazetteer.mts"
+import { from, gazetteer, to } from "../state.mts"
 
 export const PlaceCard = ({ place, hints, close }: { place: Place, hints: MapHints, close: () => void }) => {
-  const found = nameAt(place, hints).catch(() => undefined)
+  const found = nameAt(gazetteer.peek(), place, hints).catch(() => undefined)
   const name = r<string>()
   found.then(result => name.value = result ?? place.name)
 

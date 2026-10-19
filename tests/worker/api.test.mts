@@ -7,7 +7,8 @@ import { HOUR, addDays, dayStart } from "../../src/shared/time.mts"
 import { app } from "../../worker/api.mts"
 import { prune } from "../../worker/rows.mts"
 import type { Env } from "../../worker/collect.mts"
-import { health, readModel, readRows, writeModel, writeRows } from "../../scripts/worker.mts"
+import { ROOMS } from "../../src/laundry/rooms.mts"
+import { health, readModel, readRows, request, storage, writeModel, writeRows } from "../../scripts/worker.mts"
 import { d1 } from "./d1.mts"
 
 const TOKEN = "secret"
@@ -79,6 +80,27 @@ test("a day's visits, written a request at a time, read back as they were sent, 
   30_000
 )
 
+/** Ways a body of rows can be wrong: a visit missing what it must have or with the wrong type of thing, too many rows, or no day to clear */
+const wrong = fc.oneof(
+  fc.tuple(fc.constantFrom("vehicle", "route", "stop", "arrive", "depart"), fc.constantFrom(undefined, null, true, [], {}, "the other type")).map(([key, value]) =>
+    ([first, ...rest]: Visit[]) => {
+      const other = typeof first[key as keyof Visit] === "string" ? 1 : "1"
+      return { rows: [{ ...first, [key]: value === "the other type" ? other : value }, ...rest] }
+    }
+  ),
+  fc.constant((rows: Visit[]) => ({ rows: Array.from({ length: 5000 }, () => rows[0]) })),
+  fc.constantFrom(null, "2026-11-01", { visits: [] }).map(rows => () => ({ rows })),
+  fc.constantFrom("Sunday", "2026-13-01", 20261101).map(clear => (rows: Visit[]) => ({ rows, clear }))
+)
+
+test("a body of rows that isn't as the table's are is refused with a 400, and stores nothing", async () =>
+  fc.assert(fc.asyncProperty(visits(5).filter(rows => rows.length > 0), wrong, async (rows, spoil) => {
+    worker(TOKEN)
+    await expect(request("/api/rows/visits", spoil(rows))).rejects.toThrow("400")
+    expect(count("visits")).toBe(0)
+  }), { numRuns: 50 })
+)
+
 test("reading follows the pages past the first", async () => {
   const many = Array.from({ length: 1001 }, (_, i): Visit => ({ vehicle: "T-51", route: "3", stop: "101", arrive: NOON + i, depart: NOON + i }))
   await writeRows("visits", many, SUNDAY)
@@ -99,17 +121,49 @@ test("transitions and polls read by Durham's calendar day, polls an hour either 
   expect(await readRows("polls", SUNDAY)).toEqual(ats.slice(1, -1).map(at => ({ at, failed: [] })))
 })
 
+/** Stores a model as a build that read the latest first does */
+const store = async (name: string, state: { through: string, version?: string }) =>
+  writeModel(name, state, (await readModel<{ through: string }>(name)).state?.through ?? null)
+
 test("the latest model of a name is the one through the latest day, and only the last 30 are kept", async () => {
-  expect(await readModel("laundry")).toBeNull()
+  expect(await readModel("laundry")).toEqual({ state: null, throughs: [] })
   const days = fc.sample(fc.shuffledSubarray(Array.from({ length: 40 }, (_, i) => addDays(SUNDAY, i)), { minLength: 40 }), 1)[0]
   for (const through of days)
-    await writeModel("laundry", { version: 1, through })
-  await writeModel("buses", { version: 1, through: SUNDAY })
-  expect(await readModel("laundry")).toEqual({ version: 1, through: addDays(SUNDAY, 39) })
-  expect((await health()).models).toEqual({ buses: SUNDAY, laundry: addDays(SUNDAY, 39) })
-  expect(sqlite.prepare("select through from models where name = 'laundry' order by through").all().map(({ through }) => through)).toEqual(Array.from({ length: 30 }, (_, i) => addDays(SUNDAY, 10 + i)))
-  await expect(writeModel("laundry", { version: 1, through: null })).rejects.toThrow("400")
-  await expect(writeModel("anything", { version: 1, through: SUNDAY })).rejects.toThrow("404")
+    await store("laundry", { through })
+  await store("buses", { through: SUNDAY })
+  const kept = Array.from({ length: 30 }, (_, i) => addDays(SUNDAY, 10 + i))
+  expect(await readModel("laundry")).toEqual({ state: { through: addDays(SUNDAY, 39) }, throughs: kept })
+  expect((await health()).models).toEqual({ buses: SUNDAY, laundry: addDays(SUNDAY, 39), gtfs: null })
+  await expect(writeModel("laundry", { through: null }, null)).rejects.toThrow("400")
+  await expect(writeModel("laundry", { through: SUNDAY }, undefined as unknown as null)).rejects.toThrow("400")
+  await expect(writeModel("anything", { through: SUNDAY }, null)).rejects.toThrow("404")
+})
+
+test("a model is only stored over the one its writer read, so of two builds learning at once the second's 409s", async () => {
+  await writeModel("buses", { through: SUNDAY, n: 1 }, null)
+  // Both read SUNDAY's; the first to store wins, and the other learns that rather than overwriting it
+  await writeModel("buses", { through: addDays(SUNDAY, 1), n: 2 }, SUNDAY)
+  await expect(writeModel("buses", { through: addDays(SUNDAY, 1), n: 3 }, SUNDAY)).rejects.toThrow("409")
+  await expect(writeModel("buses", { through: addDays(SUNDAY, 2), n: 3 }, null)).rejects.toThrow("409")
+  // The same day again, by a build that read it, replaces it, as a rebuild does
+  await writeModel("buses", { through: addDays(SUNDAY, 1), n: 4 }, addDays(SUNDAY, 1))
+  expect(await readModel("buses")).toEqual({ state: { through: addDays(SUNDAY, 1), n: 4 }, throughs: [SUNDAY, addDays(SUNDAY, 1)] })
+})
+
+test("the timetable is read back by the day it was in force, as the version archived last at or before it", async () => {
+  for (const [i, version] of ["spring", "fall"].entries())
+    await store("gtfs", { through: addDays(SUNDAY, 10 * i), version })
+  const versionOf = async (day: string) => (await readModel<{ version: string }>("gtfs", day)).state?.version ?? null
+  expect(await Promise.all([addDays(SUNDAY, -1), SUNDAY, addDays(SUNDAY, 9), addDays(SUNDAY, 10), addDays(SUNDAY, 99)].map(versionOf)))
+    .toEqual([null, "spring", "spring", "fall", "fall"])
+  expect((await readModel("gtfs")).throughs).toEqual([SUNDAY, addDays(SUNDAY, 10)])
+})
+
+test("storage says how big the database is, in bytes and rows a table", async () => {
+  await writeRows("visits", Array.from({ length: 3 }, (_, i): Visit => ({ vehicle: "T-51", route: "3", stop: "101", arrive: NOON + i, depart: NOON + i })))
+  const { bytes, rows } = await storage()
+  expect(bytes).toBeGreaterThan(4096)
+  expect(rows).toEqual({ samples: 0, visits: 3, models: 0, transitions: 0, latest: 0, polls: 0, room_snapshots: 0 })
 })
 
 test("health says when each table's rows start and end, in its own unit, and the day each model runs through", async () => {
@@ -124,7 +178,7 @@ test("health says when each table's rows start and end, in its own unit, and the
     visits:      { since: NOON, last: NOON },
     transitions: { since: null, last: null },
     polls:       { since: at, last: at },
-    models:      { buses: null, laundry: null }
+    models:      { buses: null, laundry: null, gtfs: null }
   })
 })
 
@@ -141,6 +195,23 @@ test("the nightly prune drops each table's rows past what it keeps", async () =>
   expect([count("samples"), count("transitions"), count("visits")]).toEqual([2, 2, 2])
 })
 
+test("the nightly prune drops laundry's records of rooms no longer listed, and of machines gone from a room's snapshot", async () => {
+  const [room, other] = ROOMS.map(({ id }) => id)
+  const insert = (machine: string, room: string) =>
+    sqlite.prepare("insert into latest (machine, room, kind, number, model, status, raw, at, reported, remaining) values (?, ?, 'washer', '1', 'm', 'free', '', 0, 0, 0)").run(machine, room)
+  const snapshot = (room: string, machines: string[]) =>
+    sqlite.prepare("insert into room_snapshots (room, at, machines) values (?, 0, ?)").run(room, JSON.stringify(machines.map(id => ({ id }))))
+  insert("kept", room)
+  insert("replaced", room)
+  insert("unsnapshotted", other)
+  insert("closed", "a-room-that-was-closed")
+  snapshot(room, ["kept", "new"])
+  snapshot("a-room-that-was-closed", ["closed"])
+  await prune(env, "2026-10-07")
+  expect(sqlite.prepare("select machine from latest order by machine").all().map(({ machine }) => machine)).toEqual(["kept", "unsnapshotted"])
+  expect(sqlite.prepare("select room from room_snapshots").all().map(({ room }) => room)).toEqual([room])
+})
+
 test("the build's routes are only the build's", async () => {
   for (const [token, given] of [[TOKEN, "wrong"], [TOKEN, ""], [undefined, TOKEN], [undefined, "undefined"]]) {
     worker(token, given)
@@ -148,7 +219,8 @@ test("the build's routes are only the build's", async () => {
       await expect(readRows(name)).rejects.toThrow(/40[01]/)
     await expect(writeRows("visits", [], SUNDAY)).rejects.toThrow(/40[01]/)
     await expect(readModel("buses")).rejects.toThrow(/40[01]/)
-    await expect(writeModel("buses", { version: 1, through: SUNDAY })).rejects.toThrow(/40[01]/)
+    await expect(writeModel("buses", { version: 1, through: SUNDAY }, null)).rejects.toThrow(/40[01]/)
+    await expect(storage()).rejects.toThrow(/40[01]/)
   }
   worker(TOKEN)
   await expect(readRows("nothing")).rejects.toThrow("404")

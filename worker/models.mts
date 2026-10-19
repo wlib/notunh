@@ -1,29 +1,47 @@
-// The models the nightly build fits, each kept by name for the last day in it, a month of nights back
+// What the nightly build stores whole, each by name and a day: the models it fits, kept a month of nights back to
+// go back to, and the timetable, archived once per version it sees, as of the day it first did, so a day's visits
+// can always be replayed against the timetable then in force
 
 import type { DrizzleD1Database } from "drizzle-orm/d1"
-import { and, desc, eq, lt, max } from "drizzle-orm"
+import { and, asc, desc, eq, lt, lte, max, sql } from "drizzle-orm"
 import type { Day } from "../src/shared/time.mts"
 import { models } from "./schema.mts"
 
-/** The models there are: the map's buses, and laundry's rooms */
-export const MODELS = ["buses", "laundry"]
+/** What there is: the map's buses, laundry's rooms, and the GTFS feed by version */
+export const MODELS = ["buses", "laundry", "gtfs"]
 
-// Models kept of each, one per night, to go back to
+// Kept of each name, one per night, or per feed version
 const KEEP = 30
 
-/** The latest model of a name, as the only row if one has been fitted */
-export const latestModel = (db: DrizzleD1Database, name: string) =>
-  db.select({ state: models.state }).from(models).where(eq(models.name, name)).orderBy(desc(models.through)).limit(1)
+/** The latest of a name, or the latest through a day, as the only row if there is one */
+export const latestModel = (db: DrizzleD1Database, name: string, through?: Day) =>
+  db.select({ state: models.state }).from(models)
+    .where(and(eq(models.name, name), through === undefined ? undefined : lte(models.through, through)))
+    .orderBy(desc(models.through)).limit(1)
 
-/** Statements that store a model through a day, replacing one through the same day and dropping old ones */
-export const saveModel = (db: DrizzleD1Database, name: string, through: Day, state: unknown) => {
+/** Every day a name is stored through, in order */
+export const throughsOf = (db: DrizzleD1Database, name: string) =>
+  db.select({ through: models.through }).from(models).where(eq(models.name, name)).orderBy(asc(models.through))
+
+/**
+ * Stores a state through a day, replacing one through the same day, if the latest stored is still the one the
+ * writer read, by its day, or none: whether it was, which two builds learning at once settle by, as the one that
+ * reads the other's work is the one that goes on from it. Old ones go when a new one is kept
+ */
+export const saveModel = async (db: DrizzleD1Database, name: string, through: Day, state: unknown, expect: Day | null) => {
+  const { meta } = await db.run(sql`
+    insert into ${models} (name, through, state)
+    select ${name}, ${through}, ${JSON.stringify(state)}
+    where coalesce((select max(through) from ${models} where name = ${name}), '') = ${expect ?? ""}
+    on conflict (name, through) do update set state = excluded.state
+  `)
+  if (!meta.changes)
+    return false
   const kept = db.select({ through: models.through }).from(models).where(eq(models.name, name)).orderBy(desc(models.through)).limit(1).offset(KEEP - 1)
-  return [
-    db.insert(models).values({ name, through, state }).onConflictDoUpdate({ target: [models.name, models.through], set: { state } }),
-    db.delete(models).where(and(eq(models.name, name), lt(models.through, kept)))
-  ] as const
+  await db.delete(models).where(and(eq(models.name, name), lt(models.through, kept)))
+  return true
 }
 
-/** The last day each stored model runs through */
+/** The last day each stored name runs through */
 export const throughs = (db: DrizzleD1Database) =>
   db.select({ name: models.name, through: max(models.through) }).from(models).groupBy(models.name)

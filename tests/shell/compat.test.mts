@@ -72,7 +72,7 @@ const tooOld = (compat: CompatStatement) =>
 
 test("the app only uses APIs every supported browser has, or checks for them first", () => {
   const problems: string[] = []
-  for (const file of [...globSync("src/**/*.{mts,tsx}"), "public/sw.js"]) {
+  for (const file of globSync("src/**/*.{mts,tsx}")) {
     const lines = readFileSync(file, "utf8").split("\n")
     lines.forEach((line, i) => {
       // Comments only mention APIs

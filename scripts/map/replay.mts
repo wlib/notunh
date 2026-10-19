@@ -4,19 +4,49 @@
 // BUILD_TOKEN=… node scripts/map/replay.mts 2026-10-07 [--local]
 
 import { readFile } from "node:fs/promises"
-import { distance, withIndexes, type Feed } from "../../src/map/feed.mts"
+import { withIndexes, type Feed, type FeedData } from "../../src/map/feed.mts"
+import { distance } from "../../src/geo/projection.mts"
 import { extract, type Visit } from "../../src/map/events.mts"
 import { decode, fromHex, unpackFixes, unpackPredictions, type RawFix, type RawPrediction, type SampledPrediction } from "../../src/map/raw.mts"
-import { STREET_DETOUR } from "../../src/map/geometry.mts"
+import { STREET_DETOUR } from "../../src/map/walks.mts"
 import { DEFAULT_RATE, DEFAULT_WAIT, FACTOR_WINDOW, ZONE, factorOf, type Seen } from "../../src/map/pace.mts"
 import {
   LEADS, asModel, context, contextAt, dayType, deviationEstimate, driveEstimate, dwellEstimate, emptyScores,
-  heldPositions, inflation, probit, variance, type Estimate, type Model, type Scores, type Tally
+  holdChances, inflation, isLikely, probit, variance, type Estimate, type Model, type Scores, type Tally
 } from "../../src/map/model.mts"
 import { type Day, localDay } from "../../src/shared/time.mts"
 import { readModel, readRows } from "../worker.mts"
 
 export const FEED = new URL("../../src/map/gtfs.json", import.meta.url)
+
+/** The timetable as the Worker archives each version of it: the feed, as of the day the build first saw it */
+export type ArchivedFeed = FeedData & { through: Day }
+
+/** The timetable fetched for this build */
+export const localFeed = async () =>
+  JSON.parse(await readFile(FEED, "utf8")) as FeedData
+
+// The archived versions, by the day each was first seen, the latest of them read first and only once
+const archived = new Map<Day, Promise<Feed>>()
+let days: Promise<Day[]> | undefined
+
+/**
+ * The timetable in force on a day, for replaying it as the buses then ran it: the version archived last at or
+ * before it, or the first archived for days before any was, or this build's own while none is
+ */
+export const feedFor = async (day: Day): Promise<Feed> => {
+  const throughs = await (days ??= readModel<ArchivedFeed>("gtfs").then(({ state, throughs }) => {
+    if (state)
+      archived.set(state.through, Promise.resolve(withIndexes(state)))
+    return throughs
+  }))
+  const through = throughs.findLast(through => through <= day) ?? throughs[0]
+  if (through === undefined)
+    return withIndexes(await localFeed())
+  if (!archived.has(through))
+    archived.set(through, readModel<ArchivedFeed>("gtfs", through).then(({ state }) => withIndexes(state!)))
+  return archived.get(through)!
+}
 
 // Umo's predictions are sampled on minutes divisible by 5, so forecasts are made then
 const SAMPLED = 300 // s
@@ -118,7 +148,7 @@ export const score = (model: Model, feed: Feed, visits: readonly Visit[]): Score
     const base = visit.scheduled - trip.times[visit.position]
     // Its service day, by noon on it
     const day = localDay((base + 43_200) * 1000)
-    const held = heldPositions(model, feed, trip)
+    const holds = holdChances(model, feed, trip)
     const deviation = deviationEstimate(model, trip.route, visit.stop, dayType(day))
 
     forecastTimes(visit.depart).forEach((at, i) => {
@@ -145,7 +175,7 @@ export const score = (model: Model, feed: Feed, visits: readonly Visit[]): Score
           time = Math.max(time, at)
         time += dwell.seconds
         spread += drive.variance + dwell.variance
-        if (held[position])
+        if (isLikely(holds[position]))
           time = Math.max(time, base + trip.times[position])
       }
       time = Math.max(time, at)
@@ -197,8 +227,8 @@ export const extractDay = async (feed: Feed, day: Day) => {
 
 if (import.meta.main) {
   const day = process.argv.slice(2).find(arg => !arg.startsWith("--"))!
-  const feed = withIndexes(JSON.parse(await readFile(FEED, "utf8")))
-  const model = asModel(await readModel("buses"))
+  const feed = await feedFor(day)
+  const model = asModel((await readModel("buses")).state)
   const visits = await extractDay(feed, day)
-  console.log(`${day}: ${visits.length} visits, scored with the model through ${model.through ?? "nothing"}\n${describe(score(model, feed, visits))}`)
+  console.log(`${day}: ${visits.length} visits on timetable ${feed.version}, scored with the model through ${model.through ?? "nothing"}\n${describe(score(model, feed, visits))}`)
 }

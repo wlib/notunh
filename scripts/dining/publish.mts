@@ -3,7 +3,18 @@
 // it, so a food served all week is one file, and anything unchanged from last night stays cached
 
 import { createHash } from "node:crypto"
-import { DIETS, type FoodSummary, type Meal, type MenusData, type MenusIndex, type SearchFood, type Serving } from "../../src/dining/menus.mts"
+import { DIETS, type FoodSummary, type Meal, type MenusData, type MenusIndex, type SearchFood, type Serving, fileUrl } from "../../src/dining/menus.mts"
+import { HOUR } from "../../src/shared/time.mts"
+
+// How long an index's files stay published after it: two nights, for a tab still on last night's
+const CARRY_MS = 48 * HOUR
+
+/**
+ * The files of the index the site serves now that tonight's must keep publishing, by URL: all it names that
+ * tonight's doesn't, while it's less than two nights old, so a page still on it finds what it asks for
+ */
+export const carriedFiles = (serving: Pick<MenusIndex, "fetched" | "files"> | undefined, tonight: Pick<MenusIndex, "files">, now: number) =>
+  serving && now - serving.fetched < CARRY_MS ? serving.files.filter(url => !tonight.files.includes(url)) : []
 
 export const publish = (data: MenusData, hours: MenusIndex["hours"] = {}) => {
   const files = new Map<string, string>()
@@ -60,7 +71,7 @@ export const publish = (data: MenusData, hours: MenusIndex["hours"] = {}) => {
     contains: [...counts].sort((a, b) => b[1] - a[1]).map(([item]) => item),
     days,
     search,
-    files: [...files.keys()]
+    files: [...files.keys()].map(fileUrl)
   }
   return { index, files }
 }

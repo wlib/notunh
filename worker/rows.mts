@@ -3,12 +3,16 @@
 // back in the order they were stored, and the build sorts where it must
 
 import { drizzle } from "drizzle-orm/d1"
-import { and, asc, desc, eq, getTableColumns, getTableName, gt, gte, lt, sql, type SQL } from "drizzle-orm"
+import type * as v from "valibot"
+import { createInsertSchema } from "drizzle-valibot"
+import { and, asc, desc, eq, getTableColumns, getTableName, gt, gte, lt, notInArray, or, sql, type SQL } from "drizzle-orm"
 import type { BatchItem } from "drizzle-orm/batch"
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core"
 import { HOUR, addDays, dayStart, type Day } from "../src/shared/time.mts"
 import { serviceDayStart } from "../src/map/feed.mts"
-import { latest, polls, samples, transitions, visits } from "./schema.mts"
+import { ROOMS } from "../src/laundry/rooms.mts"
+import * as schema from "./schema.mts"
+import { latest, polls, roomSnapshots, samples, transitions, visits } from "./schema.mts"
 import { MODELS, throughs } from "./models.mts"
 import type { Env } from "./collect.mts"
 
@@ -26,7 +30,8 @@ export type Entry = {
   page?:     number,
   /** How many days the nightly run keeps, by the Env variable naming it */
   keep?:     "RETAIN_DAYS" | "RETAIN_VISIT_DAYS",
-  canWrite?: true
+  /** What each row the build writes must be, for a table it writes */
+  row?:      v.GenericSchema<unknown, Record<string, unknown>>
 }
 
 const serviceDay = (day: Day): [number, number] =>
@@ -44,7 +49,7 @@ const sampled = (source: string): Entry => ({
 export const ROWS: Record<string, Entry> = {
   buses:       sampled("buses"),
   predictions: sampled("predictions"),
-  visits:      { table: visits, at: visits.arrive, span: day => serviceDay(day).map(ms => ms / 1000) as [number, number], keep: "RETAIN_VISIT_DAYS", canWrite: true },
+  visits:      { table: visits, at: visits.arrive, span: day => serviceDay(day).map(ms => ms / 1000) as [number, number], keep: "RETAIN_VISIT_DAYS", row: createInsertSchema(visits) },
   transitions: { table: transitions, at: transitions.at, span: calendarDay, keep: "RETAIN_DAYS" },
   polls:       { table: polls, at: polls.at, span: calendarDay, pad: HOUR, keep: "RETAIN_DAYS" },
   machines:    { table: latest }
@@ -123,12 +128,37 @@ export const write = (env: Env, entry: Entry, rows: readonly Record<string, unkn
   ])
 }
 
-/** Drops every row older than its table keeps, counting back from the day of today */
+/**
+ * Drops every row older than its table keeps, counting back from the day of today, and laundry's records of rooms
+ * no longer listed and of machines no longer in their room's snapshot, where it has one
+ */
 export const prune = (env: Env, today: Day) => {
   const db = drizzle(env.DB)
-  return batch(db, Object.values(ROWS).flatMap(({ table, at, where, span, keep }) =>
-    at && span && keep ? [db.delete(table).where(and(where, lt(at, span(addDays(today, -env[keep]))[0])))] : []
-  ))
+  const rooms = ROOMS.map(({ id }) => id)
+  const snapshot = (room: SQL | SQLiteColumn) => sql`select 1 from ${roomSnapshots} where ${roomSnapshots.room} = ${room}`
+  return batch(db, [
+    ...Object.values(ROWS).flatMap(({ table, at, where, span, keep }) =>
+      at && span && keep ? [db.delete(table).where(and(where, lt(at, span(addDays(today, -env[keep]))[0])))] : []
+    ),
+    db.delete(latest).where(or(
+      notInArray(latest.room, rooms),
+      and(
+        sql`exists (${snapshot(latest.room)})`,
+        sql`not exists (${snapshot(latest.room)} and exists (select 1 from json_each(${roomSnapshots.machines}) where json_extract(value, '$.id') = ${latest.machine}))`
+      )
+    )),
+    db.delete(roomSnapshots).where(notInArray(roomSnapshots.room, rooms))
+  ])
+}
+
+/** How big the database is, in bytes and in rows of each table, which reads every row, so only when asked */
+export const storage = async (env: Env) => {
+  const tables = Object.values(schema).map(getTableName)
+  const counted = await env.DB.batch<{ n: number }>(tables.map(name => env.DB.prepare(`select count(*) as n from "${name}"`)))
+  return {
+    bytes: counted.at(-1)!.meta.size_after,
+    rows:  Object.fromEntries(tables.map((name, i) => [name, counted[i].results[0].n]))
+  }
 }
 
 /** When each table with days starts and ends, in its own unit, from two index lookups each, and the day each model runs through */

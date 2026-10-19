@@ -1,7 +1,8 @@
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
+import * as v from "valibot"
 import type { Machine, RoomLive, Status, Summaries } from "../../src/laundry/infer.mts"
-import { parseMachines } from "../../src/laundry/upstream.mts"
+import { machinesIn } from "../../src/laundry/upstream.mts"
 import { ROOMS } from "../../src/laundry/rooms.mts"
 import { diff, collector } from "../../worker/laundry.mts"
 import { app } from "../../worker/api.mts"
@@ -46,7 +47,7 @@ test("recording a poll's transitions brings the latest statuses up to it, dated 
 )
 
 test("replaying Stoke G05's four snapshots records just dryer 10 finishing and washer 3 being emptied", () => {
-  const snapshots = [at163002, at163012, at163257, at163302].map(body => parseMachines(STOKE, body))
+  const snapshots = [at163002, at163012, at163257, at163302].map(body => v.parse(machinesIn(STOKE), body))
   const times = ["16:30:02", "16:30:12", "16:32:57", "16:33:02"].map(time => Date.parse(`2026-10-07T${time}Z`))
   let latest = statuses(snapshots[0])
   const recorded = snapshots.slice(1).flatMap((machines, i) => {

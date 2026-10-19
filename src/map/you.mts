@@ -6,7 +6,8 @@ import { watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, IControl, Map as MapLibre } from "maplibre-gl"
 import { MIN_SPEED, reckon, type Fix } from "./fixes.mts"
 import { location, locationProblem, currentLocation } from "./location.mts"
-import { coveredPadding, metersPerPixel, type Coordinates } from "./geometry.mts"
+import type { Coordinates } from "../geo/projection.mts"
+import { coveredPadding, metersPerPixel } from "./camera.mts"
 
 const BLEND_MS    = 1000   // to ease from where the dot was drawn to where a new fix puts it
 const FRAME_MS    = 50     // ~20 fps, unless the map is following, which moves with every frame

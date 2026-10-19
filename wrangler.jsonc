@@ -36,11 +36,13 @@
   ],
   "vars": {
     // Raw samples and laundry transitions are only kept long enough to extract them again, and the visits extracted
-    // from samples a year
+    // from samples half a year: with the model's 4-week half-life, a day 180 days back weighs 1 % of today's, and
+    // visits are the one table that grows past D1's free 500 MB within a year (docs/storage.md)
     "RETAIN_DAYS": 60,
-    "RETAIN_VISIT_DAYS": 365
+    "RETAIN_VISIT_DAYS": 180
   },
-  // Secrets, set once with `wrangler secret put`: DEPLOY_HOOK, and BUILD_TOKEN, which the build reads and writes
-  // rows and models with (locally, in .dev.vars)
+  // Secrets, set once with `wrangler secret put`: DEPLOY_HOOK; BUILD_TOKEN, which the build reads and writes rows
+  // and models with (locally, in .dev.vars); and GITHUB_TOKEN, if set, for the nightly run to start the Map data
+  // workflow on Mondays
   "observability": { "enabled": true }
 }

@@ -1,0 +1,90 @@
+# Makes the map's OpenStreetMap data each week from Geofabrik's latest extract of New Hampshire (see
+# scripts/map/osm.mts): the walking network, the gazetteer, and our tiles, made with Planetiler. Each generation is
+# published whole as its own immutable release, map-data-<version>, and then the pointer every build reads,
+# latest.json on the map-data release, is moved to it (scripts/map/release.mts), so a build gets all of a
+# generation or none. Then Cloudflare rebuilds the site with it. Run it by hand with `gh workflow run map.yml`.
+# GitHub pauses schedules after 60 days without a commit, so the Worker's nightly run also dispatches this every
+# Monday when it has a token for it (worker/index.mts); a run that finds its generation already published makes
+# nothing, so the two can't publish it twice
+
+name: Map data
+
+on:
+  schedule:
+    # Mondays at 6:23 UTC, after Geofabrik's nightly extracts
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: map-data
+
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    env:
+      # Part of every generation's version, so a new Planetiler is a new generation
+      PLANETILER: 0.10.2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+      - run: npm ci
+      # Planetiler, and the water, lake, and Natural Earth data it downloads beside itself, about 1.5 GB that rarely
+      # changes, kept from week to week
+      - uses: actions/cache@v4
+        with:
+          path: planetiler
+          key: planetiler-${{ env.PLANETILER }}
+      - name: Download Planetiler and the extract
+        run: |
+          mkdir -p planetiler extract
+          [ -f planetiler/planetiler.jar ] || curl -fsSL --retry 3 -o planetiler/planetiler.jar \
+            "https://github.com/onthegomap/planetiler/releases/download/v$PLANETILER/planetiler.jar"
+          curl -fsSL --retry 3 -o extract/new-hampshire.osm.pbf \
+            https://download.geofabrik.de/north-america/us/new-hampshire-latest.osm.pbf
+      # Stages the archive, manifest, and pointer in release/, unless this generation is the one published already
+      - run: node scripts/map/osm.mts extract/new-hampshire.osm.pbf planetiler/planetiler.jar --release release
+      # The places the build matches laundry rooms and dining halls to must still be there, else nothing's published.
+      # The rooms and halls are the fixtures', so this asks nothing of the laundry vendor or Nutrislice
+      - run: |
+          cp tests/fixtures/data/src/laundry/rooms.json src/laundry/ && cp tests/fixtures/data/src/dining/menus.json src/dining/
+          node scripts/map/places.mts
+      # A release left by a run that failed before moving the pointer is filled in again, as nothing has read it
+      - name: Publish
+        id: publish
+        run: |
+          [ -f release/latest.json ] || { echo "Nothing new to publish"; exit 0; }
+          VERSION=$(jq -r .version release/latest.json)
+          EXTRACT=$(jq -r .extract release/manifest.json)
+          if gh release view "map-data-$VERSION" >/dev/null 2>&1; then
+            gh release upload "map-data-$VERSION" release/map-data.tar.gz release/manifest.json --clobber
+          else
+            gh release create "map-data-$VERSION" release/map-data.tar.gz release/manifest.json --latest=false \
+              --title "Map data $VERSION" \
+              --notes "The map's OpenStreetMap data made from Geofabrik's New Hampshire extract of $EXTRACT by the Map data workflow, whole in one archive with a manifest of its hashes. Builds take the generation latest.json on the map-data release names"
+          fi
+          gh release view map-data >/dev/null 2>&1 ||
+            gh release create map-data --title "Map data" --latest=false \
+              --notes "latest.json names the map data generation every build takes, each published whole as its own map-data-<version> release by the Map data workflow"
+          gh release upload map-data release/latest.json --clobber
+          echo "published=true" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+      # Rebuilds the site with it, if the hook is set
+      - if: steps.publish.outputs.published == 'true'
+        run: |
+          [ -z "$DEPLOY_HOOK" ] || curl -fsS --retry 3 -X POST "$DEPLOY_HOOK"
+        env:
+          DEPLOY_HOOK: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}

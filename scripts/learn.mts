@@ -8,7 +8,7 @@ import { writeFile } from "node:fs/promises"
 import type { Learned } from "../src/shared/learn.mts"
 import { addDays, type Day } from "../src/shared/time.mts"
 import { exists, isKept } from "./files.mts"
-import { readModel, writeModel } from "./worker.mts"
+import { ApiError, readModel, writeModel } from "./worker.mts"
 
 export const isRebuild = process.argv.includes("--rebuild") || Boolean(process.env.MODEL_REBUILD)
 
@@ -43,7 +43,7 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
     if (!process.env.BUILD_TOKEN)
       throw new Error("no BUILD_TOKEN to reach the Worker with")
     const started = Date.now()
-    const found = await readModel<M>(name)
+    const { state: found } = await readModel<M>(name)
     // A model of an older shape is learned again from the start
     const stored = found?.version === empty().version ? found : null
     await prepare?.()
@@ -63,7 +63,16 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
       }
     }
     if (model.through !== null && (isRebuild || model.through > (stored?.through ?? "")))
-      await writeModel(name, model)
+      try {
+        await writeModel(name, model, found?.through ?? null)
+      }
+      catch (error) {
+        // Another build stored a model meanwhile, which went on from the same one, so its model is the one kept and bundled
+        if (!(error instanceof ApiError && error.status === 409))
+          throw error
+        console.warn(`${name}: stored by another build meanwhile, whose model is bundled`)
+        model = (await readModel<M>(name)).state ?? model
+      }
     await writeFile(output, JSON.stringify(bundle(model)))
     console.log(`${name}: learned through ${model.through ?? "nothing yet"}`)
     return model

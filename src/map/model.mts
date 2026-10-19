@@ -6,11 +6,12 @@
 // estimates at all, so everything using it falls back on the constants it had before there was a model.
 // Keys are stop and route ids, which last across timetables, never trip ids, which don't
 
+import * as v from "valibot"
 import { serviceDayStart, type FeedData, type Trip } from "./feed.mts"
 import type { Visit } from "./events.mts"
-import { getJson } from "../shared/json.mts"
-import { foldDay, type Learned } from "../shared/learn.mts"
-import { type Day, localDay, weekday } from "../shared/time.mts"
+import { foldDay } from "../shared/learn.mts"
+import { objectOf } from "../shared/json.mts"
+import { Day, localDay, weekday } from "../shared/time.mts"
 
 // How many observations a broader estimate is worth to a narrower one
 const DRIVE_KAPPA = 8
@@ -50,22 +51,25 @@ export type Scores = {
   schedule: Tally[]
 }
 
-export type Model = Learned & {
-  version:    1,
+/** The model as the build writes it, its statistics taken on trust once its version says what shape they're in */
+export const Model = v.object({
+  version:    v.literal(1),
+  through:    v.nullable(Day),
   /** log s between stops' zones, by "from>to" stop ids, by context */
-  drives:     Record<string, (Cell | null)[]>,
+  drives:     objectOf<Record<string, (Cell | null)[]>>(),
   /** log s per m of every drive, by route, for stretches nobody's driven */
-  paces:      Record<string, Cell>,
+  paces:      objectOf<Record<string, Cell>>(),
   /** log s in a stop's zone without waiting for a scheduled time, by stop id, by day type */
-  dwells:     Record<string, (Cell | null)[]>,
+  dwells:     objectOf<Record<string, (Cell | null)[]>>(),
   /** Visits arriving early that waited for their scheduled time, and that didn't, by "route@stop" */
-  holds:      Record<string, [held: number, left: number]>,
+  holds:      objectOf<Record<string, [held: number, left: number]>>(),
   /** log s from getting in at the end of a trip to leaving on the next, by route */
-  layovers:   Record<string, Cell>,
+  layovers:   objectOf<Record<string, Cell>>(),
   /** s leaving after the scheduled time, by "route@stop" and by route, by day type */
-  deviations: Record<string, (Cell | null)[]>,
-  scores:     Scores
-}
+  deviations: objectOf<Record<string, (Cell | null)[]>>(),
+  scores:     objectOf<Scores>()
+})
+export type Model = v.InferOutput<typeof Model>
 
 export type Estimate = { mu: number, sigma: number, n: number }
 
@@ -87,13 +91,9 @@ export const emptyModel = (): Model => ({
   scores:     emptyScores()
 })
 
-/** A model as loaded, or an empty one for anything that isn't one */
+/** A model as stored, or an empty one for anything that isn't one, like one of an older shape */
 export const asModel = (value: unknown): Model =>
-  (value as Model | undefined)?.version === 1 ? value as Model : emptyModel()
-
-/** The model bundled at build time, or without one, an empty model, as the map works without */
-export const loadModel = (url: string) =>
-  getJson(url).then(asModel, emptyModel)
+  v.is(Model, value) ? value : emptyModel()
 
 //#region Contexts
 
@@ -284,20 +284,24 @@ export const holdProbability = (model: Model, route: string, stop: string, isTim
   return (held + a) / (held + left + a + b)
 }
 
-const heldCache = new WeakMap<Model, WeakMap<Trip, boolean[]>>()
+const holdCache = new WeakMap<Model, WeakMap<Trip, number[]>>()
 
-/** Whether a trip's bus waits at each of its stops for its scheduled time when it's early */
-export const heldPositions = (model: Model, feed: FeedData, trip: Trip) => {
-  let byTrip = heldCache.get(model)
+/** How likely a trip's bus is to wait at each of its stops for its scheduled time when it's early */
+export const holdChances = (model: Model, feed: FeedData, trip: Trip) => {
+  let byTrip = holdCache.get(model)
   if (!byTrip)
-    heldCache.set(model, byTrip = new WeakMap())
-  let held = byTrip.get(trip)
-  if (!held)
-    byTrip.set(trip, held = trip.stops.map((stop, position) =>
-      holdProbability(model, trip.route, feed.stops[stop].id, trip.timepoints.includes(position)) > 0.5
+    holdCache.set(model, byTrip = new WeakMap())
+  let chances = byTrip.get(trip)
+  if (!chances)
+    byTrip.set(trip, chances = trip.stops.map((stop, position) =>
+      holdProbability(model, trip.route, feed.stops[stop].id, trip.timepoints.includes(position))
     ))
-  return held
+  return chances
 }
+
+/** A bus more likely than not to wait is expected to, for where it's expected to be and when */
+export const isLikely = (chance: number) =>
+  chance > 0.5
 
 /** log s a route's buses lay over between trips */
 export const layoverEstimate = (model: Model, route: string) => {

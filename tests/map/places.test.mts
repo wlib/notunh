@@ -1,12 +1,15 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { BUILDINGS, buildingAt } from "../../src/map/places.mts"
+import { type Building, buildingAt as buildingLinked } from "../../src/map/places.mts"
 import { ROOMS } from "../../src/laundry/rooms.mts"
 import type { MenusIndex } from "../../src/dining/menus.mts"
 import { slug } from "../../src/shared/slug.mts"
 import menus from "../../src/dining/menus.json"
+import places from "../../src/map/places.json"
 
 const { halls }: Pick<MenusIndex, "halls"> = menus
+const BUILDINGS = places as Building[]
+const buildingAt = (id: string) => buildingLinked(BUILDINGS, id)
 
 // Every id a link can lead to a building by, which for a building with one room may be the room's as well
 const linksTo = BUILDINGS.map(building => [...new Set([building.id, ...building.rooms?.map(room => `${building.kind}/${room}`) ?? []])])

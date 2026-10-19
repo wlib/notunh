@@ -9,6 +9,7 @@ export default () =>
         title="Dining · notunh"
         description="What UNH's dining halls are serving at every meal, with ingredients, allergens, and nutrition"
         script="/src/dining/index.tsx"
+        data={{ menus: "/src/dining/menus.json" }}
       />
       <body>
         <div id="app" />

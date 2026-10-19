@@ -28,7 +28,7 @@ export const BusView = ({ id }: { id: string }) => {
   return (
     <section class="bus-view">
       {r(() => {
-        const busRoute = vehicle.value?.route && feed.routesById.get(vehicle.value.route.id)
+        const busRoute = vehicle.value?.route && feed.value.routesById.get(vehicle.value.route.id)
         if (!busRoute)
           return (
             <header>
@@ -132,7 +132,7 @@ export const RideSuggestion = () =>
   r(() => {
     const id = suggested.value
     const routeId = id && vehicles.value.find(vehicle => vehicle.id === id)?.route?.id
-    if (!id || !routeId || !feed.routesById.has(routeId))
+    if (!id || !routeId || !feed.value.routesById.has(routeId))
       return
     const busRoute = route(routeId)
     return (

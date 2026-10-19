@@ -1,7 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { distance } from "../../src/map/feed.mts"
-import { project } from "../../src/map/geometry.mts"
+import { distance, project } from "../../src/geo/projection.mts"
 import { compare, fixAt, isWorthTaking, reckon, type Fix } from "../../src/map/fixes.mts"
 
 const CENTER = { lat: 43.135, lon: -70.93 }

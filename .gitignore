@@ -1,10 +1,19 @@
 node_modules/
 dist/
 .wrangler/
-# Generated from upstream data, by `npm run data` or on demand before dev and build
+# Playwright's traces and reports, from `npm run test:browser`
+test-results/
+playwright-report/
+# Generated from upstream data, by `npm run data` or on demand before dev and build; the fixtures under
+# tests/fixtures/data/ are small committed copies, and the walk and gazetteer there the fallbacks while there's no
+# map data release
 src/map/gtfs.json
+src/map/walk.json
+src/map/gazetteer.json
 src/map/model.json
 src/map/places.json
+src/map/tiles.json
+src/map/style.json
 src/dining/menus.json
 public/data/
 src/laundry/rooms.json

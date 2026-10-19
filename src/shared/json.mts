@@ -1,9 +1,55 @@
-// Fetching JSON, which the pages, the Worker, and the build all do the same way
+// Fetching JSON, which the pages, the Worker, and the build all do the same way, checked against a schema where
+// it's given one, any Standard Schema (https://standardschema.dev), so an answer or a file of the wrong shape fails
+// where it's fetched, as a failed fetch does, rather than wherever it's first misread. Ours are Valibot's, and these
+// are the few of them every boundary shares
 
-/** What a URL answers with as JSON, or an error saying what it answered instead */
-export const getJson = async <T,>(url: string | URL, init?: RequestInit): Promise<T> => {
+import * as v from "valibot"
+import type { StandardSchemaV1 } from "@standard-schema/spec"
+
+// Issues named in an error, of however many
+const NAMED = 3
+
+/** What a check found wrong, on one line: the first few issues, each where it was, if anywhere, and what */
+export const describeIssues = (issues: readonly StandardSchemaV1.Issue[]) =>
+  issues.slice(0, NAMED).map(({ path, message }) => {
+    const at = path?.map(part => String(typeof part === "object" ? part.key : part)).join(".")
+    return at ? `${at}: ${message}` : message
+  }).join("; ") + (issues.length > NAMED ? `; and ${issues.length - NAMED} more` : "")
+
+/** A value as a schema makes it, or an error saying where it came from and what's wrong with it */
+export const checked = async <T,>(schema: StandardSchemaV1<unknown, T>, value: unknown, from: string | URL): Promise<T> => {
+  const result = await schema["~standard"].validate(value)
+  if (result.issues)
+    throw new Error(`Unexpected JSON from ${from}: ${describeIssues(result.issues)}`)
+  return result.value
+}
+
+/** What a URL answers with as JSON, as its schema makes it if it has one, or an error saying what it answered instead */
+export const getJson = async <T = unknown,>(url: string | URL, { schema, ...init }: RequestInit & { schema?: StandardSchemaV1<unknown, T> } = {}): Promise<T> => {
   const response = await fetch(url, init)
   if (!response.ok)
     throw new Error(`${response.status} from ${url}`)
-  return response.json()
+  const body: unknown = await response.json()
+  return schema ? checked(schema, body, url) : body as T
 }
+
+const isObject = (value: unknown) =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+
+/** An array, its items taken on trust, for a big one of our own making that isn't worth checking item by item */
+export const arrayOf = <T,>() =>
+  v.custom<T[]>(Array.isArray, "Expected an array")
+
+/** An object, likewise taken on trust past being one */
+export const objectOf = <T,>() =>
+  v.custom<T>(isObject, "Expected an object")
+
+/** An array of whichever of its items fit, so a change upstream shows less rather than garbage */
+export const usable = <S extends v.GenericSchema,>(item: S) =>
+  v.pipe(
+    v.array(v.unknown()),
+    v.transform(items => items.flatMap(value => {
+      const result = v.safeParse(item, value)
+      return result.success ? [result.output] : []
+    }))
+  )

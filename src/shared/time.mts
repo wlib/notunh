@@ -1,12 +1,15 @@
 // Durham's clock and calendar, which every bus schedule, menu, and laundry room runs on. Instants are epoch
 // milliseconds as Date.now() gives them, except where times are compared with the timetable, which counts seconds
 
+import * as v from "valibot"
+
 export const TIME_ZONE = "America/New_York"
 export const HOUR      = 3_600_000
 export const DAY       = 86_400_000
 
 /** A calendar day in Durham as YYYY-MM-DD, which sorts and compares as text */
-export type Day = string
+export const Day = v.pipe(v.string(), v.isoDate())
+export type Day = v.InferOutput<typeof Day>
 
 const dayFormat    = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE })
 const hourFormat   = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hour: "numeric", hourCycle: "h23" })

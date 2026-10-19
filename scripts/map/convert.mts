@@ -2,8 +2,9 @@
 
 import { parse as parseCsv } from "csv-parse/sync"
 import { ColorSpace, contrastWCAG21, parse, sRGB } from "colorjs.io/fn"
-import { alongSegment, angleBetween, type Coordinates } from "../../src/map/geometry.mts"
-import { distance, type FeedData, type Route, type Service, type Stop, type Trip } from "../../src/map/feed.mts"
+import { simplify } from "../../src/geo/lines.mts"
+import { type Coordinates, type Meters, angleBetween, distance, frame } from "../../src/geo/projection.mts"
+import type { FeedData, Route, Service, Stop, Trip } from "../../src/map/feed.mts"
 
 ColorSpace.register(sRGB)
 
@@ -76,8 +77,6 @@ const CORNER = 15   // m, about a bus's turning radius
 const TURN_STEP = 6 // degrees a rounded corner turns between the points drawn along it
 const MIN_STEP = 2  // m, unless they'd be closer than this, as rounding would then turn them more
 
-type Meters = [number, number]
-
 const length = (p: Meters, q: Meters) => Math.hypot(q[0] - p[0], q[1] - p[1])
 const heading = (p: Meters, q: Meters) => Math.atan2(q[0] - p[0], q[1] - p[1]) * 180 / Math.PI
 
@@ -87,44 +86,10 @@ const toward = (p: Meters, q: Meters, meters: number): Meters => {
   return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]
 }
 
-/** Meters east and north of a point and back, flat-earth, fine at city scale */
-const metersFrom = (origin: Coordinates) => {
-  const x = 111_320 * Math.cos(origin[1] * Math.PI / 180)
-  return {
-    to: ([lon, lat]: Coordinates): Meters => [(lon - origin[0]) * x, (lat - origin[1]) * 110_540],
-    from: ([east, north]: Meters): Coordinates => [origin[0] + east / x, origin[1] + north / 110_540]
-  }
-}
-
-/** Ramer–Douglas–Peucker: the fewest points that stay within a tolerance of the line through all of them */
-const simplify = (points: Meters[], tolerance: number): Meters[] => {
-  const keep = new Set([0, points.length - 1])
-  const split = (first: number, last: number) => {
-    const [a, b] = [points[first], points[last]]
-    const [dx, dy] = [b[0] - a[0], b[1] - a[1]]
-    let [farthest, worst] = [-1, tolerance]
-    for (let i = first + 1; i < last; i++) {
-      const [px, py] = [points[i][0] - a[0], points[i][1] - a[1]]
-      // From the segment rather than the line through it, so a stretch that doubles back on itself is kept
-      const t = alongSegment(px, py, dx, dy)
-      const d = Math.hypot(px - t * dx, py - t * dy)
-      if (d > worst)
-        [farthest, worst] = [i, d]
-    }
-    if (farthest === -1)
-      return
-    keep.add(farthest)
-    split(first, farthest)
-    split(farthest, last)
-  }
-  split(0, points.length - 1)
-  return points.filter((_, i) => keep.has(i))
-}
-
 /** A shape with its GPS wobble dropped and its corners rounded, with a point every few degrees of turning */
 export const smoothShape = (shape: Coordinates[]) => {
-  const meters = metersFrom(shape[0])
-  const points = simplify(shape.map(meters.to), WOBBLE)
+  const { toMeters, toCoordinates } = frame(shape[0])
+  const points = simplify(shape, WOBBLE).map(toMeters)
   const smooth: Meters[] = [points[0]]
   for (let i = 1; i + 1 < points.length; i++) {
     const [a, corner, b] = [points[i - 1], points[i], points[i + 1]]
@@ -147,7 +112,7 @@ export const smoothShape = (shape: Coordinates[]) => {
   // Two corners cut to meet halfway along a short side both put a point there, and points much closer than a meter
   // would round to one
   const isEnd = (i: number) => i === 0 || i === smooth.length - 1
-  return smooth.filter((point, i) => isEnd(i) || length(point, smooth[i - 1]) > 0.5).map(meters.from)
+  return smooth.filter((point, i) => isEnd(i) || length(point, smooth[i - 1]) > 0.5).map(toCoordinates)
 }
 
 const DAY_COLUMNS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -198,35 +163,34 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
   for (const stopTimes of stopTimesByTrip.values())
     stopTimes.sort((a, b) => +a.stop_sequence - +b.stop_sequence)
 
-  // Only keep stops some trip visits, and note the ones nobody can board at
-  // (a trip's last stop never counts as a boarding)
-  const boardable = new Set<string>()
-  const visited = new Set<string>()
-  for (const stopTimes of stopTimesByTrip.values())
-    stopTimes.forEach((stopTime, i) => {
-      visited.add(stopTime.stop_id)
-      if (i + 1 < stopTimes.length && stopTime.pickup_type !== "1")
-        boardable.add(stopTime.stop_id)
-    })
-
+  // Only the stops some trip visits
+  const visited = new Set(stopTimesByTrip.values().flatMap(stopTimes => stopTimes.map(stopTime => stopTime.stop_id)))
   const stops: Stop[] = table("stops.txt")
     .filter(stop => visited.has(stop.stop_id))
     .map(stop => ({
       id:   stop.stop_id,
       name: stop.stop_name.replace(/\s+/g, " "),
       lat:  round(+stop.stop_lat),
-      lon:  round(+stop.stop_lon),
-      ...boardable.has(stop.stop_id) ? {} : { pickup: false as const }
+      lon:  round(+stop.stop_lon)
     }))
   const stopIndex = new Map(stops.map((stop, i) => [stop.id, i]))
 
   const trips: Trip[] = table("trips.txt").map(trip => {
     const stopTimes = stopTimesByTrip.get(trip.trip_id) ?? []
     const tripStops = stopTimes.map(stopTime => stopIndex.get(stopTime.stop_id)!)
+    const last = stopTimes.length - 1
 
     const along = [0]
     for (let i = 1; i < tripStops.length; i++)
       along.push(along[i - 1] + distance(stops[tripStops[i - 1]], stops[tripStops[i]]))
+    // A stop's departure, or its arrival where that's all it has, and the other way round
+    const times = interpolateTimes(stopTimes.map(stopTime => parseTime(stopTime.departure_time || stopTime.arrival_time)), along)
+    const arrivals = interpolateTimes(stopTimes.map(stopTime => parseTime(stopTime.arrival_time || stopTime.departure_time)), along)
+    // Where nobody can get on, short of the last stop, and off, past the first, which never count anyway
+    const positions = (column: string, isMeaningful: (i: number) => boolean) =>
+      stopTimes.flatMap((stopTime, i) => stopTime[column] === "1" && isMeaningful(i) ? [i] : [])
+    const noPickup = positions("pickup_type", i => i < last)
+    const noDropOff = positions("drop_off_type", i => i > 0)
 
     return {
       id:       trip.trip_id,
@@ -235,10 +199,10 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
       headsign: trip.trip_headsign,
       shape:    trip.shape_id,
       stops:    tripStops,
-      times:    interpolateTimes(
-        stopTimes.map(stopTime => parseTime(stopTime.departure_time || stopTime.arrival_time)),
-        along
-      ),
+      times,
+      ...arrivals.some((arrival, i) => arrival !== times[i]) ? { arrivals } : {},
+      ...noPickup.length ? { noPickup } : {},
+      ...noDropOff.length ? { noDropOff } : {},
       timepoints: stopTimes.flatMap((stopTime, i) => stopTime.timepoint === "1" ? [i] : [])
     }
   })

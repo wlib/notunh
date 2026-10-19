@@ -1,7 +1,8 @@
 // The static schedule, converted from GTFS by scripts/map/convert.mts
 
-import { getJson } from "../shared/json.mts"
-import { type Day, HOUR, addDays, localDay, offsetAt, weekday } from "../shared/time.mts"
+import * as v from "valibot"
+import { arrayOf, getJson, objectOf } from "../shared/json.mts"
+import { Day, HOUR, addDays, localDay, offsetAt, weekday } from "../shared/time.mts"
 
 export type Route = {
   id:    string,
@@ -16,9 +17,7 @@ export type Stop = {
   id:   string,
   name: string,
   lat:  number,
-  lon:  number,
-  /** Present only for stops where nobody can board, like "Arrivals Only" stops */
-  pickup?: false
+  lon:  number
 }
 
 export type Service = {
@@ -39,23 +38,29 @@ export type Trip = {
   shape:    string,
   /** Indices into FeedData.stops */
   stops:    number[],
-  /** Seconds since the start of the service day, aligned with stops */
+  /** Seconds since the start of the service day that the bus leaves each stop, aligned with stops */
   times:    number[],
+  /** When it gets to each stop, only for trips that get to some stop before they leave it */
+  arrivals?: number[],
+  /** Positions in stops where nobody can get on, and where nobody can get off, like "Arrivals Only" stops */
+  noPickup?:  number[],
+  noDropOff?: number[],
   /** Positions in stops where the bus waits for its scheduled time before going on, which the connectors don't */
   timepoints: number[]
 }
 
-/** The JSON written at build time */
-export type FeedData = {
-  version:  string,
+/** The JSON written at build time, by its version and the days it runs, its contents taken on trust */
+export const FeedData = v.object({
+  version:  v.string(),
   start:    Day,
   end:      Day,
-  routes:   Route[],
-  stops:    Stop[],
-  services: Record<string, Service>,
-  trips:    Trip[],
-  shapes:   Record<string, [number, number][]>
-}
+  routes:   arrayOf<Route>(),
+  stops:    arrayOf<Stop>(),
+  services: objectOf<Record<string, Service>>(),
+  trips:    arrayOf<Trip>(),
+  shapes:   objectOf<Record<string, [number, number][]>>()
+})
+export type FeedData = v.InferOutput<typeof FeedData>
 
 export type Feed = FeedData & {
   routesById: ReadonlyMap<string, Route>
@@ -73,7 +78,30 @@ export const withIndexes = (data: FeedData): Feed => ({
 })
 
 export const loadFeed = (url: string) =>
-  getJson<FeedData>(url).then(withIndexes)
+  getJson(url, { schema: FeedData }).then(withIndexes)
+
+/** Seconds into the service day a trip gets to a stop, which is when it leaves unless it waits there */
+export const arrivalTime = (trip: Trip, position: number) =>
+  (trip.arrivals ?? trip.times)[position]
+
+/** Whether anyone can get on at a position of a trip, which nobody can at its last stop */
+export const canBoard = (trip: Trip, position: number) =>
+  position + 1 < trip.stops.length && !trip.noPickup?.includes(position)
+
+/** Whether anyone can get off at a position of a trip, which nobody can at its first stop */
+export const canAlight = (trip: Trip, position: number) =>
+  position > 0 && !trip.noDropOff?.includes(position)
+
+/** The stops somebody can get on a bus at */
+export const boardableStops = (feed: FeedData) =>
+  new Set(feed.trips.flatMap(trip => trip.stops.filter((_, position) => canBoard(trip, position))))
+
+/** A stop, by its index among some stops, as its index among others, found by its id, or undefined if it's gone */
+export const renumbered = (stop: number | undefined, before: readonly Stop[], after: readonly Stop[]) => {
+  const id = stop === undefined ? undefined : before[stop]?.id
+  const index = after.findIndex(other => other.id === id)
+  return index < 0 ? undefined : index
+}
 
 /**
  * GTFS times count from "noon minus 12h" so they stay correct across DST changes
@@ -108,10 +136,3 @@ export const isServiceActive = (service: Service | undefined, day: Day) => {
   )
 }
 
-/** Meters between two points, as the crow flies */
-export const distance = (a: { lat: number, lon: number }, b: { lat: number, lon: number }) => {
-  const toRadians = Math.PI / 180
-  const x = (b.lon - a.lon) * toRadians * Math.cos((a.lat + b.lat) / 2 * toRadians)
-  const y = (b.lat - a.lat) * toRadians
-  return Math.hypot(x, y) * 6_371_000
-}

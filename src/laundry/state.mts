@@ -2,12 +2,12 @@
 // values only, no DOM
 
 import { r, watch } from "bruh/reactive"
-import usualUrl from "./usual.json?url"
 import { ROOMS, pathOf, roomAtPath, roomName } from "./rooms.mts"
 import { KINDS, assessRoom, type Kind, type RoomLive, type RoomSummary, type Summaries } from "./infer.mts"
-import { emptyUsual, slotOf, unpack, type Usual, type Week } from "./model.mts"
+import { Usual, emptyUsual, slotOf, unpack, type Week } from "./model.mts"
 import { getJson } from "../shared/json.mts"
 import { poll } from "../shell/poll.mts"
+import { latest } from "../shell/build.mts"
 import { now } from "../shell/lifecycle.mts"
 import { distinct, remembered, toggled } from "../shell/state.mts"
 
@@ -30,12 +30,16 @@ export const toggleFavorite = (id: string) => {
 
 //#region The open room, at its own path, so a favorite can be bookmarked or opened from the home screen
 
-export const openRoom = r(roomAtPath(location.pathname))
-addEventListener("popstate", () => openRoom.value = roomAtPath(location.pathname))
+const pathname = r(location.pathname)
+addEventListener("popstate", () => pathname.value = location.pathname)
+
+export const openRoom = r(() => roomAtPath(pathname.value))
+/** Whether the path is a room's that there's no such room for, which the service worker serves this page for too */
+export const isUnknownRoom = r(() => openRoom.value === undefined && pathname.value !== "/laundry/")
 
 export const open = (id: string | undefined) => {
-  openRoom.value = id
   history.pushState(null, "", pathOf(id))
+  pathname.value = pathOf(id)
   // Each view starts at its top, as a new page would
   scrollTo(0, 0)
 }
@@ -85,9 +89,8 @@ export const summaryOf = (id: string, at: number): RoomSummary | undefined => {
 
 //#region Usually
 
-/** When each room is usually busy, learned nightly; empty until it loads, and if it can't */
-export const usual = r<Usual>(emptyUsual())
-getJson<Usual>(usualUrl).catch(emptyUsual).then(loaded => usual.value = loaded)
+/** When each room is usually busy, learned nightly, and swapped for a newer build's as it comes; empty until it loads */
+export const usual = await latest("usual", Usual, emptyUsual)
 
 const unpacked = new WeakMap<Week, ReturnType<typeof unpack>>()
 

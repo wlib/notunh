@@ -1,13 +1,16 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { toLine, type Coordinates, type Track } from "../../src/map/geometry.mts"
+import type { Track } from "../../src/geo/follow.mts"
+import { type Coordinates, ruler } from "../../src/geo/projection.mts"
+import { toRouteLine } from "../../src/map/shapes.mts"
 import { DEFAULT_RATE, ZONE, createPace, expectedDistance, observe, type Trace } from "../../src/map/pace.mts"
 
 const CENTER = { lat: 43.135, lon: -70.93 }
+const EAST = ruler(CENTER.lat).kx
 
 // A straight street east, 2 km long with a vertex every 10 m
-const street = Array.from({ length: 201 }, (_, i): Coordinates => [CENTER.lon + i * 10 / 81_150, CENTER.lat])
-const pointOn = (meters: number) => ({ lon: CENTER.lon + meters / 81_150, lat: CENTER.lat })
+const street = Array.from({ length: 201 }, (_, i): Coordinates => [CENTER.lon + i * 10 / EAST, CENTER.lat])
+const pointOn = (meters: number) => ({ lon: CENTER.lon + meters / EAST, lat: CENTER.lat })
 
 // Stops at least a few zones apart, about this many meters along the street
 const stopPositions = fc
@@ -15,7 +18,7 @@ const stopPositions = fc
   .map(slots => slots.sort((a, b) => a - b).map(slot => slot * 100))
 
 const lineWith = (positions: number[]) =>
-  toLine(street, [positions.map((meters, i) => ({ id: `s${i}`, ...pointOn(meters) }))])
+  toRouteLine("R", street, [positions.map((meters, i) => ({ id: `s${i}`, ...pointOn(meters) }))])
 
 /**
  * Drives a bus down the street at a steady speed, stopping at each stop for its wait,

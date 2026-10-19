@@ -26,7 +26,7 @@ export const MenuView = () =>
       return <p class="empty muted">Loading the menu…</p>
 
     const current = menu.value
-    const hours = index.hours[hall.value]
+    const hours = index.value.hours[hall.value]
     if (!current)
       return (
         <p class="empty muted">

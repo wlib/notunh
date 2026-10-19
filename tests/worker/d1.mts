@@ -12,11 +12,13 @@ export const d1 = () => {
   const db = new DatabaseSync(":memory:")
   for (const statement of ddl)
     db.exec(statement)
+  // As D1 reports it with every result
+  const size_after = () => Number(db.prepare("select page_count * page_size as bytes from pragma_page_count, pragma_page_size").get()!.bytes)
   const prepare = (sql: string, params: unknown[] = []): any => {
     const values = params as SQLInputValue[]
     return {
       bind: (...bound: unknown[]) => prepare(sql, bound),
-      all: async () => ({ results: db.prepare(sql).all(...values), success: true, meta: {} }),
+      all: async () => ({ results: db.prepare(sql).all(...values), success: true, meta: { size_after: size_after() } }),
       raw: async () => db.prepare(sql).all(...values).map(row => Object.values(row)),
       first: async () => db.prepare(sql).get(...values) ?? null,
       run: async () => ({ results: [], success: true, meta: { changes: Number(db.prepare(sql).run(...values).changes) } })

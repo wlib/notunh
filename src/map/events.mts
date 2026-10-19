@@ -4,7 +4,8 @@
 // the fixes are pruned, so the model can be refit from them
 
 import { tripBase, type Feed, type Trip } from "./feed.mts"
-import { routeLines, snapToLines } from "./geometry.mts"
+import { snapToLines } from "../geo/follow.mts"
+import { routeLines } from "./shapes.mts"
 import { MIN_MOVING_KPH, cross, type Trace } from "./pace.mts"
 import type { BusFix } from "./raw.mts"
 

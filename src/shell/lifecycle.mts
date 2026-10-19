@@ -1,11 +1,14 @@
 // Whether the page is in view and since when, for things that only run while it is or count from then; the one
-// clock every page reads; and a fresh start after long enough away that nothing in memory is worth keeping: the
-// schedule and menus rebuild nightly, phones have long since let go of the page anyway, and what was on screen an
-// hour ago is stale
+// clock every page reads; and a fresh start after long enough away that nothing in memory is worth keeping, as
+// phones have long since let go of the page anyway and what was on screen an hour ago is stale, or once there's
+// newer code, which only a reload brings in. Neither comes while the page is in the middle of something a reload
+// would lose, like a bus ride, and newer code only out of view, so no one sees it. Newer data needs no reload, as
+// pages swap it in live (build.mts)
 
-import { r } from "bruh/reactive"
+import { r, watch } from "bruh/reactive"
 import { HOUR, localDay } from "../shared/time.mts"
 import { distinct } from "./state.mts"
+import { isNewBuild } from "./build.mts"
 
 const LONG_AWAY_MS = HOUR
 export const TICK_MS = 15_000
@@ -27,14 +30,20 @@ setInterval(() => {
   now.value = Date.now()
 }, TICK_MS)
 
+/** Whether the page is in the middle of something a reload would lose, like riding a bus, which pages set */
+export const isBusy = r(false)
+/** Whether the page has been away long enough that a fresh start is due, once it's free */
+const isStale = r(false)
+
 const resume = () => {
   if (document.visibilityState !== "visible" || hiddenAt === undefined)
     return
   const at = Date.now()
   const isLongAway = at - hiddenAt >= LONG_AWAY_MS || localDay(at) !== loadedDay
   hiddenAt = undefined
-  if (isLongAway)
+  if (isLongAway && !isBusy.peek())
     return location.reload()
+  isStale.value ||= isLongAway
   visibleSince.value = at
   now.value = at
   isVisible.value = true
@@ -51,3 +60,10 @@ document.addEventListener("visibilitychange", () => {
 })
 // Back from the back-forward cache, in case the visibility event didn't come with it
 addEventListener("pageshow", resume)
+
+// Newer code, or a fresh start put off while busy, comes in out of view, as soon as it's due, the page goes out of
+// view, and nothing's lost, whichever is last
+watch([isNewBuild, isStale, isVisible, isBusy], () => {
+  if ((isNewBuild.value || isStale.value) && !isVisible.value && !isBusy.value)
+    location.reload()
+})

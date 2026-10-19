@@ -3,7 +3,8 @@
 // much slower or quicker buses on that line have been lately, and nudged toward what the last bus there took.
 // Where a bus should be now follows from that, rather than from its reported speed
 
-import type { Line, Track } from "./geometry.mts"
+import type { Track } from "../geo/follow.mts"
+import type { RouteLine } from "./shapes.mts"
 import { contextAt, dayTypeOf, driveEstimate, dwellEstimate, type Estimate, type Model } from "./model.mts"
 
 /** m around a stop where a bus is at it, pulling in, waiting, or pulling out */
@@ -63,7 +64,7 @@ export type Pace = {
   /** The last time from entering a stop's zone to leaving it, by stop id */
   zones: Map<string, Seen>,
   /** Every line's recent drives and zones, the evidence for how it's running */
-  recent: WeakMap<Line, { drives: Seen[], zones: Seen[] }>
+  recent: WeakMap<RouteLine, { drives: Seen[], zones: Seen[] }>
 }
 
 export const createPace = (prior = NO_PRIOR): Pace =>
@@ -71,7 +72,7 @@ export const createPace = (prior = NO_PRIOR): Pace =>
 
 /** One bus's last report, and what it was last seen doing at stops */
 export type Trace = {
-  track: Track,
+  track: Track<RouteLine>,
   /** Epoch seconds of the report */
   at: number,
   /** The bus wasn't moving */
@@ -92,7 +93,7 @@ export type Crossing =
   | { kind: "zone", stop: string, arrive: number, depart: number }
 
 /** A stop on a line, counting on around a loop: index n is the first stop on the second lap */
-const stopAt = ({ stops, length, isLoop }: Line, lap: number, index: number) => {
+const stopAt = ({ stops, length, isLoop }: RouteLine, lap: number, index: number) => {
   const n = stops.length
   const wrapped = ((index % n) + n) % n
   return {
@@ -102,11 +103,11 @@ const stopAt = ({ stops, length, isLoop }: Line, lap: number, index: number) => 
   }
 }
 
-const lapOf = ({ length, isLoop }: Line, distance: number) =>
+const lapOf = ({ length, isLoop }: RouteLine, distance: number) =>
   isLoop ? Math.floor(distance / length) : 0
 
 /** The index of the first stop past a distance, which is the stop count past the end of a line that isn't a loop */
-const firstAhead = (line: Line, distance: number) => {
+const firstAhead = (line: RouteLine, distance: number) => {
   const offset = distance - lapOf(line, distance) * (line.isLoop ? line.length : 0)
   const i = line.stops.findIndex(stop => stop.distance > offset)
   return i === -1 ? line.stops.length : i
@@ -120,7 +121,7 @@ const driven = (from: { distance: number }, to: { distance: number }) =>
  * The zone edges a bus crossed since its last report, timed by interpolating between the two reports
  * @returns its trace as of the new report, and the drives and stops it finished in between, in order
  */
-export const cross = (previous: Trace | undefined, track: Track, at: number, isStopped: boolean) => {
+export const cross = (previous: Trace | undefined, track: Track<RouteLine>, at: number, isStopped: boolean) => {
   const { line } = track
   const crossings: Crossing[] = []
   const isSameRun = previous?.track.line === line && at > previous.at && at - previous.at <= MAX_GAP
@@ -178,7 +179,7 @@ export const cross = (previous: Trace | undefined, track: Track, at: number, isS
 // log s of a stop's zone, with nothing better to go on
 const ZONE_MU = Math.log(2 * ZONE / DEFAULT_RATE + DEFAULT_WAIT)
 
-const driveMu = (pace: Pace, line: Line, from: string, to: string, meters: number, at: number) =>
+const driveMu = (pace: Pace, line: RouteLine, from: string, to: string, meters: number, at: number) =>
   pace.prior.drive(line.route, from, to, meters, at)?.mu ?? Math.log(Math.max(1, meters) / DEFAULT_RATE)
 
 const zoneMu = (pace: Pace, stop: string, at: number) =>
@@ -212,7 +213,7 @@ const remember = (seen: Seen[], next: Seen) =>
  * Learns from a bus's new report: the zones it entered and left since its last one
  * @returns the bus's trace as of the new report
  */
-export const observe = (pace: Pace, previous: Trace | undefined, track: Track, at: number, isStopped: boolean): Trace => {
+export const observe = (pace: Pace, previous: Trace | undefined, track: Track<RouteLine>, at: number, isStopped: boolean): Trace => {
   const { trace, crossings } = cross(previous, track, at, isStopped)
   const { line } = track
   let recent = pace.recent.get(line)

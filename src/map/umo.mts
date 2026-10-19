@@ -1,7 +1,8 @@
 // Live data from the Umo IQ rider API, the backend behind rider.umoiq.com and the Umo apps.
 // It needs no key and allows any origin. Found via https://rider.umoiq.com/appsettings -> apiPath
 
-import { getJson } from "../shared/json.mts"
+import * as v from "valibot"
+import { getJson, usable } from "../shared/json.mts"
 
 const BASE = "https://api.prd-1.iq.live.umoiq.com/v2.0/riders/agencies/unh"
 
@@ -11,67 +12,67 @@ export const STALE_VEHICLE_SECONDS = 180
 // The API 403s once the URL passes ~1 KB, so batched stop lists are chunked under this
 const MAX_STOPS_PARAM_LENGTH = 850
 
-export type Vehicle = {
-  id:              string,
-  lat:             number,
-  lon:             number,
-  heading:         number,
-  kph:             number,
-  secsSinceReport: number,
-  predictable:     boolean,
-  gpsTime:         number,
-  route: { id: string, name: string } | null,
-  dir:   { id: string, dirName: string, dirNameShort: string } | null,
+// The slices of Umo's answers we read, each answer an array keeping only the items that fit, so a change upstream
+// shows less rather than garbage. A vehicle needs only a fix, and a prediction only a time and a bus; what they
+// know besides, they may not
+
+const Vehicle = v.object({
+  id:              v.string(),
+  lat:             v.number(),
+  lon:             v.number(),
+  /** Epoch milliseconds of its fix */
+  gpsTime:         v.number(),
+  secsSinceReport: v.number(),
+  heading:         v.nullish(v.number()),
+  kph:             v.nullish(v.number()),
+  route:           v.nullish(v.object({ id: v.string() })),
+  dir:             v.nullish(v.object({ dirNameShort: v.string() })),
   /** The GTFS trip it's running, like "3B FULL_T04" */
-  tripTag?: string | null,
+  tripTag:         v.nullish(v.string()),
   /** Umo's own placing of it along its trip */
-  vehiclePosition?: {
+  vehiclePosition: v.nullish(v.object({
     /** The stop it's at or last passed */
-    currentStopTag?: string | null,
-    atCurrentStop?:  boolean
-  } | null
-}
+    currentStopTag: v.nullish(v.string()),
+    atCurrentStop:  v.optional(v.boolean())
+  }))
+})
+export type Vehicle = v.InferOutput<typeof Vehicle>
+
+const Prediction = v.object({
+  /** Epoch milliseconds */
+  timestamp:         v.number(),
+  minutes:           v.number(),
+  vehicleId:         v.string(),
+  tripId:            v.nullish(v.string()),
+  /** The bus hasn't started this trip yet, so this comes from Umo's schedule */
+  affectedByLayover: v.boolean(),
+  /** Where the bus is headed, for the stop's panel */
+  direction:         v.nullish(v.object({ name: v.string() }))
+})
+export type Prediction = v.InferOutput<typeof Prediction>
+
+const StopPredictions = v.object({
+  route:  v.object({ id: v.string() }),
+  stop:   v.object({ id: v.string() }),
+  values: v.optional(usable(Prediction), [])
+})
+export type StopPredictions = v.InferOutput<typeof StopPredictions>
 
 /** One of a route's stops, as Umo's route config lists them */
-export type RouteStop = {
-  id:   string,
-  code: string,
-  name: string,
-  lat:  number,
-  lon:  number
-}
-
-export type Prediction = {
-  /** Epoch milliseconds */
-  timestamp:   number,
-  minutes:     number,
-  vehicleId:   string,
-  tripId:      string,
-  isDeparture: boolean,
-  /** The bus hasn't started this trip yet, so this comes from Umo's schedule */
-  affectedByLayover: boolean,
-  direction: { id: string, name: string, destinationName: string }
-}
-
-export type StopPredictions = {
-  serverTimestamp: number,
-  route: { id: string, title: string, color: string, textColor: string },
-  stop:  { id: string, name: string, code: string },
-  values: Prediction[]
-}
+const RouteStop = v.object({ id: v.string() })
 
 // Browsers send their own User-Agent, while the Worker has to send one or Umo answers 403, so only it passes headers
-const get = <T,>(path: string, signal?: AbortSignal, headers?: HeadersInit) =>
-  getJson<T>(BASE + path, { signal, headers })
+const get = <T,>(path: string, schema: v.GenericSchema<unknown, T>, signal?: AbortSignal, headers?: HeadersInit) =>
+  getJson(BASE + path, { schema, signal, headers })
 
 export const fetchVehicles = (signal?: AbortSignal, headers?: HeadersInit) =>
-  get<Vehicle[]>("/vehicles", signal, headers)
+  get("/vehicles", usable(Vehicle), signal, headers)
 
 export const fetchRouteStops = (routeId: string, signal?: AbortSignal, headers?: HeadersInit) =>
-  get<RouteStop[]>(`/routes/${encodeURIComponent(routeId)}/stops`, signal, headers)
+  get(`/routes/${encodeURIComponent(routeId)}/stops`, usable(RouteStop), signal, headers)
 
 export const fetchStopPredictions = (stopId: string, signal?: AbortSignal) =>
-  get<StopPredictions[]>(`/stopcodes/${encodeURIComponent(stopId)}/predictions`, signal)
+  get(`/stopcodes/${encodeURIComponent(stopId)}/predictions`, usable(StopPredictions), signal)
 
 export const fetchPredictions = async (pairs: Iterable<{ route: string, stop: string }>, signal?: AbortSignal, headers?: HeadersInit) => {
   const chunks: string[][] = [[]]
@@ -89,7 +90,7 @@ export const fetchPredictions = async (pairs: Iterable<{ route: string, stop: st
   const results = await Promise.all(
     chunks
       .filter(chunk => chunk.length)
-      .map(chunk => get<StopPredictions[]>(`/nstops/${chunk.join(",")}/predictions`, signal, headers))
+      .map(chunk => get(`/nstops/${chunk.join(",")}/predictions`, usable(StopPredictions), signal, headers))
   )
   return results.flat()
 }

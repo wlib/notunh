@@ -16,8 +16,8 @@ const AT = 1_791_360_000_000
 
 const vehicle = (id: string, gpsTime: number, secsSinceReport = 5): Vehicle => ({
   id, gpsTime, secsSinceReport,
-  lat: 43.13, lon: -70.93, heading: 90, kph: 20, predictable: true,
-  route: { id: "Gables", name: "Gables" }, dir: null
+  lat: 43.13, lon: -70.93, heading: 90, kph: 20,
+  route: { id: "Gables" }, dir: null
 })
 
 // What one poll gets: some buses' latest fixes, a rate limit, or a body that isn't a vehicle list

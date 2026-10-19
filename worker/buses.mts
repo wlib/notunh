@@ -24,9 +24,9 @@ export const buses: Source<RawFix> = {
       try {
         const fresh: Vehicle[] = []
         for (const vehicle of await fetchVehicles(AbortSignal.any([signal, AbortSignal.timeout(POLL_MS)]), HEADERS)) {
-          const key = `${vehicle?.id} ${vehicle?.gpsTime}`
+          const key = `${vehicle.id} ${vehicle.gpsTime}`
           // Parked buses repeat the same old fix all day
-          if (vehicle?.secsSinceReport <= STALE_VEHICLE_SECONDS && !seen.has(key)) {
+          if (vehicle.secsSinceReport <= STALE_VEHICLE_SECONDS && !seen.has(key)) {
             seen.add(key)
             fresh.push(vehicle)
           }

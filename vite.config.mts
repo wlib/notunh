@@ -1,4 +1,5 @@
-import { defineConfig, type Connect, type Rollup } from "vite"
+import { resolve } from "node:path"
+import { build, defineConfig, type Connect, type Rollup } from "vite"
 import bruh from "vite-plugin-bruh"
 import browserslist from "browserslist"
 import esbuildTargets from "browserslist-to-esbuild"
@@ -24,6 +25,9 @@ const packageChunk = (id: string, { getModuleInfo }: Rollup.ManualChunkMeta) => 
     seen.add(module = importer)
   }
 }
+
+// Where the pages are built, for the service worker to be built beside them
+let outDir = "dist"
 
 // A laundry room's own path, like /laundry/adams-tower/, which the Worker answers with the laundry page
 const ROOM = /^\/laundry\/[\w-]+\/$/
@@ -58,6 +62,56 @@ export default defineConfig({
       configureServer: server => void server.middlewares.use(toPage),
       configurePreviewServer: server => void server.middlewares.use(toPage)
     },
+    {
+      // A page names everything the service worker keeps for it in its head (src/shell/manifest.mts), but a web
+      // worker's script is named only by the code that starts it, so each page's head names the workers of its code
+      name: "name-workers",
+      transformIndexHtml: {
+        order: "post",
+        handler: (html, { bundle, chunk, path }) => {
+          if (!bundle || !chunk)
+            return
+          // A data file that isn't there is left named as the source, where the rest are assets by now, which
+          // would be a page that can't load
+          const missing = [...html.matchAll(/href="([^"]*)" data-name="([^"]*)"/g)].filter(([, href]) => !/^(__VITE_ASSET__|\/assets\/)/.test(href))
+          if (missing.length)
+            throw new Error(`${path} names data not fetched yet: ${missing.map(([, href, name]) => `${name} (${href})`).join(", ")}`)
+          const chunks = [chunk]
+          for (const { imports } of chunks)
+            for (const name of imports)
+              if (!chunks.some(seen => seen.fileName === name) && bundle[name]?.type === "chunk")
+                chunks.push(bundle[name])
+          // A worker's script is emitted as an asset named after its module, which is in the chunk that starts it
+          const stems = chunks.flatMap(({ modules }) => Object.keys(modules).flatMap(id => id.match(/\/([^/?]+)\.[cm]?[jt]s\?(?:shared)?worker/)?.[1] ?? []))
+          return Object.values(bundle)
+            .filter(output => output.type === "asset" && stems.some(stem => output.fileName.match(`/${stem}-[\\w-]+\\.js$`)))
+            .map(({ fileName }) => ({ tag: "link", attrs: { rel: "prefetch", href: `/${fileName}` }, injectTo: "head" }))
+        }
+      }
+    },
+    {
+      // The service worker, from src/sw, built after the pages as one plain script at /sw.js, where they register it
+      name: "service-worker",
+      apply: "build",
+      configResolved(config) {
+        outDir = resolve(config.root, config.build.outDir)
+      },
+      closeBundle: () =>
+        build({
+          configFile: false,
+          logLevel: "warn",
+          publicDir: false,
+          build: {
+            outDir,
+            emptyOutDir: false,
+            target: esbuildTargets(browsers),
+            rollupOptions: {
+              input: "src/sw/sw.mts",
+              output: { format: "iife", entryFileNames: "sw.js" }
+            }
+          }
+        }).then(() => {})
+    },
     bruh()
   ],
   css: {
@@ -67,6 +121,9 @@ export default defineConfig({
   build: {
     target: esbuildTargets(browsers),
     cssMinify: "lightningcss",
+    // Data files are always files of their own, never inlined, so the service worker keeps and versions them as
+    // it does code, and a page can tell a newer build's data from its code (src/shell/build.mts)
+    assetsInlineLimit: file => file.endsWith(".json") ? false : undefined,
     rollupOptions: {
       output: {
         manualChunks: packageChunk

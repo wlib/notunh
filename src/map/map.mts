@@ -1,22 +1,28 @@
 import "maplibre-gl/dist/maplibre-gl.css"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
-import { Map as MapLibre, AttributionControl, NavigationControl, Marker, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature } from "maplibre-gl"
+import { Map as MapLibre, AttributionControl, NavigationControl, Marker, addProtocol, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature } from "maplibre-gl"
 import { r, watch, type Reactive, type SourceNode } from "bruh/reactive"
+import type { StyleSpecification } from "maplibre-gl"
 import type { Feed } from "./feed.mts"
 import type { Model } from "./model.mts"
 import type { Vehicle } from "./umo.mts"
-import type { Itinerary, Place } from "./plan.mts"
-import { type Coordinates, type Padding, coveredPadding, ridePath } from "./geometry.mts"
-import { nameAt, walkPath, type MapHints } from "./osm.mts"
+import { type Itinerary, type Place, wayKey } from "./plan.mts"
+import type { LegPath } from "./state.mts"
+import { nearestOnLine, toLine } from "../geo/lines.mts"
+import { outlineHolds } from "../geo/boxes.mts"
+import type { Coordinates } from "../geo/projection.mts"
+import { type Padding, coveredPadding } from "./camera.mts"
+import { type GazetteerPlace, type MapHints, nameAt } from "./gazetteer.mts"
 import { animateBuses } from "./buses.mts"
 import { showYou } from "./you.mts"
-import { BUILDINGS, type Building } from "./places.mts"
+import type { Building } from "./places.mts"
 import { laneSlots, lanePieces, measureCorridors } from "./corridors.mts"
+import { BASE, DRAWN_ICONS, type StyleManifest, glyphsFrom, hostedAt, upstreamGlyphs } from "./style.mts"
+import { PROTOCOL, tileLoader } from "./tiles.mts"
 
 // maplibre finds its worker with a computed URL that vite can't see, so bundle it as a worker explicitly
 setWorkerUrl(workerUrl)
 
-const STYLE = "https://tiles.openfreemap.org/styles/liberty"
 const FONT = ["Noto Sans Bold"]
 const DURHAM: Coordinates = [-70.9345, 43.1365]
 const TAP_RADIUS = 22 // px, about a fingertip
@@ -28,6 +34,8 @@ const START = "#2f8f5b"
 const END = "#c8423b"
 // Laundry and dining buildings, muted to sit quietly beneath the buses
 const QUIET: Record<Building["kind"], string> = { laundry: "#71839b", dining: "#a1825c" }
+// Further than this from a house, a street isn't the one it's on
+const MAX_STREET = 80 // m
 
 export type Tap =
   | { kind: "bus",      id: string }
@@ -91,36 +99,68 @@ const chevronIcon = (color: string) =>
     context.stroke()
   })
 
-// Glyphs on a 24 unit grid, after Tabler's wash machine and tools kitchen 2, pared down to read at a dozen pixels
-const GLYPHS: Record<Building["kind"], string> = {
-  laundry: "M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M16 14a4 4 0 1 1 -8 0a4 4 0 1 1 8 0 M8.5 6.5h.01 M11.5 6.5h.01",
-  dining:  "M19 3v12h-5c-.02 -3.68 .18 -7.4 5 -12z M19 15v6 M8 3v18 M5 3v3a3 3 0 0 0 6 0v-3"
+// Glyphs on a 24 unit grid, after Tabler's wash machine, tools kitchen 2, and recycle, pared down to read at a dozen
+// pixels
+const GLYPHS: Record<Building["kind"] | typeof DRAWN_ICONS[number], string> = {
+  laundry:         "M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M16 14a4 4 0 1 1 -8 0a4 4 0 1 1 8 0 M8.5 6.5h.01 M11.5 6.5h.01",
+  dining:          "M19 3v12h-5c-.02 -3.68 .18 -7.4 5 -12z M19 15v6 M8 3v18 M5 3v3a3 3 0 0 0 6 0v-3",
+  bicycle_parking: "M9.5 15.5a3.5 3.5 0 1 1 -7 0a3.5 3.5 0 1 1 7 0 M21.5 15.5a3.5 3.5 0 1 1 -7 0a3.5 3.5 0 1 1 7 0 M6 15.5l4 -7h6.5l1.5 7 M6 15.5h6l4.5 -7 M10 8.5l2 7 M8.5 6.5h3 M16.5 8.5l-.75 -2.5h2",
+  atm:             "M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z M3 10h18 M7 15h3",
+  recycling:       "M12 17l-2 2l2 2 M10 19h9a2 2 0 0 0 1.75 -2.75l-.55 -1 M8.536 11l-.732 -2.732l-2.732 .732 M7.804 8.268l-4.5 7.794a2 2 0 0 0 1.506 2.89l1.141 .024 M15.464 11l2.732 .732l.732 -2.732 M18.196 11.732l-4.5 -7.794a2 2 0 0 0 -3.256 -.14l-.591 .976"
 }
+
+type Disc = {
+  ring:      string,
+  disc:      string,
+  ink:       string,
+  ringWidth: number,
+  // The glyph's size as a part of its 24 unit grid, and its strokes' width in those units
+  scale:     number,
+  weight:    number,
+  shadow?:   boolean
+}
+
+/** A glyph in a disc, inside a ring of another color, and maybe a shadow */
+const discIcon = (size: number, glyph: keyof typeof GLYPHS, { ring, disc, ink, ringWidth, scale, weight, shadow = false }: Disc) =>
+  icon(size, context => {
+    const middle = size / 2
+    context.beginPath()
+    context.arc(middle, middle, middle - 1, 0, 2 * Math.PI)
+    context.fillStyle = ring
+    if (shadow) {
+      context.shadowColor = "rgb(0 0 0 / 0.2)"
+      context.shadowBlur = 1.5
+    }
+    context.fill()
+    context.shadowColor = "transparent"
+    context.beginPath()
+    context.arc(middle, middle, middle - 1 - ringWidth, 0, 2 * Math.PI)
+    context.fillStyle = disc
+    context.fill()
+    context.translate(middle, middle)
+    context.scale(scale, scale)
+    context.translate(-12, -12)
+    context.strokeStyle = ink
+    context.lineWidth = weight
+    context.lineCap = "round"
+    context.lineJoin = "round"
+    context.stroke(new Path2D(GLYPHS[glyph]))
+  })
 
 // A small muted disc in a white ring, with its glyph in white: a washing machine for laundry, a fork and knife
 // for dining
 const buildingIcon = (kind: Building["kind"]) =>
-  icon(20, context => {
-    context.beginPath()
-    context.arc(10, 10, 9, 0, 2 * Math.PI)
-    context.fillStyle = "white"
-    context.shadowColor = "rgb(0 0 0 / 0.2)"
-    context.shadowBlur = 1.5
-    context.fill()
-    context.shadowColor = "transparent"
-    context.beginPath()
-    context.arc(10, 10, 7.75, 0, 2 * Math.PI)
-    context.fillStyle = QUIET[kind]
-    context.fill()
-    context.translate(10, 10)
-    context.scale(0.45, 0.45)
-    context.translate(-12, -12)
-    context.strokeStyle = "white"
-    context.lineWidth = 2.25
-    context.lineCap = "round"
-    context.lineJoin = "round"
-    context.stroke(new Path2D(GLYPHS[kind]))
-  })
+  discIcon(20, kind, { ring: "white", disc: QUIET[kind], ink: "white", ringWidth: 1.25, scale: 0.45, weight: 2.25, shadow: true })
+
+// As Liberty's sprite draws points of interest, a colored glyph in a white disc ringed in grey, but for bicycle
+// parking, which is white on parking's blue
+const POI_ICON = { ring: "#bbb", disc: "white", ringWidth: 1, scale: 0.55, weight: 2.25 }
+const poiIcon = (name: typeof DRAWN_ICONS[number]) =>
+  discIcon(21, name, {
+    bicycle_parking: { ...POI_ICON, ring: "white", disc: "#4898ff", ink: "white" },
+    atm:             { ...POI_ICON, ink: "#5d60be" },
+    recycling:       { ...POI_ICON, ink: "#76a723" }
+  }[name])
 
 const collection = (features: GeoJSON.Feature[]): GeoJSON.FeatureCollection => ({
   type: "FeatureCollection",
@@ -181,31 +221,108 @@ const arrows = (id: string, source: string, filter?: any) => ({
   }
 })
 
+/** The rings of a polygon the map draws, as the gazetteer has outlines */
+const ringsOf = (geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon) =>
+  (geometry.type === "Polygon" ? geometry.coordinates : geometry.coordinates.flat()) as Coordinates[][]
+
+/** Each stop as a feature, by its index, which taps give back */
+const stopFeatures = (feed: Feed) =>
+  feed.stops.map((stop, i): GeoJSON.Feature => ({
+    type: "Feature",
+    id: i,
+    properties: { name: stop.name },
+    geometry: { type: "Point", coordinates: [stop.lon, stop.lat] }
+  }))
+
+/** Each route's shapes, for laying out the lanes routes share */
+const corridorsOf = (feed: Feed) =>
+  measureCorridors(feed.routes.flatMap(route =>
+    [...new Set(feed.trips.filter(trip => trip.route === route.id).map(trip => trip.shape))]
+      .map(shape => ({ route: route.id, coordinates: feed.shapes[shape] }))
+  ))
+
+/** Each laundry and dining building as a feature, by its index, which taps give back */
+const buildingFeatures = (buildings: readonly Building[]) =>
+  buildings.map(({ kind, name, lat, lon }, i): GeoJSON.Feature => ({
+    type: "Feature",
+    id: i,
+    properties: { kind, name, color: QUIET[kind] },
+    geometry: { type: "Point", coordinates: [lon, lat] }
+  }))
+
+/**
+ * Draws the map, following the data as newer builds swap it in: the timetable's stops and routes, the model the
+ * buses are driven by, the gazetteer taps are named from, the laundry and dining buildings, and which week's tiles
+ * are ours
+ */
 export const createMap = (
   container: HTMLElement,
   panel: HTMLElement,
-  feed: Feed,
   state: {
-    model:            Model,
+    feed:             Reactive<Feed>,
+    gazetteer:        Reactive<readonly GazetteerPlace[]>,
+    buildings:        Reactive<readonly Building[]>,
+    tiles:            Reactive<{ version?: string }>,
+    style:            Reactive<StyleManifest>,
+    model:            Reactive<Model>,
     vehicles:         Reactive<Vehicle[]>,
     layovers:         Reactive<ReadonlySet<string>>,
     shownRoutes:      Reactive<ReadonlySet<string>>,
     highlightedRoute: Reactive<string | undefined>,
     from:             SourceNode<Place | undefined>,
     to:               SourceNode<Place | undefined>,
-    selectedStop:     SourceNode<number | undefined>,
+    selectedStopId:   Reactive<string | undefined>,
     itinerary:        Reactive<Itinerary | undefined>,
+    legPaths:         Reactive<LegPath[]>,
     focusedBuses:     Reactive<{ vehicles?: ReadonlySet<string>, route?: string }>,
     riding:           Reactive<string | undefined>
   },
   onTap: (tap: Tap) => void
 ) => {
+  // The style's tiles, ours where we have them, from the folder of the week the data names
+  let version = state.tiles.peek().version
+  addProtocol(PROTOCOL, tileLoader(version))
+  // Glyphs outside the ranges kept with our style come from where it says
+  let upstream: string | undefined
   const map = new MapLibre({
     container,
-    style: STYLE,
     center: DURHAM,
     zoom: 14.5,
-    attributionControl: false
+    attributionControl: false,
+    transformRequest: (url, type) => type === "Glyphs" ? { url: glyphsFrom(url, upstream) } : undefined
+  })
+  // Our style as loaded, keeping what the map added to the one before: the sources and layers that aren't the style's
+  const transformStyle = (previous: StyleSpecification | undefined, style: StyleSpecification) => {
+    upstream = upstreamGlyphs(style)
+    const ours = Object.entries(previous?.sources ?? {}).filter(([id]) => !(id in style.sources))
+    return hostedAt({
+      ...style,
+      sources: { ...style.sources, ...Object.fromEntries(ours) },
+      layers: [...style.layers, ...previous?.layers.filter(layer => "source" in layer && ours.some(([id]) => id === layer.source)) ?? []]
+    }, location.origin)
+  }
+  // A newer build's style comes in as the differences from the one showing, so nothing flickers
+  let styleUrl: string | undefined
+  watch([state.style], () => {
+    if (state.style.value.url === styleUrl)
+      return
+    styleUrl = state.style.value.url
+    map.setStyle(styleUrl, { transformStyle })
+  })
+  // The points of interest Liberty's sprite has no icon for, drawn as they're needed
+  map.on("styleimagemissing", ({ id }) => {
+    if ((DRAWN_ICONS as readonly string[]).includes(id))
+      map.addImage(id, poiIcon(id as typeof DRAWN_ICONS[number]), { pixelRatio: DENSITY })
+  })
+  // A newer week's tiles are loaded afresh, each showing in place of the one before it as it comes
+  watch([state.tiles], () => {
+    if (state.tiles.value.version === version)
+      return
+    version = state.tiles.value.version
+    addProtocol(PROTOCOL, tileLoader(version))
+    for (const [id, source] of Object.entries(map.getStyle()?.sources ?? {}))
+      if ("tiles" in source && source.tiles?.some(tile => tile.startsWith(`${PROTOCOL}://`)))
+        map.refreshTiles(id)
   })
   map.addControl(new AttributionControl({ compact: true }), "bottom-right")
   map.addControl(new NavigationControl({ visualizePitch: true }), "top-right")
@@ -231,33 +348,13 @@ export const createMap = (
     container.addEventListener(type, () => intent = undefined, { capture: true, passive: true })
   show(padding => map.jumpTo({ center: DURHAM, padding }))
 
-  const corridors = measureCorridors(feed.routes.flatMap(route =>
-    [...new Set(feed.trips.filter(trip => trip.route === route.id).map(trip => trip.shape))]
-      .map(shape => ({ route: route.id, coordinates: feed.shapes[shape] }))
-  ))
-  const routeOrder = feed.routes.map(route => route.id)
-
-  const stopFeatures = feed.stops.map((stop, i): GeoJSON.Feature => ({
-    type: "Feature",
-    id: i,
-    properties: { name: stop.name },
-    geometry: { type: "Point", coordinates: [stop.lon, stop.lat] }
-  }))
-
-  const buildingFeatures = BUILDINGS.map(({ kind, name, lat, lon }, i): GeoJSON.Feature => ({
-    type: "Feature",
-    id: i,
-    properties: { kind, name, color: QUIET[kind] },
-    geometry: { type: "Point", coordinates: [lon, lat] }
-  }))
-
   for (const [color, place] of [[START, state.from], [END, state.to]] as const) {
     const marker = new Marker({ color, draggable: true })
     marker.on("dragend", async () => {
       const { lng, lat } = marker.getLngLat()
       const dropped = { lon: lng, lat, name: "Dropped pin" }
       place.value = dropped
-      const name = await nameAt(dropped)
+      const name = await nameAt(state.gazetteer.peek(), dropped, hintsAt(map.project([lng, lat])))
       if (name && place.peek() === dropped)
         place.value = { ...dropped, name }
     })
@@ -287,28 +384,46 @@ export const createMap = (
         .map(layer => layer.id)
     const named = (features: MapGeoJSONFeature[]) =>
       features.find(feature => feature.properties.name)?.properties.name as string | undefined
+    const outline = map.queryRenderedFeatures([point.x, point.y], { layers: layersOf("building") })
+      .map(feature => feature.geometry)
+      .find((geometry): geometry is GeoJSON.Polygon | GeoJSON.MultiPolygon =>
+        geometry.type === "Polygon" || geometry.type === "MultiPolygon"
+      )
+    const rings = outline && ringsOf(outline)
 
     return {
       label: named(map.queryRenderedFeatures([[point.x - 8, point.y - 8], [point.x + 8, point.y + 8]], { layers: layersOf("poi") })),
-      outline: map.queryRenderedFeatures([point.x, point.y], { layers: layersOf("building") })
-        .map(feature => feature.geometry)
-        .find((geometry): geometry is GeoJSON.Polygon | GeoJSON.MultiPolygon =>
-          geometry.type === "Polygon" || geometry.type === "MultiPolygon"
-        )
+      outline: rings,
+      address: rings && addressIn(rings)
     }
   }
 
+  // The address of a building, from the house number the tiles have within its outline, and the street nearest that,
+  // as the tiles don't say which street it's on
+  const addressIn = (rings: Coordinates[][]) => {
+    const house = map.querySourceFeatures(BASE, { sourceLayer: "housenumber" })
+      .find(({ geometry }) => geometry.type === "Point" && outlineHolds(rings, { lon: geometry.coordinates[0], lat: geometry.coordinates[1] }))
+    if (!house)
+      return undefined
+    const [lon, lat] = (house.geometry as GeoJSON.Point).coordinates
+    const street = map.querySourceFeatures(BASE, { sourceLayer: "transportation_name" })
+      .filter(({ properties }) => properties.name && properties.class !== "path")
+      .flatMap(({ geometry, properties }) =>
+        (geometry.type === "LineString" ? [geometry.coordinates] : geometry.type === "MultiLineString" ? geometry.coordinates : [])
+          .map(line => ({ name: properties.name as string, meters: nearestOnLine(toLine(line as Coordinates[]), { lat, lon }).meters }))
+      )
+      .filter(({ meters }) => meters <= MAX_STREET)
+      .sort((a, b) => a.meters - b.meters)[0]
+    return street && `${house.properties.housenumber} ${street.name}`
+  }
+
   map.on("load", () => {
-    for (const route of feed.routes) {
-      map.addImage(`bus-${route.id}`, busIcon(route.color), { pixelRatio: DENSITY })
-      map.addImage(`chevron-${route.id}`, chevronIcon(route.color), { pixelRatio: DENSITY })
-    }
     for (const kind of ["laundry", "dining"] as const)
       map.addImage(`building-${kind}`, buildingIcon(kind), { pixelRatio: DENSITY })
 
-    map.addSource("buildings", { type: "geojson", data: collection(buildingFeatures) })
+    map.addSource("buildings", { type: "geojson", data: collection([]) })
     map.addSource("routes",    { type: "geojson", data: collection([]) })
-    map.addSource("stops",     { type: "geojson", data: collection(stopFeatures) })
+    map.addSource("stops",     { type: "geojson", data: collection([]) })
     map.addSource("itinerary", { type: "geojson", data: collection([]) })
     map.addSource("vehicles",  { type: "geojson", data: collection([]) })
 
@@ -377,6 +492,8 @@ export const createMap = (
       paint: { "line-color": ["get", "color"], "line-width": lineWidth(4, 10) }
     })
     map.addLayer(arrows("itinerary-arrows", "itinerary", isRide))
+    // A walk along the streets is dotted; one only estimated as a straight line, where the network doesn't join its
+    // ends, is dashed and faint, as the guess it is
     map.addLayer({
       id: "itinerary-walk",
       type: "line",
@@ -386,7 +503,8 @@ export const createMap = (
       paint: {
         "line-color": INK,
         "line-width": lineWidth(2.5, 5),
-        "line-dasharray": [0.1, 2]
+        "line-dasharray": ["case", ["get", "isEstimate"], ["literal", [1.5, 1.5]], ["literal", [0.1, 2]]],
+        "line-opacity": ["case", ["get", "isEstimate"], 0.5, 1]
       }
     })
 
@@ -463,7 +581,7 @@ export const createMap = (
 
       const building = nearestWithin(event.point, "buildings")
       if (building) {
-        const { lat, lon, name } = BUILDINGS[building.id as number]
+        const { lat, lon, name } = state.buildings.peek()[building.id as number]
         return onTap({ kind: "building", place: { lat, lon, name } })
       }
 
@@ -471,10 +589,26 @@ export const createMap = (
       onTap({ kind: "place", place: { lon: lng, lat, name: "Dropped pin" }, hints: hintsAt(event.point) })
     })
 
-    // Only the routes shown share lanes, so they're laid out again when that changes
-    const lanes = r(() => laneSlots(corridors, state.shownRoutes.value, routeOrder))
-    const colors = new Map(feed.routes.map(route => [route.id, route.color]))
     watch(() => {
+      map.getSource<GeoJSONSource>("buildings")!.setData(collection(buildingFeatures(state.buildings.value)))
+    })
+
+    // Each route's bus and chevrons in its color, and the stops, as the timetable has them
+    watch(() => {
+      for (const route of state.feed.value.routes)
+        for (const [image, draw] of [[`bus-${route.id}`, busIcon], [`chevron-${route.id}`, chevronIcon]] as const)
+          if (map.hasImage(image))
+            map.updateImage(image, draw(route.color))
+          else
+            map.addImage(image, draw(route.color), { pixelRatio: DENSITY })
+      map.getSource<GeoJSONSource>("stops")!.setData(collection(stopFeatures(state.feed.value)))
+    })
+
+    // Only the routes shown share lanes, so they're laid out again when that changes
+    const corridors = r(() => corridorsOf(state.feed.value))
+    const lanes = r(() => laneSlots(corridors.value, state.shownRoutes.value, state.feed.value.routes.map(route => route.id)))
+    watch(() => {
+      const colors = new Map(state.feed.value.routes.map(route => [route.id, route.color]))
       map.getSource<GeoJSONSource>("routes")!.setData(collection(
         lanePieces(lanes.value).map(({ route, slot, isSliding, coordinates }) => {
           const color = colors.get(route)!
@@ -507,10 +641,11 @@ export const createMap = (
         map.setLayoutProperty(layer, "line-sort-key", ["case", isHighlighted, 1, 0])
     })
 
-    // Draw the itinerary right away, then swap in street geometry for walks as it arrives
+    // Walks follow the streets and paths, and rides the route's shape
     let fitted: string | undefined
     watch(() => {
       const itinerary = state.itinerary.value
+      const paths = state.legPaths.value
       const source = map.getSource<GeoJSONSource>("itinerary")!
 
       if (!itinerary) {
@@ -519,56 +654,43 @@ export const createMap = (
         return
       }
 
-      const paths = itinerary.legs.map(leg =>
-        leg.kind === "ride"
-          ? ridePath(feed, leg)
-          : [[leg.from.lon, leg.from.lat], [leg.to.lon, leg.to.lat]] as Coordinates[]
-      )
-      const render = () =>
-        source.setData(collection(itinerary.legs.map((leg, i) =>
-          line(paths[i], {
-            kind: leg.kind,
-            color: leg.kind === "ride" ? feed.routesById.get(leg.run.trip.route)?.color : undefined
-          })
-        )))
-      render()
+      source.setData(collection(itinerary.legs.map((leg, i) =>
+        line(paths[i].coordinates, {
+          kind: leg.kind,
+          isEstimate: paths[i].via === "estimate",
+          color: leg.kind === "ride" ? state.feed.value.routesById.get(leg.run.trip.route)?.color : undefined
+        })
+      )))
 
-      // Replanning with fresher times redraws the same trip without moving the map
-      const key = JSON.stringify(paths)
+      // Replanning with fresher times, or as you walk, redraws the same trip without moving the map
+      const key = wayKey(itinerary)
       if (key !== fitted) {
         fitted = key
-        const all = paths.flat()
+        const all = paths.flatMap(path => path.coordinates)
         const lons = all.map(([lon]) => lon)
         const lats = all.map(([, lat]) => lat)
-        show(padding =>
+        // maplibre fits bounds within the padding it was given and the map's own padding together, so the panel's
+        // is set as the map's alone
+        show(padding => {
+          map.setPadding(padding)
           map.fitBounds(
             [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
-            { padding, maxZoom: 16.5 }
+            { maxZoom: 16.5 }
           )
-        )
+        })
       }
-
-      let isCurrent = true
-      itinerary.legs.forEach(async (leg, i) => {
-        if (leg.kind !== "walk")
-          return
-        paths[i] = await walkPath(leg.from, leg.to)
-        if (isCurrent)
-          render()
-      })
-      return () => isCurrent = false
     })
 
-    watch(() => {
-      const stop = state.selectedStop.value
-      if (stop === undefined)
+    // Once for each stop selected, and not again as a newer timetable renumbers it
+    watch([state.selectedStopId], () => {
+      const stop = state.feed.peek().stops.find(stop => stop.id === state.selectedStopId.value)
+      if (!stop)
         return
-      const { lon, lat } = feed.stops[stop]
       const zoom = Math.max(map.getZoom(), 16)
-      show(padding => map.easeTo({ center: [lon, lat], zoom, padding }))
+      show(padding => map.easeTo({ center: [stop.lon, stop.lat], zoom, padding }))
     })
 
-    busPosition = animateBuses(map, feed, state.model, state.vehicles, state.layovers, state.focusedBuses)
+    busPosition = animateBuses(map, state.feed, state.model, state.vehicles, state.layovers, state.focusedBuses)
     drawYou()
   })
 

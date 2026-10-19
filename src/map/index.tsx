@@ -7,8 +7,8 @@ import { r, watch } from "bruh/reactive"
 import { Popup } from "maplibre-gl"
 import { createMap } from "./map.mts"
 import {
-  feed, model, layovers, from, to, selected, itinerary, selectedStop, selectedBus,
-  riding, suggested, viewedBus, highlightedRoute, focusedBuses, shownRoutes, directTo
+  feed, gazetteer, buildings, model, tiles, style, layovers, from, to, selected, itinerary, legPaths, selectedStop,
+  selectedStopId, selectedBus, riding, suggested, viewedBus, highlightedRoute, focusedBuses, shownRoutes, directTo
 } from "./state.mts"
 import { locationProblem } from "./location.mts"
 import { fusedVehicles } from "./riding.mts"
@@ -84,8 +84,10 @@ const openCard = (lngLat: [number, number], content: Node) => {
 const { map } = createMap(
   mapElement,
   panel,
-  feed,
-  { model, vehicles: fusedVehicles, layovers, shownRoutes, highlightedRoute, from, to, selectedStop, itinerary, focusedBuses, riding },
+  {
+    feed, gazetteer, buildings, tiles, style, model, vehicles: fusedVehicles, layovers, shownRoutes, highlightedRoute, from, to,
+    selectedStopId, itinerary, legPaths, focusedBuses, riding
+  },
   tap => {
     if (card) {
       card.remove()

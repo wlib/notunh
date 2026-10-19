@@ -1,13 +1,17 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { distance, serviceDayStart, withIndexes, type Feed, type FeedData } from "../../src/map/feed.mts"
+import { canAlight, canBoard, serviceDayStart, withIndexes, type Feed, type FeedData, type Trip } from "../../src/map/feed.mts"
+import { distance } from "../../src/geo/projection.mts"
 import type { StopPredictions } from "../../src/map/umo.mts"
 import {
-  ALTERNATIVES, BOARDING, HORIZON, LAYOVER, MAX_ACCESS_WALK, MAX_TRANSFER_WALK, MIN_TIME_SAVED, MIN_TRANSFER_GAIN,
-  buildConnections, buildRuns, cost, plan, rides, scan, slack, spread, timeAt, uncertainty, walkAllowance, walkOnly,
-  walkSeconds, type Itinerary, type Place, type Run
+  ALTERNATIVES, BOARDING, HORIZON, LAYOVER, MIN_TIME_SAVED, MIN_TRANSFER_GAIN,
+  arrivalAt, buildConnections, buildRuns, cost, itineraryKey, plan, rides, scan, slack, spread, timeAt, uncertainty, walkOnly,
+  type Itinerary, type Place, type Run
 } from "../../src/map/plan.mts"
-import { emptyModel, update } from "../../src/map/model.mts"
+import {
+  MAX_ACCESS_WALK, MAX_TRANSFER_WALK, createWalks, straightMeters, walkAllowance, walkSeconds, type Walks
+} from "../../src/map/walks.mts"
+import { emptyModel, holdProbability, isLikely, probit, update } from "../../src/map/model.mts"
 import type { Visit } from "../../src/map/events.mts"
 import { addDays } from "../../src/shared/time.mts"
 
@@ -26,7 +30,8 @@ const offset = (place: { lat: number, lon: number }, size: number) =>
 // Spread over several km, so riding beats walking and transfers matter
 const near = offset(CENTER, 8000)
 
-// Small feeds: a few stops within a few km, a few trips that may revisit stops like loops do
+// Small feeds: a few stops within a few km, a few trips that may revisit stops like loops do, wait at some stops
+// before leaving, and let nobody on or off at some
 const feed = fc
   .array(near, { minLength: 2, maxLength: 8 })
   .chain(stops =>
@@ -37,7 +42,10 @@ const feed = fc
           stops: fc.array(fc.nat(stops.length - 1), { minLength: 2, maxLength: 6 }),
           first: fc.integer({ min: 7 * 3600, max: 11 * 3600 }),
           gaps:  fc.array(fc.nat({ max: 300 }), { minLength: 8, maxLength: 8 }),
-          timepoints: fc.uniqueArray(fc.nat(5), { maxLength: 3 })
+          waits: fc.array(fc.nat({ max: 90 }), { minLength: 8, maxLength: 8 }),
+          timepoints: fc.uniqueArray(fc.nat(5), { maxLength: 3 }),
+          noPickup:   fc.uniqueArray(fc.nat(5), { maxLength: 2 }),
+          noDropOff:  fc.uniqueArray(fc.nat(5), { maxLength: 2 })
         }),
         { minLength: 1, maxLength: 8 }
       )
@@ -52,7 +60,18 @@ const feed = fc
       stops: stops.map((stop, i) => ({ ...stop, id: `${i}`, name: `Stop ${i}` })),
       services: { daily: { days: 127, start: "2000-01-01", end: "2099-12-31", added: [], removed: [] } },
       trips: trips.map((trip, i) => {
-        let time = trip.first
+        const last = trip.stops.length - 1
+        const positions = (among: number[], isMeaningful: (position: number) => boolean) =>
+          among.filter(position => position <= last && isMeaningful(position)).sort((a, b) => a - b)
+        // Getting to each stop a gap after leaving the one before, and leaving it after waiting there
+        const arrivals: number[] = []
+        const times: number[] = []
+        trip.stops.forEach((_, j) => {
+          arrivals.push(j === 0 ? trip.first : times[j - 1] + trip.gaps[j - 1])
+          times.push(arrivals[j] + (j === 0 ? 0 : trip.waits[j - 1]))
+        })
+        const noPickup = positions(trip.noPickup, position => position < last)
+        const noDropOff = positions(trip.noDropOff, position => position > 0)
         return {
           id: `T${i}`,
           route: "R",
@@ -60,8 +79,11 @@ const feed = fc
           headsign: "",
           shape: "",
           stops: trip.stops,
-          times: trip.stops.map((_, j) => j === 0 ? time : time += trip.gaps[j - 1]),
-          timepoints: trip.timepoints.filter(position => position < trip.stops.length).sort((a, b) => a - b)
+          times,
+          ...arrivals.some((arrival, j) => arrival !== times[j]) ? { arrivals } : {},
+          ...noPickup.length ? { noPickup } : {},
+          ...noDropOff.length ? { noDropOff } : {},
+          timepoints: positions(trip.timepoints, () => true)
         }
       }),
       shapes: {}
@@ -94,12 +116,12 @@ const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: numb
   const stops = feed.stops
 
   const finish = (stop: number, time: number) => {
-    if (distance(stops[stop], to) <= MAX_ACCESS_WALK)
-      best = Math.min(best, time + walkSeconds(distance(stops[stop], to)))
+    if (straightMeters(stops[stop], to) <= MAX_ACCESS_WALK)
+      best = Math.min(best, time + walkSeconds(straightMeters(stops[stop], to)))
     stops.forEach((other, i) => {
-      const meters = distance(stops[stop], other)
-      if (i !== stop && meters <= MAX_TRANSFER_WALK && distance(other, to) <= MAX_ACCESS_WALK)
-        best = Math.min(best, time + walkSeconds(meters) + walkSeconds(distance(other, to)))
+      const meters = straightMeters(stops[stop], other)
+      if (i !== stop && meters <= MAX_TRANSFER_WALK && straightMeters(other, to) <= MAX_ACCESS_WALK)
+        best = Math.min(best, time + walkSeconds(meters) + walkSeconds(straightMeters(other, to)))
     })
   }
 
@@ -108,16 +130,17 @@ const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: numb
       for (let i = 0; i < run.trip.stops.length; i++)
         for (let j = i + 1; j < run.trip.stops.length; j++)
           if (
+            canBoard(run.trip, i) && canAlight(run.trip, j) &&
             timeAt(run, i) >= ready(run.trip.stops[i]) + slack(run, i, timeAt(run, i), start) &&
             timeAt(run, i) >= start &&
             timeAt(run, j - 1) <= start + HORIZON
           )
-            yield { run, alight: run.trip.stops[j], arrival: timeAt(run, j) }
+            yield { run, alight: run.trip.stops[j], arrival: arrivalAt(run, j) }
   }
 
   const access = (stop: number) =>
-    distance(from, stops[stop]) <= MAX_ACCESS_WALK
-      ? start + walkAllowance(distance(from, stops[stop]))
+    straightMeters(from, stops[stop]) <= MAX_ACCESS_WALK
+      ? start + walkAllowance(straightMeters(from, stops[stop]))
       : Infinity
 
   for (const first of rides(access)) {
@@ -127,7 +150,7 @@ const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: numb
 
     const ready = first.arrival + uncertainty(first.arrival - start)
     const transfer = (stop: number) => {
-      const meters = distance(stops[first.alight], stops[stop])
+      const meters = straightMeters(stops[first.alight], stops[stop])
       return (
         stop === first.alight       ? ready :
         meters <= MAX_TRANSFER_WALK ? ready + walkAllowance(meters) :
@@ -154,7 +177,7 @@ const expectValid = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, s
     expect(leg.start).toBeGreaterThanOrEqual(time)
     if (leg.kind === "walk") {
       expect(distance(at, leg.from)).toBe(0)
-      expect(leg.meters).toBeCloseTo(distance(leg.from, leg.to), 3)
+      expect(leg.meters).toBeCloseTo(straightMeters(leg.from, leg.to), 3)
       expect(leg.end - leg.start).toBe(walkSeconds(leg.meters))
       ready += walkAllowance(leg.meters)
       at = leg.to
@@ -162,9 +185,12 @@ const expectValid = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, s
     else {
       const { run, fromPosition, toPosition } = leg
       expect(fromPosition).toBeLessThan(toPosition)
+      // Never on where the stop time says nobody gets on, nor off where nobody gets off
+      expect(canBoard(run.trip, fromPosition)).toBe(true)
+      expect(canAlight(run.trip, toPosition)).toBe(true)
       expect(distance(at, feed.stops[run.trip.stops[fromPosition]])).toBe(0)
       expect(leg.start).toBe(timeAt(run, fromPosition))
-      expect(leg.end).toBe(timeAt(run, toPosition))
+      expect(leg.end).toBe(arrivalAt(run, toPosition))
       if (run !== previousRun)
         expect(leg.start).toBeGreaterThanOrEqual(ready + slack(run, fromPosition, leg.start, start) - 1e-6)
       previousRun = run
@@ -176,21 +202,29 @@ const expectValid = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, s
   expect(distance(at, to)).toBe(0)
 }
 
+// Walking in straight lines, as the planner does without a network, the same object for each feed
+const walksCache = new WeakMap<Feed, Walks>()
+const walksOf = (feed: Feed) => {
+  if (!walksCache.has(feed))
+    walksCache.set(feed, createWalks(feed.stops))
+  return walksCache.get(feed)!
+}
+
 // Rounding walk times to the second can make a detour via a stop look a second or two quicker
-const beatsWalking = (from: Place, to: Place, start: number, end: number) =>
-  end < walkOnly(from, to, start).end - 2
+const beatsWalking = (feed: Feed, from: Place, to: Place, start: number, end: number) =>
+  end < walkOnly(walksOf(feed), from, to, start).end - 2
 
 // When riding only ties walking somewhere along the way, scan rightly prefers walking there,
 // which is the walk-only option and not a bus itinerary, so these properties are about buses that help
 test("scan finds valid itineraries, with the slack every boarding needs, at least as early as any with two rides", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
-    const itinerary = scan(feed, runs, buildConnections(runs, start), from, to, start, { now: start })
+    const itinerary = scan(feed, walksOf(feed), runs, buildConnections(runs, start), from, to, start, { now: start })
     const best = bruteForce(feed, runs, from, to, start)
 
     if (itinerary)
       expectValid(feed, itinerary, from, to, start)
-    if (beatsWalking(from, to, start, best)) {
+    if (beatsWalking(feed, from, to, start, best)) {
       expect(itinerary).toBeDefined()
       expect(itinerary!.end).toBeLessThanOrEqual(best + 1e-6)
     }
@@ -200,8 +234,8 @@ test("scan finds valid itineraries, with the slack every boarding needs, at leas
 test("plan suggests valid, distinct buses that feel better than walking, best first", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
-    const itineraries = plan(feed, runs, from, to, start)
-    const walking = walkOnly(from, to, start)
+    const itineraries = plan(feed, walksOf(feed), runs, from, to, start)
+    const walking = walkOnly(walksOf(feed), from, to, start)
     const buses = (itinerary: Itinerary) =>
       itinerary.legs.flatMap(leg => leg.kind === "ride" ? [leg.run] : [])
 
@@ -222,10 +256,35 @@ test("plan suggests valid, distinct buses that feel better than walking, best fi
 test("plan only changes buses to arrive well before one bus or walking could", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
-    const simpler = Math.min(bruteForce(feed, runs, from, to, start, 1), walkOnly(from, to, start).end)
-    for (const itinerary of plan(feed, runs, from, to, start))
+    const simpler = Math.min(bruteForce(feed, runs, from, to, start, 1), walkOnly(walksOf(feed), from, to, start).end)
+    for (const itinerary of plan(feed, walksOf(feed), runs, from, to, start))
       if (rides(itinerary) > 1)
         expect(itinerary.end + MIN_TRANSFER_GAIN).toBeLessThanOrEqual(simpler + 1e-6)
+  }))
+)
+
+/** The same feed with its stops in another order, keeping their ids, as a newer timetable may number them */
+const renumbered = (feed: Feed, seed: number) => {
+  const order = feed.stops.map((_, i) => i).sort((a, b) => (a * 7919 + seed) % 1009 - (b * 7919 + seed) % 1009 || a - b)
+  const index = new Map(order.map((was, now) => [was, now]))
+  return withIndexes({
+    ...feed,
+    stops: order.map(i => feed.stops[i]),
+    trips: feed.trips.map(trip => ({ ...trip, stops: trip.stops.map(stop => index.get(stop)!) }))
+  })
+}
+
+/** The stops an itinerary gets on and off at, by id */
+const stopsOf = (feed: Feed, itinerary: Itinerary) =>
+  itinerary.legs.flatMap(leg => leg.kind === "ride" ? [leg.fromPosition, leg.toPosition].map(position => feed.stops[leg.run.trip.stops[position]].id) : [])
+
+test("a timetable with its stops numbered otherwise plans the same itineraries, by the same stops", () =>
+  fc.assert(fc.property(scenario, fc.nat(), ({ feed, from, to, start }, seed) => {
+    const other = renumbered(feed, seed)
+    const before = plan(feed, walksOf(feed), buildRuns(feed, TODAY, []), from, to, start)
+    const after = plan(other, walksOf(other), buildRuns(other, TODAY, []), from, to, start)
+    expect(after.map(itineraryKey)).toEqual(before.map(itineraryKey))
+    expect(after.map(itinerary => stopsOf(other, itinerary))).toEqual(before.map(itinerary => stopsOf(feed, itinerary)))
   }))
 )
 
@@ -233,16 +292,16 @@ test("plan's best option feels no worse than catching a bus from a nearer stop",
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
     const connections = buildConnections(runs, start)
-    const [best] = plan(feed, runs, from, to, start)
-    const quickest = scan(feed, runs, connections, from, to, start, { now: start, direct: true })
+    const [best] = plan(feed, walksOf(feed), runs, from, to, start)
+    const quickest = scan(feed, walksOf(feed), runs, connections, from, to, start, { now: start, direct: true })
     fc.pre(best !== undefined && quickest !== undefined)
 
     const meters = quickest!.legs[0].kind === "walk" ? quickest!.legs[0].meters : 0
-    const walking = cost(walkOnly(from, to, start), start)
+    const walking = cost(walkOnly(walksOf(feed), from, to, start), start)
     feed.stops.forEach((stop, access) => {
-      if (distance(from, stop) >= meters)
+      if (straightMeters(from, stop) >= meters)
         return
-      const nearer = scan(feed, runs, connections, from, to, start, { now: start, direct: true, access })
+      const nearer = scan(feed, walksOf(feed), runs, connections, from, to, start, { now: start, direct: true, access })
       if (nearer && cost(nearer, start) < walking - MIN_TIME_SAVED)
         expect(cost(best, start)).toBeLessThanOrEqual(cost(nearer, start) + 1e-6)
     })
@@ -250,23 +309,21 @@ test("plan's best option feels no worse than catching a bus from a nearer stop",
 )
 
 /** Umo predicting a trip's bus at one of its stops */
-const predict = (stop: { id: string, name: string }, tripId: string, at: number, isLive = true): StopPredictions => ({
-  serverTimestamp: 0,
-  route: { id: "R", title: "R", color: "000000", textColor: "FFFFFF" },
-  stop:  { id: stop.id, name: stop.name, code: stop.id },
+const predict = (stop: { id: string }, tripId: string, at: number, isLive = true): StopPredictions => ({
+  route: { id: "R" },
+  stop:  { id: stop.id },
   values: [{
     timestamp: at * 1000,
     minutes: 0,
     vehicleId: "V",
     tripId,
-    isDeparture: !isLive,
     affectedByLayover: !isLive,
-    direction: { id: "", name: "", destinationName: "" }
+    direction: { name: "" }
   }]
 })
 
-/** A feed of trips along the same stops, at their own times and timepoints */
-const lineFeed = (trips: { times: number[], timepoints: number[] }[]) =>
+/** A feed of trips along the same stops, at their own times and timepoints, and whatever else each says */
+const lineFeed = (trips: ({ times: number[], timepoints: number[] } & Partial<Trip>)[]) =>
   withIndexes({
     version: "test",
     start: "2000-01-01",
@@ -274,11 +331,35 @@ const lineFeed = (trips: { times: number[], timepoints: number[] }[]) =>
     routes: [{ id: "R", name: "R", long: "Route", color: "#000000", text: "#FFFFFF" }],
     stops: trips[0].times.map((_, i) => ({ ...CENTER, lat: CENTER.lat + i * 0.01, id: `${i}`, name: `Stop ${i}` })),
     services: { daily: { days: 127, start: "2000-01-01", end: "2099-12-31", added: [], removed: [] } },
-    trips: trips.map(({ times, timepoints }, i) => ({
-      id: `T${i}`, route: "R", service: "daily", headsign: "", shape: "", stops: times.map((_, j) => j), times, timepoints
+    trips: trips.map(({ times, ...rest }, i) => ({
+      id: `T${i}`, route: "R", service: "daily", headsign: "", shape: "", stops: times.map((_, j) => j), times, ...rest
     })),
     shapes: {}
   })
+
+test("nobody boards an arrivals-only stop, even when it's the only one in reach", () => {
+  const times = [8 * 3600, 8 * 3600 + 600, 8 * 3600 + 1200]
+  const from = { ...CENTER, lat: CENTER.lat + 0.0001, name: "" }
+  const to = { ...CENTER, lat: CENTER.lat + 0.02, name: "" }
+  const open = lineFeed([{ times, timepoints: [] }])
+  const closed = lineFeed([{ times, timepoints: [], noPickup: [0] }])
+  const at = (feed: Feed) => plan(feed, createWalks(feed.stops), buildRuns(feed, TODAY, []), from, to, BASE + times[0] - 300)
+  expect(at(open).map(itinerary => stopsOf(open, itinerary))).toEqual([["0", "2"]])
+  expect(at(closed)).toEqual([])
+})
+
+test("a bus that waits at a stop gets there before it leaves, and a ride ends on getting there", () => {
+  const times = [8 * 3600, 8 * 3600 + 700, 8 * 3600 + 1200]
+  const arrivals = [8 * 3600, 8 * 3600 + 600, 8 * 3600 + 1200]
+  const feed = lineFeed([{ times, arrivals, timepoints: [] }])
+  const run = runOn(buildRuns(feed, TODAY, []), "T0")
+  expect(arrivalAt(run, 1)).toBe(BASE + arrivals[1])
+  expect(timeAt(run, 1)).toBe(BASE + times[1])
+  const from = { ...CENTER, lat: CENTER.lat + 0.0001, name: "" }
+  const to = { ...CENTER, lat: CENTER.lat + 0.0101, name: "" }
+  const [itinerary] = plan(feed, createWalks(feed.stops), buildRuns(feed, TODAY, []), from, to, BASE + times[0] - 300)
+  expect(itinerary.legs[1]).toMatchObject({ kind: "ride", start: BASE + times[0], end: BASE + arrivals[1] })
+})
 
 const runOn = (runs: Run[], trip: string) =>
   runs.find(run => run.trip.id === trip && run.base === BASE)!
@@ -343,7 +424,7 @@ test("a connector's next loop starts a layover after its bus gets in, unless it 
   }))
 )
 
-test("with an empty model, how far off a bus may be is as it always was", () =>
+test("with an empty model, how far off a bus may be is as it always was, less the chance it waits for its time", () =>
   fc.assert(fc.property(feed, fc.integer({ min: -600, max: 4 * 3600 }), fc.boolean(), (feed, lead, isLive) => {
     const runs = buildRuns(feed, TODAY, [])
     for (const run of runs.slice(0, 5)) {
@@ -352,13 +433,26 @@ test("with an empty model, how far off a bus may be is as it always was", () =>
         const time = timeAt(run, position)
         const now = time - lead
         expect(spread(run, position, time, now)).toBe(uncertainty(lead))
-        expect(slack(run, position, time, now)).toBe(
-          run.trip.timepoints.includes(position) && run.delays[position] <= 0 ? BOARDING : uncertainty(lead) * (isLive ? 1 : 2)
-        )
+        // The timetable's own word on waiting is the prior, and the slack covers the rest of the ways it might leave
+        const waits = holdProbability(emptyModel(), "R", "", run.trip.timepoints.includes(position))
+        const share = probit((0.85 - waits) / (1 - waits)) / probit(0.85)
+        expect(slack(run, position, time, now)).toBeCloseTo(Math.max(BOARDING, uncertainty(lead) * (isLive ? 1 : 2) * share), 6)
       })
     }
   }))
 )
+
+test("a bus as likely as not to wait for its time gets the slack of one that doesn't, and a sure one a boarding's", () => {
+  const times = [8 * 3600, 9 * 3600, 10 * 3600]
+  const feed = lineFeed([{ times, timepoints: [1] }])
+  const [run] = buildRuns(feed, TODAY, [])
+  const now = BASE + times[1] - 600
+  const at = (holdChance: number[], delays = [0, 0, 0]) => slack({ ...run, holdChance, delays }, 1, BASE + times[1] + delays[1], now)
+  expect(at([0, 0.5, 0])).toBeGreaterThan(at([0, 0, 0]) * 0.5)
+  expect(at([0, 0.9, 0])).toBe(BOARDING)
+  // Running late, it isn't waiting for anything
+  expect(at([0, 0.9, 0], [60, 60, 60])).toBe(at([0, 0, 0], [60, 60, 60]))
+})
 
 /** A model that's seen a day of buses on route R drive between each pair of its stops in some seconds */
 const learned = (feed: Feed, seconds: number[], extra: Visit[] = []) =>
@@ -395,7 +489,7 @@ test("a stop where buses turn out to wait for their time is held at, and the lay
     }))
     const model = learned(feed, [60], [...waited, { vehicle: "W", route: "R", stop: "0", arrive: BASE, depart: BASE, gotIn: BASE - layover }])
     const [run] = buildRuns(feed, TODAY, [], model)
-    expect(run.held).toEqual([false, true, false])
+    expect(run.holdChance.map(isLikely)).toEqual([false, true, false])
     // The bus on T0 gets in at 10:00, and Umo has T1 starting on schedule much later
     const runs = buildRuns(feed, TODAY, [
       predict(feed.stops[2], "T0", BASE + times[2]),

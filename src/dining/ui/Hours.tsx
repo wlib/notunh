@@ -48,7 +48,7 @@ const Opens = ({ at }: { at: WallTime }) =>
 
 export const HallHours = () =>
   r(() => {
-    const hours = index.hours[hall.value]
+    const hours = index.value.hours[hall.value]
     if (!hours)
       return null
 

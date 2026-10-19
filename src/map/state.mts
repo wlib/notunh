@@ -1,23 +1,61 @@
 // App state and live data: reactive values only, no DOM
 
 import { r, watch } from "bruh/reactive"
-import feedUrl from "./gtfs.json?url"
-import modelUrl from "./model.json?url"
-import { distance, isServiceActive, loadFeed } from "./feed.mts"
-import { loadModel } from "./model.mts"
+import * as v from "valibot"
+import { boardableStops, isServiceActive, loadFeed, renumbered } from "./feed.mts"
+import { WalkData, loadGraph } from "./graph.mts"
+import { type Progress, type Walk, type Walks, createWalks, isOffPath, walkOn, walkSeconds } from "./walks.mts"
+import { type Line, sliceLine, toLine } from "../geo/lines.mts"
+import { type Coordinates, distance } from "../geo/projection.mts"
+import { ridePath } from "./shapes.mts"
+import { Model, emptyModel } from "./model.mts"
+import { StyleManifest } from "./style.mts"
+import { TilesManifest } from "./tiles.mts"
 import { type Vehicle, type Prediction, type StopPredictions, STALE_VEHICLE_SECONDS, fetchVehicles, fetchPredictions, fetchStopPredictions } from "./umo.mts"
-import { type Itinerary, type Place, buildRuns, itineraryKey, plan, timeAt, walkOnly, walkSeconds } from "./plan.mts"
+import { type Itinerary, type Place, type WalkLeg, buildRuns, isSameItinerary, itineraryKey, plan, timeAt, walkOnly } from "./plan.mts"
 import { currentLocation, location, locationProblem } from "./location.mts"
-import { buildingAt } from "./places.mts"
+import { Building, buildingAt } from "./places.mts"
+import { Gazetteer } from "./gazetteer.mts"
+import { createPlaceSearch } from "./search.mts"
 import { poll } from "../shell/poll.mts"
-import { TICK_MS, now as clock, today, visibleSince } from "../shell/lifecycle.mts"
-import { distinct, isSameList, isSameSet, store, stored } from "../shell/state.mts"
+import { latest } from "../shell/build.mts"
+import { TICK_MS, isBusy, now as clock, today, visibleSince } from "../shell/lifecycle.mts"
+import { distinct, isSameList, isSameSet, remembered, store, stored } from "../shell/state.mts"
+import { HOUR } from "../shared/time.mts"
 
 const VEHICLE_POLL_MS    = 5_000
 const PREDICTION_POLL_MS = 30_000
 const STOP_POLL_MS       = 20_000
+// Predictions older than this, from a poll that's been failing, say nothing about where buses are now
+const PREDICTIONS_FRESH_MS = 3 * PREDICTION_POLL_MS
 
-export const [feed, model] = await Promise.all([loadFeed(feedUrl), loadModel(modelUrl)])
+/** The middle of campus, which search prefers the nearer of two places by one name to */
+const CAMPUS = { lat: 43.1365, lon: -70.9345 }
+
+// The bundled data, each swapped for a newer build's as it comes, which everything derived from it follows. The
+// map works without a model, so it starts with an empty one if its own can't load
+export const [feed, model, network, gazetteerData, tiles, style, buildings] = await Promise.all([
+  latest("gtfs", loadFeed),
+  latest("model", Model, emptyModel),
+  latest("walk", WalkData),
+  latest("gazetteer", Gazetteer),
+  latest("tiles", TilesManifest),
+  latest("style", StyleManifest),
+  latest("places", v.array(Building))
+])
+const graph = r(() => loadGraph(network.value))
+export const gazetteer = r(() => gazetteerData.value.places)
+export const walks = r(() => createWalks(feed.value.stops, graph.value, gazetteer.value))
+
+/** Places by name, laundry and dining first, then the stops buses pick up at, then the rest of Durham */
+export const searchPlaces = r(() => {
+  const boardable = boardableStops(feed.value)
+  return createPlaceSearch([
+    ...buildings.value.map(({ lat, lon, name }) => ({ lat, lon, name })),
+    ...feed.value.stops.filter((_, i) => boardable.has(i)).map(({ lat, lon, name }) => ({ lat, lon, name })),
+    ...gazetteer.value.map(({ name, at: [lon, lat] }) => ({ lat, lon, name }))
+  ], CAMPUS)
+})
 
 //#region Time
 
@@ -26,8 +64,8 @@ export const now = r(() => clock.value / 1000)
 
 export const runningToday = r(() =>
   new Set(
-    feed.trips
-      .filter(trip => isServiceActive(feed.services[trip.service], today.value))
+    feed.value.trips
+      .filter(trip => isServiceActive(feed.value.services[trip.service], today.value))
       .map(trip => trip.route)
   )
 )
@@ -40,7 +78,10 @@ export const runningToday = r(() =>
 const reports = r<Vehicle[]>([])
 /** Epoch milliseconds of the last successful vehicles update */
 export const lastUpdate = r<number>()
-export const predictions = r<StopPredictions[]>([])
+/** Umo's predictions as last fetched, and when */
+const fetched = r<{ at: number, predictions: StopPredictions[] }>({ at: -Infinity, predictions: [] })
+/** Umo's predictions while they're fresh, and none once they've gone stale, so the schedule stands in */
+export const predictions = r(() => clock.value - fetched.value.at <= PREDICTIONS_FRESH_MS ? fetched.value.predictions : [])
 
 /** Seconds since a vehicle reported, as of an epoch millisecond, counting on from when Umo said so */
 export const ageOf = (vehicle: Vehicle, at: number) =>
@@ -85,7 +126,7 @@ export const vehicles = distinct(() => {
 export const liveCounts = r(() => {
   const counts = new Map<string, number>()
   for (const { route } of vehicles.value)
-    if (route && feed.routesById.has(route.id))
+    if (route && feed.value.routesById.has(route.id))
       counts.set(route.id, (counts.get(route.id) ?? 0) + 1)
   return counts
 })
@@ -104,30 +145,30 @@ poll(
 )
 
 // Predictions only matter for routes with a bus out; the schedule covers the rest
-const predictionPairs = [
+const predictionPairs = r(() => [
   ...new Map(
-    feed.trips.flatMap(trip =>
+    feed.value.trips.flatMap(trip =>
       // Nothing departs a trip's last stop
       trip.stops.slice(0, -1).map(stop => {
-        const pair = { route: trip.route, stop: feed.stops[stop].id }
+        const pair = { route: trip.route, stop: feed.value.stops[stop].id }
         return [`${pair.route}:${pair.stop}`, pair] as const
       })
     )
   ).values()
-]
+])
 
 // Keyed by the sorted route ids, so that a new bus going out refreshes right away, and nothing else does
 const liveRoutes = distinct(() => [...liveCounts.value.keys()].sort().join(" "))
 
-watch([liveRoutes], () => {
+watch([liveRoutes, predictionPairs], () => {
   const routes = new Set(liveRoutes.value.split(" "))
-  const pairs = predictionPairs.filter(pair => routes.has(pair.route))
+  const pairs = predictionPairs.value.filter(pair => routes.has(pair.route))
   if (!pairs.length) {
-    predictions.value = []
+    fetched.value = { at: -Infinity, predictions: [] }
     return
   }
   return poll(async signal => {
-    predictions.value = await fetchPredictions(pairs, signal)
+    fetched.value = { at: Date.now(), predictions: await fetchPredictions(pairs, signal) }
   }, PREDICTION_POLL_MS)
 })
 
@@ -143,7 +184,7 @@ export const layovers = r(() => {
   return new Set([...soonest].filter(([, prediction]) => prediction.affectedByLayover).map(([id]) => id))
 })
 
-export const runs = r(() => buildRuns(feed, today.value, predictions.value, model))
+export const runs = r(() => buildRuns(feed.value, today.value, predictions.value, model.value))
 
 //#endregion
 
@@ -168,10 +209,11 @@ watch(() => {
   store(TRIP, { day: today.peek(), from: from.value, to: to.value, selected: selected.value })
 })
 
-// Cards only rerender when trips or times change
+// Cards only rerender when something they show changes: the trips, their times to the minute, or how live they are.
+// A newer timetable's runs are new objects, so its itineraries come through though they read the same
 export const itineraries = distinct(
-  (): Itinerary[] => from.value && to.value ? plan(feed, runs.value, from.value, to.value, now.value) : [],
-  (a, b) => isSameList(a.map(itineraryKey), b.map(itineraryKey))
+  (): Itinerary[] => from.value && to.value ? plan(feed.value, walks.value, runs.value, from.value, to.value, now.value) : [],
+  (a, b) => a.length === b.length && a.every((itinerary, i) => isSameItinerary(itinerary, b[i]))
 )
 
 /** Minutes and meters to walk the whole way, if worth suggesting */
@@ -179,7 +221,7 @@ export const walk = r(() => {
   if (!from.value || !to.value)
     return
 
-  const meters = distance(from.value, to.value)
+  const { meters } = walks.value.between(from.value, to.value)
   const minutes = Math.max(1, Math.round(walkSeconds(meters) / 60))
   const [best] = itineraries.value
   // Short walks, walks not much longer than the bus, or the only option
@@ -192,7 +234,7 @@ export const walk = r(() => {
 
 export const itinerary = r((): Itinerary | undefined => {
   if (selected.value === "walk" && from.value && to.value)
-    return walkOnly(from.value, to.value, now.peek())
+    return walkOnly(walks.value, from.value, to.value, now.peek())
   return (
     itineraries.value.find(itinerary => itineraryKey(itinerary) === selected.value) ??
     itineraries.value[0]
@@ -204,10 +246,37 @@ export const itinerary = r((): Itinerary | undefined => {
 //#region Map
 
 export const selectedStop = r<number>()
+
+// A newer timetable may number its stops otherwise, so the selected stop is found again in it by its id
+let stopsBefore = feed.peek().stops
+watch([feed], () => {
+  if (feed.value.stops === stopsBefore)
+    return
+  selectedStop.value = renumbered(selectedStop.peek(), stopsBefore, feed.value.stops)
+  stopsBefore = feed.value.stops
+})
+
+/** The selected stop's id, reaching what depends on it only when another stop is selected, not as it's renumbered */
+export const selectedStopId = distinct(() => {
+  const stop = selectedStop.value
+  return stop === undefined ? undefined : feed.peek().stops[stop]?.id
+})
 /** The id of the bus tapped to see its stops */
 export const selectedBus = r<string>()
-/** The bus you're on, by vehicle id */
-export const riding = r<string>()
+// A ride is over this long after the last word of it, though no bus ride takes nearly as long
+const RIDE_MS = 2 * HOUR
+/** The bus you're on, by vehicle id, remembered so a reload, as for newer code, doesn't forget it */
+export const riding = remembered<string | undefined>("map-riding",
+  stored => {
+    const { id, at } = Object(stored) as { id?: unknown, at?: unknown }
+    return typeof id === "string" && typeof at === "number" && Date.now() - at < RIDE_MS ? id : undefined
+  },
+  id => id === undefined ? null : { id, at: Date.now() }
+)
+// Newer code waits until you're off it, as a reload would lose which bus you're on
+watch([riding], () => {
+  isBusy.value = riding.value !== undefined
+})
 /** A bus you seem to be on, to ask about */
 export const suggested = r<string>()
 /** The bus whose stops the panel shows: one tapped, else the one you're on */
@@ -250,15 +319,15 @@ export const shownRoutes = r(() => chosenRoutes.value ?? activeRoutes.value)
 
 /** The selected stop's predictions, undefined until they first load, and empty if they can't */
 export const stopPredictions = r<StopPredictions[]>()
-watch(() => {
-  const stop = selectedStop.value
+watch([selectedStopId], () => {
+  const stop = selectedStopId.value
   stopPredictions.value = undefined
   if (stop === undefined)
     return
 
   return poll(
     async signal => {
-      stopPredictions.value = await fetchStopPredictions(feed.stops[stop].id, signal)
+      stopPredictions.value = await fetchStopPredictions(stop, signal)
     },
     STOP_POLL_MS,
     error => {
@@ -275,13 +344,39 @@ watch(() => {
 
 const REPLAN_M = 50 // m moved before a trip from or to you is planned again
 
-/** Where you are, as a place to plan from, moving only by enough to matter to a plan */
-const you = r<Place | undefined>(undefined, {
-  isEqual: (a, b) => a !== undefined && b !== undefined && distance(a, b) < REPLAN_M
-})
-watch(() => {
+// The walk from you last measured out, kept while its ends are the same places along the same network, so following
+// along it carries on across replans that only freshen the times
+let measured: { walks: Walks, from: Place, to: Place, line: Line } | undefined
+const lineOf = ({ from, to }: WalkLeg) => {
+  if (measured?.from !== from || measured.to !== to || measured.walks !== walks.peek())
+    measured = { walks: walks.peek(), from, to, line: toLine(walks.peek().between(from, to).coordinates) }
+  return measured.line
+}
+
+/** The walk an itinerary starts with from where you are, measured out for following along */
+const walkFromYou = (itinerary: Itinerary | undefined) => {
+  const leg = itinerary?.legs[0]
+  return leg?.kind === "walk" && leg.from.isYou ? lineOf(leg) : undefined
+}
+
+/** How far along the walk from where you are you've got, since it was last planned */
+export const progress = r<Progress>()
+
+/** Where you are, as a place to plan from, moving only by enough to matter to a plan, or on leaving the walk */
+const you = r<Place>()
+
+// Each fix follows you along the walk from you, read without depending on it, as you moving plans that walk again.
+// Off it for a few fixes in a row, a new way is planned from where you are, and followed afresh
+watch([location], () => {
   const fix = location.value
-  if (fix)
+  if (!fix)
+    return
+  const line = walkFromYou(itinerary.peek())
+  const along = line && walkOn(line, fix, progress.peek())
+  const isOff = along !== undefined && isOffPath(along)
+  progress.value = isOff ? undefined : along
+  const was = you.peek()
+  if (!was || isOff || distance(was, fix) >= REPLAN_M)
     you.value = { lat: fix.lat, lon: fix.lon, name: "Your location", isYou: true }
 })
 
@@ -292,6 +387,26 @@ for (const place of [from, to])
     if (place.peek()?.isYou && you.value && !riding.peek())
       place.value = you.value
   })
+
+/** A leg's way as the map draws it: a ride's shape, or a walk, which may be a straight line's estimate */
+export type LegPath = Pick<Walk, "coordinates" | "via">
+
+/** Each leg of the itinerary as the map draws it, with the walk from you only from where you've got to */
+export const legPaths = r((): LegPath[] => {
+  const current = itinerary.value
+  if (!current)
+    return []
+  const line = walkFromYou(current)
+  const along = progress.value
+  return current.legs.map((leg, i) => {
+    if (leg.kind === "ride")
+      return { coordinates: ridePath(feed.value, leg), via: "network" }
+    const walk = walks.value.between(leg.from, leg.to)
+    return i === 0 && line
+      ? { coordinates: along?.line === line ? sliceLine(line, along.distance, line.length) : line.coordinates, via: walk.via }
+      : walk
+  })
+})
 
 export const isLocating = r(false)
 
@@ -330,7 +445,7 @@ export const directTo = async (place: Place) => {
 const link = new URLSearchParams(globalThis.location.search).get("to")
 if (link !== null) {
   history.replaceState(history.state, "", globalThis.location.pathname)
-  const building = buildingAt(link)
+  const building = buildingAt(buildings.peek(), link)
   if (building) {
     from.value = undefined
     directTo({ lat: building.lat, lon: building.lon, name: building.name })

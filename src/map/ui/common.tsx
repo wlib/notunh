@@ -4,7 +4,7 @@ import { type Route, routeLabel } from "../feed.mts"
 import { feed, selectedStop } from "../state.mts"
 import { ClockTime } from "../../shell/intl.tsx"
 
-export const route = (id: string) => feed.routesById.get(id)!
+export const route = (id: string) => feed.peek().routesById.get(id)!
 
 /** Epoch seconds, as plans and schedules count time */
 export const Time = ({ seconds }: { seconds: number }) =>
@@ -21,5 +21,5 @@ export const RouteBadge = ({ route }: { route: Route }) =>
 
 export const StopLink = ({ stop }: { stop: number }) =>
   <button type="button" class="stop-link" onclick={() => selectedStop.value = stop}>
-    {feed.stops[stop].name}
+    {feed.peek().stops[stop].name}
   </button>

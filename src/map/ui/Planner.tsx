@@ -1,11 +1,12 @@
 /** @jsxImportSource bruh/browser */
 
-// Where from and where to, searched by stop name and with Photon as you type
+// Where from and where to, searched as you type among the places the map knows, and with Photon for addresses and
+// anywhere else
 
 import { r, watch, type SourceNode } from "bruh/reactive"
 import type { Place } from "../plan.mts"
-import { searchPlaces } from "../osm.mts"
-import { feed, from, to, selectedStop, isLocating, useCurrentLocation } from "../state.mts"
+import * as photon from "../photon.mts"
+import { from, to, searchPlaces, selectedStop, isLocating, useCurrentLocation } from "../state.mts"
 import { locationProblem } from "../location.mts"
 import { Icon } from "../../shell/ui.tsx"
 
@@ -21,24 +22,25 @@ const active = r(0)
 
 const options = r(() => [undefined, ...suggestions.value])
 
+// Fewer places than this found here, Photon is asked too
+const FEW = 3
+
 watch([query], () => {
   const text = query.value.trim()
-  const lower = text.toLowerCase()
-  const stops = text
-    ? feed.stops
-      .filter(stop => stop.pickup !== false && stop.name.toLowerCase().includes(lower))
-      .slice(0, 4)
-      .map(({ lat, lon, name }) => ({ lat, lon, name }))
-    : []
-  suggestions.value = stops
+  const local = searchPlaces.value(text)
+  suggestions.value = local
   active.value = text ? 1 : 0
-  if (text.length < 3)
+  // Only Photon knows addresses
+  const isAddress = /\d/.test(text)
+  if (text.length < 3 || local.length >= FEW && !isAddress)
     return
 
+  const names = new Set(local.map(place => place.name))
   const controller = new AbortController()
   const timer = setTimeout(() =>
-    searchPlaces(text, controller.signal)
-      .then(found => suggestions.value = [...stops, ...found])
+    photon.search(text, controller.signal)
+      // Photon names the town after the place, as "Stoke Hall, Durham"
+      .then(found => suggestions.value = [...local, ...found.filter(place => !names.has(place.name.split(", ")[0]))])
       .catch(() => {}),
     300
   )

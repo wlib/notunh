@@ -1,7 +1,9 @@
 // Routes sharing a street drawn side by side like a transit diagram, rather than on top of each other,
 // one lane per route whichever way it goes
 
-import { alongSegment, angleBetween, bearing, segmentMeters, type Coordinates } from "./geometry.mts"
+import { indexBoxes } from "../geo/boxes.mts"
+import { alongSegment } from "../geo/lines.mts"
+import { type Coordinates, type Meters, angleBetween, bearing, frame, segmentMeters } from "../geo/projection.mts"
 
 const STEP = 12     // m between points once resampled, the resolution lanes change at
 const NEAR = 18     // m, lines this close along the same street share it
@@ -52,12 +54,12 @@ type Segment = {
   strand: number,
   index:  number,
   /** Meters east and north of the origin */
-  a: [number, number],
-  b: [number, number],
+  a: Meters,
+  b: Meters,
   bearing: number
 }
 
-const distanceToSegment = ([px, py]: [number, number], { a: [ax, ay], b: [bx, by] }: Segment) => {
+const distanceToSegment = ([px, py]: Meters, { a: [ax, ay], b: [bx, by] }: Segment) => {
   const [dx, dy] = [bx - ax, by - ay]
   const t = alongSegment(px - ax, py - ay, dx, dy)
   return Math.hypot(ax + t * dx - px, ay + t * dy - py)
@@ -92,49 +94,37 @@ export type Corridors = {
 /** Finds which routes share the street along each stretch of each strand, the slow part, done once */
 export const measureCorridors = (strands: Strand[]): Corridors => {
   const resampled = strands.map(strand => resample(strand.coordinates))
-  const origin = resampled.flat()[0] ?? [0, 0]
-  const toMeters = ([lon, lat]: Coordinates): [number, number] => [
-    (lon - origin[0]) * 111_320 * Math.cos(origin[1] * Math.PI / 180),
-    (lat - origin[1]) * 110_540
-  ]
-
-  // Segments bucketed by grid cell, so only nearby ones get compared
-  const CELL = NEAR + STEP
-  const grid = new Map<string, Segment[]>()
-  const cellOf = ([x, y]: [number, number]) => [Math.floor(x / CELL), Math.floor(y / CELL)]
-  const segments = resampled.map((points, strand) =>
-    points.slice(1).map((point, index): Segment => {
-      const segment = { strand, index, a: toMeters(points[index]), b: toMeters(point), bearing: bearing(points[index], point) }
-      const [cx, cy] = cellOf([(segment.a[0] + segment.b[0]) / 2, (segment.a[1] + segment.b[1]) / 2])
-      const key = `${cx},${cy}`
-      grid.set(key, [...grid.get(key) ?? [], segment])
-      return segment
-    })
+  const { toMeters } = frame(resampled.flat()[0] ?? [0, 0])
+  const segments = resampled.flatMap((points, strand) =>
+    points.slice(1).map((point, index): Segment =>
+      ({ strand, index, a: toMeters(points[index]), b: toMeters(point), bearing: bearing(points[index], point) })
+    )
   )
 
-  return segments.map((strandSegments, strand) => ({
-    strand: strands[strand],
-    points: resampled[strand],
-    segments: strandSegments.map(segment => {
-      const middle: [number, number] = [(segment.a[0] + segment.b[0]) / 2, (segment.a[1] + segment.b[1]) / 2]
-      const [cx, cy] = cellOf(middle)
-      const alongside = new Set([strands[strand].route])
+  // Segments indexed by their boxes, so only nearby ones get compared, which there is one of for any segment asked about
+  const index = indexBoxes(segments.map(({ a, b }) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]))
 
-      for (let x = cx - 1; x <= cx + 1; x++)
-        for (let y = cy - 1; y <= cy + 1; y++)
-          for (const other of grid.get(`${x},${y}`) ?? []) {
-            // A strand's own neighboring segments aren't another pass along the street
-            if (other.strand === strand && Math.abs(other.index - segment.index) * STEP < 4 * NEAR)
-              continue
-            if (distanceToSegment(middle, other) > NEAR)
-              continue
-            const angle = angleBetween(segment.bearing, other.bearing)
-            if (angle <= PARALLEL || angle >= 180 - PARALLEL)
-              alongside.add(strands[other.strand].route)
-          }
+  const alongside = (segment: Segment) => {
+    const middle: Meters = [(segment.a[0] + segment.b[0]) / 2, (segment.a[1] + segment.b[1]) / 2]
+    const routes = new Set([strands[segment.strand].route])
+    for (const i of index!.search(middle[0] - NEAR, middle[1] - NEAR, middle[0] + NEAR, middle[1] + NEAR)) {
+      const other = segments[i]
+      // A strand's own neighboring segments aren't another pass along the street
+      if (other.strand === segment.strand && Math.abs(other.index - segment.index) * STEP < 4 * NEAR)
+        continue
+      if (distanceToSegment(middle, other) > NEAR)
+        continue
+      const angle = angleBetween(segment.bearing, other.bearing)
+      if (angle <= PARALLEL || angle >= 180 - PARALLEL)
+        routes.add(strands[other.strand].route)
+    }
+    return routes
+  }
 
-      return alongside
-    })
+  return strands.map((strand, i) => ({
+    strand,
+    points: resampled[i],
+    segments: segments.filter(segment => segment.strand === i).map(alongside)
   }))
 }
 

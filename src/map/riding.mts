@@ -4,12 +4,13 @@
 // your phone's fixes, about one a second, stand in for the bus's own every 10 to 30
 
 import { r, watch } from "bruh/reactive"
-import { distance } from "./feed.mts"
-import { pointAt, routeLines, snapToLines, type Line, type Track } from "./geometry.mts"
+import { type Following, follow } from "../geo/follow.mts"
+import { distance } from "../geo/projection.mts"
+import { type RouteLine, routeLines } from "./shapes.mts"
 import { compare, fixAt, type Fix } from "./fixes.mts"
 import { location } from "./location.mts"
 import type { Vehicle } from "./umo.mts"
-import { feed, vehicles, riding, suggested } from "./state.mts"
+import { feed, lastUpdate, vehicles, riding, suggested } from "./state.mts"
 import { isVisible } from "../shell/lifecycle.mts"
 
 // Fixes kept for lining up with buses' reports, which can be this old
@@ -83,9 +84,9 @@ watch([vehicles], () => {
 })
 
 // A bus that's stopped reporting can't keep agreeing with you, so you're off it, though it isn't declined, in case
-// it was only quiet for a while
+// it was only quiet for a while. Until Umo has answered once, as just after a reload, no bus has stopped
 watch(() => {
-  if (riding.value !== undefined && !vehicles.value.some(vehicle => vehicle.id === riding.value))
+  if (riding.value !== undefined && lastUpdate.value !== undefined && !vehicles.value.some(vehicle => vehicle.id === riding.value))
     riding.value = undefined
 })
 
@@ -109,20 +110,12 @@ export const decline = (id: string) => {
 
 // Further than this from the bus's route, you've stepped off it, or your GPS has wandered off the street
 const ON_ROUTE = 25 // m
-// How far along its route a bus can get between your fixes, beyond which a fix has found some other stretch of
-// it, like the other side of the street
+// How far along its route a bus can get between your fixes, beyond which a fix has found some other stretch of it
 const MAX_SPEED = 25 // m/s
-const LEEWAY = 30    // m
-// Fixes further apart than this start afresh
-const MAX_SKIP = 30_000 // ms
-
-/** Meters moved along a line, the short way around a loop */
-const along = ({ length, isLoop }: Line, moved: number) =>
-  isLoop ? ((moved % length) + length * 1.5) % length - length / 2 : moved
 
 /** Where on the route of the bus you're on you are, while you're on it, as a bus can't leave the street */
 const onRoute = r<{ lat: number, lon: number }>()
-let last: { track: Track, at: number } | undefined
+let last: Following<RouteLine> | undefined
 watch(() => {
   const fix = location.value
   const route = riding.value && vehicles.peek().find(vehicle => vehicle.id === riding.value)?.route?.id
@@ -131,18 +124,10 @@ watch(() => {
     onRoute.value = undefined
     return
   }
-  const recent = last && fix.at - last.at <= MAX_SKIP ? last : undefined
-  const track = snapToLines(routeLines(feed).get(route) ?? [], fix, fix.heading, recent?.track)
-  const [lon, lat] = track ? pointAt(track.line, track.distance).point : [fix.lon, fix.lat]
-  const isOnRoute = track && distance(fix, { lat, lon }) <= ON_ROUTE
-  const isFollowing = !recent || track && track.line === recent.track.line &&
-    Math.abs(along(track.line, track.distance - recent.track.distance)) <= LEEWAY + MAX_SPEED * (fix.at - recent.at) / 1000
-  if (isOnRoute && isFollowing) {
-    last = { track, at: fix.at }
-    onRoute.value = { lat, lon }
-  }
-  else
-    onRoute.value = undefined
+  const followed = follow(routeLines(feed.peek()).get(route) ?? [], fix, last, { within: ON_ROUTE, speed: MAX_SPEED })
+  if (followed)
+    last = followed
+  onRoute.value = followed && { lon: followed.point[0], lat: followed.point[1] }
 })
 
 /** The bus as your phone has it: where you are on its route, how fast you're going, and which way */

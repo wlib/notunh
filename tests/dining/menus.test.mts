@@ -1,8 +1,10 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
+import * as v from "valibot"
 import { convert, type NutrisliceFood, type NutrisliceWeek } from "../../scripts/dining/convert.mts"
-import { publish } from "../../scripts/dining/publish.mts"
-import { DIETS, passes, type Food, type Meal, type SearchFood } from "../../src/dining/menus.mts"
+import { carriedFiles, publish } from "../../scripts/dining/publish.mts"
+import { HOUR } from "../../src/shared/time.mts"
+import { DIETS, MenusIndex, fileUrl, passes, type Food, type Meal, type SearchFood } from "../../src/dining/menus.mts"
 import { createSearch } from "../../src/dining/search.mts"
 
 const TAGS = [...DIETS, "Milk", "Egg", "Wheat", "Gluten", "Soy", "Fish", "Pork", "Guiding Stars 2 stars"]
@@ -69,8 +71,9 @@ test("the published files put every meal back together, with each food in a file
     const data = twoMeals(week)
     const { index, files } = publish(data)
     const read = <T,>(file: string): T => JSON.parse(files.get(file)!)
+    expect(v.is(MenusIndex, JSON.parse(JSON.stringify(index)))).toBe(true)
 
-    expect(new Set(index.files)).toEqual(new Set(files.keys()))
+    expect(new Set(index.files)).toEqual(new Set([...files.keys()].map(fileUrl)))
     for (const menu of data.menus) {
       const day = index.days[menu.hall][menu.day]
       const meal = read<Meal[]>(day.file).find(({ meal }) => meal === menu.meal)!
@@ -143,3 +146,17 @@ test("every food is found by its own name", () => {
   for (const [i, { name }] of menu.entries())
     expect(searchMenu(name).map(({ food }) => food)).toContain(i)
 })
+
+test("last night's files stay published for the tabs still on its index, two nights at most, and only those tonight's doesn't name", () =>
+  fc.assert(fc.property(
+    fc.uniqueArray(fc.stringMatching(/^\/data\/dining\/[\w-]{16}\.json$/), { maxLength: 6 }),
+    fc.uniqueArray(fc.stringMatching(/^\/data\/dining\/[\w-]{16}\.json$/), { maxLength: 6 }),
+    fc.integer({ min: 0, max: 96 * HOUR }),
+    (before, tonight, age) => {
+      const now = Date.parse("2026-10-18T08:00:00Z")
+      const carried = carriedFiles({ fetched: now - age, files: before }, { files: tonight }, now)
+      expect(carried).toEqual(age < 48 * HOUR ? before.filter(url => !tonight.includes(url)) : [])
+      expect(carriedFiles(undefined, { files: tonight }, now)).toEqual([])
+    }
+  ))
+)

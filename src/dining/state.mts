@@ -1,19 +1,17 @@
 // What's being looked at and searched for: reactive values only, no DOM
 
 import { r, watch } from "bruh/reactive"
-import indexUrl from "./menus.json?url"
-import { fileUrl, type Filters, type Food, type Meal, type MenusIndex, type SearchFood, type Serving } from "./menus.mts"
+import { MenusIndex, fileUrl, type Filters, type Food, type Meal, type SearchFood, type Serving } from "./menus.mts"
 import { createSearch } from "./search.mts"
 import { status } from "./hours.mts"
 import { getJson } from "../shared/json.mts"
+import { latest } from "../shell/build.mts"
 import { localDay, localHour, localMinutes } from "../shared/time.mts"
 import { now as clock, today } from "../shell/lifecycle.mts"
 import { distinct, remembered, toggled } from "../shell/state.mts"
 
-export const index = await getJson<MenusIndex>(indexUrl)
-
-// Cached files the menus no longer use can go
-navigator.serviceWorker?.controller?.postMessage({ keep: index.files.map(fileUrl) })
+/** The menus' index, swapped for a newer build's as it comes */
+export const index = await latest("menus", MenusIndex)
 
 /** Each file's contents, loaded once */
 const loaded = new Map<string, Promise<unknown>>()
@@ -31,13 +29,15 @@ export const loadFood = (file: string) =>
   load<Food>(file)
 
 /** Every day with a menu, from the day the page loaded on */
-export const days = [...new Set(Object.values(index.days).flatMap(Object.keys))].filter(day => day >= today.peek()).sort()
+export const days = r(() =>
+  [...new Set(Object.values(index.value.days).flatMap(Object.keys))].filter(day => day >= today.peek()).sort()
+)
 
 //#region Remembered between visits
 
 // Most people eat at one hall
 export const hall = remembered("dining-hall", stored =>
-  index.halls.find(({ id }) => id === stored)?.id ?? index.halls[0]?.id ?? ""
+  index.peek().halls.find(({ id }) => id === stored)?.id ?? index.peek().halls[0]?.id ?? ""
 )
 
 /** A remembered list, keeping only items that still exist */
@@ -46,8 +46,8 @@ const rememberedSet = (key: string, known: readonly string[]) =>
 
 // Dietary needs don't change from visit to visit
 const chosen = {
-  diets: rememberedSet("dining-diets", index.diets),
-  avoid: rememberedSet("dining-avoid", index.contains)
+  diets: rememberedSet("dining-diets", index.peek().diets),
+  avoid: rememberedSet("dining-avoid", index.peek().contains)
 }
 export const filters = r((): Filters => ({ diets: chosen.diets.value, avoid: chosen.avoid.value }))
 
@@ -57,7 +57,12 @@ export const toggleFilter = (kind: keyof Filters, item: string) => {
 
 //#endregion
 
-export const day = r(days[0] ?? today.peek())
+export const day = r(days.peek()[0] ?? today.peek())
+// A day a newer index no longer has gives way to its first
+watch([days], () => {
+  if (!days.value.includes(day.peek()))
+    day.value = days.value[0] ?? today.peek()
+})
 
 const hour = localHour(clock.peek())
 
@@ -70,20 +75,23 @@ export const preferredMeal = r(
 )
 
 /** The meals the hall serves that day */
-export const meals = r(() => index.days[hall.value]?.[day.value]?.meals ?? [])
+export const meals = r(() => index.value.days[hall.value]?.[day.value]?.meals ?? [])
+
+/** The file with the hall's meals that day, if it has a menu, changing only for another menu, not a newer index */
+const dayFile = distinct(() => index.value.days[hall.value]?.[day.value]?.file)
 
 /** The hall's meals that day, undefined while they load, and empty when there's no menu */
 export const dayMeals = r<Meal[]>()
 export const hasFailed = r(false)
-watch([hall, day], () => {
-  const listed = index.days[hall.value]?.[day.value]
-  dayMeals.value = listed ? undefined : []
+watch([dayFile], () => {
+  const file = dayFile.value
+  dayMeals.value = file ? undefined : []
   hasFailed.value = false
-  if (!listed)
+  if (!file)
     return
 
   let isCurrent = true
-  load<Meal[]>(listed.file)
+  load<Meal[]>(file)
     .then(meals => {
       if (isCurrent)
         dayMeals.value = meals
@@ -110,13 +118,15 @@ export const menu = r((): Meal | undefined => {
 export const query = r("")
 export const isSearching = r(() => query.value.trim().length >= 2)
 
-/** Every upcoming food and a search over them, loaded once someone first searches */
-export const searchable = r<{ foods: SearchFood[], search: ReturnType<typeof createSearch> }>()
-watch([isSearching], () => {
-  if (isSearching.value && !searchable.value)
-    load<SearchFood[]>(index.search)
+/** Every upcoming food and a search over them, loaded once someone first searches, and again for a newer index's */
+export const searchable = r<{ file: string, foods: SearchFood[], search: ReturnType<typeof createSearch> }>()
+watch([isSearching, index], () => {
+  const file = index.value.search
+  if (isSearching.value && searchable.value?.file !== file)
+    load<SearchFood[]>(file)
       .then(foods => {
-        searchable.value ??= { foods, search: createSearch(foods) }
+        if (searchable.peek()?.file !== file && index.peek().search === file)
+          searchable.value = { file, foods, search: createSearch(foods) }
       })
       .catch(() => {
         hasFailed.value = true
@@ -143,8 +153,8 @@ export const now = distinct(
 
 /** Whether each hall is open now, by hall, for halls with hours */
 export const hallStatus = r(() =>
-  Object.fromEntries(Object.entries(index.hours).map(([id, hours]) => [id, status(hours, now.value)]))
+  Object.fromEntries(Object.entries(index.value.hours).map(([id, hours]) => [id, status(hours, now.value)]))
 )
 
 export const hallName = (id: string) =>
-  index.halls.find(hall => hall.id === id)?.name ?? id
+  index.value.halls.find(hall => hall.id === id)?.name ?? id

@@ -19,7 +19,9 @@ export type Env = {
   /** Workers Builds' deploy hook, a secret */
   DEPLOY_HOOK?:      string,
   /** Lets the build read and write rows and models through /api/, so it needs no D1 credentials, a secret */
-  BUILD_TOKEN?:      string
+  BUILD_TOKEN?:      string,
+  /** A GitHub token with the actions scope, a secret, for the nightly run to start the Map data workflow on Mondays */
+  GITHUB_TOKEN?:     string
 }
 
 /** What a cron trigger runs, given the epoch milliseconds its minute started at and a signal for the minute running out */

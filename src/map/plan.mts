@@ -6,19 +6,16 @@
 // time, and nearer first stops are tried as well as whichever arrives first, so ranking can weigh walking against
 // waiting. What the model has learned replaces the constants below wherever it has data
 
-import { type Feed, type Trip, distance, isServiceActive, serviceDayStart } from "./feed.mts"
-import { STREET_DETOUR } from "./geometry.mts"
+import { type Feed, type Trip, arrivalTime, canAlight, canBoard, isServiceActive, serviceDayStart } from "./feed.mts"
+import { distance } from "../geo/projection.mts"
+import { STREET_DETOUR, type Walks, walkAllowance, walkSeconds } from "./walks.mts"
 import type { StopPredictions, Vehicle } from "./umo.mts"
 import {
-  type Estimate, type Model, context, dayType, deviationEstimate, driveEstimate, dwellEstimate, emptyModel, heldPositions, inflation,
-  layoverEstimate, leadIndex, probit, variance, LEADS
+  type Estimate, type Model, context, dayType, deviationEstimate, driveEstimate, dwellEstimate, emptyModel, holdChances, inflation,
+  isLikely, layoverEstimate, leadIndex, probit, variance, LEADS
 } from "./model.mts"
 import { type Day, addDays } from "../shared/time.mts"
 
-const WALK_SPEED = 1.3               // m/s
-const WALK_WIGGLE = 0.1              // a walk may take this much longer: a slow day, or a longer way round
-export const MAX_ACCESS_WALK = 1600  // m, to the first stop or from the last
-export const MAX_TRANSFER_WALK = 400 // m, between stops
 export const HORIZON = 4 * 3600      // s, how far ahead to look for buses
 export const ALTERNATIVES = 3
 const DEPARTURES = 6                 // first buses considered, with and without changing buses
@@ -37,7 +34,8 @@ export const BOARDING = 30           // s, to get on a bus waiting at the stop f
 // starts this long after it gets in, when that's sooner than Umo says
 export const LAYOVER = 120           // s
 // How sure the slack before a bus should be that it hasn't left yet
-const SURE = probit(0.85)
+const SURE_P = 0.85
+const SURE = probit(SURE_P)
 
 // How long an itinerary feels, relative to riding
 const WALK_RELUCTANCE = 2            // walking feels twice as long
@@ -62,8 +60,8 @@ export type Run = {
   delays: number[],
   /** Seconds the bus is expected to wait at each stop for its scheduled time */
   holds: number[],
-  /** Whether the bus waits at each stop for its scheduled time when it's early */
-  held: boolean[],
+  /** How likely the bus is to wait at each stop for its scheduled time when it's early */
+  holdChance: number[],
   /** What the model knows of how far off this run's times may be */
   spread?: Spread,
   /** A tracked bus is on this trip, rather than Umo predicting from its schedule */
@@ -117,24 +115,17 @@ export type Connection = {
   arrival:   number
 }
 
-export const walkSeconds = (meters: number) =>
-  Math.round(meters * STREET_DETOUR / WALK_SPEED)
-
-/** How long to allow for a walk, for a slow day or a longer way round */
-export const walkAllowance = (meters: number) =>
-  Math.round(walkSeconds(meters) * (1 + WALK_WIGGLE))
-
 /** When the bus leaves a stop */
 export const timeAt = (run: Run, position: number) =>
   run.base + run.trip.times[position] + run.delays[position]
 
+/** When the bus gets to a stop, which waiting there for its scheduled time doesn't put off */
+export const arrivalAt = (run: Run, position: number) =>
+  run.base + arrivalTime(run.trip, position) + run.delays[position] - run.holds[position]
+
 /** How far off a time `lead` seconds ahead may be */
 export const uncertainty = (lead: number) =>
   Math.min(UNCERTAINTY_MAX, UNCERTAINTY_NOW + UNCERTAINTY_RATE * Math.max(0, lead) / 60)
-
-/** A bus waiting at a stop for its scheduled time can't leave early */
-const isHeld = (run: Run, position: number) =>
-  run.held[position] && run.delays[position] <= 0
 
 const currentCache = new WeakMap<Run, { now: number, position: number }>()
 
@@ -149,33 +140,42 @@ const currentPosition = (run: Run, now: number) => {
 }
 
 /**
- * How far off the model says a bus's time at a stop may be: for a tracked bus, by how much the stretch from where
- * it is varies, scaled to how far off forecasts turn out; otherwise by how early, when boarding, or late, when getting
- * off, it usually runs against its timetable
+ * How far off a bus's time at a stop may be, to `z` standard deviations: as the model says for a tracked bus, by how
+ * much the stretch from where it is varies, scaled to how far off forecasts turn out, or otherwise by how early, when
+ * boarding, or late, when getting off, it usually runs against its timetable; and with nothing learned, as it
+ * always was, wider for a time from the timetable alone
  */
-const learnedSpread = (run: Run, position: number, time: number, now: number, isBoarding: boolean) => {
+const spreadTo = (run: Run, position: number, time: number, now: number, isBoarding: boolean, z: number) => {
   const { spread } = run
   const deviation = spread?.deviation[position]
   if (deviation && !run.isLive)
     return isBoarding
-      ? Math.min(UNCERTAINTY_MAX * SCHEDULE_FACTOR, Math.max(BOARDING, SURE * deviation.sigma - deviation.mu))
-      : Math.min(UNCERTAINTY_MAX, Math.max(BOARDING, SURE * deviation.sigma + deviation.mu))
-  if (!spread?.variance || !run.isLive)
-    return
-  const from = Math.min(position, currentPosition(run, now))
-  const sd = Math.sqrt(Math.max(0, spread.variance[position] - spread.variance[from]))
-  return Math.min(UNCERTAINTY_MAX, Math.max(BOARDING, SURE * sd * spread.inflation[leadIndex(time - now)]))
+      ? Math.min(UNCERTAINTY_MAX * SCHEDULE_FACTOR, Math.max(BOARDING, z * deviation.sigma - deviation.mu))
+      : Math.min(UNCERTAINTY_MAX, Math.max(BOARDING, z * deviation.sigma + deviation.mu))
+  if (spread?.variance && run.isLive) {
+    const from = Math.min(position, currentPosition(run, now))
+    const sd = Math.sqrt(Math.max(0, spread.variance[position] - spread.variance[from]))
+    return Math.min(UNCERTAINTY_MAX, Math.max(BOARDING, z * sd * spread.inflation[leadIndex(time - now)]))
+  }
+  return uncertainty(time - now) * (isBoarding && !run.isLive ? SCHEDULE_FACTOR : 1) * (z / SURE)
 }
 
 /** How much later than expected a bus may get to a stop, for counting on catching another after it */
 export const spread = (run: Run, position: number, time: number, now: number) =>
-  learnedSpread(run, position, time, now, false) ?? uncertainty(time - now)
+  spreadTo(run, position, time, now, false, SURE)
 
-/** How early to be at a stop for a bus leaving it at `departure` */
-export const slack = (run: Run, position: number, departure: number, now: number) =>
-  isHeld(run, position)
-    ? BOARDING
-    : learnedSpread(run, position, departure, now, true) ?? uncertainty(departure - now) * (run.isLive ? 1 : SCHEDULE_FACTOR)
+/**
+ * How early to be at a stop for a bus leaving it at `departure`: an early bus waits there for its scheduled time
+ * as likely as the model says, and the slack covers enough of the rest of the ways it might leave that, waits and
+ * all, it's caught SURE_P of the time
+ */
+export const slack = (run: Run, position: number, departure: number, now: number) => {
+  const waits = run.delays[position] <= 0 ? run.holdChance[position] : 0
+  if (waits >= SURE_P)
+    return BOARDING
+  const z = probit((SURE_P - waits) / (1 - waits))
+  return Math.max(BOARDING, spreadTo(run, position, departure, now, true, z))
+}
 
 /** How long between trips a route's buses lay over */
 const layoverOf = (model: Model, route: string) => {
@@ -196,15 +196,49 @@ export const runOf = (runs: Run[], { id, tripTag }: Pick<Vehicle, "id" | "tripTa
   ) as Run | undefined
 }
 
+/** Identifies a ride by its run and where it gets on and off */
+const rideKey = (leg: RideLeg) =>
+  `${leg.run.trip.id}@${leg.run.base}:${leg.fromPosition}-${leg.toPosition}`
+
 /** Identifies an itinerary across replans, changing only when its trips or times to the minute do */
 export const itineraryKey = (itinerary: Itinerary) =>
+  itinerary.legs.map(leg => leg.kind === "ride" ? rideKey(leg) : "walk").join(" ") +
+  ` ${Math.floor(itinerary.start / 60)}-${Math.floor(itinerary.end / 60)}`
+
+/**
+ * Whether two itineraries would show the same: the same key, each ride on the same run of the same timetable's trip,
+ * as live, late, and held the same, and each walk between the same places. A newer timetable's trips are new objects,
+ * so its itineraries never pass for the old ones
+ */
+export const isSameItinerary = (a: Itinerary, b: Itinerary) =>
+  itineraryKey(a) === itineraryKey(b) &&
+  a.legs.every((leg, i) => {
+    const other = b.legs[i]
+    if (leg.kind === "walk")
+      return other.kind === "walk" && leg.from === other.from && leg.to === other.to
+    if (other.kind === "walk")
+      return false
+    const positions = [leg.fromPosition, leg.toPosition]
+    return (
+      leg.run.trip === other.run.trip &&
+      leg.run.isLive === other.run.isLive &&
+      leg.run.vehicle === other.run.vehicle &&
+      positions.every(position => leg.run.delays[position] === other.run.delays[position] && leg.run.holds[position] === other.run.holds[position])
+    )
+  })
+
+/**
+ * Identifies where an itinerary goes, changing only when its rides or the places it walks between do, and not as
+ * where you are moves with you
+ */
+export const wayKey = (itinerary: Itinerary) =>
   itinerary.legs
     .map(leg =>
       leg.kind === "ride"
-        ? `${leg.run.trip.id}@${leg.run.base}:${leg.fromPosition}-${leg.toPosition}`
-        : "walk"
+        ? rideKey(leg)
+        : [leg.from, leg.to].map(place => place.isYou ? "you" : `${place.lat},${place.lon}`).join(">")
     )
-    .join(" ") + ` ${Math.floor(itinerary.start / 60)}-${Math.floor(itinerary.end / 60)}`
+    .join(" ")
 
 /**
  * Shifts each predicted trip's times by its delays, carried forward from the latest prediction before each stop,
@@ -232,7 +266,7 @@ const applyPredictions = (feed: Feed, model: Model, predictions: StopPredictions
       let run: Run | undefined
       let position = 0
       let bestOffset = Infinity
-      for (const candidate of runsByTripId.get(prediction.tripId) ?? [])
+      for (const candidate of prediction.tripId && runsByTripId.get(prediction.tripId) || [])
         candidate.trip.stops.forEach((stop, i) => {
           if (feed.stops[stop].id !== entry.stop.id)
             return
@@ -262,7 +296,7 @@ const applyPredictions = (feed: Feed, model: Model, predictions: StopPredictions
     let held = 0
     for (let position = 0; position < run.delays.length; position++) {
       delay = delays.get(position) ?? delay
-      const hold = run.held[position] ? Math.max(0, -(delay + held)) : 0
+      const hold = isLikely(run.holdChance[position]) ? Math.max(0, -(delay + held)) : 0
       held += hold
       run.holds[position] = hold
       run.delays[position] = delay + held
@@ -271,7 +305,7 @@ const applyPredictions = (feed: Feed, model: Model, predictions: StopPredictions
 
   // A bus's next loop, unless it waits for its scheduled start, begins a layover after the loop it's on ends
   for (const run of known.keys()) {
-    if (run.isLive || run.held[0])
+    if (run.isLive || isLikely(run.holdChance[0]))
       continue
     const start = timeAt(run, 0)
     const sameBus = [...known.keys()].filter(other => other.vehicle === run.vehicle)
@@ -327,7 +361,7 @@ export const buildRuns = (feed: Feed, today: Day, predictions: StopPredictions[]
           base,
           delays: trip.times.map(() => 0),
           holds:  trip.times.map(() => 0),
-          held:   heldPositions(model, feed, trip),
+          holdChance: holdChances(model, feed, trip),
           spread: model.through ? spreadOf(feed, model, trip, day) : undefined,
           isLive: false
         })
@@ -345,7 +379,7 @@ export const buildConnections = (runs: Run[], start: number) => {
     let departure = -Infinity
     for (let position = 0; position + 1 < stops.length; position++) {
       departure = Math.max(departure, timeAt(run, position))
-      const arrival = Math.max(departure, timeAt(run, position + 1))
+      const arrival = Math.max(departure, arrivalAt(run, position + 1))
       if (departure >= start && departure <= start + HORIZON)
         connections.push({
           run: runIndex,
@@ -365,25 +399,6 @@ export const buildConnections = (runs: Run[], start: number) => {
   )
 }
 
-const transfersCache = new WeakMap<Feed, [number, number][][]>()
-
-const transfersFor = (feed: Feed) => {
-  const cached = transfersCache.get(feed)
-  if (cached)
-    return cached
-
-  const transfers = feed.stops.map((a, i) =>
-    feed.stops.flatMap((b, j) => {
-      const meters = distance(a, b)
-      return i !== j && meters <= MAX_TRANSFER_WALK
-        ? [[j, meters] as [number, number]]
-        : []
-    })
-  )
-  transfersCache.set(feed, transfers)
-  return transfers
-}
-
 export type Options = {
   /** The time plans are made at, which uncertainty grows from */
   now: number,
@@ -401,6 +416,7 @@ type Step =
 /** The earliest arrival at `to` leaving `from` at `start`, leaving as late as the first bus allows */
 export const scan = (
   feed: Feed,
+  walks: Walks,
   runs: Run[],
   connections: Connection[],
   from: Place,
@@ -408,7 +424,7 @@ export const scan = (
   start: number,
   { now, direct = false, access }: Options
 ): Itinerary | undefined => {
-  const transfers = transfersFor(feed)
+  const transfers = walks.transfers()
   // The earliest you could be at each stop, for getting off and walking on
   const arrival = new Float64Array(feed.stops.length).fill(Infinity)
   // The earliest you can count on being at each stop, for catching a bus there: later, by how unsure getting there is
@@ -417,21 +433,21 @@ export const scan = (
   const readyHow: (Step | undefined)[] = []
   const boarded = new Map<number, { board: Connection, via: Step }>()
 
-  for (const [i, stop] of feed.stops.entries()) {
-    const meters = distance(from, stop)
-    if (meters > MAX_ACCESS_WALK || (access !== undefined && i !== access))
+  const accessMeters = walks.toStops(from)
+  for (const [i, meters] of accessMeters.entries()) {
+    if (meters === Infinity || (access !== undefined && i !== access))
       continue
     arrival[i] = start + walkSeconds(meters)
     ready[i] = start + walkAllowance(meters)
     how[i] = readyHow[i] = { kind: "origin", meters }
   }
 
-  const egress = feed.stops.map(stop => distance(stop, to))
+  const egress = walks.toStops(to)
   let best = Infinity
   let bestStop: number | undefined
 
   const finishFrom = (stop: number) => {
-    if (egress[stop] > MAX_ACCESS_WALK)
+    if (egress[stop] === Infinity)
       return
     const done = arrival[stop] + walkSeconds(egress[stop])
     if (done < best) {
@@ -446,15 +462,17 @@ export const scan = (
     if (connection.departure >= best)
       break
 
+    const run = runs[connection.run]
     if (!boarded.has(connection.run)) {
       const via = readyHow[connection.from]
-      if (!via || (direct && via.kind !== "origin"))
+      if (!via || (direct && via.kind !== "origin") || !canBoard(run.trip, connection.position))
         continue
-      const run = runs[connection.run]
       if (ready[connection.from] + slack(run, connection.position, connection.departure, now) > connection.departure)
         continue
       boarded.set(connection.run, { board: connection, via })
     }
+    if (!canAlight(run.trip, connection.position + 1))
+      continue
 
     const { to: stop, arrival: time } = connection
     const step: Step = { kind: "ride", ...boarded.get(connection.run)!, alight: connection }
@@ -465,7 +483,7 @@ export const scan = (
       finishFrom(stop)
     }
     // Getting off is as unsure as when the bus gets there, and without changing buses only leads on to the destination
-    const readyAt = time + spread(runs[connection.run], connection.position + 1, time, now)
+    const readyAt = time + spread(run, connection.position + 1, time, now)
     const isReadier = !direct && readyAt < ready[stop]
     if (isReadier) {
       ready[stop] = readyAt
@@ -543,8 +561,8 @@ export const scan = (
   return { legs, start: leave, end: best }
 }
 
-export const walkOnly = (from: Place, to: Place, start: number): Itinerary => {
-  const meters = distance(from, to)
+export const walkOnly = (walks: Walks, from: Place, to: Place, start: number): Itinerary => {
+  const { meters } = walks.between(from, to)
   const end = start + walkSeconds(meters)
   return {
     legs: [{ kind: "walk", from, to, start, end, meters }],
@@ -589,12 +607,11 @@ const busesOf = (itinerary: Itinerary) =>
  * The best bus itineraries leaving at or after `now`, best first: each feels better than walking right away, rides
  * a different set of buses, and only changes buses to arrive well before anything simpler would
  */
-export const plan = (feed: Feed, runs: Run[], from: Place, to: Place, now: number) => {
+export const plan = (feed: Feed, walks: Walks, runs: Run[], from: Place, to: Place, now: number) => {
   const connections = buildConnections(runs, now)
-  const walk = walkOnly(from, to, now)
-  const nearest = feed.stops
-    .map((stop, i) => [i, distance(from, stop)] as const)
-    .filter(([, meters]) => meters <= MAX_ACCESS_WALK)
+  const walk = walkOnly(walks, from, to, now)
+  const nearest = [...walks.toStops(from).entries()]
+    .filter(([, meters]) => meters < Infinity)
     .sort((a, b) => a[1] - b[1])
 
   // The next few first buses, with and without changing: the quickest way on each, and from the nearer stops
@@ -603,13 +620,13 @@ export const plan = (feed: Feed, runs: Run[], from: Place, to: Place, now: numbe
   for (const direct of [true, false]) {
     let after = now
     for (let i = 0; i < DEPARTURES; i++) {
-      const quickest = scan(feed, runs, connections, from, to, after, { now, direct })
+      const quickest = scan(feed, walks, runs, connections, from, to, after, { now, direct })
       if (!quickest)
         break
       candidates.push(quickest)
       const meters = (quickest.legs[0] as WalkLeg).meters
       for (const [access] of nearest.filter(([, walk]) => walk < meters).slice(0, NEARER_STOPS)) {
-        const nearer = scan(feed, runs, connections, from, to, after, { now, direct, access })
+        const nearer = scan(feed, walks, runs, connections, from, to, after, { now, direct, access })
         if (nearer)
           candidates.push(nearer)
       }

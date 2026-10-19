@@ -3,7 +3,7 @@
 // A stop's next buses: Umo's predictions, with the schedule for routes it isn't predicting
 
 import { r, type SourceNode } from "bruh/reactive"
-import type { Route } from "../feed.mts"
+import { type Route, canBoard } from "../feed.mts"
 import { type Place, timeAt } from "../plan.mts"
 import { feed, now, runs, from, to, selectedStop, stopPredictions } from "../state.mts"
 import { Count, List } from "../../shell/intl.tsx"
@@ -13,7 +13,7 @@ import { RouteBadge, Time, route } from "./common.tsx"
 const SCHEDULE_HOURS = 3
 
 export const StopView = ({ stop }: { stop: number }) => {
-  const { id, name, lat, lon } = feed.stops[stop]
+  const { id, name, lat, lon } = feed.peek().stops[stop]
   const place: Place = { lat, lon, name }
   const pick = (target: SourceNode<Place | undefined>) => () => {
     target.value = place
@@ -25,7 +25,7 @@ export const StopView = ({ stop }: { stop: number }) => {
     for (const run of runs.value)
       run.trip.stops.forEach((s, position) => {
         const time = timeAt(run, position)
-        if (s === stop && position + 1 < run.trip.stops.length && time >= now.value && time < now.value + SCHEDULE_HOURS * 3600)
+        if (s === stop && canBoard(run.trip, position) && time >= now.value && time < now.value + SCHEDULE_HOURS * 3600)
           departures.push({ route: route(run.trip.route), time, headsign: run.trip.headsign })
       })
     return departures.sort((a, b) => a.time - b.time)
@@ -50,7 +50,7 @@ export const StopView = ({ stop }: { stop: number }) => {
         if (!stopPredictions.value)
           return <p class="muted">Loading arrivals…</p>
 
-        const predicted = stopPredictions.value.filter(entry => entry.values.length && feed.routesById.has(entry.route.id))
+        const predicted = stopPredictions.value.filter(entry => entry.values.length && feed.value.routesById.has(entry.route.id))
         const predictedRoutes = new Set(predicted.map(entry => entry.route.id))
         const fallback = scheduled.value.filter(departure => !predictedRoutes.has(departure.route.id)).slice(0, 6)
 
@@ -63,7 +63,7 @@ export const StopView = ({ stop }: { stop: number }) => {
               {predicted.map(({ route: { id }, values }) =>
                 <li>
                   <RouteBadge route={route(id)} />
-                  <span class="arrival-direction">{values[0].direction.name}</span>
+                  <span class="arrival-direction">{values[0].direction?.name}</span>
                   <span class={{ "arrival-times": true, muted: values[0].affectedByLayover }}>
                     {!values[0].affectedByLayover && <span class="dot" title="Live" />}
                     <List type="unit" items={values.slice(0, 3).map(value => value.minutes === 0 ? "Now" : <Count value={value.minutes} />)} />

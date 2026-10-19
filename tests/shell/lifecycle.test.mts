@@ -110,6 +110,23 @@ test("a page loaded out of view counts as away since it loaded", async () => {
   expect(brief.isVisible.peek()).toBe(true)
 })
 
+test("a page busy on coming back from long away, as on a bus, isn't reloaded until it's free and out of view", async () => {
+  const page = await load(Date.UTC(2026, 9, 7, 16))
+  page.isBusy.value = true
+  page.setVisibility("hidden")
+  vi.advanceTimersByTime(2 * HOUR)
+  page.setVisibility("visible")
+  expect(page.reload).not.toHaveBeenCalled()
+  expect(page.isVisible.peek()).toBe(true)
+  expect(page.visibleSince.peek()).toBe(Date.now())
+  page.isBusy.value = false
+  await vi.advanceTimersByTimeAsync(0)
+  expect(page.reload).not.toHaveBeenCalled()
+  page.setVisibility("hidden")
+  await vi.advanceTimersByTimeAsync(0)
+  expect(page.reload).toHaveBeenCalledOnce()
+})
+
 test("pageshow after the visibility event already brought the page back changes nothing", async () => {
   const loadedAt = Date.UTC(2026, 9, 7, 16)
   const page = await load(loadedAt)
@@ -120,4 +137,38 @@ test("pageshow after the visibility event already brought the page back changes 
   page.restore()
   expect(page.visibleSince.peek()).toBe(loadedAt + 30_000)
   expect(page.reload).not.toHaveBeenCalled()
+})
+
+test("newer code waits while the page is busy, as on a bus, and comes in once it's not and out of view", async () => {
+  const page = await load(Date.UTC(2026, 9, 7, 16))
+  const { receive } = await import("../../src/shell/build.mts")
+  page.isBusy.value = true
+  page.setVisibility("hidden")
+  receive(`<head><script type="module" src="/assets/index-BBBBBBBB.js"></script></head>`)
+  await vi.advanceTimersByTimeAsync(0)
+  expect(page.reload).not.toHaveBeenCalled()
+  page.isBusy.value = false
+  await vi.advanceTimersByTimeAsync(0)
+  expect(page.reload).toHaveBeenCalledOnce()
+})
+
+test("newer code reloads the page once it's out of view, whether it came in view or out, and never in view", async () => {
+  await fc.assert(fc.asyncProperty(fc.boolean(), fc.array(fc.boolean(), { maxLength: 6 }), async (isHiddenFirst, visibility) => {
+    const page = await load(Date.UTC(2026, 9, 7, 16))
+    const { receive } = await import("../../src/shell/build.mts")
+    if (isHiddenFirst)
+      page.setVisibility("hidden")
+    receive(`<head><script type="module" src="/assets/index-BBBBBBBB.js"></script></head>`)
+    await vi.advanceTimersByTimeAsync(0)
+    let isHidden = isHiddenFirst
+    for (const isVisible of visibility) {
+      if (!isHidden) {
+        expect(page.reload).not.toHaveBeenCalled()
+        page.setVisibility(isVisible ? "visible" : "hidden")
+        isHidden = !isVisible
+        await vi.advanceTimersByTimeAsync(0)
+      }
+    }
+    expect(page.reload.mock.calls.length).toBe(isHidden ? 1 : 0)
+  }))
 })

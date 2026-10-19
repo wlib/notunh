@@ -28,7 +28,12 @@ export const BOARDING = 30           // s, to get on a bus waiting at the stop f
 // How sure the slack before a bus should be that it hasn't left yet
 const SURE_P = 0.85
 // A route that keeps to its timetable, as those it marks timepoints on do, is back on it this far ahead and more:
-// held out, its timetable shifted by how late it runs beat chaining a bus there 130 to 270 s at 30 and 60 minutes
+// held out, its timetable shifted by how late it runs beat chaining a bus there 130 to 270 s at 30 and 60 minutes.
+// That can put a stop past it sooner than the one before, as can a source's uneven predictions, and a run's times
+// are left so rather than put in order: held out on Oct 8 to 19, having the timetable taken back up no sooner than
+// the bus left the stop before gained 2 to 3 s at 30 minutes but lost 1 to 2 s at 1 to 10, since a bus chained or
+// predicted that far behind its timetable is as often not. Whatever needs a chronology reads a run in order, as
+// the planner's connections do (plan.mts) (notunh-model-research/2026-10-19_followups/)
 const HANDOFF = 1800 // s
 // A loop's bus goes on into a next loop of its route only due to start at most this much after it could, or this much
 // before, for a bus running late: replayed, going on into any loop due nearest did no better than this
@@ -39,7 +44,7 @@ export type Run = {
   trip: Trip,
   /** Epoch seconds that the trip's times are relative to */
   base: number,
-  /** Seconds the bus leaves each stop later than scheduled, aligned with trip.stops */
+  /** Seconds the bus leaves each stop later than scheduled, aligned with trip.stops, not always in order (HANDOFF) */
   delays: number[],
   /** Seconds the bus is expected to wait at each stop for its scheduled time */
   holds: number[],

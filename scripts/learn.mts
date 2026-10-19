@@ -5,29 +5,42 @@
 // already there is kept; with --rebuild (or MODEL_REBUILD=1), learning starts over from the first day there is.
 //
 // Learning writes what production has learned, so only a build of the branch production deploys from learns, as
-// Cloudflare's builds name it, or a command run by hand; any other, like a preview's, bundles what's stored as it
-// is, only reading. So does a build reaching a Worker from before models had revisions, as the first build of this
-// version does, since it runs before its Worker deploys: the next build, against the new Worker, learns
+// Cloudflare's builds name it, or a command told to with --store (or NOTUNH_STORE=1); any other, like a preview's
+// or a build by hand, bundles what's stored as it is, only reading. So does a build reaching a Worker from before
+// models had revisions and checkpoints, as the first build of a version that brings them does, since it runs
+// before its Worker deploys: the next build, against the new Worker, learns.
+//
+// What's being learned and what's published are stored apart: learning carries on from its checkpoint
+// ("<name>.training"), stored by every build that learns, and the model is published only once the checkpoint has
+// caught up with the one published, so a refit or a rebuild that takes several builds never puts a model through
+// fewer days in the place of one through more, and the pages bundle the published model meanwhile, or the
+// checkpoint where the published one is of another shape than this build's
 
 import { writeFile } from "node:fs/promises"
 import type { URL } from "node:url"
-import type { Learned } from "../src/shared/learn.mts"
+import { type Learned, checkpointOf } from "../src/shared/learn.mts"
 import { addDays, type Day } from "../src/shared/time.mts"
 import { exists, isKept } from "./files.mts"
 import { ApiError, readModel, writeModel } from "./worker.mts"
 
 const PRODUCTION_BRANCH = "main"
 
-export const isRebuild = process.argv.includes("--rebuild") || Boolean(process.env.MODEL_REBUILD)
-export const isLearning = (process.env.WORKERS_CI_BRANCH ?? PRODUCTION_BRANCH) === PRODUCTION_BRANCH
+export const isRebuild = () =>
+  process.argv.includes("--rebuild") || Boolean(process.env.MODEL_REBUILD)
+
+const isStoring = () =>
+  process.env.WORKERS_CI_BRANCH === PRODUCTION_BRANCH || process.argv.includes("--store") || Boolean(process.env.NOTUNH_STORE)
+
+const isConflict = (error: unknown) =>
+  error instanceof ApiError && error.status === 409
 
 const message = (error: unknown) =>
   error instanceof Error ? error.message : `${error}`
 
 /**
- * Learns the model stored under a name on through the last whole day, stores it if that's further than before (or
- * at all, on a rebuild), and writes what the page loads to output. Gives back the model, or undefined if the file
- * was kept or the model couldn't be reached
+ * Learns the model stored under a name on through the last whole day from its checkpoint, stores the checkpoint if
+ * it got further, publishes it once it's caught up, and writes what the page loads to output. Gives back the model
+ * bundled, or undefined if the file was kept or the model couldn't be reached
  */
 export const learn = async <M extends Learned, B = M>(name: string, output: URL, {
   empty, first, last, fold, prepare, bundle = model => model as unknown as B, budgetMs = 3 * 60_000
@@ -55,15 +68,18 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
     if (!process.env.BUILD_TOKEN)
       throw new Error("no BUILD_TOKEN to reach the Worker with")
     const started = Date.now()
+    const ofThisShape = (state: M | null | undefined) => state?.version === empty().version ? state : null
     const { state: found, revision, throughs } = await readModel<M>(name)
-    const learning = isLearning && revision !== undefined
-    if (isLearning && !learning)
-      console.warn(`${name}: the Worker predates model revisions, so this build only reads`)
-    // A model of an older shape is learned again from the start, carrying on from where a refit stopped
-    const ofThisShape = (state: M | null) => state?.version === empty().version ? state : null
-    const stored = ofThisShape(found)
+    // A Worker from before checkpoints has no such name
+    const checkpoint = await readModel<M>(checkpointOf(name)).catch(error => error instanceof ApiError && error.status === 404 ? undefined : Promise.reject(error))
+    const learning = isStoring() && revision !== undefined && checkpoint?.revision !== undefined
+    if (isStoring() && !learning)
+      console.warn(`${name}: the Worker predates model revisions or checkpoints, so this build only reads`)
+    const published = ofThisShape(found)
     await prepare?.(learning)
-    let model = isRebuild && learning ? empty() : stored ?? empty()
+    // From where learning left off, else what's published, unless that's of an older shape, which is learned again
+    let model = isRebuild() && learning ? empty() : ofThisShape(checkpoint?.state) ?? published ?? empty()
+    let folded = 0
     const days = learning ? model.through === null ? await first() : addDays(model.through, 1) : undefined
     for (let day = days; day !== undefined && day <= last; day = addDays(day, 1)) {
       if (Date.now() - started > budgetMs) {
@@ -73,27 +89,33 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
       // A day that can't be read stops learning there, keeping the days before it, and the next build tries again
       try {
         model = await fold(model, day, throughs.at(-1) ?? null)
+        folded++
       }
       catch (error) {
         console.warn(`${name}: stopped at ${day}: ${message(error)}`)
         break
       }
     }
-    if (learning && model.through !== null && (isRebuild || model.through > (stored?.through ?? "")))
+    // Caught up with what's published, of whatever shape, it's published
+    const isCaughtUp = model.through !== null && model.through >= (found?.through ?? "")
+    let bundled = isCaughtUp ? model : published ?? model
+    if (learning && model.through !== null && folded)
       try {
-        await writeModel(name, model, revision!)
+        await writeModel(checkpointOf(name), model, checkpoint!.revision!)
+        if (isCaughtUp)
+          await writeModel(name, model, revision!)
       }
       catch (error) {
-        // Another build stored a model meanwhile, which went on from the same one, so its model is the one kept and
+        // Another build learned meanwhile, from the same checkpoint, or published from it, so what's published is
         // bundled, if it's of this shape: one another version of the build stored isn't this one's to bundle
-        if (!(error instanceof ApiError && error.status === 409))
+        if (!isConflict(error))
           throw error
-        console.warn(`${name}: stored by another build meanwhile, whose model is bundled if it's of this shape`)
-        model = ofThisShape((await readModel<M>(name)).state) ?? model
+        console.warn(`${name}: learned by another build meanwhile, whose model is bundled if it's of this shape`)
+        bundled = ofThisShape((await readModel<M>(name)).state) ?? bundled
       }
-    await writeFile(output, JSON.stringify(bundle(model)))
-    console.log(`${name}: ${learning ? "learned" : "as stored, not learning,"} through ${model.through ?? "nothing yet"}`)
-    return model
+    await writeFile(output, JSON.stringify(bundle(bundled)))
+    console.log(`${name}: ${learning ? "learned" : "as stored, not learning,"} through ${model.through ?? "nothing yet"}${bundled === model ? "" : `, bundling the published model through ${bundled.through}`}`)
+    return bundled
   }
   catch (error) {
     console.warn(`${file} not updated: ${message(error)}`)

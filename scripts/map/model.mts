@@ -14,8 +14,8 @@ import { type Model, emptyModel, fold, summarize } from "../../src/map/model.mts
 import { type Day, localDay } from "../../src/shared/time.mts"
 import { lastSettled } from "../observations.mts"
 import { isRebuild, learn } from "../learn.mts"
-import { ApiError, health, readModel, readRows, writeModel, writeRows } from "../worker.mts"
-import { type ArchivedFeed, describe, extractDay, feedFor, localFeed, score } from "./replay.mts"
+import { ApiError, health, readRows, writeRows } from "../worker.mts"
+import { archiveFeed, describe, extractDay, feedFor, localFeed, score } from "./replay.mts"
 
 const OUTPUT = new URL("../../src/map/model.json", import.meta.url)
 
@@ -34,17 +34,6 @@ const isMissing = (error: unknown) =>
 
 const today = localDay(Date.now())
 
-/** Archives this build's timetable if its version is new, as of today; another build archiving it first is fine */
-const archiveFeed = async () => {
-  const feed = await localFeed()
-  const { state, revision } = await readModel<ArchivedFeed>("gtfs")
-  if (state?.version === feed.version)
-    return
-  await writeModel("gtfs", { ...feed, through: today } satisfies ArchivedFeed, revision ?? null)
-    .catch(error => error instanceof ApiError && error.status === 409 ? undefined : Promise.reject(error))
-  console.log(`buses: archived timetable ${feed.version}`)
-}
-
 // The first days archived, and the Worker has samples and visits for, asked once there's a day to learn
 let firsts: Promise<{ observed?: Day, stored?: Day }> | undefined
 const firstDays = () =>
@@ -57,12 +46,12 @@ const model = await learn("buses", OUTPUT, {
   empty: emptyModel,
   // The timetable is archived as of the day it's first learned with, which a build only reading doesn't
   prepare: async learning => {
-    if (learning)
-      await archiveFeed()
+    if (learning && await archiveFeed(await localFeed(), today))
+      console.log(`buses: archived the timetable`)
   },
   first: async () => {
     const { observed, stored } = await firstDays()
-    return [observed, isRebuild ? stored : undefined].filter(day => day !== undefined).sort()[0]
+    return [observed, isRebuild() ? stored : undefined].filter(day => day !== undefined).sort()[0]
   },
   last:  lastSettled(Date.now()),
   fold:  async (model, day, storedThrough) => {

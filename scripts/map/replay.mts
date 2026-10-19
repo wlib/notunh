@@ -6,18 +6,19 @@
 // BUILD_TOKEN=… node scripts/map/replay.mts 2026-10-07 [--local]
 
 import { readFile } from "node:fs/promises"
+import { URL } from "node:url"
 import { withIndexes, type Feed, type FeedData } from "../../src/map/feed.mts"
 import { extract, type Visit } from "../../src/map/events.mts"
 import type { BusFix, SampledPrediction } from "../../src/map/raw.mts"
 import { observationsOf } from "../observations.mts"
 import { NO_PACE, expectedMu, paced } from "../../src/map/movement.mts"
 import { NO_FORECAST, type Sighting, buildRuns, timeAt } from "../../src/map/forecast.mts"
-import { busOn, sightingOf } from "../../src/map/tracking.mts"
+import { busOn, isNews, sightingOf } from "../../src/map/tracking.mts"
 import { routeLines } from "../../src/map/shapes.mts"
 import { LEADS, asModel, dayTypeAt, emptyScores, offsetEstimate, scored, type Model, type Scores } from "../../src/map/model.mts"
-import { type Day, localDay } from "../../src/shared/time.mts"
+import { type Day, addDays, localDay } from "../../src/shared/time.mts"
 import { groupBy } from "../../src/shared/group.mts"
-import { readModel } from "../worker.mts"
+import { ApiError, readModel, writeModel } from "../worker.mts"
 
 export const FEED = new URL("../../src/map/gtfs.json", import.meta.url)
 
@@ -48,6 +49,22 @@ export const feedFor = async (day: Day): Promise<Feed> => {
   if (!archived.has(through))
     archived.set(through, readModel<ArchivedFeed>("gtfs", through).then(({ state }) => withIndexes(state!)))
   return archived.get(through)!
+}
+
+/**
+ * Archives a timetable if its version is new: as of a day, or where another version was archived as of that day or
+ * after, as of the day after it, so no two versions share a day and neither replaces the other, a day's timetable
+ * being the first version seen on it. Another build archiving it first is fine
+ * @returns whether it was new
+ */
+export const archiveFeed = async (feed: FeedData, today: Day) => {
+  const { state, revision } = await readModel<ArchivedFeed>("gtfs")
+  if (state?.version === feed.version)
+    return false
+  const through = state && state.through >= today ? addDays(state.through, 1) : today
+  await writeModel("gtfs", { ...feed, through } satisfies ArchivedFeed, revision ?? null)
+    .catch(error => error instanceof ApiError && error.status === 409 ? undefined : Promise.reject(error))
+  return true
 }
 
 // Umo's predictions are sampled on minutes divisible by 5, so forecasts are made then
@@ -114,23 +131,28 @@ export const sightingsOf = (model: Model, visits: readonly Visit[]) => {
 
 /**
  * What the map would have seen of the buses at any epoch second of a day, asked in order, from their fixes: each
- * bus's fixes up to then through the location model, and its trip as its last fix had it tagged
+ * bus's fixes in the order the Worker's polls got them, as the map gets them, each once it was got (as it was taken,
+ * for samples from before polls were kept), through the location model, passing over those older than one already
+ * followed as the map does, and its trip as its last fix had it tagged
  */
 export const replayed = (feed: Feed, model: Model, fixes: readonly BusFix[]) => {
   const lines = routeLines(feed)
-  const sorted = fixes.toSorted((a, b) => a.at - b.at)
-  const buses = new Map<string, { route: string, bus: ReturnType<typeof busOn>, trip: string | null, seen?: Sighting }>()
+  const got = (fix: BusFix) => fix.received ?? fix.at
+  const sorted = fixes.toSorted((a, b) => got(a) - got(b) || a.at - b.at)
+  const buses = new Map<string, { route: string, bus: ReturnType<typeof busOn>, at: number, seen?: Sighting }>()
   let next = 0
   return (at: number): Sighting[] => {
-    for (; next < sorted.length && sorted[next].at <= at * 1000; next++) {
+    for (; next < sorted.length && got(sorted[next]) <= at * 1000; next++) {
       const fix = sorted[next]
       if (fix.route === null || !lines.has(fix.route))
         continue
       let own = buses.get(fix.vehicle)
+      if (!isNews(own, { at: fix.at, route: fix.route }))
+        continue
       if (own?.route !== fix.route)
-        buses.set(fix.vehicle, own = { route: fix.route, bus: busOn(lines.get(fix.route)!), trip: null })
+        buses.set(fix.vehicle, own = { route: fix.route, bus: busOn(lines.get(fix.route)!), at: fix.at })
       const { location, pace } = own.bus.observe(model, { at: fix.at / 1000, lat: fix.lat, lon: fix.lon, heading: fix.heading, kph: fix.kph })
-      own.trip = fix.trip
+      own.at = fix.at
       own.seen = sightingOf(fix.vehicle, fix.trip, location, pace)
     }
     // A bus not heard from in a while is out of service

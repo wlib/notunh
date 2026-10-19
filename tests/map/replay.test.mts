@@ -5,7 +5,7 @@ import { withIndexes, type FeedData } from "../../src/map/feed.mts"
 import { extract, type Visit } from "../../src/map/events.mts"
 import { unpackFixes, unpackPredictions, type RawFix, type RawPrediction } from "../../src/map/raw.mts"
 import { LEADS, emptyModel, update } from "../../src/map/model.mts"
-import { attachPredictions, score } from "../../scripts/map/replay.mts"
+import { attachPredictions, replayed, score } from "../../scripts/map/replay.mts"
 
 // Half an hour of the Worker's samples, recorded on a Wednesday afternoon with seven buses out, and the timetable
 // then, cut down to their routes
@@ -41,6 +41,16 @@ test("real fixes show every bus going through its trip's stops in order, at plau
   expect(visits.filter(visit => visit.gotIn !== undefined && visit.position === 0).length).toBeGreaterThanOrEqual(3)
   // Umo was sampled predicting most of them
   expect(visits.filter(visit => visit.umo).length / visits.length).toBeGreaterThan(0.5)
+})
+
+test("the buses are replayed as the map got their fixes, each once a poll got it, and an older fix got after a newer one passed over", () => {
+  const LAG = 25_000
+  // Every fix got LAG after it was taken, and some fixes got again much later, as Umo sometimes sends an old one
+  const got = [...fixes.map(fix => ({ ...fix, received: fix.at + LAG })), ...fixes.filter((_, i) => i % 7 === 0).map(fix => ({ ...fix, received: fix.at + 10 * LAG }))]
+  const [asGot, asTaken] = [replayed(feed, emptyModel(), got), replayed(feed, emptyModel(), fixes)]
+  const start = Math.min(...fixes.map(fix => fix.at)) / 1000
+  for (let at = start + 300; at < start + 1500; at += 60)
+    expect(asGot(at + LAG / 1000)).toEqual(asTaken(at))
 })
 
 // How far off the model's forecasts were on the recording, in seconds at each lead, which changes to extraction or

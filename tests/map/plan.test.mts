@@ -290,6 +290,21 @@ test("a timetable with its stops numbered otherwise plans the same itineraries, 
   }))
 )
 
+test("a run's connections keep a chronology however unevenly its stops are delayed, as the timetable's handoff or a source can leave them", () =>
+  fc.assert(fc.property(feed, fc.array(fc.integer({ min: -1800, max: 3600 }), { minLength: 1, maxLength: 12 }), (feed, shifts) => {
+    const runs = buildRuns(feed, TODAY, []).map(run => ({ ...run, delays: run.delays.map((delay, i) => delay + shifts[i % shifts.length]) }))
+    const connections = buildConnections(runs, BASE + 6 * 3600)
+    fc.pre(connections.length > 0)
+    for (const connection of connections)
+      expect(connection.arrival).toBeGreaterThanOrEqual(connection.departure)
+    for (const own of Map.groupBy(connections, connection => connection.run).values())
+      own.sort((a, b) => a.position - b.position).forEach((connection, i) => {
+        if (i && connection.position === own[i - 1].position + 1)
+          expect(connection.departure).toBeGreaterThanOrEqual(own[i - 1].arrival)
+      })
+  }))
+)
+
 test("plan's best option feels no worse than catching a bus from a nearer stop", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])

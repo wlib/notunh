@@ -21,6 +21,13 @@ export type Fixed = Vehicle & { accuracy?: number }
  */
 export type Followed = { vehicle: Fixed, location?: Location, pace: Pace, course?: { course: Course, from: number } }
 
+/**
+ * Whether a fix of a bus is news against the one it was last followed by: newer, as Umo sometimes sends an older fix
+ * after a newer one, or on another route, which is news either way, as the map and the nightly scoring both take it
+ */
+export const isNews = (last: { at: number, route?: string | null } | undefined, fix: { at: number, route: string }) =>
+  !last || fix.route !== last.route || fix.at > last.at
+
 /** A bus's pace, having finished a leg: from the stop before along the same line, as long as the model expects, or not */
 export const pacedBy = (model: Model, pace: Pace, before: Passage | undefined, passage: Passage) => {
   const isLeg = before && before.line === passage.line && before.index === passage.index - 1 && !before.isIncomplete
@@ -93,19 +100,27 @@ export const follow = (feed: Reactive<Feed>, model: Reactive<Model>, vehicles: R
     ))
   }
 
-  // Each bus, on its route's lines: a newer timetable's buses are followed along its lines from their next fix, and
-  // a newer model's paces start afresh, as they were measured against the old one's legs
+  /** A bus as followed, from where it is and its pace, with its course drawn by the model */
+  const followedAs = (vehicle: Fixed, location: Location | undefined, pace: Pace): Followed =>
+    ({ vehicle, location, pace, course: location && courseAlong(model.peek(), location, pace, holdsOf(vehicle)) })
+
+  // Each bus, on its route's lines, and the timetable and model it was last followed by. What survives a change of
+  // either is what the fixes say: a newer timetable's buses are followed afresh along its lines from their last fix,
+  // as its lines may run otherwise; and a newer model's keep where they are, but their paces start afresh, as they
+  // were measured against the old one's legs, and their courses are drawn by the new one, both at once
   let buses = new Map<string, { route: string, bus: ReturnType<typeof busOn> }>()
-  watch([feed], () => {
-    buses = new Map()
-  })
-  watch([model], () => {
-    for (const { bus } of buses.values())
-      bus.rebase()
-  })
+  let [lastFeed, lastModel] = [feed.peek(), model.peek()]
 
   const followed = r<ReadonlyMap<string, Followed>>(new Map())
   watch(() => {
+    const [isNewFeed, isNewModel] = [feed.value !== lastFeed, model.value !== lastModel]
+    lastFeed = feed.peek()
+    lastModel = model.peek()
+    if (isNewFeed)
+      buses = new Map()
+    else if (isNewModel)
+      for (const { bus } of buses.values())
+        bus.rebase()
     const linesByRoute = routeLines(feed.peek())
     const next = new Map<string, Followed>()
     for (const vehicle of vehicles.value) {
@@ -113,12 +128,11 @@ export const follow = (feed: Reactive<Feed>, model: Reactive<Model>, vehicles: R
       if (!route || !linesByRoute.has(route))
         continue
       const previous = followed.peek().get(vehicle.id)
-      // Umo sometimes sends an older fix after a newer one, though a bus put on another route is news either way
-      if (previous && vehicle.gpsTime <= previous.vehicle.gpsTime && previous.vehicle.route?.id === route) {
-        next.set(vehicle.id, previous)
+      let own = buses.get(vehicle.id)
+      if (previous && own?.route === route && !isNews({ at: previous.vehicle.gpsTime, route: previous.vehicle.route?.id }, { at: vehicle.gpsTime, route })) {
+        next.set(vehicle.id, isNewModel ? followedAs(vehicle, previous.location, NO_PACE) : previous)
         continue
       }
-      let own = buses.get(vehicle.id)
       // A bus put on another route starts afresh, as the nightly extraction has it
       if (own?.route !== route) {
         own = { route, bus: busOn(linesByRoute.get(route)!) }
@@ -127,7 +141,7 @@ export const follow = (feed: Reactive<Feed>, model: Reactive<Model>, vehicles: R
       const { location, pace } = own.bus.observe(model.peek(), {
         at: vehicle.gpsTime / 1000, lat: vehicle.lat, lon: vehicle.lon, heading: vehicle.heading, kph: vehicle.kph, accuracy: vehicle.accuracy
       })
-      next.set(vehicle.id, { vehicle, location, pace, course: location && courseAlong(model.peek(), location, pace, holdsOf(vehicle)) })
+      next.set(vehicle.id, followedAs(vehicle, location, pace))
     }
     followed.value = next
   })

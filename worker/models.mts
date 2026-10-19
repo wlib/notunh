@@ -1,14 +1,19 @@
-// What the nightly build stores whole, each by name and a day: the models it fits, the latest being the last stored,
-// whatever day it runs through, kept a month of writes back to go back to, and the timetable, archived once per version it sees, as of the day it first did, so a day's visits
-// can always be replayed against the timetable then in force
+// What the nightly build stores whole, each by name and a day: the models it publishes and its checkpoints of
+// learning them (scripts/learn.mts), the latest of each being the last stored, whatever day it runs through, kept a
+// month of writes back to go back to, and the timetable, archived once per version it sees, as of the day it first
+// did, so a day's visits can always be replayed against the timetable then in force
 
 import type { DrizzleD1Database } from "drizzle-orm/d1"
 import { and, asc, desc, eq, lt, lte, max, sql } from "drizzle-orm"
 import type { Day } from "../src/shared/time.mts"
+import { checkpointOf } from "../src/shared/learn.mts"
 import { models } from "./schema.mts"
 
 /** What there is: the map's buses, laundry's rooms, and the GTFS feed by version */
 export const MODELS = ["buses", "laundry", "gtfs"]
+
+/** What's stored: those, and the learned ones' checkpoints, which the build learns on from apart from what it publishes */
+export const STORED = [...MODELS, ...["buses", "laundry"].map(checkpointOf)]
 
 // Kept of each name, the last stored, one a night, or a feed version
 const KEEP = 30

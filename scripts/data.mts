@@ -2,12 +2,14 @@
 // is written anywhere but here until they pass:
 //
 //   node scripts/data.mts fetch [--if-missing]   the timetable, style, menus, rooms, map data, and places, read only
-//   node scripts/data.mts learn [--if-missing]   the bus and laundry models, which store what they learn in D1
+//   node scripts/data.mts learn [--if-missing]   the bus and laundry models, as stored, or with --store, learned
+//                                                on and stored in D1, as main's build does (scripts/learn.mts)
 //
 // and with neither, both. With NOTUNH_OFFLINE set, as pull requests are checked, nothing upstream is asked: every
 // file comes from the fixtures (tests/fixtures/data/), the places are still matched from them, and nothing is
 // learned. Each step keeps its own file with --if-missing, the places only while what they're derived from is the
-// same; `npm run dev` fetches alone, so a checkout never learns, which writes what production learned
+// same; `npm run dev` fetches alone, and nothing but main's build or --store learns, which writes what production
+// learned
 
 import { spawn } from "node:child_process"
 import { readdir } from "node:fs/promises"

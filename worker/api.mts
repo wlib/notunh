@@ -13,7 +13,7 @@ import { Day } from "../src/shared/time.mts"
 import { describeIssues } from "../src/shared/json.mts"
 import type { Env } from "./collect.mts"
 import { ROWS, health, maxRows, read, storage, write } from "./rows.mts"
-import { MODELS, latestModel, saveModel, throughsOf } from "./models.mts"
+import { STORED, latestModel, saveModel, throughsOf } from "./models.mts"
 import { room, rooms } from "./laundry.mts"
 
 type Worker = { Bindings: Env }
@@ -64,7 +64,7 @@ for (const [name, entry] of Object.entries(ROWS))
 // The latest stored, or the latest through a day, with its revision, and every day the name is stored through
 app.get("/api/models/:name", async c => {
   const name = c.req.param("name")
-  if (!MODELS.includes(name))
+  if (!STORED.includes(name))
     return c.notFound()
   const db = drizzle(c.env.DB)
   const [[model], days] = await db.batch([latestModel(db, name, c.req.query("through") as Day | undefined), throughsOf(db, name)])
@@ -74,7 +74,7 @@ app.get("/api/models/:name", async c => {
 // Stores a state through a day if the latest is still the one the writer expects, by its revision or null for none, else 409
 app.post("/api/models/:name", body(v.object({ expect: v.nullable(v.string()), state: v.looseObject({ through: Day }) })), async c => {
   const name = c.req.param("name")
-  if (!MODELS.includes(name))
+  if (!STORED.includes(name))
     return c.notFound()
   const { expect, state } = c.req.valid("json")
   return await saveModel(drizzle(c.env.DB), name, state.through, state, expect)

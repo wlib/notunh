@@ -12,6 +12,10 @@ export type Learned = {
   through: Day | null
 }
 
+/** The name a learned model's checkpoint is stored by, which learning carries on from, apart from the model published */
+export const checkpointOf = (name: string) =>
+  `${name}.training`
+
 /** How much what was learned some days ago still counts */
 export const decay = (days: number) =>
   0.5 ** (days / HALF_LIFE)

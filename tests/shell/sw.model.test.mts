@@ -1,5 +1,5 @@
 // The service worker against a model of what the world is allowed to know, over generated sequences of what
-// happens to it: releases published, the map's with a style that requires its style.json and keeps its folder, and
+// happens to it: releases published, and earlier ones published again as new, as a rollback is, the map's with a style that requires its style.json and keeps its folder, and
 // tiles kept by folder, windows opening pages, asking for their files, and closing, going offline, the quota
 // filling, for every file, only the large ones, or until the worker next lets go of something, for every file or
 // only pages, the origin answering a sign-in page in place of a data file, the network holding a page's files while
@@ -25,8 +25,9 @@ const WINDOWS = ["w1", "w2", "w3"]
 /** One deploy: for each page, the code and data it names, all hashed by the release that last changed them */
 type Release = Record<string, { code: string[], data: Record<string, string> }>
 
-const releaseAt = (id: number) => `2026-10-${String(id + 1).padStart(2, "0")}T08:00:00.000Z`
-const idOf = (release: string) => +release.slice(8, 10) - 1
+const FIRST = Date.parse("2026-10-01T08:00:00.000Z")
+const releaseAt = (id: number) => new Date(FIRST + id * 86_400_000).toISOString()
+const idOf = (release: string) => (Date.parse(release) - FIRST) / 86_400_000
 
 /** The data files each page names: the map's style and tiles too, which ask the cache for more by the Retain shape */
 const DATA: Record<string, string[]> = { "/": ["data"], "/map/": ["data", "style", "tiles"], "/dining/": ["data"] }
@@ -304,6 +305,13 @@ const publish = command<{ shared: boolean, changes: Record<string, "code" | "dat
   }
 )
 
+/** A rollback done as scripts/republish.mts does it: an earlier release's build published again as a new release */
+const republish = command<number>(back => `Republish(${back})`, (m, back) => m.published >= back, async (m, h, back) => {
+  h.publish(structuredClone(h.releases[m.published - back]))
+  m.published = h.world.published
+  await verify(m, h)
+})
+
 /** An edge serving an earlier release again, as before a deploy has reached it, or after a platform rollback */
 const rollback = command<number>(back => `Rollback(${back})`, (m, back) => m.published >= back, async (m, h, back) => {
   h.world.published = m.published = m.published - back
@@ -415,6 +423,7 @@ const commands = [
   page.map(revalidate),
   fc.record({ shared: fc.boolean(), changes: fc.tuple(change, change, change).map(changes => Object.fromEntries(PAGES.map((page, i) => [page, changes[i]]))) }).map(publish),
   fc.integer({ min: 1, max: 3 }).map(rollback),
+  fc.integer({ min: 1, max: 3 }).map(republish),
   fc.record({ window }).map(close),
   fc.record({ window, isFrozen: fc.boolean() }).map(freeze),
   fc.record({ window }).map(request),

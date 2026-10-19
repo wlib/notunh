@@ -13,6 +13,8 @@ import type { Env } from "../../worker/collect.mts"
 import { ROOMS } from "../../src/laundry/rooms.mts"
 import { health, readModel, readRows, request, storage, writeModel, writeRows } from "../../scripts/worker.mts"
 import { learn } from "../../scripts/learn.mts"
+import { archiveFeed } from "../../scripts/map/replay.mts"
+import { checkpointOf } from "../../src/shared/learn.mts"
 import { d1 } from "./d1.mts"
 
 const TOKEN = "secret"
@@ -161,9 +163,13 @@ test("a refit's checkpoint through an earlier day than the model it replaces is 
   expect((await readModel("buses")).state).toEqual({ through: SUNDAY, version: "2" })
 })
 
-/** Learns a model of a version through a day as a build does, failing to read one day if asked, with the days it folded and what it bundled */
+/**
+ * Learns a model of a version through a day as production's build does, failing to read one day if asked, with the
+ * days it folded and what it bundled
+ */
 const learnThrough = async (version: number, last: Day, unreadable?: Day) => {
   type Model = { version: number, through: Day | null }
+  vi.stubEnv("WORKERS_CI_BRANCH", "main")
   const folded: Day[] = []
   const output = pathToFileURL(`${tmpdir()}/notunh-learn-${crypto.randomUUID()}.json`)
   await learn<Model>("buses", output, {
@@ -189,6 +195,30 @@ test("a refit of a new version stopped partway is stored, and the next build car
   const { folded, bundled } = await learnThrough(2, addDays(SUNDAY, 18))
   expect(folded).toEqual(daysFrom(11, 18))
   expect(bundled).toEqual({ version: 2, through: addDays(SUNDAY, 18) })
+})
+
+test("a build by hand, or a preview's, only reads, unless told to store what it learns", async () => {
+  await learnThrough(1, addDays(SUNDAY, 3))
+  const published = await readModel("buses")
+  for (const [branch, store] of [["", ""], ["preview", ""], ["", "1"]]) {
+    vi.stubEnv("WORKERS_CI_BRANCH", branch || undefined as unknown as string)
+    vi.stubEnv("NOTUNH_STORE", store)
+    const output = pathToFileURL(`${tmpdir()}/notunh-learn-${crypto.randomUUID()}.json`)
+    await learn<{ version: number, through: Day | null }>("buses", output, { empty: () => ({ version: 1, through: null }), first: async () => SUNDAY, last: addDays(SUNDAY, 5), fold: async (model, day) => ({ ...model, through: day }) })
+    expect((await readModel("buses")).state).toEqual(store ? { version: 1, through: addDays(SUNDAY, 5) } : published.state)
+  }
+})
+
+test("a rebuild learns on in its checkpoint over several builds while the model it replaces stays published and bundled, until it's caught up", async () => {
+  await learnThrough(1, addDays(SUNDAY, 18))
+  vi.stubEnv("MODEL_REBUILD", "1")
+  const first = await learnThrough(1, addDays(SUNDAY, 18), addDays(SUNDAY, 8))
+  vi.stubEnv("MODEL_REBUILD", "")
+  expect(first).toEqual({ folded: daysFrom(0, 7), bundled: { version: 1, through: addDays(SUNDAY, 18) } })
+  expect((await readModel("buses")).state).toEqual({ version: 1, through: addDays(SUNDAY, 18) })
+  expect((await readModel(checkpointOf("buses"))).state).toEqual({ version: 1, through: addDays(SUNDAY, 7) })
+  expect(await learnThrough(1, addDays(SUNDAY, 19))).toEqual({ folded: daysFrom(8, 19), bundled: { version: 1, through: addDays(SUNDAY, 19) } })
+  expect((await readModel("buses")).state).toEqual({ version: 1, through: addDays(SUNDAY, 19) })
 })
 
 test("against a Worker from before model revisions, a build only reads, storing nothing, and bundles what's stored if it's of this version", async () => {
@@ -230,6 +260,18 @@ test("the timetable is read back by the day it was in force, as the version arch
   expect(await Promise.all([addDays(SUNDAY, -1), SUNDAY, addDays(SUNDAY, 9), addDays(SUNDAY, 10), addDays(SUNDAY, 99)].map(versionOf)))
     .toEqual([null, "spring", "spring", "fall", "fall"])
   expect((await readModel("gtfs")).throughs).toEqual([SUNDAY, addDays(SUNDAY, 10)])
+})
+
+test("two timetable versions first seen the same day are both archived, the first as of that day and the second as of the next (Astra's same-day feed)", async () => {
+  const feed = (version: string) => ({ version, start: SUNDAY, end: SUNDAY, routes: [], stops: [], services: {}, trips: [], shapes: {} })
+  expect(await archiveFeed(feed("spring"), SUNDAY)).toBe(true)
+  expect(await archiveFeed(feed("fall"), SUNDAY)).toBe(true)
+  expect(await archiveFeed(feed("fall"), SUNDAY)).toBe(false)
+  const versionOf = async (day: string) => (await readModel<{ version: string }>("gtfs", day)).state?.version
+  expect([await versionOf(SUNDAY), await versionOf(addDays(SUNDAY, 1))]).toEqual(["spring", "fall"])
+  // Back to the first version that day, it's archived again after the second, which it replaces from then on
+  expect(await archiveFeed(feed("spring"), SUNDAY)).toBe(true)
+  expect((await readModel("gtfs")).throughs).toEqual([SUNDAY, addDays(SUNDAY, 1), addDays(SUNDAY, 2)])
 })
 
 test("storage says how big the database is, in bytes and rows a table", async () => {

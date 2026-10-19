@@ -7,11 +7,14 @@
 // the way, and dwelling there, or halted somewhere, for however long the time between the fixes leaves, which is
 // integrated over a grid of cruising speeds and ways of splitting that time. That gives each stop's arrival and
 // departure as quantiles, how likely the bus stopped there, and when it was a quarter, half, and three quarters of
-// the way there from the stop before. A bus stopped near a stop is at it: 98 % of stopped fixes are within REACH of
-// one. Nothing here knows of trips or the timetable; a passage is of a stop along a shape
+// the way there from the stop before. Whether a fix is of a bus at a stop, halted elsewhere, or moving is a
+// posterior, from how fixes' speeds read when buses stand still and how far from stops buses stand, all fitted on
+// what the fixes of Oct 7 to 19 show (notunh-model-research/2026-10-19_probabilistic/). Nothing here knows of
+// trips or the timetable; a passage is of a stop along a shape
 
 import { type Line } from "../geo/lines.mts"
 import { angleBetween } from "../geo/projection.mts"
+import { cdf, density, probit } from "../shared/normal.mts"
 import type { RouteLine } from "./shapes.mts"
 
 /** A fix as it's matched */
@@ -48,8 +51,6 @@ export type Passage = {
    * quarters of the way, where it was followed all that way
    */
   profile?: number[],
-  /** It got there, or left, more than GAP from a fix, so that's when it likely did, not when it was seen to */
-  isGap:    boolean,
   /** It was last seen still there, so when it left is unknown, and depart is when it was last seen */
   isIncomplete: boolean
 }
@@ -91,7 +92,8 @@ const CRUISE_SPREAD = 0.45
 const ACCELERATION = 0.8
 const BRAKING = 1
 // How long a bus stopping at a stop stays, and one halted elsewhere, median s and log spread, and how much longer,
-// on average, it's held up on the way between fixes
+// on average, it's held up on the way between fixes, and how likely it is to stop at a stop it passes: the priors
+// the time between two fixes is integrated over
 const DWELL = 15
 const HALT = 10
 const STAY_SPREAD = 0.9
@@ -99,36 +101,63 @@ const DELAY = 4
 const STOP_CHANCE = 0.5
 // How far off the time between two fixes is, in s, from their whole seconds and where along the street they put
 // the bus, which with every other fix left out puts 79 % of arrivals and 90 % of departures inside the 80 % band
-// the fixes either side of it give; and how far off a fix's place is, in m, at least and per m/s
+// the fixes either side of it give
 const TIME_SIGMA = 2.5
-const FIX_SIGMA = 5
-const FIX_SIGMA_PER_SPEED = 0.3
-// Headings mean something moving at least this fast, and are off by about this many degrees, or are wild
-const MOVING_KPH = 5
-const HEADING_SIGMA = 25
-const WILD_HEADING = 0.02
-// Slower is stopped, and a bus stopped this near a stop is at it
-const STILL_KPH = 3
-export const REACH = 20 // m
-// A fix further than this from every line isn't on the route, and a line this much further from it than it was
-// has passed it
-const SNAP = 60   // m
-const PASSED = 15 // m
-// GPS wanders this far back along a street, a bus gets no faster, and the drive between fixes is about as long as
-// their speeds say, give or take this, and this share of it
+
+// What follows is fitted on the fixes of Oct 7 to 19 (notunh-model-research/2026-10-19_probabilistic/), and is how
+// the GPS reads and where buses stand, which doesn't drift as the timetable or the traffic does.
+// A fix is off the street it's on by about FIX_SIGMA, half-normally, but for a bus parked beside its route, as at a
+// terminal's lot, which LOT_SHARE of fixes are, about LOT_SIGMA off
+const FIX_SIGMA = 2.5 // m
+const LOT_SIGMA = 26  // m
+const LOT_SHARE = 0.03
+// How far a fix's heading is off its street's at each speed it reads, in km/h, interpolated between: half-normally
+// by a spread, in degrees, or any way at all, some share of the time. A bus standing still has mostly lost its
+// heading, and one turning a corner that the street's few bends cut short is off the most
+const HEADINGS: [kph: number, sigma: number, wild: number][] = [
+  [0, 12.5, 0.62], [1, 9.9, 0.12], [2.5, 7.7, 0.03], [8, 14.9, 0.02], [17, 8.6, 0.04], [25, 5.4, 0.03], [35, 2.4, 0.02], [45, 1.4, 0.02]
+]
+// How likely a bus is to be standing still at each speed a fix reads, in whole km/h, as how far it moved between the
+// fixes either side says, and faster, not at all: the GPS reads a bus standing still as 0, and one reading 1 to 5
+// is creeping along. A fix without a speed is as likely as any to be standing still
+const STILL = [0.969, 0.028, 0.009, 0.01, 0.014, 0.014, 0.002, 0]
+const STILL_SHARE = 0.08
+// Creeping up to a stop or away from it, as buses read 1 to 3 km/h doing, counts as being at it: that's what a stay
+// at a stop is taken to be, rather than a reading of whether the bus moved. Counting creeping as moving, as STILL
+// has it, put departures from every other fix 2.4 times as far from where all of them put them (90th percentile
+// 11 s against 4.6 s), as the drive between two fixes can't creep
+const CREEP = 3 // km/h
+// Where a bus standing at a stop stands, in m past the stop: about STAND_OFFSET past where the timetable has it,
+// mostly within a few meters, as each stop has buses stand in one place, and some stops further off, as shares
+// and spreads; against standing still anywhere else, halted, which buses do so many times per meter as often
+const STANDS: [share: number, sigma: number][] = [[0.598, 2.58], [0.13, 5.91]]
+const STAND_OFFSET = 3.85 // m
+const HALTED = 0.272 / 200 // per m
+// The drive between two fixes is as long as their speeds say, give or take, Laplace distributed, by SLACK and
+// SLACK_SHARE of it. That's looser than the drives fit (about 1.3 m for each second between the fixes, or 20 m and
+// 8 % of the drive), and both fits, at least as likely, lost 1 to 3 s at 10 and 20 minutes ahead: the drives
+// they're fitted on are only those the looser one matched, and what it's for is which pass of a line a fix is on
+const SLACK = 20 // m
+const SLACK_SHARE = 0.5
+// What switching to another of the route's shapes is worth, in log odds: matched fixes switch about every 450th
+// (6.1), but at that, more passages were lost when every other fix was dropped, so it's as rare as it was set
+const SWITCH = 8
+
+// These are bounds rather than estimates. A fix further than SNAP from every line isn't on the route: fixes of
+// buses standing still are 30 to 45 m off it at terminals' lots and 80 m and more where buses are out of service,
+// with next to none between. A line this much further from a fix than it was has passed it, six times as far off
+// as fixes are. A bus doesn't back up along its route, which GPS puts it BACK, twelve times as far off as fixes
+// are, never does. A bus gets no faster. Longer between fixes starts a new track, as with nothing to go on, the bus
+// may have gone off its route and come back. And the grid integrated over, the cruising speeds and samples of
+// each way of splitting the time between fixes, and how many stops between two fixes each could be stopped at
+// before only one of them is, which bound the work
+const SNAP = 60       // m
+const PASSED = 15     // m
 const BACK = 30       // m
 const MAX_SPEED = 35  // m/s
-const SLACK = 20      // m
-const SLACK_SHARE = 0.5
-// What switching to another of the route's shapes is worth, in log odds
-const SWITCH = 8
-// Longer between fixes starts a new track, and longer than GAP leaves what happened in between a guess
-export const MAX_SILENCE = 300 // s
-export const GAP = 60          // s
-// The grid integrated over: cruising speeds, and samples of each way of splitting the time between fixes
+const MAX_SILENCE = 300 // s
 const SPEEDS = 16
 const SPLITS = 8
-// Stops between two fixes past which only one of them is thought stopped at
 const MAX_STOPS = 3
 
 export const GENERIC: Expectations = { cruise: () => CRUISE, dwell: () => DWELL, stops: () => STOP_CHANCE }
@@ -143,34 +172,14 @@ const random = (seed: number) => () => {
   return ((t ^ t >>> 14) >>> 0) / 4294967296
 }
 
-/** The standard normal's cumulative distribution, to 1.5e-7 (Abramowitz and Stegun 7.1.26) */
-const phi = (z: number) => {
-  const t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2)
-  const erfc = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429)))) * Math.exp(-z * z / 2)
-  return z >= 0 ? 1 - erfc / 2 : erfc / 2
-}
-
-/** The standard normal quantile, by bisection of phi, which is only needed for a fixed grid */
-const quantileZ = (p: number) => {
-  let [low, high] = [-8, 8]
-  for (let i = 0; i < 60; i++) {
-    const middle = (low + high) / 2
-    if (phi(middle) < p)
-      low = middle
-    else
-      high = middle
-  }
-  return (low + high) / 2
-}
-
-const SPEED_GRID = Array.from({ length: SPEEDS }, (_, i) => quantileZ((i + 0.5) / SPEEDS))
+const SPEED_GRID = Array.from({ length: SPEEDS }, (_, i) => probit((i + 0.5) / SPEEDS))
 
 /** How long something stays, log-normally, with a median and a spread: its density, survival, and mean */
 const stay = (median: number, spread = STAY_SPREAD) => {
   const mu = Math.log(median)
   return {
-    density:  (x: number) => x <= 0 ? 0 : Math.exp(-0.5 * ((Math.log(x) - mu) / spread) ** 2) / (x * spread * Math.sqrt(2 * Math.PI)),
-    survival: (x: number) => x <= 0 ? 1 : 1 - phi((Math.log(x) - mu) / spread),
+    density:  (x: number) => x <= 0 ? 0 : density((Math.log(x) - mu) / spread) / (x * spread),
+    survival: (x: number) => x <= 0 ? 1 : 1 - cdf((Math.log(x) - mu) / spread),
     mean:     median * Math.exp(spread * spread / 2)
   }
 }
@@ -201,6 +210,19 @@ const spreadOf = (values: readonly number[], weights: readonly number[]): Spread
 
 const exactly = (time: number): Spread =>
   ({ low: time, median: time, high: time })
+
+/** The normal density some way off its mean */
+const normal = (off: number, sigma: number) =>
+  density(off / sigma) / sigma
+
+/** A row of a table by its first column, each other column interpolated between the rows either side, or held past its ends */
+const interpolate = <Row extends number[]>(table: readonly Row[], x: number): Row => {
+  const i = table.findIndex(row => row[0] > x)
+  if (i <= 0)
+    return table.at(i)!
+  const [a, b] = [table[i - 1], table[i]]
+  return a.map((value, j) => value + (b[j] - value) * (x - a[0]) / (b[0] - a[0])) as Row
+}
 
 //#endregion
 
@@ -320,25 +342,43 @@ const candidates = (lines: readonly Line[], { lat, lon }: Observation) => {
 const speedOf = (fix: Observation) =>
   Math.max(0, (fix.kph ?? 0) / 3.6)
 
+/** How likely a fix is of a bus standing still, by the speed it reads */
+const stillness = ({ kph }: Observation) => {
+  if (kph == null)
+    return STILL_SHARE
+  const i = Math.min(STILL.length - 1, Math.max(0, Math.floor(kph)))
+  return STILL[i] + (STILL[Math.min(STILL.length - 1, i + 1)] - STILL[i]) * (Math.max(0, kph) - i)
+}
+
+/** A fix is of a bus standing still where that's likelier than its moving */
 const isStill = (fix: Observation) =>
-  (fix.kph ?? Infinity) <= STILL_KPH
+  stillness(fix) > 0.5
+
+/** How likely a bus standing still some meters past a stop is to be standing at it, rather than halted there */
+const standing = (offset: number) => {
+  const at = STANDS.reduce((sum, [share, sigma]) => sum + share * normal(offset - STAND_OFFSET, sigma), 0)
+  return at / (at + HALTED)
+}
 
 const sigmaOf = (fix: Observation) =>
-  Math.max(fix.accuracy ?? 0, FIX_SIGMA + FIX_SIGMA_PER_SPEED * speedOf(fix))
+  Math.max(fix.accuracy ?? 0, FIX_SIGMA)
 
-/** Log odds of a fix being at a candidate, from how far off it is, and its heading */
+/** Log likelihood of a fix being at a candidate, from how far off it is, and its heading, as far as the fix has one */
 const emission = (fix: Observation, { meters, bearing }: Candidate) => {
-  const isHeaded = fix.heading != null && (fix.kph ?? 0) >= MOVING_KPH
-  return -0.5 * (meters / sigmaOf(fix)) ** 2 +
-    (isHeaded ? Math.log(Math.exp(-0.5 * (angleBetween(fix.heading!, bearing) / HEADING_SIGMA) ** 2) + WILD_HEADING) : 0)
+  const off = Math.log((1 - LOT_SHARE) * 2 * normal(meters, sigmaOf(fix)) + LOT_SHARE * 2 * normal(meters, LOT_SIGMA))
+  if (fix.heading == null || fix.kph == null)
+    return off
+  const [, sigma, wild] = interpolate(HEADINGS, fix.kph)
+  return off + Math.log((1 - wild) * 2 * normal(angleBetween(fix.heading, bearing), sigma) + wild / 180)
 }
 
 /** A fix matched to a line, laps and all */
 type Matched = { fix: Observation, line: number, distance: number }
 
 /**
- * Log odds of driving from a matched fix to a candidate for the next, and how far along that is, laps and all:
- * about as far as their speeds say, never far back, and never faster than a bus goes. Switching lines is a new track
+ * Log odds of driving from a matched fix to a candidate for the next, against driving as far as their speeds say,
+ * and how far along that is, laps and all: never far back, and never faster than a bus goes. Switching lines is a
+ * new track
  */
 const transition = (lines: readonly RouteLine[], from: Matched, fix: Observation, to: Candidate) => {
   if (to.line !== from.line)
@@ -420,8 +460,11 @@ export const match = (lines: readonly RouteLine[], fixes: readonly Observation[]
 
 //#region Between fixes
 
-/** A stop a bus is at, by index, when it got there, and its way there from the stop before, when known */
-type At = { index: number, arrive: Spread, isGap: boolean, profile?: number[] }
+/**
+ * A stop a bus is at, by index, how likely its fixes there say it is to be standing at it, when it got there, and its
+ * way there from the stop before, when known
+ */
+type At = { index: number, chance: number, arrive: Spread, profile?: number[] }
 
 /** What's known of a bus's track as of its last matched fix */
 type State = {
@@ -440,15 +483,20 @@ type State = {
   passed?:  Passage
 }
 
-/** The stop a fix stopped near a stop is at, of those it hasn't been through, or the one it's at */
+/**
+ * The stop a fix is of a bus at, standing or creeping, of those either side of it that it hasn't been through, or
+ * the one it's at, where that's likelier than its being halted there, and how likely
+ */
 const stopAt = (state: State, point: Matched) => {
-  if (!isStill(point.fix))
-    return
-  const { line } = state
-  const ahead = stopAhead(line, point.distance)
-  for (const index of [ahead - 1, ahead])
-    if (index >= (state.at?.index ?? state.ahead) && Math.abs(stopDistance(line, index) - point.distance) <= REACH)
-      return index
+  const isNear = (point.fix.kph ?? Infinity) <= CREEP
+  const ahead = stopAhead(state.line, point.distance)
+  let found: { index: number, chance: number } | undefined
+  for (const index of [ahead - 1, ahead]) {
+    const chance = isNear ? standing(point.distance - stopDistance(state.line, index)) : 0
+    if (index >= (state.at?.index ?? state.ahead) && chance > Math.max(0.5, found?.chance ?? 0))
+      found = { index, chance }
+  }
+  return found
 }
 
 type Sample = {
@@ -470,9 +518,11 @@ type Sample = {
  */
 const between = (state: State, to: Matched, expect: Expectations): Passage[] => {
   const { line, last: from } = state
-  const toAt = stopAt(state, to)
-  // Still at the stop it was at
+  const found = stopAt(state, to)
+  const toAt = found?.index
+  // Still at the stop it was at, which every fix of it there is more evidence of
   if (state.at && toAt === state.at.index) {
+    state.at.chance = Math.max(state.at.chance, found!.chance)
     state.last = to
     return []
   }
@@ -500,11 +550,10 @@ const between = (state: State, to: Matched, expect: Expectations): Passage[] => 
 
   const wasStill = isStill(from.fix) && !state.at
   const isStillNow = isStill(to.fix) && toAt === undefined
-  const isGap = seconds > GAP
   const passages: Passage[] = []
-  const finish = (index: number, arrive: Spread, depart: Spread, dwelled: number, wasGap: boolean, profile?: number[]): Passage => ({
+  const finish = (index: number, arrive: Spread, depart: Spread, dwelled: number, profile?: number[]): Passage => ({
     line, index, stop: stopId(line, index), distance: stopDistance(line, index),
-    arrive, depart, dwelled, ...profile && { profile }, isGap: wasGap, isIncomplete: false
+    arrive, depart, dwelled, ...profile && { profile }, isIncomplete: false
   })
   /** The profile of the way to a stop, from the quarters, given when it got there */
   const profileTo = (index: number, arrive: number) => {
@@ -541,7 +590,7 @@ const between = (state: State, to: Matched, expect: Expectations): Passage[] => 
 
     if (state.at) {
       const depart = spreadAt(sample => sample.depart, t0)
-      passages.push(finish(state.at.index, state.at.arrive, depart, 1, state.at.isGap || isGap, state.at.profile))
+      passages.push(finish(state.at.index, state.at.arrive, depart, state.at.chance, state.at.profile))
       state.left = { index: state.at.index, at: depart.median }
       state.quarters = []
       state.at = undefined
@@ -551,14 +600,14 @@ const between = (state: State, to: Matched, expect: Expectations): Passage[] => 
       const arrive = spreadAt(sample => sample.stops[s]?.arrive, timeAlong(stopDistance(line, index)))
       const depart = spreadAt(sample => sample.stops[s]?.depart, timeAlong(stopDistance(line, index)))
       const dwelled = total > 0 ? samples.reduce((sum, sample) => sum + (sample.stops[s]?.dwelled ? sample.weight : 0), 0) / total : 0
-      passages.push(finish(index, arrive, depart, dwelled, isGap, profileTo(index, arrive.median)))
+      passages.push(finish(index, arrive, depart, dwelled, profileTo(index, arrive.median)))
       state.left = { index, at: depart.median }
       state.quarters = []
     })
     if (toAt !== undefined) {
       quartersTo(toAt)
       const arrive = spreadAt(sample => sample.arrive, to.fix.at)
-      state.at = { index: toAt, arrive, isGap, ...profileOf(profileTo(toAt, arrive.median)) }
+      state.at = { index: toAt, chance: found!.chance, arrive, ...profileOf(profileTo(toAt, arrive.median)) }
       state.quarters = []
     }
     quartersTo(Infinity)
@@ -697,7 +746,7 @@ const tracker = (lines: readonly RouteLine[], expect: Expectations) => {
     const at = state?.at
     const ended = at ? [{
       line: state!.line, index: at.index, stop: stopId(state!.line, at.index), distance: stopDistance(state!.line, at.index),
-      arrive: at.arrive, depart: exactly(state!.last.fix.at), dwelled: 1, ...profileOf(at.profile), isGap: at.isGap, isIncomplete: true
+      arrive: at.arrive, depart: exactly(state!.last.fix.at), dwelled: at.chance, ...profileOf(at.profile), isIncomplete: true
     }] : []
     state = undefined
     return ended
@@ -710,8 +759,8 @@ const tracker = (lines: readonly RouteLine[], expect: Expectations) => {
       state = { line, last: point, ahead: stopAhead(line, point.distance), quarters: [] }
       // Already at a stop when first seen, it's not known when it got there, so that stop is left out
       const at = stopAt(state, point)
-      if (at !== undefined)
-        state.ahead = at + 1
+      if (at)
+        state.ahead = at.index + 1
       else if (isStill(point.fix))
         state.halted = point.fix.at
       return ended
@@ -768,7 +817,8 @@ export const locator = (lines: readonly RouteLine[], expect = GENERIC) => {
     let best: { score: number, point: Matched, isNew: boolean } | undefined
     for (const option of options) {
       const step = last ? transition(lines, last, fix, option) : { log: 0, distance: option.distance, isNew: true }
-      const isDriven = Number.isFinite(step.log)
+      // Nowhere it could likelier have driven from, as matching a whole day has it, a track starts here
+      const isDriven = step.log > -2 * SWITCH
       const score = (isDriven ? step.log : -2 * SWITCH) + emission(fix, option)
       if (!best || score > best.score)
         best = { score, point: { fix, line: option.line, distance: isDriven ? step.distance : option.distance }, isNew: step.isNew || !isDriven }

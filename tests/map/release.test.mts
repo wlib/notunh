@@ -1,7 +1,8 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { readFileSync } from "node:fs"
-import { POINTER, fetchPointer, lockedClosure, manifestOf, mismatches, sha256 } from "../../scripts/map/release.mts"
+import { POINTER, fetchPointer, lockedClosure, manifestOf, mismatches } from "../../scripts/map/release.mts"
+import { contentHash } from "../../src/shared/hash.mts"
 import { walkGraph } from "../../scripts/map/walkable.mts"
 import { gazetteerOf } from "../../scripts/map/gazetteer.mts"
 import type { OsmElement } from "../../scripts/map/pbf.mts"
@@ -40,19 +41,22 @@ test("the generator's packages are as package-lock.json resolves them, with all 
 })
 
 test("an archive is as its manifest says only when every file it names has exactly those bytes", () =>
-  fc.assert(fc.property(files, fc.nat(), fc.nat(), (contents, pick, flip) => {
-    const manifest = manifestOf(MADE, contents)
+  fc.assert(fc.asyncProperty(files, fc.nat(), fc.nat(), async (contents, pick, flip) => {
+    const manifest = await manifestOf(MADE, Object.fromEntries(Object.entries(contents).map(([path, data]) => [path, () => data])))
     expect(manifest).toMatchObject({ ...MADE, version: versionOf(MADE) })
     expect(Object.keys(manifest.files).sort()).toEqual(Object.keys(contents).sort())
-    const hashOf = (found: Record<string, Uint8Array>) => (path: string) => path in found ? sha256(found[path]) : undefined
-    expect(mismatches(manifest, hashOf(contents))).toEqual([])
+    const hashOf = async (found: Record<string, Uint8Array>) => {
+      const hashes = new Map(await Promise.all(Object.entries(found).map(async ([path, data]) => [path, await contentHash(data)] as const)))
+      return (path: string) => hashes.get(path)
+    }
+    expect(mismatches(manifest, await hashOf(contents))).toEqual([])
     // Files beyond the manifest's don't matter; one missing or changed does
-    expect(mismatches(manifest, hashOf({ ...contents, extra: new Uint8Array() }))).toEqual([])
+    expect(mismatches(manifest, await hashOf({ ...contents, extra: new Uint8Array() }))).toEqual([])
     const [path] = Object.keys(contents).slice(pick % Object.keys(contents).length)
     const { [path]: data, ...without } = contents
-    expect(mismatches(manifest, hashOf(without))).toEqual([path])
+    expect(mismatches(manifest, await hashOf(without))).toEqual([path])
     const changed = new Uint8Array([...data, flip % 256])
-    expect(mismatches(manifest, hashOf({ ...contents, [path]: changed }))).toEqual([path])
+    expect(mismatches(manifest, await hashOf({ ...contents, [path]: changed }))).toEqual([path])
   }))
 )
 

@@ -38,11 +38,20 @@ export class TruncatedPbf extends Error {
   }
 }
 
-/** Each blob, still deflated, from a file's framing, which only once it's all read can say whether it was cut short */
-const blobsOf = function* (data: Uint8Array) {
+/**
+ * Each blob, still deflated, from a file's framing as its bytes come, which only once they've all come can say
+ * whether it was cut short, as one with none at all was
+ */
+const blobsOf = async function* (extract: AsyncIterable<Uint8Array>) {
   const frames = createOsmPbfBlobFrameGenerator()
-  yield* frames.nextChunk(data)
+  let isEmpty = true
+  for await (const chunk of extract) {
+    isEmpty &&= !chunk.length
+    yield* frames.nextChunk(chunk)
+  }
   try {
+    if (isEmpty)
+      throw new Error("The file is empty")
     frames.finish()
   }
   catch (cause) {
@@ -50,7 +59,7 @@ const blobsOf = function* (data: Uint8Array) {
   }
 }
 
-/** zlib, inflated in one go rather than through a stream, up to the most a blob may hold */
+/** zlib, inflated in one go, as a blob is at most a few MB, up to the most it may hold */
 const inflate = async (data: Uint8Array, maxOutputLength?: number) =>
   new Uint8Array(inflateSync(data, { maxOutputLength }))
 
@@ -117,13 +126,11 @@ const readBlock = ({ stringtable, primitivegroup, granularity, lat_offset, lon_o
   }
 }
 
-/** Reads every element of an extract in order, and says when the extract was taken, if it says */
-export const readPbf = async (data: Uint8Array, readers: Readers) => {
-  if (!data.length)
-    throw new TruncatedPbf()
+/** Reads every element of an extract in order, as its bytes come, and says when the extract was taken, if it says */
+export const readPbf = async (extract: AsyncIterable<Uint8Array>, readers: Readers) => {
   let timestamp: Date | undefined
   // The header first, then every block
-  for await (const block of osmPbfBlobsToBlocksGenerator(blobsOf(data), inflate)) {
+  for await (const block of osmPbfBlobsToBlocksGenerator(blobsOf(extract), inflate)) {
     if ("primitivegroup" in block)
       readBlock(block, readers)
     else if (block.osmosis_replication_timestamp)
@@ -176,11 +183,11 @@ const isWithin = ([west, south, east, north]: Box) => ({ lat, lon }: Point) =>
  * their paths can be followed past the box. Read in two passes, relations first, so only the ways that wanted
  * relations are made of are kept besides the wanted ways
  */
-export const elementsWithin = async (data: Uint8Array, box: Box, isWanted: (tags: Tags) => boolean) => {
+export const elementsWithin = async (read: () => AsyncIterable<Uint8Array>, box: Box, isWanted: (tags: Tags) => boolean) => {
   const inside = isWithin(box)
   const relations: OsmRelation[] = []
   const parts = new Set<number>()
-  await readPbf(data, {
+  await readPbf(read(), {
     relation: relation => {
       if (!isWanted(relation.tags))
         return
@@ -194,7 +201,7 @@ export const elementsWithin = async (data: Uint8Array, box: Box, isWanted: (tags
   const places = nodePlaces()
   const nodes = new Map<number, OsmNode>()
   const ways = new Map<number, OsmWay>()
-  const { timestamp } = await readPbf(data, {
+  const { timestamp } = await readPbf(read(), {
     node: node => {
       places.add(node)
       if (node.tags && isWanted(node.tags) && inside(node))

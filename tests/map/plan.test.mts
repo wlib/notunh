@@ -12,7 +12,8 @@ import {
 import {
   MAX_ACCESS_WALK, MAX_TRANSFER_WALK, createWalks, straightMeters, walkAllowance, walkSeconds, type Walks
 } from "../../src/map/walks.mts"
-import { emptyModel, holdProbability, isLikely, probit, update } from "../../src/map/model.mts"
+import { emptyModel, holdProbability, isLikely, update } from "../../src/map/model.mts"
+import { probit } from "../../src/shared/normal.mts"
 import type { Visit } from "../../src/map/events.mts"
 import { type Day, addDays } from "../../src/shared/time.mts"
 

@@ -1,14 +1,16 @@
 // How the build and scripts read what the Worker observed on a service day: from the day's archive once the catalog
-// lists it (src/map/archive.mts), checked against the catalog's hash, or else from the Worker's D1, which keeps a
-// day's samples until it's archived, decoded either way to the same rows (src/map/raw.mts), so extraction runs on
-// either. Only reads
+// lists it (src/map/archive.mts), checked against the catalog's hash as it's read, or else from the Worker's D1,
+// which keeps a day's samples until it's archived, decoded either way to the same rows (src/map/raw.mts), so
+// extraction runs on either. Only reads
 
-import { gunzipSync } from "node:zlib"
+import { createInterface } from "node:readline"
+import { Readable } from "node:stream"
+import { createGunzip, createZstdDecompress } from "node:zlib"
 import { decode, fromHex, observe, type ObservedRow, type Source } from "../src/map/raw.mts"
 import { archiveUrl, fetchCatalog, type Catalog, type Manifest } from "../src/map/archive.mts"
 import { serviceDayStart } from "../src/map/feed.mts"
 import { type Day, addDays, localDay } from "../src/shared/time.mts"
-import { sha256 } from "./map/release.mts"
+import { contentHash } from "../src/shared/hash.mts"
 import { readRows } from "./worker.mts"
 
 export const SOURCES: Source[] = ["buses", "predictions"]
@@ -49,20 +51,33 @@ export const storedRows = async (day: Day, skip = false) =>
     Promise.all((await readRows<{ at: number, body: string }>(source, day)).map(row => decoded(source, row, skip)))
   ))).flat(2)
 
-/** The rows an archive holds, a line each */
-export const unpack = (bytes: Uint8Array) =>
-  gunzipSync(bytes).toString().split("\n").filter(Boolean).map(line => JSON.parse(line) as ObservedRow)
+/** The rows an archive holds, a line each, as its file's bytes come: zstd's, or gzip's before 2026-10-20 */
+export const unpack = async (file: string, bytes: AsyncIterable<Uint8Array>) => {
+  const lines = createInterface({ input: Readable.from(bytes).pipe(file.endsWith(".gz") ? createGunzip() : createZstdDecompress()), crlfDelay: Infinity })
+  const rows: ObservedRow[] = []
+  for await (const line of lines)
+    if (line)
+      rows.push(JSON.parse(line))
+  return rows
+}
 
-/** An archived day's rows, as long as its file is exactly what its manifest says */
-export const archivedRows = async ({ day, sha256: hash, bytes }: Manifest, load = fetch) => {
-  const url = archiveUrl(day)
+/** An archived day's rows, as long as its file is exactly what its manifest says, which is hashed as it's read */
+export const archivedRows = async (manifest: Manifest, load = fetch) => {
+  const url = archiveUrl(manifest)
   const response = await load(url)
-  if (!response.ok)
+  if (!response.ok || !response.body)
     throw new Error(`${response.status} from ${url}`)
-  const file = new Uint8Array(await response.arrayBuffer())
-  if (file.length !== bytes || sha256(file) !== hash)
+  let bytes = 0
+  const [hashing, reading] = response.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+    transform: (chunk, out) => {
+      bytes += chunk.length
+      out.enqueue(chunk)
+    }
+  })).tee()
+  const [hash, rows] = await Promise.all([contentHash(hashing), unpack(url, reading).catch(() => undefined)])
+  if (bytes !== manifest.bytes || hash !== manifest.sha256 || !rows)
     throw new Error(`${url} isn't the file its manifest names`)
-  return unpack(file)
+  return rows
 }
 
 // Read once, when first a day is

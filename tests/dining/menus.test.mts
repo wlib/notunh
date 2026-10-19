@@ -67,9 +67,9 @@ const twoMeals = (week: NutrisliceWeek) =>
   )
 
 test("the published files put every meal back together, with each food in a file of its own", () =>
-  fc.assert(fc.property(weekOf(DATES), week => {
+  fc.assert(fc.asyncProperty(weekOf(DATES), async week => {
     const data = twoMeals(week)
-    const { index, files } = publish(data)
+    const { index, files } = await publish(data)
     const read = <T,>(file: string): T => JSON.parse(files.get(file)!)
     expect(v.is(MenusIndex, JSON.parse(JSON.stringify(index)))).toBe(true)
 
@@ -87,9 +87,9 @@ test("the published files put every meal back together, with each food in a file
 )
 
 test("a food is the same file however many days serve it, and search lists it once with each meal serving it", () =>
-  fc.assert(fc.property(weekOf(DATES), week => {
+  fc.assert(fc.asyncProperty(weekOf(DATES), async week => {
     const data = twoMeals(week)
-    const { index, files } = publish(data)
+    const { index, files } = await publish(data)
     const search = JSON.parse(files.get(index.search)!) as SearchFood[]
 
     expect(files.size).toBe(new Set([...files.values()]).size)

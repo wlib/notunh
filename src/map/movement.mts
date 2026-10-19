@@ -8,25 +8,31 @@
 
 import { type Model, legMu, lingerEstimate, profileEstimate, zoneEstimate } from "./model.mts"
 import { type Location, stopAhead, stopDistance, stopId } from "./locate.mts"
+import { meanResidual } from "../shared/normal.mts"
 
 // A bus's pace drifts back to usual over about PACE_MEMORY, and strays from it by about PACE_SIGMA, while a leg
 // strays from what the bus's pace makes it by about LEG_SIGMA, all in log s; fitted on Oct 7 to 19, all three
-// stable from one held-out day to the next
+// stable from one held-out day to the next. Neither starting the pace afresh after a break or a long layover, nor
+// a slower pace for each bus at each time of day, foretold legs any better
+// (notunh-model-research/2026-10-19_probabilistic/)
 export const PACE_MEMORY = 3600 // s
 const PACE_SIGMA = 0.064
 export const LEG_SIGMA = 0.17
-// Further off than this, a leg says nothing of the bus's pace
+// A bound rather than an estimate: a leg further off than this, 2.7 times as long as expected or more, as 0.65 %
+// are, counts as only this far off. Weighing each leg by how likely it is to have been driven at the bus's pace
+// rather than held up, by the mixture the legs fit, rather than bounding them, gained a second at a minute ahead
+// but lost 25 to 35 s at 20 and 30 minutes on Oct 17, a slow day, whose long legs it took for hold-ups
 const MAX_EXCESS = 1
 // Before anything's been learned: how fast buses drive, how long they spend at a stop, and how much longer one
 // already there stays
 export const DEFAULT_RATE = 6 // m/s
 const DEFAULT_DWELL = 10 // s
 const DEFAULT_LINGER = 30 // s
-// A bus stopped between stops is held up about this much more, and what's left of a stay or a leg is only so sure
-const HELD_UP = 8 // s
+// A bus seen halted between stops is halted, all told, a median HALT, with a log spread of HALT_SPREAD, as fitted
+// on Oct 7 to 19; and what's left of a stay or a leg is only so sure
+const HALT = 24.5 // s
+const HALT_SPREAD = 0.76
 const CURRENT_SPREAD = 0.35
-// A bus partway along a leg, as far as time alone says, has at least this share of it to go
-const LEFT_SHARE = 0.15
 // How long a bus's speed now says more of where it'll be than the leg's usual pace does
 const SPEED_MEMORY = 5 // s
 
@@ -60,9 +66,10 @@ export type Waypoint = { stop: string, route: string, isFirst: boolean, meters: 
 
 /**
  * Where a bus is on its way: at its first stop since it got there, or having left it, and how far it's got toward
- * the next, as a share of the meters between them, how fast it's going, in m/s, and whether it's held up between them
+ * the next, as a share of the meters between them, how fast it's going, in m/s, and since when it's been halted
+ * between them, if it is
  */
-export type Whereabouts = { arrive: number, depart?: number, progress?: number, speed?: number, isHalted?: boolean }
+export type Whereabouts = { arrive: number, depart?: number, progress?: number, speed?: number, halted?: number }
 
 /** A bus's expected course: when it gets to and leaves each stop of its way, how sure each departure is, and where it is when */
 export type Course = {
@@ -172,11 +179,13 @@ export const course = (model: Model, way: readonly Waypoint[], where: Whereabout
  * drive from here, as seconds from now and meters along the leg
  */
 const along = (meters: number, took: number, profile: readonly number[], where: Whereabouts, now: number) => {
+  const elapsed = Math.max(0, now - where.depart!)
   const share = where.progress === undefined
-    ? Math.min(1 - LEFT_SHARE, Math.max(0, (now - where.depart!) / took))
+    ? elapsed / (elapsed + meanResidual(Math.log(took) - LEG_SIGMA ** 2 / 2, LEG_SIGMA, elapsed))
     : timeShareOf(profile, Math.max(0, Math.min(1, where.progress)))
   const progress = where.progress === undefined ? shareAlong(profile, share) : Math.max(0, Math.min(1, where.progress))
-  const held = where.isHalted ? HELD_UP : 0
+  // Halted, as long again as a bus halted that long is on average
+  const held = where.halted === undefined ? 0 : meanResidual(Math.log(HALT), HALT_SPREAD, now - where.halted)
   const from = progress * meters
   const rest = took * (1 - share)
   if (where.speed === undefined)
@@ -242,7 +251,7 @@ export const courseAlong = (model: Model, location: Location, pace: Pace, holds?
       depart:   last?.depart ?? location.since,
       progress: meters ? (location.distance - from) / meters : 0,
       speed:    location.speed,
-      isHalted: location.mode === "halted"
+      ...location.mode === "halted" && { halted: location.since }
     }
   return { course: course(model, way, where, pace, location.at), from }
 }

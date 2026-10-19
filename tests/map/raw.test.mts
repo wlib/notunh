@@ -50,8 +50,8 @@ const polls = fc.array(fc.tuple(fc.integer({ min: 0, max: 59_999 }), fc.option(f
   .map(polls => polls.map(([ms, seen]) => packPoll(AT, AT + ms, seen)))
 
 /** A body as an older Worker wrote it, gzipped JSON */
-const gzipped = async (row: unknown) =>
-  new Uint8Array(await new Response(new Response(JSON.stringify(row)).body!.pipeThrough(new CompressionStream("gzip"))).arrayBuffer())
+const gzipped = (row: unknown) =>
+  new Response(new Blob([JSON.stringify(row)]).stream().pipeThrough(new CompressionStream("gzip"))).bytes()
 
 test("unpackFixes gives back every vehicle's fix exactly, and the poll that first saw it, through a row body", async () =>
   fc.assert(fc.asyncProperty(fc.array(vehicle, { maxLength: 40 }), polls, fc.nat(), async (vehicles, polls, seed) => {

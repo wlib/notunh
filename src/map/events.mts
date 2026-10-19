@@ -5,12 +5,15 @@
 // only one reading of them: each names the extractor that read it, and another can read the fixes again
 
 import { tripBase, type Feed, type Trip } from "./feed.mts"
-import { positionsOf, routeLines } from "./shapes.mts"
-import { REACH, type Passage, passagesOf } from "./locate.mts"
+import { LOOP_GAP, positionsOf, routeLines } from "./shapes.mts"
+import { type Passage, passagesOf } from "./locate.mts"
 import type { BusFix } from "./raw.mts"
 
-/** The version of how visits are read from fixes: 1 was zone crossings, before 2026-10-20, 2 the location model */
-export const EXTRACTOR = 2
+/**
+ * The version of how visits are read from fixes: 1 was zone crossings, before 2026-10-20, 2 the location model, and
+ * 3 the location model with what's uncertain fitted as likelihoods
+ */
+export const EXTRACTOR = 3
 
 // Longer at a stop, or between the end of one trip and the start of the next, is a bus out of service
 const MAX_VISIT = 1800      // s
@@ -19,8 +22,7 @@ const MAX_SILENCE = 120_000 // ms
 // Further ahead of its timetable, a bus joining a trip partway is on its way to where it starts
 const MAX_EARLY = 900       // s
 
-/** What's known of a visit beyond its times: it was in a gap between fixes, or last seen still there */
-export const GAP = 1
+/** What's known of a visit beyond its times: it was last seen still there. Its spread says how sure its times are */
 export const INCOMPLETE = 2
 
 /** A bus going through a stop, all times in epoch seconds, as the timetable's are compared in */
@@ -35,7 +37,7 @@ export type Visit = {
   spread?: number[],
   /** How likely it stopped there, rather than going straight through */
   dwelled?: number,
-  /** GAP and INCOMPLETE */
+  /** INCOMPLETE, and before extractor 3, 1 where it was in a gap between fixes */
   flags?:  number,
   /** The trip it left on, when the timetable has it */
   trip?:   string,
@@ -121,7 +123,7 @@ const extractRun = (feed: Feed, trips: ReadonlyMap<string, Trip>, fixes: readonl
 
     // Driven from the stop before, along the same track
     const isDriven = before && before.line === passage.line && before.index === passage.index - 1 && !before.isIncomplete
-    const flags = (passage.isGap ? GAP : 0) | (passage.isIncomplete ? INCOMPLETE : 0)
+    const flags = passage.isIncomplete ? INCOMPLETE : 0
     const seen: Visit = {
       vehicle,
       route: route!,
@@ -149,14 +151,15 @@ const extractRun = (feed: Feed, trips: ReadonlyMap<string, Trip>, fixes: readonl
     // Along the trip from where it was, from the start on joining it where it starts, as a late bus may be due back
     // there nearer the time, or else wherever it's due nearest the time, unless it'd be far early there
     const { base, position: previous } = run
-    // Where the trip has the stop along the shape it went through it on, as a loop may pass one stop twice
+    // Where the trip has the stop along the shape it went through it on, as a loop may pass one stop twice, and
     const { line } = passage
     const along = line.coordinates === feed.shapes[after.shape] ? positionsOf(feed, after) : undefined
     const apart = (p: number) => {
       const off = along![p] - passage.distance
       return line.isLoop ? Math.abs(((off % line.length) + line.length * 1.5) % line.length - line.length / 2) : Math.abs(off)
     }
-    const positions = after.stops.flatMap((_, p) => stopId(after, p) === stop && (!along || apart(p) <= REACH) ? [p] : [])
+    // there, the same place as the line has it, which merges a stop at both ends of a loop
+    const positions = after.stops.flatMap((_, p) => stopId(after, p) === stop && (!along || apart(p) < LOOP_GAP) ? [p] : [])
     const position =
       previous >= 0 || base === undefined || positions[0] === 0
         ? positions.find(p => p > previous)

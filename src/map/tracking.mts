@@ -68,7 +68,7 @@ export const sightingOf = (vehicleId: string, tripId: string | null | undefined,
       depart:   last.depart ?? location.since,
       progress: Number.isFinite(meters) && meters > 0 ? (location.distance - last.distance) / meters : 0,
       speed:    location.speed,
-      isHalted: location.mode === "halted"
+      ...location.mode === "halted" && { halted: location.since }
     },
     pace,
     at: location.at

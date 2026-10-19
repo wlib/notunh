@@ -172,16 +172,13 @@ export const observe = (rows: readonly ObservedRow[]): Observations => {
   return observed
 }
 
-const pipe = (bytes: BodyInit, stream: CompressionStream | DecompressionStream) =>
-  new Response(new Response(bytes).body!.pipeThrough(stream))
-
 /** A row's body: gzipped JSON of the version, the samples, and the polls */
 export const encode = async (samples: readonly unknown[], polls: readonly RawPoll[]) =>
-  new Uint8Array(await pipe(JSON.stringify({ version: RAW_VERSION, samples, polls }), new CompressionStream("gzip")).arrayBuffer())
+  new Uint8Array(await new Response(new Blob([JSON.stringify({ version: RAW_VERSION, samples, polls })]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer())
 
 /** A row, if it was packed by a version this reads, saying which, which fails for any later one rather than misread it */
 export const decode = async <T,>(body: Uint8Array<ArrayBuffer>): Promise<Row<T>> => {
-  const row: unknown = JSON.parse(await pipe(body, new DecompressionStream("gzip")).text())
+  const row: unknown = JSON.parse(await new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream("gzip"))).text())
   if (Array.isArray(row))
     return { version: 0, samples: row, polls: null }
   const { version, samples, polls } = Object(row) as { version?: unknown, samples?: unknown, polls?: unknown }

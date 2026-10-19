@@ -6,10 +6,11 @@
 // beside the new one, as the tiles' does, for a map tab still on it. With --if-missing, a style already there is
 // kept. The fixtures (tests/fixtures/make.mts) bundle a style the same way, from the Liberty the tests have
 
-import { createHash } from "node:crypto"
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises"
+import { Readable } from "node:stream"
 import type { StyleSpecification, VectorSourceSpecification } from "maplibre-gl"
 import { getJson, objectOf } from "../../src/shared/json.mts"
+import { contentHash } from "../../src/shared/hash.mts"
 import { BASE, GLYPH_RANGES, LIBERTY, STYLE_ROOT, StyleManifest, type TileJson, fontsOf, restyle } from "../../src/map/style.mts"
 import { PUBLIC, isKept, keepServed } from "../files.mts"
 import { deployed, served } from "../site.mts"
@@ -31,11 +32,9 @@ export const pathsOf = (fonts: readonly string[]) =>
  * Liberty made ours in a folder named by what's in it, the style taken as it is before it names the folder, with
  * the manifest the page loads it by
  */
-export const bundle = (liberty: StyleSpecification, tiles: TileJson, files: Iterable<readonly [string, Uint8Array]>): StyleFolder => {
-  const hash = createHash("sha256").update(JSON.stringify(restyle(liberty, tiles, "")))
-  for (const [, data] of files)
-    hash.update(data)
-  const folder = `${STYLE_ROOT}${hash.digest("base64url").slice(0, 16)}/`
+export const bundle = async (liberty: StyleSpecification, tiles: TileJson, files: readonly (readonly [string, Uint8Array])[]): Promise<StyleFolder> => {
+  const hash = await contentHash(Readable.from([JSON.stringify(restyle(liberty, tiles, "")), ...files.map(([, data]) => data)]), "base64url")
+  const folder = `${STYLE_ROOT}${hash.slice(0, 16)}/`
   return {
     folder,
     files:    new Map<string, Uint8Array | string>([...files, ["style.json", JSON.stringify(restyle(liberty, tiles, folder))]]),
@@ -64,7 +63,7 @@ if (import.meta.main && !await isKept(MANIFEST)) {
       [`fonts/${font}/${range}.pbf`, await download(liberty.glyphs!.replace("{fontstack}", encodeURIComponent(font)).replace("{range}", range))] as const
     ))
   )
-  const { folder, files, manifest } = bundle(liberty, tiles, [...sprite, ...glyphs])
+  const { folder, files, manifest } = await bundle(liberty, tiles, [...sprite, ...glyphs])
 
   // The folder the site serves stays, with every file of it fetched back, as a build starts from nothing; the
   // rest of the folders named like this one are earlier runs' (the tiles beside them are another step's)

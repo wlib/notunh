@@ -21,18 +21,21 @@ import { foldDay } from "../shared/learn.mts"
 import { objectOf } from "../shared/json.mts"
 import { groupBy } from "../shared/group.mts"
 import { Day, localDay, localHour, weekday } from "../shared/time.mts"
+import { probit } from "../shared/normal.mts"
 
 // How many observations a leg's own mean is worth against how long legs that far usually take, and a time of day's
 // against the leg's
 const LEG_KAPPA = 5
 const CONTEXT_KAPPA = 8
-// A bus not driven between two stops it visited, off its route or lost to its GPS, took longer than this doing
-// something else than driving the leg
+// Bounds on what's learned from, each where the data has a gap between two kinds of thing rather than a spread of
+// one (notunh-model-research/2026-10-19_probabilistic/). A bus not driven between two stops it visited, off its
+// route or lost to its GPS, took longer than MAX_GAP doing something else than driving the leg: such gaps take two
+// minutes, or the better part of an hour, and few between. Longer at a stop is out of service, and longer still
+// not a visit at all: one stay in 10,000 is over 7 minutes. Further off its timetable, a bus is on another trip
+// than the one it's tagged with, as a connector running a lap late on its last lap's tag is
 const MAX_GAP = 600      // s
-// Longer at a stop is out of service, and longer still not a visit at all
 const MAX_ZONE = 900     // s
 const MAX_LINGER = 1800  // s
-// Further off its timetable, a bus is on another trip than the one it's tagged with
 const MAX_OFFSET = 900   // s
 // Seconds already at a stop that how much longer it stays is learned from, and how many visits that takes
 const LINGERED = [0, 5, 10, 20, 40, 80, 160, 320]
@@ -225,7 +228,8 @@ const MIN_HEADWAYS = 20
 const MAX_SHAPE = 10
 
 // A visit this much ahead of its timetable could have waited for it, and one leaving this close to its scheduled
-// time did
+// time did. Waiting is too rare to fit as a likelihood, against leaving as soon as done, as the waits would mix
+// away into nothing: 43 of 11,449 visits a minute or more early on Oct 7 to 19
 const EARLY = 60 // s
 const GRACE = 30 // s
 
@@ -506,19 +510,12 @@ export const holdChances = (model: Model, feed: FeedData, trip: Trip) => {
   return chances
 }
 
-/** A bus more likely than not to wait is expected to, for where it's expected to be and when */
+/**
+ * A bus more likely than not to wait is expected to, for where it's expected to be and when: of waiting or not,
+ * whichever is likelier is the time off by the least, at the median
+ */
 export const isLikely = (chance: number) =>
   chance > 0.5
-
-/** The standard normal quantile, to within 5e-4 (Abramowitz and Stegun 26.2.23) */
-export const probit = (p: number): number => {
-  if (p === 0.5)
-    return 0
-  if (p > 0.5)
-    return -probit(1 - p)
-  const t = Math.sqrt(-2 * Math.log(p))
-  return -(t - (2.515517 + 0.802853 * t + 0.010328 * t * t) / (1 + 1.432788 * t + 0.189269 * t * t + 0.001308 * t * t * t))
-}
 
 // Fewer forecasts scored than this at a lead say nothing yet
 const MIN_SCORED = 20

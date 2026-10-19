@@ -6,9 +6,10 @@ import type { Visit } from "../../src/map/events.mts"
 import { INCOMPLETE } from "../../src/map/events.mts"
 import {
   LEADS, Model, asModel, bandScale, contextAt, emptyModel, emptyScores, fold as foldIn, holdChances, holdProbability, isLikely,
-  leadIndex, legMu, lingerEstimate, offsetEstimate, probit, profileEstimate, scored, summarize, update, waitEstimate, zoneEstimate
+  leadIndex, legMu, lingerEstimate, offsetEstimate, profileEstimate, scored, summarize, update, waitEstimate, zoneEstimate
 } from "../../src/map/model.mts"
 import { addDays } from "../../src/shared/time.mts"
+import { probit } from "../../src/shared/normal.mts"
 
 const DAY = "2026-10-05"
 // Midday on it, a Monday

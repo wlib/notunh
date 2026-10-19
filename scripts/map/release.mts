@@ -4,10 +4,10 @@
 // A generation's version is its extract's date and its generator (src/map/made.mts), so the same extract made
 // again by changed code is a new generation, at a new URL
 
-import { createHash } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import * as v from "valibot"
 import { checked } from "../../src/shared/json.mts"
+import { type Chunks, contentHash } from "../../src/shared/hash.mts"
 import { Made, versionOf } from "../../src/map/made.mts"
 
 const RELEASES = "https://github.com/wlib/notunh/releases/download/"
@@ -64,23 +64,23 @@ export const lockedClosure = (packages: Record<string, Locked>, names: string[])
 
 /** The generator as it is now, with the packages locked and the Planetiler the workflow names in PLANETILER */
 export const generator = async (planetiler = process.env.PLANETILER ?? "") => {
-  const hash = createHash("sha256").update(`planetiler ${planetiler}\n`)
   const { packages } = JSON.parse(await readFile(new URL("../../package-lock.json", import.meta.url), "utf8"))
-  for (const locked of lockedClosure(packages, PACKAGES))
-    hash.update(`${locked}\n`)
-  for (const name of GENERATOR)
-    hash.update(await readFile(new URL(name, import.meta.url)))
-  return hash.digest("hex")
+  return contentHash(async function* () {
+    yield `planetiler ${planetiler}\n`
+    for (const locked of lockedClosure(packages, PACKAGES))
+      yield `${locked}\n`
+    for (const name of GENERATOR)
+      yield await readFile(new URL(name, import.meta.url))
+  }())
 }
 
-export const sha256 = (data: Uint8Array | string) =>
-  createHash("sha256").update(data).digest("hex")
-
-export const manifestOf = (made: Made, files: Record<string, Uint8Array | string>): Manifest => ({
-  ...made,
-  version: versionOf(made),
-  files:   Object.fromEntries(Object.entries(files).map(([path, data]) => [path, sha256(data)]))
-})
+/** The manifest of some files, by path, each read as it's hashed, one at a time */
+export const manifestOf = async (made: Made, files: Record<string, () => Chunks>): Promise<Manifest> => {
+  const hashes: Record<string, string> = {}
+  for (const [path, read] of Object.entries(files))
+    hashes[path] = await contentHash(read())
+  return { ...made, version: versionOf(made), files: hashes }
+}
 
 /** The files of a manifest that aren't as it says, missing or with other bytes, by path */
 export const mismatches = (manifest: Manifest, hashOf: (path: string) => string | undefined) =>

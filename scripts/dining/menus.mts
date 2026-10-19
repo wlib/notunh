@@ -81,7 +81,7 @@ if (!data.menus.length)
 // The index goes last, so it only ever names files that are there, and the files published before stay as long as
 // a tab still on an index naming them may ask (publish.mts), fetched back from the site since a build starts from
 // nothing, with the record of them beside them for the next build
-const { index, files } = publish(data, hours)
+const { index, files } = await publish(data, hours)
 const [serving, published] = await Promise.all([deployed("/dining/", "menus", MenusIndex), served(PUBLISHED, Published)])
 const carrying = carried(serving, published, index, Date.now())
 await rm(FILES, { recursive: true, force: true })

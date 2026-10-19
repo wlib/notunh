@@ -80,13 +80,13 @@ await write("src/map/gazetteer.json", await read("src/map/gazetteer.json"))
 
 // The style as the build makes it, in a folder named by its hash as the build names it, without its sprite and fonts
 const liberty: StyleSpecification = JSON.parse(gunzipSync(await readFile(new URL("../map/fixtures/liberty.json.gz", import.meta.url))).toString())
-const style = bundle(liberty, { tiles: ["https://tiles.openfreemap.org/planet/20261011_080001_pt/{z}/{x}/{y}.pbf"] }, [])
+const style = await bundle(liberty, { tiles: ["https://tiles.openfreemap.org/planet/20261011_080001_pt/{z}/{x}/{y}.pbf"] }, [])
 for (const [path, json] of style.files)
   await write(`public${style.folder}${path}`, JSON.parse(json as string))
 await write("src/map/style.json", style.manifest)
 
 const index = await read<MenusIndex>("src/dining/menus.json")
-const menus = publish(await fewerDays(index, DAYS, STATIONS), index.hours)
+const menus = await publish(await fewerDays(index, DAYS, STATIONS), index.hours)
 await write("src/dining/menus.json", menus.index)
 for (const [name, json] of menus.files)
   await write(`public${DATA_PATH}${name}.json`, JSON.parse(json))

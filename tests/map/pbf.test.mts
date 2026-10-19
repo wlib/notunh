@@ -1,5 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
+import { Readable } from "node:stream"
 import { deflateSync } from "node:zlib"
 import { type OsmElement, type OsmNode, type OsmRelation, type OsmWay, TruncatedPbf, elementsWithin, readPbf } from "../../scripts/map/pbf.mts"
 import type { Box } from "../../src/geo/boxes.mts"
@@ -89,10 +90,16 @@ const blobs = (elements: OsmElement[], coding: Coding, timestamp?: number): [str
 const pbf = (elements: OsmElement[], coding: Coding, timestamp?: number) =>
   file(blobs(elements, coding, timestamp))
 
-const read = async (data: Uint8Array) => {
+/** A file's elements, read from its bytes as they come, cut where asked */
+const read = async (data: Uint8Array, cuts: number[] = []) => {
   const elements: OsmElement[] = []
   const add = (element: OsmElement) => void elements.push(element)
-  const { timestamp } = await readPbf(data, { node: add, way: add, relation: add })
+  const at = [...new Set(cuts.map(cut => cut % (data.length + 1)))].sort((a, b) => a - b)
+  const chunks = async function* () {
+    for (const [i, from] of [0, ...at].entries())
+      yield data.subarray(from, [...at, data.length][i])
+  }
+  const { timestamp } = await readPbf(chunks(), { node: add, way: add, relation: add })
   return { elements, timestamp }
 }
 
@@ -130,9 +137,9 @@ const coding = fc.record({
   isDense: fc.boolean()
 })
 
-test("every node, way, and relation reads back as it was written, dense or not", () =>
-  fc.assert(fc.asyncProperty(elements, coding, fc.option(fc.integer({ min: 1, max: 2 ** 33 }), { nil: undefined }), async (written, coding, seconds) => {
-    const { elements, timestamp } = await read(pbf(written, coding, seconds))
+test("every node, way, and relation reads back as it was written, dense or not, however its bytes come", () =>
+  fc.assert(fc.asyncProperty(elements, coding, fc.option(fc.integer({ min: 1, max: 2 ** 33 }), { nil: undefined }), fc.array(fc.nat(), { maxLength: 4 }), async (written, coding, seconds, cuts) => {
+    const { elements, timestamp } = await read(pbf(written, coding, seconds), cuts)
     expect(elements).toEqual(written)
     expect(timestamp).toEqual(seconds ? new Date(seconds * 1000) : undefined)
   }))
@@ -144,7 +151,7 @@ test("only the kinds of elements asked for are read", async () => {
     { type: "way", id: 2, nodes: [1], tags: {} }
   ]
   const ways: OsmWay[] = []
-  await readPbf(pbf(written, { granularity: 100, latOffset: 0, lonOffset: 0, isDense: true }), { way: way => void ways.push(way) })
+  await readPbf(Readable.from([pbf(written, { granularity: 100, latOffset: 0, lonOffset: 0, isDense: true })]), { way: way => void ways.push(way) })
   expect(ways).toEqual([written[1]])
 })
 
@@ -170,7 +177,7 @@ test("the elements within some bounds have their outlines and extents, and the w
   ]
   const box: Box = [-71.0, 43.0, -70.9, 43.2]
   const { elements, timestamp } = await elementsWithin(
-    pbf(written, { granularity: 100, latOffset: 0, lonOffset: 0, isDense: true }, 1_760_000_000),
+    () => Readable.from([pbf(written, { granularity: 100, latOffset: 0, lonOffset: 0, isDense: true }, 1_760_000_000)]),
     box,
     tags => !!tags.highway || !!tags.name
   )

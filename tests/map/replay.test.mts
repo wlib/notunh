@@ -47,9 +47,12 @@ test("real fixes show every bus going through its trip's stops in order, at plau
 // the model should only bring down, or explain: measuring the ground on the WGS84 ellipsoid rather than three
 // flat-earth guesses moved every stop along its line by a few parts in a thousand; chaining from each bus's latest
 // visit, along its shape's meters and on through its layover, took them from 100, 145, 180, 260 and 410 to 75, 125,
-// 180, 230 and 265; and following each bus with the location model, its fixes replayed as they came, and departures
-// read as when a bus leaves the stop rather than its zone, took them to these
-const MAE = [65, 120, 165, 175, 260]
+// 180, 230 and 265; following each bus with the location model, its fixes replayed as they came, and departures
+// read as when a bus leaves the stop rather than its zone, took them to 65, 120, 165, 175 and 260; and fitting what
+// the location model takes as likely to the fixes of Oct 7 to 19 took them to these, on a half hour whose 5 and 10
+// minutes ahead are 50 to 110 departures, where the twelve days held out moved by a second or less
+// (notunh-model-research/2026-10-19_probabilistic/)
+const MAE = [62, 116, 171, 192, 260]
 
 test("forecasts from the model do no worse on the recording than they did", () => {
   const scored = score(emptyModel(), feed, visits, fixes)

@@ -16,7 +16,7 @@ export type RouteLine = Line & {
 
 // A shape ending this close to where it starts is a loop: its buses drive on around it, and its trips end at the
 // stop they start from, which driving on around already comes back to
-const LOOP_GAP = 30 // m
+export const LOOP_GAP = 30 // m
 
 /** How a bus keeps to its route's shapes: within the street's width of one, the way it's heading, and on along the pass it was on */
 export const BUS_TRACKING: Tracking = {

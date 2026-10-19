@@ -4,9 +4,10 @@
 // and dining menus, whose names it reads. With --if-missing, places already there are kept while they were derived
 // from the same gazetteer, rooms, menus, and code, which the file names by a hash
 
-import { createHash } from "node:crypto"
 import { readFile, writeFile } from "node:fs/promises"
+import { Readable } from "node:stream"
 import { slug } from "../../src/shared/slug.mts"
+import { contentHash } from "../../src/shared/hash.mts"
 import type { Building, Places } from "../../src/map/places.mts"
 import { exists } from "../files.mts"
 import type { Gazetteer } from "../../src/map/gazetteer.mts"
@@ -31,10 +32,8 @@ const ALIASES: Record<string, string> = {
 }
 
 const [gazetteerJson, roomsJson, menusJson] = await Promise.all([GAZETTEER, ROOMS, MENUS].map(url => readFile(url, "utf8")))
-const inputs = createHash("sha256")
-for (const input of [gazetteerJson, roomsJson, menusJson, await readFile(new URL(import.meta.url))])
-  inputs.update(input).update("\0")
-const derivedFrom = inputs.digest("base64url").slice(0, 16)
+const inputs = [gazetteerJson, roomsJson, menusJson, await readFile(new URL(import.meta.url))]
+const derivedFrom = (await contentHash(Readable.from(inputs.flatMap(input => [input, "\0"])), "base64url")).slice(0, 16)
 
 if (process.argv.includes("--if-missing") && await exists(OUTPUT) && (JSON.parse(await readFile(OUTPUT, "utf8")) as Places).inputs === derivedFrom)
   process.exit(0)

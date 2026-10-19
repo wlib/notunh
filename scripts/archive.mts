@@ -1,31 +1,36 @@
 // Archives what the Worker observed on completed service days, for the Observations workflow
 // (.github/workflows/archive.yml) to publish as src/map/archive.mts says: a day's stored rows, decoded, as one
-// gzipped ndjson file, packed the same way every time, so the same rows make the same bytes, with its manifest, and
-// the catalog with the manifests merged in. Gzip rather than brotli or zstd, which are a fifth smaller, as zcat,
-// Node, and browsers' DecompressionStream all read it. Reads the Worker with BUILD_TOKEN, and writes only files:
+// ndjson file compressed by zstd, packed the same way every time, so the same rows make the same bytes, with its
+// manifest, and the catalog with the manifests merged in. zstd at level 19 with long-distance matching, as a day's
+// minutes repeat each other over hours, makes a file 23 % smaller than gzip -9 did (a weekday 640 KB to 490 KB, on
+// Oct 8 to 18), and only scripts read the archive, so no page or Worker has to (they have only gzip). Reads the
+// Worker with BUILD_TOKEN, and writes only files:
 //   node scripts/archive.mts days [from [to]]                  the settled days of a range, by default the last 7
 //   node scripts/archive.mts pack <day> <folder>               the day's file and manifest.json, if it has any rows
 //   node scripts/archive.mts catalog <catalog.json> <manifest.json>…   the catalog with the manifests merged in
 
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { isDeepStrictEqual } from "node:util"
-import { gzipSync } from "node:zlib"
+import { Readable } from "node:stream"
+import { constants, createZstdCompress } from "node:zlib"
 import * as v from "valibot"
 import type { ObservedRow } from "../src/map/raw.mts"
 import { Catalog, Manifest, fileOf } from "../src/map/archive.mts"
 import { Day, addDays } from "../src/shared/time.mts"
 import { checked } from "../src/shared/json.mts"
-import { sha256 } from "./map/release.mts"
+import { contentHash } from "../src/shared/hash.mts"
 import { SOURCES, byMinute, lastSettled, storedRows, unpack } from "./observations.mts"
 
 // Days the nightly run looks back over, so a night or six it failed are archived by the next
 const LOOKBACK = 7
 
-/** Rows a line each, in the order of their minutes */
-export const pack = (rows: readonly ObservedRow[]) =>
-  gzipSync(rows.toSorted(byMinute).map(row => `${JSON.stringify(row)}\n`).join(""), { level: 9 })
+const ZSTD = { params: { [constants.ZSTD_c_compressionLevel]: 19, [constants.ZSTD_c_enableLongDistanceMatching]: 1 } }
 
-export const manifestOf = (day: Day, rows: readonly ObservedRow[], file: Uint8Array): Manifest => {
+/** Rows a line each, in the order of their minutes, compressed as they're written */
+export const pack = async (rows: readonly ObservedRow[]) =>
+  new Uint8Array(Buffer.concat(await Array.fromAsync(Readable.from(rows.toSorted(byMinute).map(row => `${JSON.stringify(row)}\n`)).pipe(createZstdCompress(ZSTD)))))
+
+export const manifestOf = async (day: Day, rows: readonly ObservedRow[], file: Uint8Array): Promise<Manifest> => {
   const counts = (source: ObservedRow["source"]) => {
     const of = rows.filter(row => row.source === source)
     const polls = of.flatMap(row => row.polls ?? [])
@@ -37,7 +42,7 @@ export const manifestOf = (day: Day, rows: readonly ObservedRow[], file: Uint8Ar
       failed:   polls.filter(([, seen]) => seen === null).length
     }
   }
-  return { day, sha256: sha256(file), bytes: file.length, sources: { buses: counts("buses"), predictions: counts("predictions") } }
+  return { day, file: fileOf(day), sha256: await contentHash(file), bytes: file.length, sources: { buses: counts("buses"), predictions: counts("predictions") } }
 }
 
 /** The catalog with manifests in, each replacing any of its day, in order of day */
@@ -68,11 +73,11 @@ if (import.meta.main) {
     if (!rows.length)
       console.log(`Nothing is stored for ${day}`)
     else {
-      const file = pack(rows)
+      const file = await pack(rows)
       // Packing must be lossless before anything's published, as the samples go once it is
-      if (!isDeepStrictEqual(unpack(file), rows.toSorted(byMinute)))
+      if (!isDeepStrictEqual(await unpack(fileOf(day), Readable.from([file])), rows.toSorted(byMinute)))
         throw new Error(`The archive of ${day} doesn't read back as its rows`)
-      const manifest = manifestOf(day, rows, file)
+      const manifest = await manifestOf(day, rows, file)
       await mkdir(folder, { recursive: true })
       await writeFile(`${folder}/${fileOf(day)}`, file)
       await writeFile(`${folder}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`)

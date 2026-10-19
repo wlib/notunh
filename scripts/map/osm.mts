@@ -12,6 +12,7 @@
 // the walk and gazetteer are the fixtures', and the tiles all OpenFreeMap's. With --if-missing, tiles already there
 // are kept
 
+import { createReadStream } from "node:fs"
 import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, relative, resolve } from "node:path"
@@ -28,7 +29,8 @@ import { PLACE_KEYS } from "../../src/map/gazetteer.mts"
 import { type Made, versionOf } from "../../src/map/made.mts"
 import { TilesManifest } from "../../src/map/tiles.mts"
 import { MANIFEST, TILES, makeTiles, writeManifest } from "./tiles.mts"
-import { ARCHIVE, Manifest, archiveUrl, fetchPointer, generator, manifestOf, mismatches, sha256 } from "./release.mts"
+import { ARCHIVE, Manifest, archiveUrl, fetchPointer, generator, manifestOf, mismatches } from "./release.mts"
+import { contentHash } from "../../src/shared/hash.mts"
 import { fromFixtures, isKept } from "../files.mts"
 import { deployed } from "../site.mts"
 
@@ -48,7 +50,7 @@ const isWanted = (tags: Record<string, string>) =>
 
 /** The walk and gazetteer from an extract, and where they're from, which names the tiles' version */
 const fromExtract = async (extract: string): Promise<Made> => {
-  const { elements, timestamp } = await elementsWithin(await readFile(extract), DURHAM, isWanted)
+  const { elements, timestamp } = await elementsWithin(() => createReadStream(extract), DURHAM, isWanted)
   const graph = walkGraph(elements)
   if (graph.vertices.length < 2000)
     throw new Error(`Only ${graph.vertices.length / 2} vertices in the walking network`)
@@ -87,10 +89,7 @@ const stage = async (made: Made, folder: string) => {
   await cp(WALK, join(files, "walk.json"))
   await cp(GAZETTEER, join(files, "gazetteer.json"))
   await cp(fileURLToPath(new URL(`${version}/`, TILES)), join(files, "tiles"), { recursive: true })
-  const contents: Record<string, Uint8Array> = {}
-  for (const path of await filesUnder(files))
-    contents[path] = await readFile(join(files, path))
-  const manifest = JSON.stringify(manifestOf(made, contents))
+  const manifest = JSON.stringify(await manifestOf(made, Object.fromEntries((await filesUnder(files)).map(path => [path, () => createReadStream(join(files, path))]))))
   await writeFile(join(files, "manifest.json"), manifest)
   await run("tar", ["-czf", join(folder, ARCHIVE), "-C", files, "."])
   await writeFile(join(folder, "manifest.json"), manifest)
@@ -110,9 +109,10 @@ const fetchGeneration = async (version: string, folder: string) => {
   const manifest = await checked(Manifest, JSON.parse(await readFile(join(folder, "manifest.json"), "utf8")), url)
   if (manifest.version !== version)
     throw new Error(`${url} holds ${manifest.version}`)
+  // A file that isn't there has no hash, which no manifest names
   const hashes = new Map<string, string>()
   for (const path of Object.keys(manifest.files))
-    hashes.set(path, sha256(await readFile(join(folder, path)).catch(() => "")))
+    hashes.set(path, await contentHash(createReadStream(join(folder, path))).catch(() => ""))
   const wrong = mismatches(manifest, path => hashes.get(path))
   if (wrong.length)
     throw new Error(`${url} isn't as its manifest says, at ${wrong.slice(0, 5).join(", ")}${wrong.length > 5 ? ` and ${wrong.length - 5} more` : ""}`)

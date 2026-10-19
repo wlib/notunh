@@ -1,8 +1,8 @@
 // The lossless archive of what the Worker observed (src/map/raw.mts): each completed service day's stored rows of
-// both sources, decoded, as one gzipped ndjson file on its own immutable GitHub release, observations-<day>, with a
-// manifest of it, and a catalog of every day archived, catalog.json on the one mutable release, observations,
-// uploaded last (scripts/archive.mts, .github/workflows/archive.yml). The Worker keeps a day's samples past
-// RETAIN_ARCHIVED_DAYS only while the catalog doesn't list it
+// both sources, decoded, as one zstd-compressed ndjson file (gzipped before 2026-10-20) on its own immutable GitHub
+// release, observations-<day>, with a manifest of it, and a catalog of every day archived, catalog.json on the one
+// mutable release, observations, uploaded last (scripts/archive.mts, .github/workflows/archive.yml). The Worker
+// keeps a day's samples past RETAIN_ARCHIVED_DAYS only while the catalog doesn't list it
 
 import * as v from "valibot"
 import { getJson } from "../shared/json.mts"
@@ -11,11 +11,13 @@ import { Day } from "../shared/time.mts"
 const RELEASES = "https://github.com/wlib/notunh/releases/download/"
 export const CATALOG = `${RELEASES}observations/catalog.json`
 
+/** The name of a day's archive as it's written now */
 export const fileOf = (day: Day) =>
-  `observations-${day}.ndjson.gz`
+  `observations-${day}.ndjson.zst`
 
-export const archiveUrl = (day: Day) =>
-  `${RELEASES}observations-${day}/${fileOf(day)}`
+/** Where a day's archive is, as its manifest names it, or before manifests named it, the gzipped file it was */
+export const archiveUrl = ({ day, file }: Pick<Manifest, "day" | "file">) =>
+  `${RELEASES}observations-${day}/${file ?? `observations-${day}.ndjson.gz`}`
 
 /** What a source's rows of a day hold, and when it was looking */
 export const Counts = v.object({
@@ -29,9 +31,11 @@ export const Counts = v.object({
 })
 export type Counts = v.InferOutput<typeof Counts>
 
-/** An archived day, as its manifest.json says: the file's SHA-256 and size, and each source's counts */
+/** An archived day, as its manifest.json says: the file's name, SHA-256, and size, and each source's counts */
 export const Manifest = v.object({
   day:     Day,
+  /** From 2026-10-20, when the file became zstd's */
+  file:    v.optional(v.string()),
   sha256:  v.string(),
   bytes:   v.number(),
   sources: v.object({ buses: Counts, predictions: Counts })

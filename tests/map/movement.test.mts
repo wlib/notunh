@@ -17,8 +17,8 @@ const whereabouts = fc.oneof(
     left:     fc.integer({ min: 0, max: 600 }),
     progress: fc.option(fc.double({ min: 0, max: 1, noNaN: true }), { nil: undefined }),
     speed:    fc.option(fc.double({ min: 0, max: 20, noNaN: true }), { nil: undefined }),
-    isHalted: fc.boolean()
-  }).map(({ left, ...rest }): Whereabouts => ({ arrive: NOW - left - 30, depart: NOW - left, ...rest }))
+    halted:   fc.option(fc.integer({ min: 0, max: 600 }), { nil: undefined })
+  }).map(({ left, halted, ...rest }): Whereabouts => ({ arrive: NOW - left - 30, depart: NOW - left, ...rest, ...halted !== undefined && { halted: NOW - halted } }))
 )
 
 test("a bus's pace follows how much longer than expected its legs take, and drifts back to usual while it's unseen", () =>

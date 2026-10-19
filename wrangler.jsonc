@@ -35,14 +35,19 @@
     }
   ],
   "vars": {
-    // Raw samples and laundry transitions are only kept long enough to extract them again, and the visits extracted
-    // from samples half a year: with the model's 4-week half-life, a day 180 days back weighs 1 % of today's, and
-    // visits are the one table that grows past D1's free 500 MB within a year (docs/storage.md)
+    // Samples are kept two weeks once the observations archive has their day, which every build and refit reads
+    // older days from, and 60 days at most, as laundry transitions are, while it doesn't. The visits extracted from
+    // samples are kept half a year: with the model's 4-week half-life, a day 180 days back weighs 1 % of today's, and
+    // visits are the one table that grows past D1's free 500 MB within a year. Each day's location model summary,
+    // about 90 KB, is kept a year and a month, so a week can be compared with the same week a year before
+    // (docs/storage.md)
     "RETAIN_DAYS": 60,
-    "RETAIN_VISIT_DAYS": 180
+    "RETAIN_ARCHIVED_DAYS": 14,
+    "RETAIN_VISIT_DAYS": 180,
+    "RETAIN_SUMMARY_DAYS": 400
   },
   // Secrets, set once with `wrangler secret put`: DEPLOY_HOOK; BUILD_TOKEN, which the build reads and writes rows
-  // and models with (locally, in .dev.vars); and GITHUB_TOKEN, if set, for the nightly run to start the Map data
-  // workflow on Mondays
+  // and models with (locally, in .dev.vars); and GITHUB_TOKEN, if set, for the nightly run to start the
+  // Observations workflow every night and the Map data workflow on Mondays
   "observability": { "enabled": true }
 }

@@ -13,7 +13,7 @@ import { loadStyle } from "./style.mts"
 import { TilesManifest } from "./tiles.mts"
 import { type Vehicle, type StopPredictions, STALE_VEHICLE_SECONDS, fetchVehicles, fetchPredictions, forecastOf } from "./umo.mts"
 import { type Observation, NO_FORECAST, buildRuns, timeAt } from "./forecast.mts"
-import { follow } from "./tracking.mts"
+import { type Fixed, follow } from "./tracking.mts"
 import { type Itinerary, type Place, type WalkLeg, isSameItinerary, itineraryKey, plan, walkOnly } from "./plan.mts"
 import { currentLocation, location, locationProblem } from "./location.mts"
 import { Places, buildingAt } from "./places.mts"
@@ -179,9 +179,9 @@ export const layovers = r(() => {
 })
 
 /** Every bus with the one you're on where your phone puts it, when riding.mts has it there */
-export const fused = r<Vehicle[]>()
-/** The buses as the map follows them, and what they've shown lately of how stretches and stops take */
-export const { followed, lately, sightings } = follow(feed, model, r(() => fused.value ?? vehicles.value))
+export const fused = r<Fixed[]>()
+/** The buses as the map follows them, where the location model has them, and their courses */
+export const { followed, sightings } = follow(feed, model, r(() => fused.value ?? vehicles.value))
 
 export const runs = r(() => buildRuns(feed.value, today.value, forecast.value, model.value, sightings.value))
 

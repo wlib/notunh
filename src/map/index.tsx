@@ -7,7 +7,7 @@ import { r, watch } from "bruh/reactive"
 import { Popup } from "maplibre-gl"
 import { createMap } from "./map.mts"
 import {
-  feed, gazetteer, buildings, tiles, style, followed, lately, layovers, from, to, selected, itinerary, legPaths, selectedStop,
+  feed, gazetteer, buildings, tiles, style, followed, layovers, from, to, selected, itinerary, legPaths, selectedStop,
   selectedStopId, selectedBus, riding, suggested, viewedBus, highlightedRoute, focusedBuses, shownRoutes, directTo
 } from "./state.mts"
 import { locationProblem } from "./location.mts"
@@ -85,7 +85,7 @@ const { map } = createMap(
   mapElement,
   panel,
   {
-    feed, gazetteer, buildings, tiles, style, followed, lately, layovers, shownRoutes, highlightedRoute, from, to,
+    feed, gazetteer, buildings, tiles, style, followed, layovers, shownRoutes, highlightedRoute, from, to,
     selectedStopId, itinerary, legPaths, focusedBuses, riding
   },
   tap => {

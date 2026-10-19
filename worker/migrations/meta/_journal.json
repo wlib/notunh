@@ -22,6 +22,13 @@
       "when": 1792378581992,
       "tag": "0002_model_revisions",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792440279109,
+      "tag": "0003_observations",
+      "breakpoints": true
     }
   ]
 }

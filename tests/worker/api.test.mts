@@ -8,7 +8,7 @@ import type { Visit } from "../../src/map/events.mts"
 import { serviceDayStart } from "../../src/map/feed.mts"
 import { type Day, HOUR, addDays, dayStart } from "../../src/shared/time.mts"
 import { app } from "../../worker/api.mts"
-import { prune } from "../../worker/rows.mts"
+import { archivedSpans, prune } from "../../worker/rows.mts"
 import type { Env } from "../../worker/collect.mts"
 import { ROOMS } from "../../src/laundry/rooms.mts"
 import { health, readModel, readRows, request, storage, writeModel, writeRows } from "../../scripts/worker.mts"
@@ -29,7 +29,7 @@ let sqlite: ReturnType<typeof d1>["sqlite"]
 /** A Worker with a fresh database, and the build's token for it, or for none when it's given none */
 const worker = (token: string | undefined, given = token ?? "") => {
   const DB = d1()
-  env = { DB, ASSETS, RETAIN_DAYS: 60, RETAIN_VISIT_DAYS: 365, BUILD_TOKEN: token } as unknown as Env
+  env = { DB, ASSETS, RETAIN_DAYS: 60, RETAIN_ARCHIVED_DAYS: 14, RETAIN_VISIT_DAYS: 365, RETAIN_SUMMARY_DAYS: 400, BUILD_TOKEN: token } as unknown as Env
   sqlite = DB.sqlite
   vi.stubEnv("BUILD_TOKEN", given)
 }
@@ -67,7 +67,13 @@ const visits = (maxLength: number) => fc.uniqueArray(
     meters:    maybe(fc.double({ min: 1, max: 2000, noNaN: true })),
     left:      maybe(fc.integer({ min: NOON - 600, max: NOON })),
     gotIn:     maybe(fc.integer({ min: NOON - 600, max: NOON })),
-    umo:       maybe(fc.array(fc.option(fc.integer({ min: NOON, max: NOON + 3600 }), { nil: null }), { minLength: 5, maxLength: 5 }))
+    umo:       maybe(fc.array(fc.option(fc.integer({ min: NOON, max: NOON + 3600 }), { nil: null }), { minLength: 5, maxLength: 5 })),
+    // What the location model's extractor adds
+    spread:    maybe(fc.array(fc.integer({ min: NOON, max: NOON + 3600 }), { minLength: 4, maxLength: 4 })),
+    dwelled:   maybe(fc.double({ min: 0, max: 1, noNaN: true })),
+    flags:     maybe(fc.nat(3)),
+    profile:   maybe(fc.array(fc.double({ min: 0, max: 1, noNaN: true }), { minLength: 3, maxLength: 3 })),
+    extractor: maybe(fc.constantFrom(1, 2))
   }).map(visit => JSON.parse(JSON.stringify(visit)) as Visit),
   { selector: visit => `${visit.vehicle} ${visit.arrive}`, maxLength }
 )
@@ -230,7 +236,7 @@ test("storage says how big the database is, in bytes and rows a table", async ()
   await writeRows("visits", Array.from({ length: 3 }, (_, i): Visit => ({ vehicle: "T-51", route: "3", stop: "101", arrive: NOON + i, depart: NOON + i })))
   const { bytes, rows } = await storage()
   expect(bytes).toBeGreaterThan(4096)
-  expect(rows).toEqual({ samples: 0, visits: 3, models: 0, transitions: 0, latest: 0, polls: 0, room_snapshots: 0 })
+  expect(rows).toEqual({ samples: 0, visits: 3, summaries: 0, models: 0, transitions: 0, latest: 0, polls: 0, room_snapshots: 0 })
 })
 
 test("health says when each table's rows start and end, in its own unit, and the day each model runs through", async () => {
@@ -245,6 +251,7 @@ test("health says when each table's rows start and end, in its own unit, and the
     visits:      { since: NOON, last: NOON },
     transitions: { since: null, last: null },
     polls:       { since: at, last: at },
+    summaries:   { since: null, last: null },
     models:      { buses: null, laundry: null, gtfs: null }
   })
 })
@@ -260,6 +267,42 @@ test("the nightly prune drops each table's rows past what it keeps", async () =>
     sqlite.prepare("insert into visits (vehicle, route, stop, arrive, depart) values ('T-51', '3', '101', ?, 0)").run(noon(days) / 1000)
   await prune(env, today)
   expect([count("samples"), count("transitions"), count("visits")]).toEqual([2, 2, 2])
+})
+
+test("the nightly prune drops samples past two weeks only of days the archive has, and past 60 days whatever it has", async () => {
+  const today = "2026-10-07"
+  const noon = (days: number) => serviceDayStart(addDays(today, -days)) + 12 * HOUR
+  const ages = [70, 61, 60, 40, 30, 20, 15, 14, 13, 1]
+  for (const days of ages)
+    for (const source of ["buses", "predictions"])
+      sqlite.prepare("insert into samples (source, at, body) values (?, ?, x'00')").run(source, noon(days))
+  // Archived: one past the cap, two in the window's reach, and two it keeps however archived
+  await prune(env, today, [70, 40, 20, 14, 1].map(days => addDays(today, -days)))
+  const kept = sqlite.prepare("select distinct at from samples order by at").all().map(({ at }) => at)
+  expect(kept).toEqual([60, 30, 15, 14, 13, 1].map(noon))
+})
+
+test("the samples pruned early are the archived days between the window and the cap, as spans that meet merged", () =>
+  fc.assert(fc.property(fc.array(fc.integer({ min: -5, max: 80 })), fc.integer({ min: 1, max: 30 }), fc.integer({ min: 30, max: 70 }), (ages, window, cap) => {
+    const today = "2026-10-07"
+    const spans = archivedSpans(today, ages.map(days => addDays(today, -days)), window, cap)
+    const goes = (days: number) => spans.some(([from, to]) => from <= serviceDayStart(addDays(today, -days)) + 12 * HOUR && serviceDayStart(addDays(today, -days)) + 12 * HOUR < to)
+    for (let days = -5; days <= 80; days++)
+      expect(goes(days)).toBe(ages.includes(days) && days > window && days <= cap)
+    for (let i = 1; i < spans.length; i++)
+      expect(spans[i][0]).toBeGreaterThan(spans[i - 1][1])
+  }))
+)
+
+test("a day's summary is stored and read back by its service day, and storing the day again replaces it", async () => {
+  const at = serviceDayStart(SUNDAY)
+  const summary = (version: number) => ({ at, version, extractor: 2, state: { legs: [[1, 2.5]], version } })
+  await writeRows("summaries", [summary(1)], SUNDAY)
+  expect(await readRows("summaries", SUNDAY)).toEqual([summary(1)])
+  await writeRows("summaries", [summary(2)], SUNDAY)
+  expect(await readRows("summaries", SUNDAY)).toEqual([summary(2)])
+  expect(await readRows("summaries", addDays(SUNDAY, 1))).toEqual([])
+  expect((await health()).summaries).toEqual({ since: at, last: at })
 })
 
 test("the nightly prune drops laundry's records of rooms no longer listed, and of machines gone from a room's snapshot", async () => {

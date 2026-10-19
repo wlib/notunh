@@ -1,6 +1,6 @@
 // Forecasting: when each bus will be at each stop, and how sure that is. A bus the map is following on its trip is
-// chained from the stop it was last seen at (chain.mts), on into the next loop where its trip ends where another
-// starts; a route that keeps to its timetable is forecast from that, shifted by how late the route runs, once it's
+// forecast along its course from where the location model has it (movement.mts), on into the next loop where its
+// trip ends where another starts; a route that keeps to its timetable is forecast from that, shifted by how late the route runs, once it's
 // far enough ahead that breaks and holds put the bus back on it; and a run with no bus followed is its timetable,
 // shifted likewise. A live source's word comes in as observations, a time it gives for a trip at a stop, and how
 // far ahead it covers each route at each stop (umo.mts makes these of Umo's predictions), so the planner never
@@ -12,11 +12,8 @@ import { type Feed, type Trip, arrivalTime, isServiceActive, serviceDayStart } f
 import { distance } from "../geo/projection.mts"
 import { STREET_DETOUR } from "./walks.mts"
 import { positionsOf } from "./shapes.mts"
-import { ZONE } from "./crossings.mts"
 import { type Estimate, type Model, bandScale, dayType, emptyModel, holdChances, isLikely, offsetEstimate, probit } from "./model.mts"
-import type { Pace } from "./pace.mts"
-import type { Seen } from "./crossings.mts"
-import { type Waypoint, chain } from "./chain.mts"
+import { type Pace, type Waypoint, type Whereabouts, course } from "./movement.mts"
 import { type Day, addDays } from "../shared/time.mts"
 import { groupBy } from "../shared/group.mts"
 
@@ -83,9 +80,9 @@ export const NO_FORECAST: Forecast = { observations: [], at: -Infinity, coverage
 
 /**
  * A bus the map is following, as of its last report in epoch seconds: the trip it's tagged with, the stop it's at
- * or last left and when it got there and left, and how it's been driving
+ * or last left, when it got there and left, and how far it's got toward the next, and how it's been driving
  */
-export type Sighting = Seen & { vehicleId: string, tripId: string, pace: Pace, at: number }
+export type Sighting = Whereabouts & { vehicleId: string, tripId: string, stop: string, pace: Pace, at: number }
 
 /** When the bus leaves a stop */
 export const timeAt = (run: Run, position: number) =>
@@ -205,10 +202,10 @@ const applyObservations = (feed: Feed, { observations, at }: Forecast, runsByTri
   return new Set(known.keys())
 }
 
-/** Meters a trip's bus drives from one stop's zone to the next's, along its shape, else as the crow flies and then some */
+/** Meters a trip's bus drives from one stop to the next, along its shape, else as the crow flies and then some */
 const metersTo = (feed: Feed, trip: Trip, position: number) => {
   const along = positionsOf(feed, trip)
-  const driven = along && along[position] - along[position - 1] - 2 * ZONE
+  const driven = along && along[position] - along[position - 1]
   return driven && driven > 0 ? driven : distance(feed.stops[trip.stops[position - 1]], feed.stops[trip.stops[position]]) * STREET_DETOUR
 }
 
@@ -246,7 +243,7 @@ const applySightings = (feed: Feed, model: Model, sightings: readonly Sighting[]
     const own = along(trip, position, end)
     const layover = { ...own.at(-1)!, isFirst: true }
     const ended = sighting.depart === undefined || position < end
-      ? chain(model, [...own.slice(0, -1), layover], sighting, sighting.pace, sighting.at).times.at(-1)!
+      ? course(model, [...own.slice(0, -1), layover], sighting, sighting.pace, sighting.at).times.at(-1)!
       : -Infinity
     // The one the source has it starting next, else the one due to start nearest when it would
     const isNext = (other: Run) => +(other.vehicle === sighting.vehicleId)
@@ -259,7 +256,7 @@ const applySightings = (feed: Feed, model: Model, sightings: readonly Sighting[]
       )
       .sort((a, b) => isNext(b) - isNext(a) || gap(a) - gap(b))[0]
     const way = next ? [...own.slice(0, -1), layover, ...along(next.trip, 1, next.trip.stops.length - 1)] : own
-    const { arrivals, times, variances } = chain(model, way, sighting, sighting.pace, sighting.at)
+    const { arrivals, times, variances } = course(model, way, sighting, sighting.pace, sighting.at)
     const isTimed = trip.timepoints.length > 0
 
     // Each run's departures from the chain, from a waypoint on, past which a route that keeps to its timetable is

@@ -1,18 +1,23 @@
 // How well departures could have been foreseen on a day: for every visit on a known trip, at each of the model's
 // lead times before it left, a forecast from the timetable alone, one from where the bus was and the model, and
-// Umo's own prediction sampled then. Run directly on a day of samples to see how each did:
+// Umo's own prediction sampled then. Where the bus was is what the map would have made of its fixes then, replayed
+// through the same location model and pace in the order they came, or with only stored visits to go on, the stop it
+// was last at. Run directly on a day of samples to see how each did:
 // BUILD_TOKEN=… node scripts/map/replay.mts 2026-10-07 [--local]
 
 import { readFile } from "node:fs/promises"
 import { withIndexes, type Feed, type FeedData } from "../../src/map/feed.mts"
 import { extract, type Visit } from "../../src/map/events.mts"
-import { decode, fromHex, unpackFixes, unpackPredictions, type RawFix, type RawPrediction, type SampledPrediction } from "../../src/map/raw.mts"
-import { NO_PACE, expectedMu, paced } from "../../src/map/pace.mts"
+import type { BusFix, SampledPrediction } from "../../src/map/raw.mts"
+import { observationsOf } from "../observations.mts"
+import { NO_PACE, expectedMu, paced } from "../../src/map/movement.mts"
 import { NO_FORECAST, type Sighting, buildRuns, timeAt } from "../../src/map/forecast.mts"
+import { busOn, sightingOf } from "../../src/map/tracking.mts"
+import { routeLines } from "../../src/map/shapes.mts"
 import { LEADS, asModel, dayTypeAt, emptyScores, offsetEstimate, scored, type Model, type Scores } from "../../src/map/model.mts"
 import { type Day, localDay } from "../../src/shared/time.mts"
 import { groupBy } from "../../src/shared/group.mts"
-import { readModel, readRows } from "../worker.mts"
+import { readModel } from "../worker.mts"
 
 export const FEED = new URL("../../src/map/gtfs.json", import.meta.url)
 
@@ -80,7 +85,7 @@ export const attachPredictions = (visits: readonly Visit[], samples: readonly { 
 
 /**
  * What the map would have seen of the buses at any epoch second of a day, from its visits: each bus's trip, the
- * stop it was at or last left, and its pace from the legs it drove before, as pace.mts learns them live
+ * stop it was at or last left, and its pace from the legs it drove before, as the map learns them live (tracking.mts)
  */
 export const sightingsOf = (model: Model, visits: readonly Visit[]) => {
   const buses = [...groupBy(visits, visit => visit.vehicle).entries()].map(([vehicle, own]) => {
@@ -108,23 +113,49 @@ export const sightingsOf = (model: Model, visits: readonly Visit[]) => {
 }
 
 /**
+ * What the map would have seen of the buses at any epoch second of a day, asked in order, from their fixes: each
+ * bus's fixes up to then through the location model, and its trip as its last fix had it tagged
+ */
+export const replayed = (feed: Feed, model: Model, fixes: readonly BusFix[]) => {
+  const lines = routeLines(feed)
+  const sorted = fixes.toSorted((a, b) => a.at - b.at)
+  const buses = new Map<string, { route: string, bus: ReturnType<typeof busOn>, trip: string | null, seen?: Sighting }>()
+  let next = 0
+  return (at: number): Sighting[] => {
+    for (; next < sorted.length && sorted[next].at <= at * 1000; next++) {
+      const fix = sorted[next]
+      if (fix.route === null || !lines.has(fix.route))
+        continue
+      let own = buses.get(fix.vehicle)
+      if (own?.route !== fix.route)
+        buses.set(fix.vehicle, own = { route: fix.route, bus: busOn(lines.get(fix.route)!), trip: null })
+      const { location, pace } = own.bus.observe(model, { at: fix.at / 1000, lat: fix.lat, lon: fix.lon, heading: fix.heading, kph: fix.kph })
+      own.trip = fix.trip
+      own.seen = sightingOf(fix.vehicle, fix.trip, location, pace)
+    }
+    // A bus not heard from in a while is out of service
+    return [...buses.values()].flatMap(({ seen }) => seen && seen.at >= at - OUT_OF_SERVICE ? [seen] : [])
+  }
+}
+
+/**
  * How each way of forecasting did on a day's visits, as scores to fold into the model: at each sample time, every
  * departure still to come at a lead is forecast as the map would have from what it would have seen then, by the
  * model as it stood before the day, against Umo's prediction sampled then and the timetable shifted by how late its
- * route runs
+ * route runs. What the map saw is the day's fixes replayed, where they're kept, else its visits
  */
-export const score = (model: Model, feed: Feed, visits: readonly Visit[]): Scores => {
+export const score = (model: Model, feed: Feed, visits: readonly Visit[], fixes?: readonly BusFix[]): Scores => {
   const scores = emptyScores()
   const trips = new Map(feed.trips.map(trip => [trip.id, trip]))
-  const sightingsAt = sightingsOf(model, visits)
+  const sightingsAt = fixes ? replayed(feed, model, fixes) : sightingsOf(model, visits)
   const due = new Map<number, { visit: Visit, lead: number, umo?: number | null }[]>()
   for (const visit of visits)
     if (visit.trip !== undefined && trips.has(visit.trip) && visit.position !== undefined && visit.scheduled !== undefined)
       forecastTimes(visit.depart).forEach((at, i) => due.set(at, [...due.get(at) ?? [], { visit, lead: visit.depart - at, umo: visit.umo?.[i] }]))
 
-  for (const [at, departures] of due) {
+  for (const at of [...due.keys()].sort((a, b) => a - b)) {
     const runs = groupBy(buildRuns(feed, localDay(at * 1000), NO_FORECAST, model, sightingsAt(at)), run => `${run.trip.id}@${run.base}`)
-    for (const { visit, lead, umo } of departures) {
+    for (const { visit, lead, umo } of due.get(at)!) {
       const trip = trips.get(visit.trip!)!
       const run = runs.get(`${trip.id}@${visit.scheduled! - trip.times[visit.position!]}`)?.[0]
       if (run?.tracked)
@@ -136,7 +167,6 @@ export const score = (model: Model, feed: Feed, visits: readonly Visit[]): Score
   }
   return scores
 }
-
 /** Each lead's scores as a line: how far off each way of forecasting was on average */
 export const describe = (scores: Scores) =>
   LEADS.map((minutes, i) => {
@@ -147,30 +177,19 @@ export const describe = (scores: Scores) =>
     return `${String(minutes).padStart(2)} min: ${kinds.join(", ")}`
   }).join("\n")
 
-/** A row of samples as the Worker keeps them, at the epoch millisecond its minute starts */
-type Row = { at: number, body: string }
-
-/** A row's samples, or none if it can't be read, so one bad row costs its minute rather than the day */
-const samplesOf = <T,>({ at, body }: Row) =>
-  decode<T>(fromHex(body)).catch(error => {
-    console.warn(`Skipped the samples of ${new Date(at).toISOString()}: ${error instanceof Error ? error.message : error}`)
-    return [] as T[]
-  })
-
-/** Each visit a service day's samples show, with Umo's predictions for them */
+/**
+ * Each visit a service day's observations show, with Umo's predictions for them, and the fixes they were read from,
+ * from the day's archive, or the Worker while it keeps them (scripts/observations.mts)
+ */
 export const extractDay = async (feed: Feed, day: Day) => {
-  const [buses, predictions] = await Promise.all(["buses", "predictions"].map(name => readRows<Row>(name, day)))
-  const fixes = await Promise.all(buses.map(async row => unpackFixes(row.at, await samplesOf<RawFix>(row))))
-  const samples = await Promise.all(predictions.map(async row =>
-    ({ at: row.at, predictions: unpackPredictions(row.at, await samplesOf<RawPrediction>(row)) })
-  ))
-  return attachPredictions(extract(feed, fixes.flat()), samples)
+  const { fixes, predictions } = await observationsOf(day)
+  return { visits: attachPredictions(extract(feed, fixes), predictions), fixes }
 }
 
 if (import.meta.main) {
   const day = process.argv.slice(2).find(arg => !arg.startsWith("--"))!
   const feed = await feedFor(day)
   const model = asModel((await readModel("buses")).state)
-  const visits = await extractDay(feed, day)
-  console.log(`${day}: ${visits.length} visits on timetable ${feed.version}, scored with the model through ${model.through ?? "nothing"}\n${describe(score(model, feed, visits))}`)
+  const { visits, fixes } = await extractDay(feed, day)
+  console.log(`${day}: ${visits.length} visits on timetable ${feed.version}, scored with the model through ${model.through ?? "nothing"}\n${describe(score(model, feed, visits, fixes))}`)
 }

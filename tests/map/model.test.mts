@@ -3,9 +3,10 @@ import fc from "fast-check"
 import * as v from "valibot"
 import { withIndexes, type Trip } from "../../src/map/feed.mts"
 import type { Visit } from "../../src/map/events.mts"
+import { INCOMPLETE } from "../../src/map/events.mts"
 import {
-  LEADS, Model, asModel, bandScale, contextAt, emptyModel, emptyScores, holdChances, holdProbability, isLikely, leadIndex,
-  legMu, lingerEstimate, offsetEstimate, probit, scored, update, waitEstimate, zoneEstimate
+  LEADS, Model, asModel, bandScale, contextAt, emptyModel, emptyScores, fold as foldIn, holdChances, holdProbability, isLikely,
+  leadIndex, legMu, lingerEstimate, offsetEstimate, probit, profileEstimate, scored, summarize, update, waitEstimate, zoneEstimate
 } from "../../src/map/model.mts"
 import { addDays } from "../../src/shared/time.mts"
 
@@ -167,7 +168,7 @@ test("a model the build folds, as it's stored, always fits the schema the page l
     const stored = JSON.parse(JSON.stringify(fold(days)))
     expect(v.is(Model, stored)).toBe(true)
     expect(asModel(stored)).toBe(stored)
-    expect(asModel({ ...stored, version: 1 })).toEqual(emptyModel())
+    expect(asModel({ ...stored, version: 2 })).toEqual(emptyModel())
   }))
 )
 
@@ -178,3 +179,37 @@ test("the model's size is bounded by the stops and routes it's seen, not by how 
     expect(model.legs["R:a>b"]?.length ?? 24).toBe(24)
   }))
 )
+
+test("the model is its days' summaries folded together, so folding them again is the same as learning the days again", () =>
+  fc.assert(fc.property(fc.array(fc.array(lognormal(4, 0.3), { maxLength: 10 }), { minLength: 1, maxLength: 10 }), fc.array(fc.integer({ min: 1, max: 3 }), { minLength: 10, maxLength: 10 }), (days, steps) => {
+    let day = DAY
+    const dated = days.map((seconds, i) => {
+      day = addDays(day, steps[i])
+      return { day, visits: seconds.map((s, j) => drive(s, NOON + 600 * j, "R", `V${j}`)) }
+    })
+    const learned = dated.reduce((model, { day, visits }) => update(model, day, visits), emptyModel())
+    const summaries = dated.map(({ day, visits }) => ({ day, summary: JSON.parse(JSON.stringify(summarize(visits))) }))
+    expect(summaries.reduce((model, { day, summary }) => foldIn(model, day, summary), emptyModel())).toEqual(learned)
+  }))
+)
+
+test("how buses spend their time along a leg is its own, leaning on every leg's while it's seen few", () => {
+  const along = (stop: string, profile: number[]): Visit =>
+    ({ vehicle: `V${stop}`, route: "R", stop, arrive: NOON + 100, depart: NOON + 110, from: "a", meters: 500, left: NOON, profile })
+  const model = update(emptyModel(), DAY, [
+    ...Array.from({ length: 50 }, () => along("b", [0.1, 0.2, 0.3])),
+    along("c", [0.5, 0.8, 0.9])
+  ].map((visit, i) => ({ ...visit, vehicle: `V${i}` })))
+  const busy = profileEstimate(model, "R", "a", "b")
+  const lone = profileEstimate(model, "R", "a", "c")
+  busy.forEach((share, j) => expect(share).toBeCloseTo([0.1, 0.2, 0.3][j], 1))
+  // Mostly every leg's, as it's been seen once
+  lone.forEach((share, j) => expect(share).toBeLessThan([0.5, 0.8, 0.9][j]))
+  expect(profileEstimate(emptyModel(), "R", "a", "b")).toHaveLength(3)
+})
+
+test("a bus last seen still at a stop says nothing of how long buses stay there", () => {
+  const stays = [visit("s", 0, 30, { vehicle: "A" }), visit("s", 0, 30, { vehicle: "B" })]
+  const cut = visit("s", 0, 5, { vehicle: "C", flags: INCOMPLETE })
+  expect(zoneEstimate(update(emptyModel(), DAY, [...stays, cut]), "R", "s", false)?.mean).toBeCloseTo(30, 6)
+})

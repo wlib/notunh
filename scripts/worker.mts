@@ -8,7 +8,7 @@ import { ORIGIN } from "./site.mts"
 
 /** When each table's rows start and end, in its own unit, and the last day each model has learned through */
 export type Health = {
-  [name in "buses" | "predictions" | "visits" | "transitions" | "polls"]: { since: number | null, last: number | null }
+  [name in "buses" | "predictions" | "visits" | "transitions" | "polls" | "summaries"]: { since: number | null, last: number | null }
 } & {
   models: Record<string, Day | null>
 }

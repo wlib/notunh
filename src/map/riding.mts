@@ -10,6 +10,7 @@ import { BUS_TRACKING, type RouteLine, routeLines } from "./shapes.mts"
 import { compare, fixAt, type Fix } from "./fixes.mts"
 import { location } from "./location.mts"
 import type { Vehicle } from "./umo.mts"
+import type { Fixed } from "./tracking.mts"
 import { feed, fused, lastUpdate, vehicles, riding, suggested } from "./state.mts"
 import { isVisible } from "../shell/lifecycle.mts"
 
@@ -130,11 +131,12 @@ watch(() => {
   onRoute.value = followed && { lon: followed.point[0], lat: followed.point[1] }
 })
 
-/** The bus as your phone has it: where you are on its route, how fast you're going, and which way */
-const asBus = (vehicle: Vehicle, fix: Fix, { lat, lon }: { lat: number, lon: number }): Vehicle => ({
+/** The bus as your phone has it: where you are on its route, how sure that is, how fast you're going, and which way */
+const asBus = (vehicle: Vehicle, fix: Fix, { lat, lon }: { lat: number, lon: number }): Fixed => ({
   ...vehicle,
   lat,
   lon,
+  accuracy: fix.accuracy,
   heading: fix.heading ?? vehicle.heading,
   kph: fix.speed === undefined ? vehicle.kph : fix.speed * 3.6,
   gpsTime: fix.at,

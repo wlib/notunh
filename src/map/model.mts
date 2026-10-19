@@ -1,10 +1,14 @@
 // What weeks of the Worker's samples show of how the buses run, folded together in the nightly build a service
-// day at a time: how long each leg between stops a bus visits one after the other takes at each time of day, how
-// long buses spend at each stop and lay over at the start of a trip, how much longer a bus already there still
-// stays, whether buses wait at a stop for its scheduled time, how far off the timetable each route runs, and how
-// often its buses come.
-// Every statistic decays by half every HALF_LIFE days, so a new semester takes over within a month, and every
-// estimate leans on a broader one while it has little data of its own. An empty model has no estimates at all, so
+// day at a time: how long each leg between stops a bus visits one after the other takes at each time of day, and
+// how its time is spent along the way, how long buses spend at each stop and lay over at the start of a trip, how
+// much longer a bus already there still stays, whether buses wait at a stop for its scheduled time, how far off the
+// timetable each route runs, and how often its buses come.
+// A day's visits make a summary of sums (summarize), and the model is those summaries folded together, each decayed
+// by half every HALF_LIFE days, so a new semester takes over within a month, and folding the same summaries with
+// another half-life is all a change of it takes. Every estimate leans on a broader one while it has little data of
+// its own. Weighing visits by how sure their times are was measured and made no difference worth keeping
+// (notunh-model-research/2026-10-19_location/), but a visit last seen still at its stop says nothing of
+// how long buses stay there, as its stay was cut short An empty model has no estimates at all, so
 // everything using it falls back on the constants it had before there was a model. Held out a day at a time on
 // Oct 7 to 19, chaining these along a bus's trip beat Umo by half at every lead to 20 minutes
 // (notunh-model-research/2026-10-19_heldout/IMPLEMENTED.md).
@@ -12,7 +16,7 @@
 
 import * as v from "valibot"
 import { type FeedData, type Trip } from "./feed.mts"
-import type { Visit } from "./events.mts"
+import { type Visit, INCOMPLETE } from "./events.mts"
 import { foldDay } from "../shared/learn.mts"
 import { objectOf } from "../shared/json.mts"
 import { groupBy } from "../shared/group.mts"
@@ -38,6 +42,8 @@ const TIMEPOINT_PRIOR: [number, number] = [4, 1]
 const OTHER_PRIOR: [number, number] = [1, 4]
 // Cells decayed below this are dropped, keeping the model to what's still running
 const MIN_N = 0.01
+// How many legs' worth a leg's own profile is against every leg's
+const PROFILE_KAPPA = 5
 
 /** Minutes ahead that forecasts are scored at, each scoring those nearest it */
 export const LEADS = [1, 3, 5, 10, 20, 30, 60]
@@ -61,13 +67,18 @@ export type Scores = {
 
 /** The model as the build writes it, its statistics taken on trust once its version says what shape they're in */
 export const Model = v.object({
-  version:  v.literal(2),
+  version:  v.literal(3),
   through:  v.nullable(Day),
-  /** log s from leaving one stop's zone to entering the next's zone, by "route:from>to" stop ids, by context */
+  /** log s from leaving one stop to getting to the next, by "route:from>to" stop ids, by context */
   legs:     objectOf<Record<string, (Cell | null)[]>>(),
   /** Sums of log m and log s over every leg driven a known distance: n, Σx, Σy, Σx², Σxy */
   lengths:  v.array(v.number()),
-  /** s in a stop's zone, by zoneKey */
+  /**
+   * How a leg's time is spent along it: the count and the sums of the share of its time a bus took to get a quarter,
+   * half, and three quarters of the way, by "route:from>to", and over every leg as "*"
+   */
+  profiles: objectOf<Record<string, number[]>>(),
+  /** s at a stop, from getting there to leaving, by zoneKey */
   zones:    objectOf<Record<string, Cell>>(),
   /** How long a bus some while at a stop still stays there, by zoneKey: for each of LINGERED, a count and the sum of s */
   lingers:  objectOf<Record<string, number[]>>(),
@@ -96,10 +107,11 @@ export const emptyScores = (): Scores =>
   ({ model: tallies(), umo: tallies(), schedule: tallies(), ratios: LEADS.map(() => Array(RATIOS).fill(0)) })
 
 export const emptyModel = (): Model => ({
-  version:  2,
+  version:  3,
   through:  null,
   legs:     {},
   lengths:  [0, 0, 0, 0, 0],
+  profiles: {},
   zones:    {},
   lingers:  {},
   holds:    {},
@@ -173,6 +185,7 @@ const scale = (model: Model, by: number): Model => {
     ...model,
     legs:    scaledEach(model.legs, cells),
     lengths: model.lengths.map(x => x * by),
+    profiles: scaledEach(model.profiles, sums),
     zones:   scaledEach(model.zones, cell => scaled(cell, by)),
     lingers: scaledEach(model.lingers, sums),
     holds:   scaledEach(model.holds, ([held, left]) => (held + left) * by >= MIN_N ? [held * by, left * by] : null),
@@ -198,12 +211,13 @@ const addTo = (record: Record<string, (Cell | null)[]>, key: string, size: numbe
   cells[index] = added(cells[index], x)
 }
 
-/** The key a stop's zone times are kept by: the stop on its route, or where a trip starts, the route's layover */
+/** The key a stop's times are kept by: the stop on its route, or where a trip starts, the route's layover */
 const zoneKey = (route: string, stop: string, isFirst: boolean) =>
   isFirst ? `${route}^` : `${route}@${stop}`
-// Every stop's, and every layover's, for routes the model knows nothing of yet
+// Every stop's, and every layover's, for routes the model knows nothing of yet, and every leg's profile
 const ANY_STOP = "@"
 const ANY_LAYOVER = "^"
+const ANY_LEG = "*"
 
 // Longer between buses at a stop is a gap in service, not a headway, and fewer of them at a time of day say little
 const MAX_HEADWAY = 3 * 3600 // s
@@ -215,9 +229,12 @@ const MAX_SHAPE = 10
 const EARLY = 60 // s
 const GRACE = 30 // s
 
-/** What a service day's visits add to a model, and how forecasts did that day */
-const add = (before: Model, visits: readonly Visit[], scores: Scores): Model => {
-  const next = structuredClone(before)
+/**
+ * What a service day's visits show, and how forecasts did that day, as sums over the day, undecayed, which fold
+ * into a model as they are
+ */
+export const summarize = (visits: readonly Visit[], scores = emptyScores()): Model => {
+  const next = emptyModel()
   const linger = (key: string, seconds: number) => {
     const sums = next.lingers[key] ??= Array(2 * LINGERED.length).fill(0)
     LINGERED.forEach((elapsed, i) => {
@@ -227,11 +244,16 @@ const add = (before: Model, visits: readonly Visit[], scores: Scores): Model => 
       }
     })
   }
+  const profile = (key: string, shares: readonly number[]) => {
+    const sums = next.profiles[key] ??= [0, 0, 0, 0]
+    sums[0]++
+    shares.forEach((share, j) => sums[j + 1] += share)
+  }
 
   const byVehicle = groupBy(visits, visit => visit.vehicle)
   for (const own of byVehicle.values()) {
     own.sort((a, b) => a.arrive - b.arrive)
-    own.forEach(({ stop, route, arrive, depart, scheduled, position, from, meters, left }, i) => {
+    own.forEach(({ stop, route, arrive, depart, scheduled, position, from, meters, left, profile: shares, flags = 0 }, i) => {
       // Every leg between stops visited one after the other: driven, or where the bus was lost between them, the
       // time from leaving one to getting to the other, as long as that could have been driving
       const previous = own[i - 1]
@@ -241,10 +263,17 @@ const add = (before: Model, visits: readonly Visit[], scores: Scores): Model => 
           const [x, y] = [Math.log(meters!), Math.log(arrive - left)]
           next.lengths = [next.lengths[0] + 1, next.lengths[1] + x, next.lengths[2] + y, next.lengths[3] + x * x, next.lengths[4] + x * y]
         }
+        if (shares) {
+          profile(`${route}:${from}>${stop}`, shares)
+          profile(ANY_LEG, shares)
+        }
       }
-      else if (previous && previous.stop !== stop && arrive - previous.depart < MAX_GAP)
+      else if (previous && previous.stop !== stop && !((previous.flags ?? 0) & INCOMPLETE) && arrive - previous.depart < MAX_GAP)
         addTo(next.legs, `${route}:${previous.stop}>${stop}`, CONTEXTS, contextAt(arrive), Math.log(Math.max(1, arrive - previous.depart)))
 
+      // Last seen still there, when it left is unknown
+      if (flags & INCOMPLETE)
+        return
       const dwell = depart - arrive
       if (dwell >= 0 && dwell < MAX_ZONE && position !== undefined)
         for (const key of [zoneKey(route, stop, position === 0), position === 0 ? ANY_LAYOVER : ANY_STOP])
@@ -268,7 +297,7 @@ const add = (before: Model, visits: readonly Visit[], scores: Scores): Model => 
   }
 
   // Each bus leaving a stop after another of its route did
-  const byStop = groupBy(visits, ({ route, stop }) => `${route}@${stop}`)
+  const byStop = groupBy(visits.filter(({ flags = 0 }) => !(flags & INCOMPLETE)), ({ route, stop }) => `${route}@${stop}`)
   for (const own of byStop.values()) {
     own.sort((a, b) => a.depart - b.depart)
     own.forEach(({ route, vehicle, depart }, i) => {
@@ -278,15 +307,35 @@ const add = (before: Model, visits: readonly Visit[], scores: Scores): Model => 
     })
   }
 
-  for (const kind of ["model", "umo", "schedule"] as const)
-    next.scores[kind] = next.scores[kind].map((tally, i) => tally.map((x, j) => x + scores[kind][i][j]) as Tally)
-  next.scores.ratios = next.scores.ratios.map((counts, i) => counts.map((x, j) => x + scores.ratios[i][j]))
+  next.scores = structuredClone(scores)
   return next
 }
 
+/** Two models' sums added together, cell by cell, an empty cell being none */
+const merged = <T,>(a: T, b: T): T =>
+  a === null || a === undefined ? b :
+  b === null || b === undefined ? a :
+  typeof a === "number" ? a + (b as number) as T :
+  Array.isArray(a) ? a.map((x, i) => merged(x, (b as unknown[])[i])) as T :
+  typeof a === "object" ? Object.fromEntries([...new Set([...Object.keys(a), ...Object.keys(b)])].map(key =>
+    [key, merged((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])]
+  )) as T :
+  a
+
+/** A model with a day's summary added, its version and the day it runs through its own */
+const plus = (model: Model, summary: Model): Model => {
+  const { version, through, ...sums } = model
+  const { version: _, through: __, ...more } = summary
+  return { version, through, ...merged(sums, more) }
+}
+
+/** The model with a day's summary folded in */
+export const fold = (model: Model, day: Day, summary: Model) =>
+  foldDay(model, day, scale, before => plus(before, summary))
+
 /** The model with a service day's visits folded in, and how forecasts did that day added to its scores */
 export const update = (model: Model, day: Day, visits: readonly Visit[], scores = emptyScores()) =>
-  foldDay(model, day, scale, before => add(before, visits, scores))
+  fold(model, day, summarize(visits, scores))
 
 //#endregion
 
@@ -332,7 +381,7 @@ const fitted = (model: Model) => {
 }
 
 /**
- * Mean log s for a bus to get from leaving one stop's zone to entering the next's, some meters apart, at an epoch
+ * Mean log s for a bus to get from leaving one stop to getting to the next, some meters apart, at an epoch
  * second: that leg's own mean, leaning on how long legs that long take while it's seen few buses, shifted by how
  * much slower legs are at that time of day, and by how much this leg is, as far as it's been seen then
  */
@@ -349,10 +398,24 @@ export const legMu = (model: Model, route: string, from: string, to: string, met
   return base + contexts[context] + (cell ? (mean(cell) - base - contexts[context]) * cell[0] / (cell[0] + CONTEXT_KAPPA) : 0)
 }
 
+/** Where a bus driving a leg spends its time, before anything's been learned: slower pulling out and in */
+const DEFAULT_PROFILE = [0.3, 0.52, 0.74]
+
+/**
+ * The share of a leg's time a bus takes to get a quarter, half, and three quarters of the way: the leg's own,
+ * leaning on every leg's while it's seen few buses
+ */
+export const profileEstimate = (model: Model, route: string, from: string, to: string) => {
+  const [n, ...sums] = model.profiles[ANY_LEG] ?? [0, 0, 0, 0]
+  const prior = n > 0 ? sums.map(sum => sum / n) : DEFAULT_PROFILE
+  const [m, ...own] = model.profiles[`${route}:${from}>${to}`] ?? [0, 0, 0, 0]
+  return prior.map((share, j) => (own[j] + PROFILE_KAPPA * share) / (m + PROFILE_KAPPA))
+}
+
 const estimate = (cell: Cell | undefined): Estimate | undefined =>
   cell && { mean: mean(cell), variance: Math.max(0, cell[2] / cell[0] - mean(cell) ** 2) }
 
-/** s in a stop's zone, or laying over at the start of a trip: on that route, else at any stop, or any layover */
+/** s at a stop, none for going straight through, or laying over at the start of a trip: on that route, else at any stop, or any layover */
 export const zoneEstimate = (model: Model, route: string, stop: string, isFirst: boolean) =>
   estimate(model.zones[zoneKey(route, stop, isFirst)] ?? model.zones[isFirst ? ANY_LAYOVER : ANY_STOP])
 

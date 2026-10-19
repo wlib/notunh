@@ -12,10 +12,11 @@ import { attachPredictions, score } from "../../scripts/map/replay.mts"
 const { feed: data, rows }: { feed: FeedData, rows: { source: string, at: number, body: unknown[] }[] } =
   JSON.parse(gunzipSync(readFileSync(new URL("fixtures/buses.json.gz", import.meta.url))).toString())
 const feed = withIndexes(data)
-const fixes = rows.filter(row => row.source === "buses").flatMap(row => unpackFixes(row.at, row.body as RawFix[]))
+// Recorded before rows were versioned, as bare arrays of samples
+const fixes = rows.filter(row => row.source === "buses").flatMap(row => unpackFixes(row.at, { version: 0, samples: row.body as RawFix[], polls: null }))
 const samples = rows
   .filter(row => row.source === "predictions")
-  .map(row => ({ at: row.at, predictions: unpackPredictions(row.at, row.body as RawPrediction[]) }))
+  .map(row => ({ at: row.at, predictions: unpackPredictions(row.at, { version: 0, samples: row.body as RawPrediction[], polls: null }) }))
 const visits = attachPredictions(extract(feed, fixes), samples)
 const DAY = "2026-10-07"
 
@@ -44,19 +45,20 @@ test("real fixes show every bus going through its trip's stops in order, at plau
 
 // How far off the model's forecasts were on the recording, in seconds at each lead, which changes to extraction or
 // the model should only bring down, or explain: measuring the ground on the WGS84 ellipsoid rather than three
-// flat-earth guesses moved every stop along its line by a few parts in a thousand, which took a second or two off
-// the shorter leads and put less than one on the longest; chaining from each bus's latest visit, along its shape's
-// meters and on through its layover, took them from 100, 145, 180, 260 and 410 to these
-const MAE = [75, 125, 180, 230, 265]
+// flat-earth guesses moved every stop along its line by a few parts in a thousand; chaining from each bus's latest
+// visit, along its shape's meters and on through its layover, took them from 100, 145, 180, 260 and 410 to 75, 125,
+// 180, 230 and 265; and following each bus with the location model, its fixes replayed as they came, and departures
+// read as when a bus leaves the stop rather than its zone, took them to these
+const MAE = [65, 120, 165, 175, 260]
 
 test("forecasts from the model do no worse on the recording than they did", () => {
-  const scored = score(emptyModel(), feed, visits)
+  const scored = score(emptyModel(), feed, visits, fixes)
   LEADS.slice(0, MAE.length).forEach((_, i) => {
     const [n, error] = scored.model[i]
     expect(n).toBeGreaterThan(0)
     expect(error / n).toBeLessThanOrEqual(MAE[i])
   })
   // And having learned from it, better still
-  const learned = score(update(emptyModel(), DAY, visits, scored), feed, visits)
+  const learned = score(update(emptyModel(), DAY, visits, scored), feed, visits, fixes)
   expect(learned.model[0][1]).toBeLessThan(scored.model[0][1])
 })

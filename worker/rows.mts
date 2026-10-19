@@ -1,6 +1,7 @@
 // Every table the build reads and writes, by name, each with the column its days are on when it has one: epoch
 // milliseconds, or schedule seconds for visits, as src/map/events.mts keeps them. Reads page by rowid, so rows come
-// back in the order they were stored, and the build sorts where it must
+// back in the order they were stored, and the build sorts where it must. The nightly prune drops what each keeps no
+// longer, and samples sooner for days the observations archive has
 
 import { drizzle } from "drizzle-orm/d1"
 import type * as v from "valibot"
@@ -12,7 +13,7 @@ import { HOUR, addDays, dayStart, type Day } from "../src/shared/time.mts"
 import { serviceDayStart } from "../src/map/feed.mts"
 import { ROOMS } from "../src/laundry/rooms.mts"
 import * as schema from "./schema.mts"
-import { latest, polls, roomSnapshots, samples, transitions, visits } from "./schema.mts"
+import { latest, polls, roomSnapshots, samples, summaries, transitions, visits } from "./schema.mts"
 import { MODELS, throughs } from "./models.mts"
 import type { Env } from "./collect.mts"
 
@@ -29,7 +30,7 @@ export type Entry = {
   /** Rows a page, when they're bigger than most */
   page?:     number,
   /** How many days the nightly run keeps, by the Env variable naming it */
-  keep?:     "RETAIN_DAYS" | "RETAIN_VISIT_DAYS",
+  keep?:     "RETAIN_DAYS" | "RETAIN_VISIT_DAYS" | "RETAIN_SUMMARY_DAYS",
   /** What each row the build writes must be, for a table it writes */
   row?:      v.GenericSchema<unknown, Record<string, unknown>>
 }
@@ -52,7 +53,9 @@ export const ROWS: Record<string, Entry> = {
   visits:      { table: visits, at: visits.arrive, span: day => serviceDay(day).map(ms => ms / 1000) as [number, number], keep: "RETAIN_VISIT_DAYS", row: createInsertSchema(visits) },
   transitions: { table: transitions, at: transitions.at, span: calendarDay, keep: "RETAIN_DAYS" },
   polls:       { table: polls, at: polls.at, span: calendarDay, pad: HOUR, keep: "RETAIN_DAYS" },
-  machines:    { table: latest }
+  machines:    { table: latest },
+  // About 90 KB a row
+  summaries:   { table: summaries, at: summaries.at, span: serviceDay, keep: "RETAIN_SUMMARY_DAYS", page: 10, row: createInsertSchema(summaries) }
 }
 
 // A page of rows
@@ -129,17 +132,38 @@ export const write = (env: Env, entry: Entry, rows: readonly Record<string, unkn
 }
 
 /**
- * Drops every row older than its table keeps, counting back from the day of today, and laundry's records of rooms
- * no longer listed and of machines no longer in their room's snapshot, where it has one
+ * The service days archived that samples go of before the rest: those older than the window and not yet past the
+ * cap, which every table's keeping prunes anyway, as spans of epoch milliseconds, those that meet merged
  */
-export const prune = (env: Env, today: Day) => {
+export const archivedSpans = (today: Day, archived: readonly Day[], window: number, cap: number) => {
+  const spans: [number, number][] = []
+  for (const day of [...new Set(archived)].sort())
+    if (day >= addDays(today, -cap) && day < addDays(today, -window)) {
+      const [from, to] = serviceDay(day)
+      const last = spans.at(-1)
+      if (last?.[1] === from)
+        last[1] = to
+      else
+        spans.push([from, to])
+    }
+  return spans
+}
+
+/**
+ * Drops every row older than its table keeps, counting back from the day of today, samples of the days archived
+ * older than RETAIN_ARCHIVED_DAYS, and laundry's records of rooms no longer listed and of machines no longer in
+ * their room's snapshot, where it has one
+ */
+export const prune = (env: Env, today: Day, archived: readonly Day[] = []) => {
   const db = drizzle(env.DB)
   const rooms = ROOMS.map(({ id }) => id)
   const snapshot = (room: SQL | SQLiteColumn) => sql`select 1 from ${roomSnapshots} where ${roomSnapshots.room} = ${room}`
+  const spans = archivedSpans(today, archived, env.RETAIN_ARCHIVED_DAYS, env.RETAIN_DAYS)
   return batch(db, [
     ...Object.values(ROWS).flatMap(({ table, at, where, span, keep }) =>
       at && span && keep ? [db.delete(table).where(and(where, lt(at, span(addDays(today, -env[keep]))[0])))] : []
     ),
+    ...spans.length ? [db.delete(samples).where(or(...spans.map(([from, to]) => and(gte(samples.at, from), lt(samples.at, to)))))] : [],
     db.delete(latest).where(or(
       notInArray(latest.room, rooms),
       and(

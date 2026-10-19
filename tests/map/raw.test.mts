@@ -1,7 +1,7 @@
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
 import { type StopPredictions, type Vehicle, fetchVehicles } from "../../src/map/umo.mts"
-import { decode, encode, fromHex, packFixes, packPredictions, unpackFixes, unpackPredictions } from "../../src/map/raw.mts"
+import { type ObservedRow, type RawFix, type RawPoll, type RawPrediction, RAW_VERSION, decode, encode, fromHex, observe, packFixes, packPoll, packPredictions, unpackFixes, unpackPredictions } from "../../src/map/raw.mts"
 
 // The epoch millisecond a row's minute starts
 const AT = 1_791_360_000_000
@@ -45,11 +45,24 @@ const stopPredictions = fc.record({
   values:          fc.array(prediction, { maxLength: 6 })
 }) satisfies fc.Arbitrary<StopPredictions>
 
-test("unpackFixes gives back every vehicle's fix exactly, through a row body", async () =>
-  fc.assert(fc.asyncProperty(fc.array(vehicle, { maxLength: 40 }), async vehicles => {
-    const body = await encode(packFixes(AT, vehicles))
-    const fixes = unpackFixes(AT, await decode(body))
-    expect(fixes).toEqual(vehicles.map(vehicle => ({
+// Polls a minute made, each when it was made and how many it saw, if it didn't fail
+const polls = fc.array(fc.tuple(fc.integer({ min: 0, max: 59_999 }), fc.option(fc.nat(20), { nil: null })), { minLength: 1, maxLength: 6 })
+  .map(polls => polls.map(([ms, seen]) => packPoll(AT, AT + ms, seen)))
+
+/** A body as an older Worker wrote it, gzipped JSON */
+const gzipped = async (row: unknown) =>
+  new Uint8Array(await new Response(new Response(JSON.stringify(row)).body!.pipeThrough(new CompressionStream("gzip"))).arrayBuffer())
+
+test("unpackFixes gives back every vehicle's fix exactly, and the poll that first saw it, through a row body", async () =>
+  fc.assert(fc.asyncProperty(fc.array(vehicle, { maxLength: 40 }), polls, fc.nat(), async (vehicles, polls, seed) => {
+    const first = vehicles.map((_, i) => (seed + i) % polls.length)
+    const body = await encode(vehicles.flatMap((vehicle, i) => packFixes(AT, [vehicle], first[i])), polls)
+    const row = await decode<RawFix>(body)
+    expect(row.version).toBe(RAW_VERSION)
+    expect(row.polls).toEqual(polls)
+    const fixes = unpackFixes(AT, row)
+    expect(fixes.map(fix => fix.received)).toEqual(first.map(poll => AT + Math.round(polls[poll][0] * 1000)))
+    expect(fixes.map(({ received, ...fix }) => fix)).toEqual(vehicles.map(vehicle => ({
       vehicle: vehicle.id,
       at:      vehicle.gpsTime,
       lat:     vehicle.lat,
@@ -67,7 +80,7 @@ test("a vehicle Umo lists without some fields is stored with nulls for them, and
   fc.assert(fc.asyncProperty(vehicle, fc.subarray(["heading", "kph", "tripTag", "route", "vehiclePosition", "lat", "gpsTime"]), async (vehicle, missing) => {
     const partial = Object.fromEntries(Object.entries(vehicle).filter(([key]) => !missing.includes(key)))
     vi.stubGlobal("fetch", async () => Response.json([partial, null]))
-    const packed = packFixes(AT, await fetchVehicles())
+    const packed = packFixes(AT, await fetchVehicles(), 0)
     if (missing.includes("lat") || missing.includes("gpsTime")) {
       expect(packed).toEqual([])
       return
@@ -81,8 +94,8 @@ test("a vehicle Umo lists without some fields is stored with nulls for them, and
 
 test("packPredictions keeps exactly the soonest prediction for each route, stop, and vehicle", async () =>
   fc.assert(fc.asyncProperty(fc.array(stopPredictions, { maxLength: 8 }), async entries => {
-    const body = await encode(packPredictions(AT, entries))
-    const sampled = unpackPredictions(AT, await decode(body))
+    const body = await encode(packPredictions(AT, entries), [packPoll(AT, AT, 3)])
+    const sampled = unpackPredictions(AT, await decode<RawPrediction>(body))
 
     const all = entries.flatMap(({ route, stop, values }) => values.map(value => ({ route: route.id, stop: stop.id, ...value })))
     const key = ({ route, stop, vehicle }: { route: string, stop: string, vehicle: string }) => `${route}:${stop}:${vehicle}`
@@ -102,4 +115,44 @@ test("fromHex reads what SQLite's hex() writes", () =>
     const hex = [...bytes].map(byte => byte.toString(16).padStart(2, "0").toUpperCase()).join("")
     expect(fromHex(hex)).toEqual(bytes)
   }))
+)
+
+test("rows an older Worker wrote still read, saying which version they are, and without polls or receipt", async () => {
+  const fix: RawFix = ["T-51", 3.5, 43.13, -70.93, 90, 20, null, "Gables", null]
+  for (const [row, version] of [[[fix], 0], [{ version: 1, samples: [fix] }, 1]] as const) {
+    const read = await decode<RawFix>(await gzipped(row))
+    expect(read).toEqual({ version, samples: [fix], polls: null })
+    expect(unpackFixes(AT, read)).toEqual([{ vehicle: "T-51", at: AT + 3500, lat: 43.13, lon: -70.93, heading: 90, kph: 20, trip: null, route: "Gables", stop: null }])
+  }
+})
+
+test("a row of a later version, or not a row at all, is refused rather than misread", async () => {
+  for (const row of [{ version: RAW_VERSION + 1, samples: [], polls: [] }, { version: RAW_VERSION, samples: [] }, { samples: [] }, "fixes"])
+    await expect(decode(await gzipped(row))).rejects.toThrow("reads up to")
+})
+
+test("observing rows gives every fix and prediction in the order of their minutes, and each source's polls, or the minutes that didn't record them", () =>
+  fc.assert(fc.property(
+    fc.uniqueArray(fc.record({ minute: fc.nat(30), source: fc.constantFrom("buses" as const, "predictions" as const), polls: fc.option(polls, { nil: null }) }), { selector: ({ minute, source }) => `${minute} ${source}` }),
+    rows => {
+      const at = (minute: number) => AT + minute * 60_000
+      const fix = (minute: number): RawFix => ["T-51", minute, 43.13, -70.93, null, null, null, null, null, 0]
+      const prediction = (minute: number): RawPrediction => ["3", "101", "T-51", null, minute, 0]
+      const observed: ObservedRow[] = rows.map(({ minute, source, polls }) => source === "buses"
+        ? { source, at: at(minute), version: polls ? RAW_VERSION : 1, samples: [fix(minute)], polls }
+        : { source, at: at(minute), version: polls ? RAW_VERSION : 1, samples: [prediction(minute)], polls })
+      const { fixes, predictions, coverage } = observe(observed)
+      const sorted = rows.toSorted((a, b) => a.minute - b.minute)
+      const of = (source: string) => sorted.filter(row => row.source === source)
+      expect(fixes.map(fix => fix.at)).toEqual(of("buses").map(({ minute }) => at(minute) + minute * 1000))
+      expect(fixes.every(fix => (fix.received === undefined) === !of("buses").find(({ minute }) => at(minute) + minute * 1000 === fix.at)!.polls)).toBe(true)
+      expect(predictions.map(({ at }) => at)).toEqual(of("predictions").map(({ minute }) => at(minute)))
+      for (const source of ["buses", "predictions"] as const) {
+        expect(coverage[source].polls).toEqual(of(source).flatMap(({ minute, polls }) =>
+          (polls ?? []).map(([seconds, seen]: RawPoll) => ({ at: at(minute) + Math.round(seconds * 1000), seen }))
+        ))
+        expect(coverage[source].unrecorded).toEqual(of(source).filter(({ polls }) => !polls).map(({ minute }) => at(minute)))
+      }
+    }
+  ))
 )

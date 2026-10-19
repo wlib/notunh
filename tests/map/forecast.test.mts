@@ -3,8 +3,7 @@ import fc from "fast-check"
 import { serviceDayStart, withIndexes, type Trip } from "../../src/map/feed.mts"
 import type { Visit } from "../../src/map/events.mts"
 import { NO_FORECAST, type Run, type Sighting, buildRuns, spread, timeAt } from "../../src/map/forecast.mts"
-import { chain, type Waypoint } from "../../src/map/chain.mts"
-import { NO_PACE } from "../../src/map/pace.mts"
+import { NO_PACE } from "../../src/map/movement.mts"
 import { emptyModel, update, zoneEstimate } from "../../src/map/model.mts"
 import { forecastOf } from "../../src/map/umo.mts"
 import { addDays } from "../../src/shared/time.mts"
@@ -46,29 +45,6 @@ const learned = (legs: number, dwell: number, late = 0, extra: Visit[] = []) =>
     { vehicle: `V${i}`, route: "R", stop: `${i}`, arrive: BASE + 36000, depart: BASE + 36000 + dwell, position: i + 1, trip: "T0", scheduled: BASE + 36000 + dwell - late },
     { vehicle: `V${i}`, route: "R", stop: `${i + 1}`, arrive: BASE + 36000 + dwell + legs, depart: BASE + 36000 + 2 * dwell + legs, from: `${i}`, meters: 1000, left: BASE + 36000 + dwell, position: i + 2, trip: "T0", scheduled: BASE + 36000 + 2 * dwell + legs - late }
   ]).flat()])
-
-test("along a way, a bus leaves each stop after the one before, the later the slower it's been driving, and at once with nothing left there", () =>
-  fc.assert(fc.property(
-    fc.array(fc.integer({ min: 100, max: 3000 }), { minLength: 2, maxLength: 8 }),
-    fc.double({ min: -0.5, max: 0.5, noNaN: true }),
-    fc.boolean(),
-    (meters, bias, isThere) => {
-      const way = meters.map((m, i): Waypoint => ({ stop: `${i}`, route: "R", isFirst: false, meters: m }))
-      const now = BASE + 3600
-      const at = { arrive: now - 20, ...!isThere && { depart: now - 10 } }
-      const usual = chain(emptyModel(), way, at, NO_PACE, now)
-      const paced = chain(emptyModel(), way, at, { mean: bias, variance: 0, at: now }, now)
-      usual.times.slice(1).forEach((time, i) => {
-        expect(time).toBeGreaterThan(usual.times[i])
-        expect(usual.arrivals[i + 1]).toBeLessThanOrEqual(time)
-        expect(usual.variances[i + 1]).toBeGreaterThanOrEqual(usual.variances[i])
-        // Further on, the bus's pace has had longer to wear off, but never turns around
-        expect((paced.times[i + 1] - time) * bias).toBeGreaterThanOrEqual(0)
-      })
-      expect(usual.times[0]).toBeGreaterThanOrEqual(isThere ? now : now - 10)
-    }
-  ))
-)
 
 test("a bus the map follows is forecast along its trip from where it was seen, and Umo, which it outranks there, still says which runs aren't coming", () =>
   fc.assert(fc.property(fc.integer({ min: 0, max: 3 }), fc.boolean(), fc.integer({ min: -600, max: 900 }), (position, isThere, late) => {

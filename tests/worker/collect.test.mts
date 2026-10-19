@@ -1,9 +1,10 @@
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
 import type { Vehicle } from "../../src/map/umo.mts"
-import { decode, unpackFixes, type RawFix } from "../../src/map/raw.mts"
+import { RAW_VERSION, decode, packPoll, unpackFixes, type RawFix } from "../../src/map/raw.mts"
 import { sampling, type Env, type Source } from "../../worker/collect.mts"
 import { POLLS, buses } from "../../worker/buses.mts"
+import { predictions } from "../../worker/predictions.mts"
 import { d1 } from "./d1.mts"
 
 afterEach(() => {
@@ -31,17 +32,27 @@ const serve = (reply: number | string | { id: string, report: number, isParked: 
   : typeof reply === "string" ? new Response(reply)
   : Response.json(reply.map(({ id, report, isParked }) => vehicle(id, AT + report * 11_000, isParked ? 3600 : 5)))
 
-test("the buses source stores every distinct fresh fix once, through rate limits and garbage, within the minute", async () =>
+test("the buses source stores every distinct fresh fix once, through rate limits and garbage, within the minute, and records every poll", async () =>
   fc.assert(fc.asyncProperty(fc.array(reply, { minLength: POLLS, maxLength: POLLS }), async replies => {
     vi.useFakeTimers({ now: AT })
     let poll = 0
     vi.stubGlobal("fetch", async () => serve(replies[poll++]))
 
-    const fixes = buses.collect(AT, new AbortController().signal)
+    const collected = buses.collect(AT, new AbortController().signal)
     await vi.runAllTimersAsync()
-    const stored = unpackFixes(AT, await fixes)
+    const { samples, polls } = await collected
+    const stored = unpackFixes(AT, { version: RAW_VERSION, samples, polls })
 
     expect(poll).toBe(POLLS)
+    // Each poll ten seconds after the one before, failed where the reply wasn't a list, else counting the live buses
+    expect(polls).toEqual(replies.map((reply, i) =>
+      packPoll(AT, AT + i * 10_000, Array.isArray(reply) ? reply.filter(({ isParked }) => !isParked).length : null)
+    ))
+    // A fix is received by the first poll that listed it
+    for (const fix of stored) {
+      const first = replies.findIndex(reply => Array.isArray(reply) && reply.some(({ id, report, isParked }) => !isParked && id === fix.vehicle && AT + report * 11_000 === fix.at))
+      expect(fix.received).toBe(AT + first * 10_000)
+    }
     expect(Date.now() - AT).toBeLessThan(60_000)
     const expected = new Set(
       replies.flatMap(reply => Array.isArray(reply) ? reply.filter(({ isParked }) => !isParked).map(({ id, report }) => `${id} ${report}`) : [])
@@ -52,18 +63,32 @@ test("the buses source stores every distinct fresh fix once, through rate limits
   }))
 )
 
-test("sampling a source stores one gzipped row of what it saw, and none when it saw nothing", async () => {
+test("sampling a source stores one gzipped row of what it saw and its polls for every minute it polled, seeing nothing or failing too, and none when it made no polls", async () => {
   const db = d1()
   const env = { DB: db } as unknown as Env
-  const source = (name: string, samples: () => Promise<RawFix[]>): Source => ({ name, cron: "* * * * *", collect: samples })
-  const fix: RawFix = ["T-51", 3, 43.13, -70.93, 90, 20, null, "Gables", null]
+  const source = (name: string, collect: Source["collect"]): Source => ({ name, cron: "* * * * *", collect })
+  const fix: RawFix = ["T-51", 3, 43.13, -70.93, 90, 20, null, "Gables", null, 0]
   const signal = new AbortController().signal
 
-  await sampling(source("seen", async () => [fix])).run(env, AT, signal)
-  await sampling(source("empty", async () => [])).run(env, AT, signal)
-  await expect(sampling(source("failed", async () => { throw new Error("upstream down") })).run(env, AT, signal)).rejects.toThrow("upstream down")
+  await sampling(source("seen", async () => ({ samples: [fix], polls: [packPoll(AT, AT, 1)] }))).run(env, AT, signal)
+  await sampling(source("nothing out", async () => ({ samples: [], polls: [packPoll(AT, AT, 0)] }))).run(env, AT, signal)
+  await sampling(source("failed", async () => ({ samples: [], polls: [packPoll(AT, AT, null)] }))).run(env, AT, signal)
+  await sampling(source("never polled", async () => ({ samples: [], polls: [] }))).run(env, AT, signal)
+  await expect(sampling(source("broken", async () => { throw new Error("a bug") })).run(env, AT, signal)).rejects.toThrow("a bug")
 
-  const rows = db.sqlite.prepare("SELECT source, at, body FROM samples").all()
-  expect(rows.map(({ source, at }) => [source, at])).toEqual([["seen", AT]])
-  expect(await decode(new Uint8Array(rows[0].body as Uint8Array))).toEqual([fix])
+  const rows = db.sqlite.prepare("SELECT source, at, body FROM samples ORDER BY rowid").all()
+  expect(rows.map(({ source, at }) => [source, at])).toEqual([["seen", AT], ["nothing out", AT], ["failed", AT]])
+  expect(await Promise.all(rows.map(({ body }) => decode(new Uint8Array(body as Uint8Array))))).toEqual([
+    { version: RAW_VERSION, samples: [fix], polls: [[0, 1]] },
+    { version: RAW_VERSION, samples: [], polls: [[0, 0]] },
+    { version: RAW_VERSION, samples: [], polls: [[0, null]] }
+  ])
+})
+
+test("the predictions source records its round as one poll, failed if any request failed, and still a row", async () => {
+  vi.useFakeTimers({ now: AT })
+  vi.stubGlobal("fetch", async () => new Response("", { status: 503 }))
+  expect(await predictions.collect(AT, new AbortController().signal)).toEqual({ samples: [], polls: [[0, null]] })
+  vi.stubGlobal("fetch", async () => Response.json([vehicle("T-51", AT, 3600)]))
+  expect(await predictions.collect(AT, new AbortController().signal)).toEqual({ samples: [], polls: [[0, 0]] })
 })

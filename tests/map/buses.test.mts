@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { confidence } from "../../src/map/buses.mts"
+import { confidence } from "../../src/map/render/buses.mts"
 
 test("confidence is full for a fresh report, fades as it ages, and never fades away", () => {
   fc.assert(fc.property(fc.double({ min: -60, max: 3600, noNaN: true }), fc.double({ min: 0, max: 3600, noNaN: true }), (age, more) => {

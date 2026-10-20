@@ -1,4 +1,4 @@
-// Our own map tiles (src/map/tiles.mts), made with Planetiler from an OpenStreetMap extract: the base map in the
+// Our own map tiles (src/map/basemap/tiles.mts), made with Planetiler from an OpenStreetMap extract: the base map in the
 // OpenMapTiles schema Liberty draws, and the campus set in our own (campus.yml). Each set is cut to exactly the
 // tiles it covers, with an empty one wherever Planetiler made none, so every tile the map asks here for is here
 
@@ -7,10 +7,10 @@ import { copyFile, mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { TILES_FOLDER, TILE_SETS, type TileSetName, type TilesManifest, extentOf, tilesOf } from "../../src/map/tiles.mts"
+import { TILES_FOLDER, TILE_SETS, type TileSetName, type TilesManifest, extentOf, tilesOf } from "../../src/map/basemap/tiles.mts"
 import { exists } from "../files.mts"
 
-/** Where the tiles are served from, each version (src/map/made.mts) in a folder of its own */
+/** Where the tiles are served from, each version (src/shared/made.mts) in a folder of its own */
 export const TILES = new URL(`../../public${TILES_FOLDER}`, import.meta.url)
 /** Which version is there, bundled with the map, and empty while there's none */
 export const MANIFEST = new URL("../../src/map/tiles.json", import.meta.url)

@@ -3,7 +3,9 @@
 // Every route, to show or hide on the map and to pick one out, and how many buses are live
 
 import { r } from "bruh/reactive"
-import { feed, lastUpdate, isLiveDown, liveCounts, runningToday, shownRoutes, chosenRoutes, pickedRoute } from "../state.mts"
+import { feed } from "../state/data.mts"
+import { lastUpdate, isLiveDown, liveCounts, runningToday } from "../state/live.mts"
+import { shownRoutes, chosenRoutes, pickedRoute } from "../state/view.mts"
 import { Count, Plural } from "../../shell/intl.tsx"
 import { toggled } from "../../shell/state.mts"
 import { RouteBadge, route } from "./common.tsx"

@@ -4,10 +4,12 @@
 // anywhere else
 
 import { r, watch, type SourceNode } from "bruh/reactive"
-import type { Place } from "../plan.mts"
-import * as photon from "../photon.mts"
-import { from, to, searchPlaces, selectedStop, isLocating, useCurrentLocation } from "../state.mts"
-import { locationProblem } from "../location.mts"
+import type { Place } from "../../places/search.mts"
+import * as photon from "../../places/photon.mts"
+import { searchPlaces } from "../state/data.mts"
+import { from, to, isLocating, useCurrentLocation } from "../state/trip.mts"
+import { selectedStop } from "../state/view.mts"
+import { locationProblem } from "../state/location.mts"
 import { Icon } from "../../shell/ui.tsx"
 
 type Field = "from" | "to"

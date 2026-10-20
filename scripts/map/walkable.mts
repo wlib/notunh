@@ -2,7 +2,7 @@
 // directions follow: junctions and dead ends joined by the paths between them, bends and all
 
 import type { OsmElement, OsmNode } from "./pbf.mts"
-import type { WalkData } from "../../src/map/graph.mts"
+import type { WalkData } from "../../src/routing/graph.mts"
 import { simplify } from "../../src/geo/lines.mts"
 import type { Coordinates } from "../../src/geo/projection.mts"
 

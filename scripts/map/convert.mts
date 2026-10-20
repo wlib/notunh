@@ -4,7 +4,7 @@ import { parse as parseCsv } from "csv-parse/sync"
 import { ColorSpace, contrastWCAG21, parse, sRGB } from "colorjs.io/fn"
 import { simplify } from "../../src/geo/lines.mts"
 import { type Coordinates, type Meters, angleBetween, distance, frame } from "../../src/geo/projection.mts"
-import type { FeedData, Route, Service, Stop, Trip } from "../../src/map/feed.mts"
+import type { FeedData, Route, Service, Stop, Trip } from "../../src/transit/feed.mts"
 
 ColorSpace.register(sRGB)
 

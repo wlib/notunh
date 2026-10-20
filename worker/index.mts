@@ -1,7 +1,7 @@
 // The Worker behind notunh.app's static assets: cron triggers that keep raw samples of the live APIs and laundry's
 // changes in D1, a nightly one that prunes what's past keeping and rebuilds the site, and the routes in api.mts
 
-import { CATALOG, fetchCatalog } from "../src/map/archive.mts"
+import { CATALOG, fetchCatalog } from "../src/transit/observations/archive.mts"
 import { localDay, weekday } from "../src/shared/time.mts"
 import { HEADERS, sampling, type Env, type Job } from "./collect.mts"
 import { app } from "./api.mts"

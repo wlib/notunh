@@ -1,5 +1,5 @@
 // Every table the build reads and writes, by name, each with the column its days are on when it has one: epoch
-// milliseconds, or schedule seconds for visits, as src/map/events.mts keeps them. Reads page by rowid, so rows come
+// milliseconds, or schedule seconds for visits, as src/transit/inference/events.mts keeps them. Reads page by rowid, so rows come
 // back in the order they were stored, and the build sorts where it must. The nightly prune drops what each keeps no
 // longer, and samples sooner for days the observations archive has
 
@@ -10,7 +10,7 @@ import { and, asc, desc, eq, getTableColumns, getTableName, gt, gte, lt, notInAr
 import type { BatchItem } from "drizzle-orm/batch"
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core"
 import { HOUR, addDays, dayStart, type Day } from "../src/shared/time.mts"
-import { serviceDayStart } from "../src/map/feed.mts"
+import { serviceDayStart } from "../src/transit/feed.mts"
 import { ROOMS } from "../src/laundry/rooms.mts"
 import * as schema from "./schema.mts"
 import { latest, polls, roomSnapshots, samples, summaries, transitions, visits } from "./schema.mts"

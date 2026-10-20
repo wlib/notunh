@@ -10,9 +10,9 @@ const bytes = customType<{ data: Uint8Array<ArrayBuffer>, driverData: Uint8Array
 })
 
 /**
- * What each source saw in a minute it polled, and its polls, gzipped JSON tuples as src/map/raw.mts packs them,
+ * What each source saw in a minute it polled, and its polls, gzipped JSON tuples as src/transit/observations/raw.mts packs them,
  * which is 4 to 6 times smaller than rows of them would be. Kept RETAIN_ARCHIVED_DAYS once the day is archived
- * (src/map/archive.mts), else RETAIN_DAYS
+ * (src/transit/observations/archive.mts), else RETAIN_DAYS
  */
 export const samples = sqliteTable("samples", {
   source: text().notNull(),
@@ -22,7 +22,7 @@ export const samples = sqliteTable("samples", {
 }, table => [primaryKey({ columns: [table.source, table.at] })])
 
 /**
- * Each bus's visits to stops, exactly as src/map/events.mts extracts them from samples, kept RETAIN_VISIT_DAYS so
+ * Each bus's visits to stops, exactly as src/transit/inference/events.mts extracts them from samples, kept RETAIN_VISIT_DAYS so
  * the model can be refit from them long after the samples are gone. Visits of the first extractor, the zone
  * crossings, have no extractor, spread, dwelled, flags, or profile
  */
@@ -52,7 +52,7 @@ export const visits = sqliteTable("visits", {
 ])
 
 /**
- * Each service day's summary of what the location model made of it (src/map/locate.mts), about 90 KB, by the day's
+ * Each service day's summary of what the location model made of it (src/transit/inference/locate.mts), about 90 KB, by the day's
  * start, with the model version and extractor that made it, replaced whole when the day is summarized again, and
  * kept RETAIN_SUMMARY_DAYS
  */

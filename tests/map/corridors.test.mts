@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { laneSlots, lanePieces, measureCorridors, type LaneSlots, type Strand } from "../../src/map/corridors.mts"
+import { laneSlots, lanePieces, measureCorridors, type LaneSlots, type Strand } from "../../src/map/render/corridors.mts"
 import { type Coordinates, ruler, segmentMeters } from "../../src/geo/projection.mts"
 
 // Every route shown

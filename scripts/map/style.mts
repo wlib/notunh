@@ -1,5 +1,5 @@
 // Downloads OpenFreeMap's Liberty style, with its sprite and the fonts the map's labels need, and makes it ours
-// (src/map/style.mts) in a folder under public/data/map/ named by a hash of everything in it, so the style, sprite,
+// (src/map/basemap/style.mts) in a folder under public/data/map/ named by a hash of everything in it, so the style, sprite,
 // and fonts the map loads always match, with the folder named in src/map/style.json, which the map's page bundles
 // and loads the style by, and keeps the folder with. Its tiles are the planet build current now, whose URLs never
 // change. The site rebuilds nightly to pick up a new build, and the folder the site serves stays one more build
@@ -11,7 +11,7 @@ import { Readable } from "node:stream"
 import type { StyleSpecification, VectorSourceSpecification } from "maplibre-gl"
 import { getJson, objectOf } from "../../src/shared/json.mts"
 import { contentHash } from "../../src/shared/hash.mts"
-import { BASE, GLYPH_RANGES, LIBERTY, STYLE_ROOT, StyleManifest, type TileJson, fontsOf, restyle } from "../../src/map/style.mts"
+import { BASE, GLYPH_RANGES, LIBERTY, STYLE_ROOT, StyleManifest, type TileJson, fontsOf, restyle } from "../../src/map/basemap/style.mts"
 import { PUBLIC, isKept, keepServed } from "../files.mts"
 import { deployed, served } from "../site.mts"
 

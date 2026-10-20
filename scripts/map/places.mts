@@ -8,9 +8,9 @@ import { readFile, writeFile } from "node:fs/promises"
 import { Readable } from "node:stream"
 import { slug } from "../../src/shared/slug.mts"
 import { contentHash } from "../../src/shared/hash.mts"
-import type { Building, Places } from "../../src/map/places.mts"
+import type { Building, Places } from "../../src/places/buildings.mts"
 import { exists } from "../files.mts"
-import type { Gazetteer } from "../../src/map/gazetteer.mts"
+import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { type Box, holds } from "../../src/geo/boxes.mts"
 
 const OUTPUT   = new URL("../../src/map/places.json", import.meta.url)

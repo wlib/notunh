@@ -1,14 +1,14 @@
 // How the build and scripts read what the Worker observed on a service day: from the day's archive once the catalog
-// lists it (src/map/archive.mts), checked against the catalog's hash as it's read, or else from the Worker's D1,
-// which keeps a day's samples until it's archived, decoded either way to the same rows (src/map/raw.mts), so
+// lists it (src/transit/observations/archive.mts), checked against the catalog's hash as it's read, or else from the Worker's D1,
+// which keeps a day's samples until it's archived, decoded either way to the same rows (src/transit/observations/raw.mts), so
 // extraction runs on either. Only reads
 
 import { createInterface } from "node:readline"
 import { Readable } from "node:stream"
 import { createGunzip, createZstdDecompress } from "node:zlib"
-import { decode, fromHex, observe, type ObservedRow, type Source } from "../src/map/raw.mts"
-import { archiveUrl, fetchCatalog, type Catalog, type Manifest } from "../src/map/archive.mts"
-import { serviceDayStart } from "../src/map/feed.mts"
+import { decode, fromHex, observe, type ObservedRow, type Source } from "../src/transit/observations/raw.mts"
+import { archiveUrl, fetchCatalog, type Catalog, type Manifest } from "../src/transit/observations/archive.mts"
+import { serviceDayStart } from "../src/transit/feed.mts"
 import { type Day, addDays, localDay } from "../src/shared/time.mts"
 import { contentHash } from "../src/shared/hash.mts"
 import { readRows } from "./worker.mts"

@@ -1,7 +1,7 @@
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
 import { buildOf, isRetained, retainOf } from "../../src/shell/manifest.mts"
-import { Model, emptyModel } from "../../src/map/model.mts"
+import { Model, emptyModel } from "../../src/transit/models/model.mts"
 import { RELEASE, fakePage, headOf, leavePage } from "./page.mts"
 import { republished } from "../../scripts/republish.mts"
 

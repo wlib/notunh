@@ -1,5 +1,5 @@
 // Learns the bus model in the build, as scripts/learn.mts does, and writes src/map/model.json for the map to
-// bundle. Each whole service day is summed up (model.mts summarize) from the visits its fixes show, read from the
+// bundle. Each whole service day is summed up (fit.mts summarize) from the visits its fixes show, read from the
 // day's archive or the Worker while it keeps them (scripts/observations.mts), or else from the visits stored then,
 // with how forecasts did that day scored, each day against the timetable then in force: a version of the feed the
 // build hasn't seen before is archived in the Worker first (replay.mts). The visits and the summary are stored, and
@@ -7,10 +7,11 @@
 // --rebuild (or MODEL_REBUILD=1), the model is learned afresh from the first day there's anything of, which is
 // folding the summaries again where they're kept; --local uses `wrangler dev`
 
-import { serviceDayStart } from "../../src/map/feed.mts"
-import { fetchCatalog } from "../../src/map/archive.mts"
-import { EXTRACTOR, type Visit } from "../../src/map/events.mts"
-import { type Model, emptyModel, fold, summarize } from "../../src/map/model.mts"
+import { serviceDayStart } from "../../src/transit/feed.mts"
+import { fetchCatalog } from "../../src/transit/observations/archive.mts"
+import { EXTRACTOR, type Visit } from "../../src/transit/inference/events.mts"
+import { type Model, emptyModel } from "../../src/transit/models/model.mts"
+import { fold, summarize } from "../../src/transit/models/fit.mts"
 import { type Day, localDay } from "../../src/shared/time.mts"
 import { lastSettled } from "../observations.mts"
 import { isRebuild, learn } from "../learn.mts"

@@ -4,9 +4,12 @@
 // seem to be on
 
 import { r } from "bruh/reactive"
-import { runOf, timeAt } from "../forecast.mts"
-import { feed, now, runs, vehicles, ageOf, itinerary, selectedBus, riding, suggested, shownRoutes, chosenRoutes } from "../state.mts"
-import { decline, ride } from "../riding.mts"
+import { runOf, timeAt } from "../../transit/models/forecast.mts"
+import { feed } from "../state/data.mts"
+import { now, runs, vehicles, ageOf } from "../state/live.mts"
+import { decline, ride, riding, suggested } from "../state/riding.mts"
+import { itinerary } from "../state/trip.mts"
+import { selectedBus, shownRoutes, chosenRoutes } from "../state/view.mts"
 import { Minutes, ago } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import { RouteBadge, StopLink, Time, route } from "./common.tsx"

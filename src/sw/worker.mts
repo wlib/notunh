@@ -10,8 +10,8 @@
 // promoted. Neither holds up the other's writes for long: whatever stalls is given up on at a deadline
 
 import { type Build, type Generation, buildOf, closureOf, isOlder, isSameBuild, retainOf } from "../shell/manifest.mts"
-import { TILES_FOLDER } from "../map/tiles.mts"
-import { STYLE_ROOT } from "../map/style.mts"
+import { TILES_FOLDER } from "../map/basemap/tiles.mts"
+import { STYLE_ROOT } from "../map/basemap/style.mts"
 import { type CacheLike, ANY, deleteWhere, generationOf, isBrandAsset, isHashed, pageOf, prune } from "./retention.mts"
 
 type Extendable = { waitUntil(promise: Promise<unknown>): void }

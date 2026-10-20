@@ -1,14 +1,14 @@
 // The map's OpenStreetMap data as GitHub releases: each generation is its own immutable release, tagged
 // map-data-<version>, holding one archive of the walk, the gazetteer, the tiles, and a manifest with a hash of each,
 // and the one mutable release, map-data, holds only latest.json, uploaded last, naming the generation builds take.
-// A generation's version is its extract's date and its generator (src/map/made.mts), so the same extract made
+// A generation's version is its extract's date and its generator (src/shared/made.mts), so the same extract made
 // again by changed code is a new generation, at a new URL
 
 import { readFile } from "node:fs/promises"
 import * as v from "valibot"
 import { checked } from "../../src/shared/json.mts"
 import { type Chunks, contentHash } from "../../src/shared/hash.mts"
-import { Made, versionOf } from "../../src/map/made.mts"
+import { Made, versionOf } from "../../src/shared/made.mts"
 
 const RELEASES = "https://github.com/wlib/notunh/releases/download/"
 export const POINTER = `${RELEASES}map-data/latest.json`
@@ -26,7 +26,7 @@ export type Manifest = v.InferOutput<typeof Manifest>
 // Everything whose change makes different data from the same extract, hashed with Planetiler's version
 const GENERATOR = [
   "osm.mts", "pbf.mts", "walkable.mts", "gazetteer.mts", "tiles.mts", "campus.yml",
-  "../../src/map/made.mts", "../../src/map/tiles.mts", "../../src/map/gazetteer.mts",
+  "../../src/shared/made.mts", "../../src/map/basemap/tiles.mts", "../../src/places/gazetteer.mts",
   "../../src/geo/boxes.mts", "../../src/geo/lines.mts", "../../src/geo/projection.mts"
 ]
 

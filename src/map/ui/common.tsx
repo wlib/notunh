@@ -1,7 +1,8 @@
 /** @jsxImportSource bruh/browser */
 
-import { type Route, routeLabel } from "../feed.mts"
-import { feed, selectedStop } from "../state.mts"
+import { type Route, routeLabel } from "../../transit/feed.mts"
+import { feed } from "../state/data.mts"
+import { selectedStop } from "../state/view.mts"
 import { ClockTime } from "../../shell/intl.tsx"
 
 export const route = (id: string) => feed.peek().routesById.get(id)!

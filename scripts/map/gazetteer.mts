@@ -2,7 +2,7 @@
 // each place's name, kind, middle, and extent, and each building's outline and doors
 
 import type { OsmElement, OsmNode, OsmRelation, OsmWay } from "./pbf.mts"
-import { type GazetteerPlace, PLACE_KEYS, kindOf } from "../../src/map/gazetteer.mts"
+import { type GazetteerPlace, PLACE_KEYS, kindOf } from "../../src/places/gazetteer.mts"
 import type { Box } from "../../src/geo/boxes.mts"
 import { type Coordinates, type Point } from "../../src/geo/projection.mts"
 

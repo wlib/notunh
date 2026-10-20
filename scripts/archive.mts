@@ -1,5 +1,5 @@
 // Archives what the Worker observed on completed service days, for the Observations workflow
-// (.github/workflows/archive.yml) to publish as src/map/archive.mts says: a day's stored rows, decoded, as one
+// (.github/workflows/archive.yml) to publish as src/transit/observations/archive.mts says: a day's stored rows, decoded, as one
 // ndjson file compressed by zstd, packed the same way every time, so the same rows make the same bytes, with its
 // manifest, and the catalog with the manifests merged in. zstd at level 19 with long-distance matching, as a day's
 // minutes repeat each other over hours, makes a file 23 % smaller than gzip -9 did (a weekday 640 KB to 490 KB, on
@@ -14,8 +14,8 @@ import { isDeepStrictEqual } from "node:util"
 import { Readable } from "node:stream"
 import { constants, createZstdCompress } from "node:zlib"
 import * as v from "valibot"
-import type { ObservedRow } from "../src/map/raw.mts"
-import { Catalog, Manifest, fileOf } from "../src/map/archive.mts"
+import type { ObservedRow } from "../src/transit/observations/raw.mts"
+import { Catalog, Manifest, fileOf } from "../src/transit/observations/archive.mts"
 import { Day, addDays } from "../src/shared/time.mts"
 import { checked } from "../src/shared/json.mts"
 import { contentHash } from "../src/shared/hash.mts"

@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { type TileSet, PROTOCOL, TILES_FOLDER, TILE_SETS, covers, extentOf, sourcesOf, tileBox, tileLoader, tileTemplate, tilesOf } from "../../src/map/tiles.mts"
+import { type TileSet, PROTOCOL, TILES_FOLDER, TILE_SETS, covers, extentOf, sourcesOf, tileBox, tileLoader, tileTemplate, tilesOf } from "../../src/map/basemap/tiles.mts"
 
 const UPSTREAM = "https://tiles.openfreemap.org/planet/20261011_080001_pt/{z}/{x}/{y}.pbf"
 const VERSION = "2026-10-17"

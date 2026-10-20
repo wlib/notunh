@@ -1,10 +1,11 @@
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
-import { type FeedData, serviceDayStart } from "../../src/map/feed.mts"
+import { type FeedData, serviceDayStart } from "../../src/transit/feed.mts"
 import { distance } from "../../src/geo/projection.mts"
-import type { Vehicle } from "../../src/map/umo.mts"
-import { type Place, itineraryKey } from "../../src/map/plan.mts"
-import type { Building } from "../../src/map/places.mts"
+import type { Vehicle } from "../../src/transit/observations/umo.mts"
+import { itineraryKey } from "../../src/routing/plan.mts"
+import type { Place } from "../../src/places/search.mts"
+import type { Building } from "../../src/places/buildings.mts"
 import places from "../../src/map/places.json"
 import { localDay } from "../../src/shared/time.mts"
 import { fakePage, headOf, leavePage } from "../shell/page.mts"
@@ -81,13 +82,17 @@ const load = async ({ at = NOON, saved = {} as Record<string, unknown>, permissi
       throw new TypeError("Load failed")
     return Response.json(await umo.vehicles())
   })
-  const state = await import("../../src/map/state.mts")
-  const { ride } = await import("../../src/map/riding.mts")
+  const state = {
+    ...await import("../../src/map/state/data.mts"),
+    ...await import("../../src/map/state/live.mts"),
+    ...await import("../../src/map/state/riding.mts"),
+    ...await import("../../src/map/state/trip.mts"),
+    ...await import("../../src/map/state/view.mts")
+  }
   const { receive } = await import("../../src/shell/build.mts")
   await vi.advanceTimersByTimeAsync(0)
   return {
     ...state,
-    ride,
     receive,
     umo,
     replaceState,

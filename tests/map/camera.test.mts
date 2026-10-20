@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { coveredPadding } from "../../src/map/camera.mts"
+import { coveredPadding } from "../../src/map/render/camera.mts"
 
 const rect = (left: number, top: number, width: number, height: number) =>
   ({ left, top, width, height, right: left + width, bottom: top + height })

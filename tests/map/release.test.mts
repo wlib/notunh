@@ -6,9 +6,9 @@ import { contentHash } from "../../src/shared/hash.mts"
 import { walkGraph } from "../../scripts/map/walkable.mts"
 import { gazetteerOf } from "../../scripts/map/gazetteer.mts"
 import type { OsmElement } from "../../scripts/map/pbf.mts"
-import { type Made, versionOf } from "../../src/map/made.mts"
-import type { WalkData } from "../../src/map/graph.mts"
-import type { Gazetteer } from "../../src/map/gazetteer.mts"
+import { type Made, versionOf } from "../../src/shared/made.mts"
+import type { WalkData } from "../../src/routing/graph.mts"
+import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { FIXTURES } from "../../scripts/files.mts"
 
 const MADE: Made = { extract: "2026-10-13", generator: "3fa880d87b44b360178b9552605ea6da9d004d6ea7662cff696aa156b0b5e3eb" }

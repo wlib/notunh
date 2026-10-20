@@ -1,7 +1,7 @@
 // What each cron trigger runs, and for the sources that are sampled, storing what one saw in a minute and every poll
 // it made to see it as a gzipped row in samples, so a minute polled is a row even when nothing was seen
 
-import { encode, type RawPoll } from "../src/map/raw.mts"
+import { encode, type RawPoll } from "../src/transit/observations/raw.mts"
 import { samples } from "./schema.mts"
 import { inserts } from "./rows.mts"
 
@@ -14,7 +14,7 @@ export type Env = {
   ASSETS:               Fetcher,
   /** How many days of samples and laundry transitions the nightly run keeps */
   RETAIN_DAYS:          number,
-  /** How many days of samples it keeps of days the observations archive has (src/map/archive.mts) */
+  /** How many days of samples it keeps of days the observations archive has (src/transit/observations/archive.mts) */
   RETAIN_ARCHIVED_DAYS: number,
   /** How many days of the visits extracted from samples it keeps */
   RETAIN_VISIT_DAYS:    number,

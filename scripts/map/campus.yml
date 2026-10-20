@@ -1,5 +1,5 @@
 # What OpenMapTiles leaves out that a campus map wants, as Planetiler's custom profile for the campus tile set
-# (src/map/tiles.mts), drawn by the campus layers in src/map/style.mts. Each layer starts at the zoom it's first
+# (src/map/basemap/tiles.mts), drawn by the campus layers in src/map/basemap/style.mts. Each layer starts at the zoom it's first
 # drawn at, or the set's deepest, which is overzoomed past it
 
 schema_name: notunh campus

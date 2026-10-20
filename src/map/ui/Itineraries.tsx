@@ -3,9 +3,10 @@
 // The ways to get there by bus, and walking the whole way
 
 import { r } from "bruh/reactive"
-import { slack } from "../forecast.mts"
-import { type Itinerary, type Leg, type RideLeg, itineraryKey } from "../plan.mts"
-import { now, selected, itineraries, itinerary, walk } from "../state.mts"
+import { slack } from "../../transit/models/forecast.mts"
+import { type Itinerary, type Leg, type RideLeg, itineraryKey } from "../../routing/plan.mts"
+import { now } from "../state/live.mts"
+import { selected, itineraries, itinerary, walk } from "../state/trip.mts"
 import { ClockRange, Distance, Minutes, Plural } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import { RouteBadge, StopLink, Time, minutes, route } from "./common.tsx"

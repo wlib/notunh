@@ -3,9 +3,10 @@
 // A card that opens on the map at a spot, to get directions to or from it
 
 import { r, type SourceNode } from "bruh/reactive"
-import type { Place } from "../plan.mts"
-import { nameAt, type MapHints } from "../gazetteer.mts"
-import { from, gazetteer, to } from "../state.mts"
+import type { Place } from "../../places/search.mts"
+import { nameAt, type MapHints } from "../../places/gazetteer.mts"
+import { gazetteer } from "../state/data.mts"
+import { from, to } from "../state/trip.mts"
 
 export const PlaceCard = ({ place, hints, close }: { place: Place, hints: MapHints, close: () => void }) => {
   const found = nameAt(gazetteer.peek(), place, hints).catch(() => undefined)

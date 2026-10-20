@@ -1,6 +1,6 @@
 // OpenStreetMap, from one extract of New Hampshire: the streets and paths people walk around Durham, as the network
 // at src/map/walk.json, the places people go, as the gazetteer at src/map/gazetteer.json, and with Planetiler, our
-// own map tiles (scripts/map/tiles.mts), all three marked with where they came from (src/map/made.mts). Each week
+// own map tiles (scripts/map/tiles.mts), all three marked with where they came from (src/shared/made.mts). Each week
 // the Map data workflow makes them from Geofabrik's latest extract and publishes them as a release (release.mts):
 //
 //   node scripts/map/osm.mts <extract.osm.pbf> <planetiler.jar> [--release <folder>]
@@ -25,9 +25,9 @@ import { elementsWithin } from "./pbf.mts"
 import type { Box } from "../../src/geo/boxes.mts"
 import { HIGHWAYS, walkGraph } from "./walkable.mts"
 import { gazetteerOf } from "./gazetteer.mts"
-import { PLACE_KEYS } from "../../src/map/gazetteer.mts"
-import { type Made, versionOf } from "../../src/map/made.mts"
-import { TilesManifest } from "../../src/map/tiles.mts"
+import { PLACE_KEYS } from "../../src/places/gazetteer.mts"
+import { type Made, versionOf } from "../../src/shared/made.mts"
+import { TilesManifest } from "../../src/map/basemap/tiles.mts"
 import { MANIFEST, TILES, makeTiles, writeManifest } from "./tiles.mts"
 import { ARCHIVE, Manifest, archiveUrl, fetchPointer, generator, manifestOf, mismatches } from "./release.mts"
 import { contentHash } from "../../src/shared/hash.mts"

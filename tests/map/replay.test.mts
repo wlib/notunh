@@ -1,10 +1,11 @@
 import { test, expect } from "vitest"
 import { readFileSync } from "node:fs"
 import { gunzipSync } from "node:zlib"
-import { withIndexes, type FeedData } from "../../src/map/feed.mts"
-import { extract, type Visit } from "../../src/map/events.mts"
-import { unpackFixes, unpackPredictions, type RawFix, type RawPrediction } from "../../src/map/raw.mts"
-import { LEADS, emptyModel, update } from "../../src/map/model.mts"
+import { withIndexes, type FeedData } from "../../src/transit/feed.mts"
+import { extract, type Visit } from "../../src/transit/inference/events.mts"
+import { unpackFixes, unpackPredictions, type RawFix, type RawPrediction } from "../../src/transit/observations/raw.mts"
+import { LEADS, emptyModel } from "../../src/transit/models/model.mts"
+import { update } from "../../src/transit/models/fit.mts"
 import { attachPredictions, replayed, score } from "../../scripts/map/replay.mts"
 
 // Half an hour of the Worker's samples, recorded on a Wednesday afternoon with seven buses out, and the timetable

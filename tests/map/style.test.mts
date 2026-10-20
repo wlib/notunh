@@ -4,9 +4,9 @@ import { readFileSync } from "node:fs"
 import { gunzipSync } from "node:zlib"
 import { createExpression, featureFilter, validateStyleMin } from "@maplibre/maplibre-gl-style-spec"
 import type { FilterSpecification, LayerSpecification, StyleSpecification } from "maplibre-gl"
-import { BASE, CAMPUS, GLYPH_RANGES, fontsOf, glyphsFrom, hostedAt, loadStyle, restyle, upstreamGlyphs } from "../../src/map/style.mts"
+import { BASE, CAMPUS, GLYPH_RANGES, fontsOf, glyphsFrom, hostedAt, loadStyle, restyle, upstreamGlyphs } from "../../src/map/basemap/style.mts"
 import { pathsOf } from "../../scripts/map/style.mts"
-import { TILE_SETS, tileTemplate } from "../../src/map/tiles.mts"
+import { TILE_SETS, tileTemplate } from "../../src/map/basemap/tiles.mts"
 
 // Liberty as OpenFreeMap served it in October 2026
 const liberty: StyleSpecification = JSON.parse(gunzipSync(readFileSync(new URL("fixtures/liberty.json.gz", import.meta.url))).toString())

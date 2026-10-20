@@ -5,7 +5,7 @@ import { toLine } from "../../src/geo/lines.mts"
 import type { Coordinates } from "../../src/geo/projection.mts"
 
 const CENTER = { lat: 43.135, lon: -70.93 }
-/** A bus's, as src/map/shapes.mts has it */
+/** A bus's, as src/transit/shapes.mts has it */
 const TRACKING: Tracking = { snap: 60, heading: 50, back: 30, ahead: 300, switching: 25, leeway: 30, maxSkip: 30_000 }
 
 test("a bus snaps to the side of the street it's heading along", () =>

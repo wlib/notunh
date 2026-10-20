@@ -2,8 +2,8 @@
 // misses only the odd pair of fixes a few seconds apart. Each poll is recorded, with how many live buses it listed,
 // and each fix with the poll that first saw it
 
-import { STALE_VEHICLE_SECONDS, fetchVehicles } from "../src/map/umo.mts"
-import { packFixes, packPoll, type RawFix, type RawPoll } from "../src/map/raw.mts"
+import { STALE_VEHICLE_SECONDS, fetchVehicles } from "../src/transit/observations/umo.mts"
+import { packFixes, packPoll, type RawFix, type RawPoll } from "../src/transit/observations/raw.mts"
 import { HEADERS, type Source } from "./collect.mts"
 
 export const POLLS = 6

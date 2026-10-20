@@ -2,7 +2,8 @@
 // laundry vendor puts every room at the same spot, so rooms are matched to their residence halls by name instead,
 // against the campus's buildings in the gazetteer, which scripts/map/osm.mts makes. A build runs it once its inputs
 // are installed (scripts/inputs.mts), since it reads the rooms' and dining halls' names. The file records a hash of
-// the gazetteer, rooms, menus, and code it was derived from
+// the gazetteer, rooms, menus, and code it was derived from. With --fixtures, it matches the fixtures' rooms and halls,
+// as the Map data workflow checks a new gazetteer without asking anything of the laundry vendor or Nutrislice
 
 import { readFile, writeFile } from "node:fs/promises"
 import { Readable } from "node:stream"
@@ -11,11 +12,13 @@ import { contentHash } from "../../src/shared/hash.mts"
 import type { Building, Places } from "../../src/places/buildings.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { type Box, holds } from "../../src/geo/boxes.mts"
+import { FIXTURES, REPO } from "../files.mts"
 
 const OUTPUT   = new URL("../../src/map/places.json", import.meta.url)
 const GAZETTEER = new URL("../../src/map/gazetteer.json", import.meta.url)
-const ROOMS    = new URL("../../src/laundry/rooms.json", import.meta.url)
-const MENUS    = new URL("../../src/dining/menus.json", import.meta.url)
+const SOURCES  = process.argv.includes("--fixtures") ? FIXTURES : REPO
+const ROOMS    = new URL("src/laundry/rooms.json", SOURCES)
+const MENUS    = new URL("src/dining/menus.json", SOURCES)
 
 // UNH's Durham campus and the town around it, as west, south, east, north
 const CAMPUS: Box = [-70.96, 43.125, -70.915, 43.15]

@@ -9,10 +9,10 @@
 # first, so a failed run, or weeks of them, is made up by the next. One can also be run by hand for a range:
 # `gh workflow run archive.yml -f from=2026-10-07 -f to=2026-10-13`.
 #
-# Needs the repository secret BUILD_TOKEN, the same value as the Worker's (`wrangler secret put BUILD_TOKEN`), to read
-# its rows. Asks nothing of Umo. GitHub pauses schedules after 60 days without a commit, so the Worker's nightly run
-# also dispatches this when it has a GITHUB_TOKEN (worker/index.mts). A day already published is left as it is, so
-# the two can't publish it twice
+# Needs the production environment's secret BUILD_TOKEN, the same value as the Worker's (scripts/secrets.mts), to
+# read its rows. Asks nothing of Umo. GitHub pauses schedules after 60 days without a commit, so the Worker's nightly
+# run also dispatches this when it has a GITHUB_TOKEN (worker/index.mts). A day already published is left as it is,
+# so the two can't publish it twice
 
 name: Observations
 
@@ -39,6 +39,11 @@ jobs:
   archive:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Its secrets are the production environment's, which only main can use (scripts/secrets.mts sets them). It
+    # deploys nothing, so it isn't recorded as a deployment
+    environment:
+      name: production
+      deployment: false
     steps:
       - uses: actions/checkout@v7
         with:

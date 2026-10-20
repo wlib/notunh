@@ -16,7 +16,7 @@ const STAGES = {
   learn:   ["map/model", "laundry/model"]
 }
 
-export const runStage = async (names: readonly string[], flags: string[], execute = run) => {
+export const runStage = async (names: readonly string[], flags: string[], execute: (command: string, args: string[]) => Promise<unknown> = run) => {
   let failed = false
   for (const name of names) {
     try { await execute(process.execPath, [new URL(`${name}.mts`, import.meta.url).pathname, ...flags]) }

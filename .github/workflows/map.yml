@@ -4,10 +4,10 @@
 # is moved to it (scripts/release.mts), so a build gets all of a generation or none. Run it by hand with
 # `gh workflow run map.yml`.
 #
-# Needs no secrets beyond the job's own token, plus the optional CLOUDFLARE_DEPLOY_HOOK to rebuild the site with the
-# new generation. GitHub pauses schedules after 60 days without a commit, so the Worker's nightly run also dispatches
-# this on Mondays when it has a GITHUB_TOKEN (worker/index.mts). A run that finds its generation already published
-# makes nothing, so the two can't publish it twice
+# Needs no secrets beyond the job's own token, plus the production environment's optional CLOUDFLARE_DEPLOY_HOOK to
+# rebuild the site with the new generation. GitHub pauses schedules after 60 days without a commit, so the Worker's
+# nightly run also dispatches this on Mondays when it has a GITHUB_TOKEN (worker/index.mts). A run that finds its
+# generation already published makes nothing, so the two can't publish it twice
 
 name: Map data
 
@@ -28,6 +28,10 @@ jobs:
     # Only main's generation is the one builds take
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Its secrets are the production environment's, which only main can use (scripts/secrets.mts sets them)
+    environment:
+      name: production
+      url: https://notunh.app
     env:
       # Part of every generation's version, so a new Planetiler is a new generation
       PLANETILER: 0.10.2
@@ -50,20 +54,12 @@ jobs:
         with:
           path: planetiler
           key: planetiler-${{ env.PLANETILER }}
-      - name: Download Planetiler and the extract
-        run: |
-          mkdir -p planetiler extract
-          [ -f planetiler/planetiler.jar ] || curl -fsSL --retry 3 -o planetiler/planetiler.jar \
-            "https://github.com/onthegomap/planetiler/releases/download/v$PLANETILER/planetiler.jar"
-          curl -fsSL --retry 3 -o extract/new-hampshire.osm.pbf \
-            https://download.geofabrik.de/north-america/us/new-hampshire-latest.osm.pbf
-      # Stages the archive, manifest, and pointer in release/, unless this generation is the one published already
-      - run: node scripts/map/osm.mts extract/new-hampshire.osm.pbf planetiler/planetiler.jar --release release
+      # Downloads Geofabrik's latest extract, and Planetiler unless cached, then stages the archive, manifest, and
+      # pointer in release/, unless this generation is the one published already
+      - run: node scripts/map/osm.mts --release release
       # The buildings the build matches laundry rooms and dining halls to must still be there, else nothing's
       # published. The rooms and halls are the fixtures', so this asks nothing of the laundry vendor or Nutrislice
-      - run: |
-          cp tests/fixtures/data/src/laundry/rooms.json src/laundry/ && cp tests/fixtures/data/src/dining/menus.json src/dining/
-          node scripts/map/places.mts
+      - run: node scripts/map/places.mts --fixtures
       - uses: ./.github/actions/publish
         with:
           kind: map-data

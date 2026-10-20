@@ -88,15 +88,7 @@ Each night the Worker's 4:17 AM cron starts the Inputs workflow, which acquires 
 
 **Rolling back.** Clients never step back to a release older than the one they have, so `wrangler rollback` only reaches new visitors. To go back for everyone, publish the old release again: rebuild its commit with the `NOTUNH_INPUTS` and `NOTUNH_MAP_DATA` its `/inputs.json` names, or stamp a folder an old build wrote with `node scripts/republish.mts <folder>` and deploy it with `wrangler deploy --assets <folder>` (after `npm run db:migrate`; Worker versions don't roll D1 back).
 
-**Deploying from a Worker that predates the Inputs workflow.** Production's D1 then has migrations 0000 and 0001, and nothing is released as `inputs` or `map-data`.
-
-1. Secrets: the Worker needs `GITHUB_TOKEN` (`wrangler secret put GITHUB_TOKEN`, a fine-grained token for this repository with Actions read and write), and the repository `BUILD_TOKEN` and `CLOUDFLARE_DEPLOY_HOOK`. Check with `npx wrangler secret list` and `gh secret list`.
-2. Merge to `main`. Workers Builds' build of it fails at install, as nothing is released yet, so nothing is migrated or deployed and the site stays as it is.
-3. `gh workflow run map.yml`, and wait for it (`gh run watch`); the build its Deploy Hook starts fails the same way. Then `gh workflow run inputs.yml`. It learns against the Worker still deployed, which refuses learning's writes, so nothing is stored in D1 and the inputs carry an empty bus model (the stored one is of an older version) and the stored laundry model. It publishes `inputs-<version>` and POSTs the Deploy Hook.
-4. That build applies `0002_models_derived_feeds` (columns with defaults the Worker before keeps working with, and new tables), then deploys. Check `npx wrangler d1 migrations list notunh --remote` shows nothing left, and `curl https://notunh.app/inputs.json`.
-5. `gh workflow run inputs.yml` again, or wait for the night: it acquires the timetable into D1, derives each day, refits the bus model from the first day observed, stores both models, and deploys them.
-6. Once that's done and no rollback to the Worker before is wanted, `git mv worker/migrations/after-deploy/0003_drop_visits.sql worker/migrations/` and push; the next deploy drops the old `visits` table. Not before: the Worker before deletes from it in its nightly prune's batch, which would fail every night without it.
-7. Optionally, delete what nothing reads any more: the Worker secret `DEPLOY_HOOK` (`wrangler secret delete DEPLOY_HOOK`) and the Workers Builds variable `BUILD_TOKEN`.
+**Dropping `visits`.** Once no rollback to a Worker from before October 2026 is wanted, `git mv worker/migrations/after-deploy/0003_drop_visits.sql worker/migrations/` and push; the next deploy drops the old table. Not before: those Workers delete from it in their nightly prune, which would fail every night without it.
 
 ### Workflows and secrets
 
@@ -107,7 +99,12 @@ Each night the Worker's 4:17 AM cron starts the Inputs workflow, which acquires 
 | Observations (`archive.yml`) | Nightly 9:30 UTC, Worker dispatch, or `-f from= -f to=` | Archives each settled service day's samples as release `observations-<day>` and updates `catalog.json` | `BUILD_TOKEN` |
 | Map data (`map.yml`) | Mondays, Worker dispatch, or by hand | Builds walk network, gazetteer, and tiles from OSM as release `map-data-<version>`, then rebuilds the site | `CLOUDFLARE_DEPLOY_HOOK` (optional) |
 
-Worker secrets (`wrangler secret put`): `BUILD_TOKEN` (also a repository secret; locally in `.dev.vars`) and `GITHUB_TOKEN`, which can start this repository's workflows. The Worker's nightly run starts Observations and Inputs every night, and Map data on Mondays. Inputs has no schedule of its own, since GitHub pauses schedules after 60 days without a commit, so without `GITHUB_TOKEN` the site keeps the inputs it has.
+Secrets live on two sides, and `node scripts/secrets.mts check` says whether each is set:
+
+- The Worker: `BUILD_TOKEN` and `GITHUB_TOKEN`, a fine-grained token with Actions read and write on this repository, which starts its workflows. The Worker's nightly run starts Observations and Inputs every night, and Map data on Mondays. Inputs has no schedule of its own, since GitHub pauses schedules after 60 days without a commit, so without `GITHUB_TOKEN` the site keeps the inputs it has.
+- The `production` environment on GitHub, which only `main` can use: `BUILD_TOKEN` and `CLOUDFLARE_DEPLOY_HOOK`, the URL of a Workers Builds deploy hook of `main`. Inputs and Map data record each run as a deployment of notunh.app.
+
+`BUILD_TOKEN` is on both sides and in `.dev.vars`, so it's only changed with `node scripts/secrets.mts rotate`, which sets all three.
 
 ## Data sources
 

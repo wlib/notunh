@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import { mkdtemp, readFile, writeFile, rm, cp } from "node:fs/promises"
-import { join } from "node:path"
+import { join, relative } from "node:path"
 import { tmpdir } from "node:os"
 import { publishArchives } from "../scripts/archive-publish.mts"
 import { runStage } from "../scripts/data.mts"
@@ -77,7 +77,8 @@ test("a downloaded production generation installs nested assets into a clean che
   const folder = await mkdtemp(join(tmpdir(), "install-test-"))
   try {
     const source = join(folder, "source")
-    const staged = join(folder, "staged")
+    // Relative, as the workflow names it
+    const staged = relative(process.cwd(), join(folder, "staged"))
     const fetched = join(folder, "fetched")
     const target = join(folder, "checkout")
     await cp("tests/fixtures/data", source, { recursive: true })

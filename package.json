@@ -14,7 +14,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p worker",
-    "test": "vitest run",
+    "test": "vitest run --silent=passed-only",
     "test:browser": "playwright test",
     "model": "node scripts/map/model.mts",
     "db:generate": "drizzle-kit generate --config drizzle.config.mts",
@@ -67,5 +67,14 @@
     "last 2 and_chr versions",
     "last 2 firefox versions",
     "last 2 edge versions"
-  ]
+  ],
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.1": true,
+    "esbuild@0.18.20": true,
+    "sharp@0.34.5": true,
+    "sharp@0.35.4": true,
+    "workerd@1.20261001.1": true
+  }
 }

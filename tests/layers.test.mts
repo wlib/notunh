@@ -25,8 +25,11 @@ const LAYERS: Record<string, string[]> = {
   "src/routing":              ["src/shared", "src/geo", "src/places", "src/transit", "src/transit/observations", "src/transit/inference", "src/transit/models"]
 }
 
-/** What only a page has: the reactive library, the map's renderer, and the pages' state, rendering, and UI */
-const BROWSER = [/^bruh(\/|$)/, /^maplibre-gl(\/|$)/, /^src\/map\/(state|render|ui)\//, /^src\/[^/]+\/(state\.mts|ui\/|index\.tsx)/]
+/**
+ * What only a page has: bruh's reactivity and browser rendering (not its server rendering, which the build uses), the
+ * map's renderer, and the pages' state, rendering, and UI
+ */
+const BROWSER = [/^bruh(\/(browser|reactive|components|utils\/browser)(\/|$)|$)/, /^maplibre-gl(\/|$)/, /^src\/map\/(state|render|ui)\//, /^src\/[^/]+\/(state\.mts|ui\/|index\.tsx)/]
 
 type Import = { target: string, isType: boolean }
 

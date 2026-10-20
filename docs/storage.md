@@ -1,69 +1,49 @@
 # Storage
 
-Every artifact and table notunh makes: who makes it, how it's versioned, what it may be mixed with, where it lives, and how long. The code named in each row is the source of truth; this is the map of it. Browser caching is in [offline.md](offline.md).
+Every artifact and table: who makes it, its version, where it lives, and how long it's kept. The code named is the source of truth. How the steps run is in [deploying.md](deploying.md); browser caching is in [offline.md](offline.md).
 
-## The pipeline
-
-Each step makes one thing and the next takes it as made, pinned by version:
-
-| Step | Runs | Makes |
-|---|---|---|
-| **Collect** | the Worker's crons | `samples`, laundry's tables, in D1 |
-| **Archive** | `archive.yml`, nightly | `observations-<day>` releases and `catalog.json` |
-| **Map data** | `map.yml`, Mondays | `map-data-<version>` releases and their pointer |
-| **Inputs** | `inputs.yml`, nightly, started by the Worker: `scripts/data.mts acquire` (`map/gtfs.mts`, `map/style.mts`, `dining/menus.mts`, `laundry/rooms.mts`), the tests, `scripts/data.mts learn --store` (`map/model.mts`, `laundry/model.mts`, writing D1 through the Worker's API), then the site built from them | `inputs-<version>` releases and their pointer, then the Deploy Hook |
-| **Build** | Workers Builds, on every push to `main` and after Inputs or Map data publish: `npm run build`, then `npm run deploy` | the site and the Worker; `predeploy` applies D1 migrations first |
-
-A build only installs (`scripts/inputs.mts`): the inputs and map data generations their pointers name as it starts, or those `NOTUNH_INPUTS` and `NOTUNH_MAP_DATA` name, checked against their manifests, then what the site serves now kept beside them for open pages, then the places matched (`map/places.mts`). `public/inputs.json` records what it installed. It writes nothing anywhere but its own folder and needs no secrets, so a preview build is as safe as `main`'s. Only learning with `--store` writes D1: `inputs.yml` on `main`, after the tests pass, or a run by hand; a run whose Worker refuses its writes, as the one before an API change may, stores nothing and publishes the models already stored.
-
-Pull requests (`check.yml`) build with `NOTUNH_OFFLINE=1`: the fixtures under `tests/fixtures/data/` stand in for both generations, so no pull request reaches the GTFS host, Nutrislice, the laundry vendor, or GitHub releases. `npm run fixtures` (`tests/fixtures/make.mts`) remakes the fixtures from the data installed.
+A build only installs (`scripts/inputs.mts`) and writes nothing outside its folder. Only learning with `--store` writes D1: `inputs.yml` on `main` after the tests pass, or a run by hand.
 
 ## Artifacts
 
-| Artifact | Made by, when | Version | Mixes with | Lives | Kept | Removed by |
-|---|---|---|---|---|---|---|
-| inputs: `src/map/gtfs.json` and `.zip`, `src/map/style.json` and its folder, `src/dining/menus.json` and its files, `src/laundry/rooms.json`, `src/map/model.json`, `src/laundry/usual.json` | Inputs, nightly | `<Durham day>-<hash8>` of every file's SHA-256 (`stageInputs` in `scripts/inputs.mts`) | a build takes one generation whole or fails | GitHub release `inputs-<version>` (immutable); pointer `latest.json` on release `inputs`, uploaded last | forever (a few MB a night) | never |
-| `src/map/gtfs.json`, `src/map/gtfs.zip` | acquire | `feed.version` (GTFS `feed_info`); the JSON hashed into the page head; the zip is the original, acquired with it | any build's model, walk, and gazetteer, by stop/route ids and coordinates ([offline.md](offline.md)) | bundled; the zip only among the inputs | with its page | next build; SW prune |
-| `feeds` | learn, a row per acquisition: whenever the timetable acquired isn't the one acquired last | `id`, the SHA-256 of the converted JSON; `source`, the zip's; `acquired`, the Worker's time; `version`, `start`, `end` as the feed says, `""` where it doesn't | replay of the days it was in effect (`inEffect` in `replay.mts`) | D1 | forever, as long as the observations it interprets (a few a year, about 0.5 MB each) | never |
-| `src/map/model.json` | learn, as D1 stores it once learning's done, or empty while it holds another version's | `through` (last day folded), shape `version` (3), and the `predictor` its scores are of | any build's timetable, by stop and route ids, though a route keeping its id through a new path keeps its old times until relearned; a page given another version uses an empty model | bundled | with its page | next build; SW prune |
-| `models` rows `buses`, `laundry` | learn, with `--store` | `(name, through)`, `revision` renewed by every write, `written` order (the last written is the latest, whatever day it runs through) | nothing else | D1 `models` | last 30 per name | `saveModel` |
-| `derived` `visits`, `statistics`, `evaluation`, and their `chunks` | learn, once per service day, and again when what it's derived from changes | a manifest per name and service day: `identity` (the observations' id, the timetable's, `EXTRACTOR`; for statistics the model's `version`; for evaluations `PREDICTOR` and the model's hash), and the `generation` of gzipped JSON parts it commits (`worker/derived.mts`) | exactly its identity's inputs; reused for nothing else | D1 | visits `RETAIN_VISIT_DAYS` = 180, the others `RETAIN_STATISTICS_DAYS` = 400; parts while a manifest names them | nightly prune; a commit deletes the generation it replaces |
-| `samples` | Worker crons: a row per minute polled (buses), per 5 (predictions), even if nothing was seen | `(source, minute)`; body names `RAW_VERSION` (`raw.mts`). Version 2 records each poll (when asked, live bus count or null on failure) and which poll first saw each fix; version 3 times each poll when it was answered or failed instead. Older versions still read | nothing; the source of truth every extraction reads | D1 | `RETAIN_ARCHIVED_DAYS` = 14 once the catalog lists the day; until then, however long that takes | nightly prune, which reads the catalog first; if it can't, prunes none |
-| `observations-<day>.ndjson.zst` + `manifest.json` | `archive.yml`, nightly, or by hand for a range (`scripts/archive.mts`) | the service day; each line a stored row decoded (`{ source, at, version, samples, polls }`), lossless, zstd level 19 with long-distance matching. The manifest names the file, with SHA-256, bytes, and per-source counts | read like D1 (`observationsOf` in `scripts/observations.mts`, hash-checked while streaming) | GitHub release `observations-<day>`, immutable once its manifest is up; `catalog.json` on release `observations`, uploaded last | forever (about 0.5 MB a weekday, 150 MB a year) | never |
-| `transitions`, `polls` | Worker laundry cron | `at` in epoch ms | the laundry model's days | D1 | `RETAIN_DAYS` = 60 | nightly prune |
-| `latest`, `room_snapshots` | Worker laundry cron | per machine / per room, current only | the laundry routes | D1 | while the room and machine are still listed | nightly prune |
-| `src/laundry/rooms.json` | acquire | the vendor's list, hashed | the Worker's crons and routes (bundled in) | bundled | with the deploy | next deploy |
-| `src/laundry/usual.json` | learn | `through`, hashed | its page | bundled | with its page | next build; SW prune |
-| `src/dining/menus.json` | acquire | `fetched` (epoch ms), hashed | exactly the files it names (`files`) | bundled | with its page | next build; SW prune |
-| `public/data/dining/<hash>.json` | acquire; kept by the build (`keepPublishedMenus`) | content hash | any index naming it | static assets | tonight's; those the served index names, one more build; those published before until 48 h past the fetch of the last index naming them (`carried` in `publish.mts`, record at `/data/dining/published.json`), fetched back from the site | the first build after that |
-| `src/map/style.json`, `public/data/map/<hash>/` | acquire, from live Liberty | hash of the restyled style, sprite, and glyphs; the manifest names the folder and requires its `style.json` | its page; the planet build pinned in it | bundled manifest; static folder | origin: new folder and the previously served one; browsers: with the page | the next build, which starts `public/data/` empty; SW prune |
-| map data: `walk.json`, `gazetteer.json`, `tiles/<version>/`, `manifest.json` | `map.yml`, Mondays and on dispatch | `<extract date>-<generator8>` ([map.md](map.md)); each file carries `made` | a build takes one generation whole or fails; in a page each file is its own slot, meeting others by coordinates | GitHub release `map-data-<version>` (immutable); pointer `latest.json` on release `map-data`, uploaded last | GitHub forever; origin: the pointer's tiles and the previously served ones, one build | next build's `osm.mts` |
-| `src/map/tiles.json` | the build (`installMapData` in `scripts/inputs.mts`) | `{ version, folders }`, or the fixtures' `{}` offline | its page; the folder it names | bundled | with its page | next build; SW prune |
-| `src/map/places.json` | the build, from gazetteer, rooms, and halls | `inputs`, a hash of those and the deriving code | its page | bundled | with its page | next build |
-| `public/inputs.json` | the build | the inputs' version (or folder) and the map data's | nothing | static assets | with the deploy | next build |
-| page HTML | `vite build` | `<meta name="release">` + the hashed files it names | nothing: a page is a generation | static assets; SW cache (current + previous per page) | 2 per page in browsers | SW |
-| `/sw.js` | `vite build`, from `src/sw/` | its bytes | — | browser registration | until replaced | the browser, on byte change |
-| `localStorage` | pages | `laundry-favorites`, `map-riding`, `dining-hall`, and the map's remembered state (`remembered` in `src/shell/state.mts`) | nothing | the browser | until Safari's seven-day rule or the user clears it | user; Safari |
+| Artifact | Made by | Version | Lives | Kept |
+|---|---|---|---|---|
+| Inputs: `src/map/gtfs.json`/`.zip`, `src/map/style.json` and its folder, `src/dining/menus.json` and its files, `src/laundry/rooms.json`, `src/map/model.json`, `src/laundry/usual.json` | Inputs, nightly | `<Durham day>-<hash8>` of every file (`stageInputs` in `scripts/inputs.mts`) | Release `inputs-<version>`; pointer `latest.json` on release `inputs` | Forever (a few MB a night) |
+| Map data: `walk.json`, `gazetteer.json`, `tiles/<version>/` | `map.yml`, Mondays | `<extract date>-<generator8>` ([map.md](map.md)) | Release `map-data-<version>`; pointer on release `map-data` | Forever; origin keeps the served tiles one more build |
+| `src/map/gtfs.json` | acquire | `feed.version` from GTFS `feed_info` | Bundled | With its page |
+| `feeds` | learn, when the timetable acquired differs from the last | `id` (SHA-256 of the JSON), `source` (of the zip), `acquired` (Worker time), `version`/`start`/`end` as the feed says or `""` | D1 | Forever, to replay the days it was in effect (`inEffect` in `scripts/map/replay.mts`) |
+| `src/map/model.json` | learn | `through`, shape `version` (3), `predictor` | Bundled | With its page; a page given another version uses an empty model |
+| `models` (`buses`, `laundry`) | learn `--store` | `(name, through)`, `revision` per write; the last written is the latest | D1 | Last 30 per name (`saveModel`) |
+| `derived` (`visits`, `statistics`, `evaluation`) and their `chunks` | learn, per service day | Manifest `identity` (observations id, timetable id, `EXTRACTOR`, plus model `version` or `PREDICTOR` and model hash) and `generation` (`worker/derived.mts`) | D1 | Visits `RETAIN_VISIT_DAYS` (180), others `RETAIN_STATISTICS_DAYS` (400) |
+| `samples` | Worker crons: a row per minute (buses), per 5 (predictions) | `(source, minute)`; body `RAW_VERSION` (`raw.mts`), older versions still read | D1 | `RETAIN_ARCHIVED_DAYS` (14) once the catalog lists the day; never pruned before |
+| `observations-<day>.ndjson.zst` + `manifest.json` | `archive.yml` (`scripts/archive.mts`) | Service day; lossless rows, zstd -19 --long; manifest has SHA-256, bytes, counts | Release `observations-<day>`; `catalog.json` on release `observations` | Forever (~0.5 MB a weekday) |
+| `transitions`, `polls` | Laundry cron | `at` in epoch ms | D1 | `RETAIN_DAYS` (60) |
+| `latest`, `room_snapshots` | Laundry cron | Current only | D1 | While the room and machine are listed |
+| `src/laundry/rooms.json` | acquire | Hashed | Bundled into pages and Worker | Until the next deploy |
+| `src/laundry/usual.json` | learn | `through` | Bundled | With its page |
+| `src/dining/menus.json` | acquire | `fetched` (epoch ms) | Bundled | With its page |
+| `public/data/dining/<hash>.json` | acquire; `keepPublishedMenus` | Content hash | Static | Tonight's, the served index's for one more build, and any index's until 48 h past its last fetch (`carried` in `scripts/dining/publish.mts`, record at `/data/dining/published.json`) |
+| `public/data/map/<hash>/` (style, sprite, glyphs) | acquire | Hash of its contents | Static | New and previously served folder |
+| `src/map/tiles.json`, `src/map/places.json` | The build | `{ version, folders }`; hash of places' inputs | Bundled | With its page |
+| `public/inputs.json` | The build | Inputs and map data versions | Static | With the deploy |
+| Page HTML, `/sw.js` | `vite build` | `<meta name="release">` and the hashed files it names; the worker by its bytes | Static; SW cache | Current + previous per page in browsers |
+| `localStorage` | Pages | `laundry-favorites`, `map-riding`, `dining-hall`, map state (`src/shell/state.mts`) | Browser | Until cleared, or Safari's seven-day rule |
 
-Live data (Umo, the laundry API) is never stored by a browser: `/api/*` and other origins bypass the service worker. The laundry room list is shared at Cloudflare's edge for 300 s and a room for 30 s (`worker/laundry.mts`), `max-age=0` in browsers.
+The nightly prune reads the catalog first and prunes no samples if it can't. Live data (Umo, `/api/*`) is never cached by the service worker. Laundry's room list is edge-cached 300 s and a room 30 s (`worker/laundry.mts`), `max-age=0` in browsers.
 
 ## D1 sizing
 
-The free plan allows 500 MB per database and 5 M rows read a day. Measured on Oct 7 to 19:
+D1 caps a database at 500 MB. Measured over Oct 7 to 19:
 
-- **Samples**: a weekday is about 30 k bus fixes in about 1,150 minute rows, 620 KB of gzipped bodies, plus about 280 KB of predictions; weekends about a third. So about 1 MB a weekday, 14 MB at two weeks. Two weeks covers a fortnight of failed builds or refits without GitHub. While archiving fails, samples grow by about 1 MB a weekday rather than be dropped, which leaves over a year before D1's 500 MB; `npm run storage` and `/api/health`'s `buses.since` show how far back they go.
-- **Archive**: the same day as one ndjson file is about 3.9 MB raw, 640 KB gzip -9, 490 KB zstd -19 --long. Only scripts read it, so it can be zstd; everything a page or the Worker reads stays gzip, which Workers and Safari 16.4's `DecompressionStream` support.
-- **Statistics**: about 86 KB JSON, 24 KB gzipped, a day, so 400 days is about 10 MB, long enough to compare a week with the same week a year before. An evaluation is a few KB.
-- **Visits**: about 7 k a day, about 840 KB as JSON and about 150 KB gzipped, in one part, so 180 days is about 27 MB. Storing a day costs two row writes, not one per visit, so a rebuild stays well within D1's daily writes. They're derived from the observations and can be again.
+- **Samples**: about 1 MB a weekday, a third of that on weekends. Two weeks covers a fortnight of failed builds. If archiving fails, samples grow rather than drop, leaving over a year before the cap.
+- **Archive**: a day is about 3.9 MB raw, 640 KB gzip, 490 KB zstd.
+- **Statistics**: about 24 KB gzipped a day, ~10 MB over 400 days, enough to compare a week with the same week a year before.
+- **Visits**: about 150 KB gzipped a day in one part, ~27 MB over 180 days. A day costs two row writes, so a rebuild stays within D1's daily writes. They can always be derived again.
 
-Measure rather than estimate: `npm run storage` (`GET /api/storage`, token-gated) gives `{ bytes, rows: { table: n } }`, with `bytes` from D1's own `size_after`.
+Measure with `npm run storage` (`GET /api/storage`). `/api/health`'s `buses.since` shows how far back samples go.
 
-**Concurrency.** Inputs runs never overlap (the workflow's concurrency group), and models are still stored with compare-and-swap on the latest row's `revision`: a run that read model `M` and tries to store over anything written since, as a `--store` run by hand might have, gets a 409, and the inputs carry what's stored instead. What's derived from a day is published as a generation: its parts first, then its manifest, which commits it only once every part is stored, deleting the parts of the generation it replaces in the same transaction. A reader gets the manifest and its parts in one read, so a run cut off mid-publication, or two deriving the same day at once, leaves the day's last committed generation whole. The nightly prune drops parts no manifest names, even those of a publication still running, whose commit then fails and is retried the next night.
+## Concurrency
 
-## GitHub releases
-
-- **Inputs** and **Map data** publish a generation only when the pointer doesn't already name it (`stage` in `scripts/release.mts`; `osm.mts` also compares versions before Planetiler runs), so a second run, like Map data's schedule beside the Worker's Monday dispatch, can't double-publish. A generation is immutable once its manifest is up (`.github/actions/publish`): one published before is pointed at again, never replaced, and a release left without its manifest is filled in again.
-- **Observations** publishes every settled service day D1 still has that the catalog doesn't list, the oldest first (`daysToArchive` in `scripts/archive.mts`), so any run of failed nights is made up by the next; `gh workflow run archive.yml -f from=<day> -f to=<day>` does a range by hand. A day's release is immutable once its `manifest.json` is up: a later run only merges that manifest into the catalog again, and a release left without one is filled in again from D1 (which still has the day, since the catalog never listed it). `catalog.json` is only merged into, never rebuilt, and uploaded last, so the Worker never prunes a day whose archive isn't whole. A catalog that can't be downloaded fails the run rather than being replaced.
-- GitHub pauses schedules after 60 days without a commit. The Worker's nightly dispatch doesn't pause but needs `GITHUB_TOKEN`, and Inputs has no schedule of its own: without the token, the site keeps the last inputs, map data stops refreshing, and samples pile up in D1 until archiving resumes.
-
-Nothing here deletes releases. Each is a few MB. Old `inputs-<version>` and `map-data-<version>` releases are safe to delete by hand once no build pins them, which is after the next build, unless you want to rebuild an old release with the inputs it had.
+- Inputs runs never overlap (the workflow's concurrency group). Models are still stored compare-and-swap on the latest `revision`: a run that read an older model gets a 409, and the inputs carry what's stored instead.
+- A day's derived data is a generation: parts first, then a manifest that commits once every part is stored and deletes the replaced generation in the same transaction. Readers get manifest and parts in one read, so an interrupted or concurrent run leaves the last committed generation whole.
+- The nightly prune drops parts no manifest names, even a running publication's, whose commit then fails and retries the next night.

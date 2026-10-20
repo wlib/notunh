@@ -47,7 +47,7 @@ const pinned = async (): Promise<Installed> => {
   const [inputs, mapData] = await Promise.all(([["inputs", "NOTUNH_INPUTS"], ["map-data", "NOTUNH_MAP_DATA"]] as const).map(async ([kind, name]) => {
     const version = process.env[name] ?? (await fetchPointer(kind))?.version
     if (!version)
-      throw new Error(`Nothing is released as ${kind} yet: run its workflow (README, Deploying)`)
+      throw new Error(`Nothing is released as ${kind} yet: run its workflow (docs/deploying.md)`)
     return version
   }))
   return { inputs, "map-data": mapData }

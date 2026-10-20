@@ -26,19 +26,19 @@ test("a page republished, as in a rollback, reads as it did, and last changed wh
   expect(lastmodOf(pageAt("2026-10-03T00:00:00.000Z"), republished)).toBe("2026-10-02T00:00:00.000Z")
 })
 
-test("a sitemap reads back as it was written", () => {
-  fc.assert(fc.property(fc.array(instant, { minLength: PATHS.length, maxLength: PATHS.length }), lastmods => {
+test("a sitemap reads back as it was written", () =>
+  fc.assert(fc.asyncProperty(fc.array(instant, { minLength: PATHS.length, maxLength: PATHS.length }), async lastmods => {
     const entries = PATHS.map((path, index) => ({ loc: SITE + path, lastmod: lastmods[index] }))
-    expect(lastmodsOf(sitemapOf(entries))).toEqual(new Map(entries.map(({ loc, lastmod }) => [loc, lastmod])))
+    expect(lastmodsOf(await sitemapOf(entries))).toEqual(new Map(entries.map(({ loc, lastmod }) => [loc, lastmod])))
   }))
-})
+)
 
-test("a deploy submits exactly the pages whose lastmod is its release", () => {
-  fc.assert(fc.property(instant, fc.array(fc.boolean(), { minLength: PATHS.length, maxLength: PATHS.length }), (release, changed) => {
-    const sitemap = sitemapOf(PATHS.map((path, index) => ({ loc: SITE + path, lastmod: changed[index] ? release : "2025-01-01T00:00:00.000Z" })))
+test("a deploy submits exactly the pages whose lastmod is its release", () =>
+  fc.assert(fc.asyncProperty(instant, fc.array(fc.boolean(), { minLength: PATHS.length, maxLength: PATHS.length }), async (release, changed) => {
+    const sitemap = await sitemapOf(PATHS.map((path, index) => ({ loc: SITE + path, lastmod: changed[index] ? release : "2025-01-01T00:00:00.000Z" })))
     expect(changedOf(sitemap, release)).toEqual(PATHS.filter((_, index) => changed[index]).map(path => SITE + path))
   }))
-})
+)
 
 /** A fetch that answers with a status, recording what it's asked */
 const stub = (status: number) => {

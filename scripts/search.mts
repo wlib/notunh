@@ -5,6 +5,7 @@
 // the home page's alone. Offline, as pull requests are built, nothing is compared and every page is this build's
 
 import { mkdir, readFile, writeFile } from "node:fs/promises"
+import { jsx } from "bruh/server"
 import { buildOf } from "../src/shell/manifest.mts"
 import { INDEXNOW_KEY, PATHS, SITE } from "../src/shell/pages.mts"
 import { isOffline } from "./files.mts"
@@ -24,12 +25,13 @@ export const lastmodOf = (built: string, served?: string, servedLastmod?: string
   return servedLastmod ?? published ?? release
 }
 
-export const sitemapOf = (entries: { loc: string, lastmod: string }[]) =>
-  `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${entries.map(({ loc, lastmod }) => `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`).join("\n")}
-</urlset>
-`
+/** A sitemap of pages and when each last changed */
+export const sitemapOf = async (entries: { loc: string, lastmod: string }[]) =>
+  `<?xml version="1.0" encoding="UTF-8"?>\n${await jsx("urlset", {
+    // bruh types the attributes of HTML, SVG, and MathML alone, so the sitemap's namespace goes untyped
+    ...{ xmlns: "http://www.sitemaps.org/schemas/sitemap/0.9" } as {},
+    children: entries.map(({ loc, lastmod }) => jsx("url", { children: [jsx("loc", { children: loc }), jsx("lastmod", { children: lastmod })] }))
+  }).toStringPromise()}\n`
 
 /** Each page's lastmod in a sitemap, by its URL */
 export const lastmodsOf = (sitemap: string) =>
@@ -63,7 +65,7 @@ if (import.meta.main) {
     const built = await readFile(new URL(`.${path}index.html`, DIST), "utf8")
     return { loc, lastmod: lastmodOf(built, await served(path), servedLastmods.get(loc)) }
   }))
-  await write("/sitemap.xml", sitemapOf(entries))
+  await write("/sitemap.xml", await sitemapOf(entries))
   await write(`/${INDEXNOW_KEY}.txt`, INDEXNOW_KEY)
   console.log(`Sitemap: ${entries.map(({ loc, lastmod }) => `${loc} ${lastmod}`).join(", ")}`)
 }

@@ -1,22 +1,20 @@
 # Map data
 
-Everything the map has of OpenStreetMap, plus the base map style, walking, and place search. Buses are in [transit.md](transit.md).
+What the map takes from OpenStreetMap, plus the base map, walking, and place search. Buses are in [transit.md](transit.md).
 
 ## One generation from one extract
 
-The **Map data** workflow (`.github/workflows/map.yml`) downloads Geofabrik's New Hampshire extract each Monday, and `scripts/map/osm.mts` makes three things from it:
+The Map data workflow (`.github/workflows/map.yml`) downloads Geofabrik's New Hampshire extract each Monday, and `scripts/map/osm.mts` makes:
 
 - `src/map/walk.json`: the walking network around Durham;
-- `src/map/gazetteer.json`: every place OSM names, with its kind, middle, and extent, and each building's outline and doors;
-- our own vector tiles, made with [Planetiler](https://github.com/onthegomap/planetiler) (`scripts/map/tiles.mts`).
+- `src/map/gazetteer.json`: every named place, with kind, middle, and extent, and each building's outline and doors;
+- vector tiles, made with [Planetiler](https://github.com/onthegomap/planetiler) (`scripts/map/tiles.mts`).
 
-The three are one **generation**, each file stamped with where it came from (`src/shared/made.mts`): the extract's date and a hash of the generating code, `campus.yml`, the packages it uses as `package-lock.json` resolves them, and Planetiler's version. Together those name the version, `<extract date>-<generator8>`. A generation is published whole as the immutable release `map-data-<version>` (one `map-data.tar.gz` and a manifest of hashes), then `latest.json` on the `map-data` release is moved to point at it (`scripts/release.mts`, `.github/actions/publish`). A build installs the generation it pins (`installMapData` in `scripts/inputs.mts`): all of it or none, hashes checked before anything is swapped in, and it fails while nothing is published. Only an offline build takes the fixtures' walk and gazetteer instead, with OpenFreeMap's tiles alone.
+The three are one generation. Each file is stamped (`src/shared/made.mts`) with the extract's date and a hash of the generating code, `campus.yml`, the locked package versions, and Planetiler's version, giving the version `<extract date>-<generator8>`. It's published whole as the immutable release `map-data-<version>`, then the `map-data` release's `latest.json` is moved to it (`scripts/release.mts`).
 
-The workflow publishes only when the pointer doesn't already name the generation, so the schedule and the Worker's Monday dispatch can both fire safely.
+A build installs its pinned generation (`installMapData` in `scripts/inputs.mts`): all or nothing, hashes checked first. It fails if nothing is published. Only an offline build uses the fixtures' walk and gazetteer, with OpenFreeMap's tiles alone.
 
-`scripts/map/pbf.mts` reads the extract in about 3 s. `@osmix/pbf` handles the file's framing, blocks, and protobuf; what OSM's fields mean and how elements are gathered are ours. A truncated file is refused rather than misread.
-
-To make a generation locally (needs Java 21+):
+`scripts/map/pbf.mts` reads the extract in about 3 s on top of `@osmix/pbf`, and refuses a truncated file. To make a generation locally (Java 21+):
 
 ```sh
 node scripts/map/osm.mts <extract.osm.pbf> <planetiler.jar> [--release <folder>]
@@ -27,32 +25,32 @@ node scripts/map/osm.mts <extract.osm.pbf> <planetiler.jar> [--release <folder>]
 Two sets (`src/map/basemap/tiles.mts`), served from `public/data/map/tiles/<version>/<set>/{z}/{x}/{y}.pbf`:
 
 - **base**: the OpenMapTiles schema Liberty draws, zooms 10 to 14 around Durham, Dover, and Portsmouth;
-- **campus**: a schema of our own (`scripts/map/campus.yml`), zooms 14 to 16 around Durham: building names, parking, doors, benches, emergency phones, drinking water, fences and walls, trees.
+- **campus**: our own schema (`scripts/map/campus.yml`), zooms 14 to 16 around Durham: building names, parking, doors, benches, emergency phones, water, fences, trees.
 
-Each set is cut to exactly the tiles wholly inside its boxes, which stay in New Hampshire since the extract has nothing of Maine across the river. Where Planetiler made no tile there's an empty file, so every tile the map asks us for exists. The style names tiles as `tiles://<set>/{z}/{x}/{y}`, and the map's `tiles` protocol fetches each from us where the set covers it, else from upstream (OpenFreeMap's pinned planet build, for the base set), else none. So each tile is wholly ours or wholly OpenFreeMap's, and they meet without a seam.
+Each set is exactly the tiles wholly inside its boxes, with an empty file wherever Planetiler made none. The style names tiles `tiles://<set>/{z}/{x}/{y}`, and the map's `tiles` protocol fetches ours where the set covers, else OpenFreeMap's pinned planet build. So each tile is wholly ours or wholly theirs, and they meet without a seam.
 
-Tiles are stored uncompressed: gzip only saves a quarter, and MapLibre can't read it without a `Content-Encoding` header. Cloudflare compresses them in transit. A version is about 1,200 files and 3.2 MB; the build keeps the previously served version beside the new one for open tabs, well within the free plan's 20,000 files per deploy.
+Tiles are stored uncompressed: gzip saves only a quarter, and MapLibre can't read it without `Content-Encoding`. Cloudflare compresses them in transit.
 
 ## Base map
 
-OpenFreeMap's Liberty style, made ours as the inputs are made each night (`scripts/map/style.mts`, `src/map/basemap/style.mts`) into a folder under `public/data/map/` named by a hash of everything in it, so style, sprite, and fonts always match. `src/map/style.json` names that folder and is bundled like other data.
+OpenFreeMap's Liberty style, restyled nightly with the inputs (`scripts/map/style.mts`, `src/map/basemap/style.mts`) into a folder under `public/data/map/` named by the hash of its contents, so style, sprite, and fonts always match. `src/map/style.json` names that folder.
 
-- Sprite and the Latin and punctuation glyph ranges are served from our origin; rarer ranges still come from OpenFreeMap.
+- Sprite and the Latin and punctuation glyphs are served from our origin; rarer glyph ranges come from OpenFreeMap.
 - Tile URLs point at ours where we have them, else at the planet build current when the style was acquired, so they never change under a running page.
-- Our campus layers are added, and layers are redrawn where they hide what's in the tiles: house numbers, bicycle parking, ATMs, woods, railways and platforms, campus land use and pitches. Unnamed flowerbeds, barriers, and OSM bus stops (our own stops already show) are left out.
+- Campus layers are added, and layers that hide what the tiles have are redrawn. Unnamed flowerbeds, barriers, and OSM bus stops are left out.
 
-On the origin, the previously served style folder stays one more build beside the new one (`keepServedStyle`).
+The previously served style folder stays one more build (`keepServedStyle`).
 
 ## Walking
 
-`src/routing/graph.mts`, `src/routing/walks.mts`. The network keeps every connected part of OSM's paths with twenty or more paths. A walk goes to and from a building's nearest door where the gazetteer knows its doors, else the place itself, joining the network by the nearest few paths and letting the shortest way decide.
+`src/routing/graph.mts`, `src/routing/walks.mts`. The network keeps every connected part of OSM's paths with twenty or more paths. A walk goes to and from a building's nearest door where the gazetteer knows its doors, else the place itself.
 
-Where the network doesn't join both ends, the walk is an **estimate**: a straight line, drawn dashed and faint. The planner allows it 30 % more than its distance takes at 1.3 m/s, against 10 % for a walk along the network.
+Where the network doesn't join both ends, the walk is an **estimate**: a straight line, drawn dashed. The planner allows it 30 % over its time at 1.3 m/s, against 10 % for a network walk.
 
 ## Places
 
-- **Search** (`src/places/search.mts`): the gazetteer, stops, and laundry and dining buildings first, with uFuzzy (as dining searches foods). Each name appears once, as the place by that name nearest the middle of campus. [Photon](https://photon.komoot.io) only for addresses, or when little is found locally.
-- **Naming a tapped spot** (`src/places/gazetteer.mts`): the map's label there, else the gazetteer building it's in (by outline where known) or a place within 60 m, else the tiles' house number, else Photon.
-- **Laundry and dining buildings**: `scripts/map/places.mts` matches them to campus buildings in the gazetteer, into `src/map/places.json`. The laundry vendor puts every room at the same spot, so rooms are matched to halls by name, with a small alias table where OSM names a building differently. An unmatched room or hall fails the build. `places.json` records a hash of its inputs (gazetteer, rooms, menus, code) and is derived again when any changes.
+- **Search** (`src/places/search.mts`): gazetteer, stops, and laundry and dining buildings, with uFuzzy. Each name appears once, as the place nearest the middle of campus. [Photon](https://photon.komoot.io) only for addresses, or when little is found locally.
+- **Naming a tapped spot** (`src/places/gazetteer.mts`): the map's label, else the building it's in or a place within 60 m, else the tiles' house number, else Photon.
+- **Laundry and dining buildings**: `scripts/map/places.mts` matches them to gazetteer buildings into `src/map/places.json`. The vendor puts every laundry room at the same spot, so rooms match halls by name, with a small alias table. An unmatched room or hall fails the build.
 
-`/map/?to=laundry/<room>` or `?to=dining/<hall>`, as the laundry and dining pages link, plans a trip there from your location.
+`/map/?to=laundry/<room>` or `?to=dining/<hall>` plans a trip there from your location.

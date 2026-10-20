@@ -84,7 +84,7 @@ if (import.meta.main) {
     else {
       const file = await pack(rows)
       // Packing must be lossless before anything's published, as D1 drops the samples once the day is cataloged
-      if (!isDeepStrictEqual(await unpack(fileOf(day), Readable.from([file])), rows.toSorted(byMinute)))
+      if (!isDeepStrictEqual(await unpack(Readable.from([file])), rows.toSorted(byMinute)))
         throw new Error(`The archive of ${day} doesn't read back as its rows`)
       const manifest = await manifestOf(day, rows, file)
       await mkdir(folder, { recursive: true })

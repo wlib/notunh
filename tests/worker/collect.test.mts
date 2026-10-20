@@ -5,6 +5,7 @@ import { RAW_VERSION, decode, packPoll, unpackFixes, type RawFix } from "../../s
 import { sampling, type Env, type Source } from "../../worker/collect.mts"
 import { POLLS, buses } from "../../worker/buses.mts"
 import { predictions } from "../../worker/predictions.mts"
+import worker from "../../worker/index.mts"
 import { d1 } from "./d1.mts"
 
 afterEach(() => {
@@ -96,4 +97,21 @@ test("the predictions source records its round as one poll, failed if any reques
   expect(await predictions.collect(AT, new AbortController().signal)).toEqual({ samples: [], polls: [[0, null]] })
   vi.stubGlobal("fetch", async () => Response.json([vehicle("T-51", AT, 3600)]))
   expect(await predictions.collect(AT, new AbortController().signal)).toEqual({ samples: [], polls: [[0, 0]] })
+})
+
+test("the nightly run starts the workflows even when its prune fails", async () => {
+  const db = d1()
+  db.batch = async () => { throw new Error("D1 is down") }
+  const env = { DB: db, RETAIN_DAYS: 60, RETAIN_ARCHIVED_DAYS: 14, RETAIN_VISIT_DAYS: 180, RETAIN_STATISTICS_DAYS: 400, GITHUB_TOKEN: "token" } as unknown as Env
+  const dispatched: string[] = []
+  vi.stubGlobal("fetch", async (url: string) => {
+    if (url.startsWith("https://api.github.com/"))
+      dispatched.push(url.match(/workflows\/([\w.]+)\//)![1])
+    return new Response(null, { status: url.startsWith("https://api.github.com/") ? 204 : 404 })
+  })
+  const logged = vi.spyOn(console, "error").mockImplementation(() => {})
+  await worker.scheduled({ cron: "17 8 * * *", scheduledTime: Date.parse("2026-10-20T08:17:00Z") } as ScheduledController, env)
+  expect(dispatched).toEqual(["archive.yml", "inputs.yml"])
+  expect(logged).toHaveBeenCalledWith(expect.objectContaining({ message: "D1 is down" }))
+  logged.mockRestore()
 })

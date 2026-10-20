@@ -2,6 +2,9 @@
   "private": true,
   "name": "notunh",
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "icons": "node scripts/icons.mts",
     "fixtures": "node tests/fixtures/make.mts",

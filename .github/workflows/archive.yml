@@ -1,8 +1,8 @@
 # Archives what the Worker observed on each completed service day: the buses' fixes, Umo's predictions, and the polls
 # that took them, losslessly (format in src/transit/observations/archive.mts). Each day is its own immutable release,
-# observations-<day>, holding observations-<day>.ndjson.zst (.ndjson.gz for days archived before 2026-10-20) and a
-# manifest.json naming the file. Its manifest is then merged into catalog.json on the observations release. The
-# catalog is uploaded last, so a day is listed only once its archive is whole.
+# observations-<day>, holding observations-<day>.ndjson.zst and a manifest.json naming the file. Its manifest is then
+# merged into catalog.json on the observations release. The catalog is uploaded last, so a day is listed only once its
+# archive is whole.
 #
 # The Worker keeps a day's samples in D1 for RETAIN_ARCHIVED_DAYS (14) once the catalog lists it, and until then
 # however long that takes. Each run archives every settled day D1 still has that the catalog doesn't, the oldest
@@ -37,6 +37,7 @@ concurrency:
 
 jobs:
   archive:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -21,6 +21,15 @@ const message = (error: unknown) =>
   error instanceof Error ? error.message : `${error}`
 
 /** Learns the model stored under a name as asked, and writes what the page loads to output, giving back the model */
+/**
+ * Says learning didn't get as far as it should. The build still goes ahead with what was learned, but the job fails
+ * once the rest is published, so a day that never folds is seen rather than freezing the model quietly
+ */
+const stalled = (reason: string) => {
+  console.warn(reason)
+  process.exitCode = 1
+}
+
 export const learn = async <M extends Learned, B = M>(name: string, output: URL, {
   empty, first, last, fold, prepare, bundle = model => model as unknown as B,
   store = process.argv.includes("--store"), rebuild = process.argv.includes("--rebuild")
@@ -58,10 +67,10 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
           learned = await fold(learned, day)
       }
       catch (error) {
-        console.warn(`${name}: stopped${day ? ` at ${day}` : ""}, which the next run carries on from: ${message(error)}`)
+        stalled(`${name}: stopped${day ? ` at ${day}` : ""}, which the next run carries on from: ${message(error)}`)
       }
       if (learned !== model && learned.through !== null && learned.through >= (model.through ?? ""))
-        await writeModel(name, learned, revision).catch(error => console.warn(`${name}: not stored: ${message(error)}`))
+        await writeModel(name, learned, revision).catch(error => stalled(`${name}: not stored: ${message(error)}`))
       model = ofThisShape((await readModel<M>(name)).state) ?? empty()
     }
   }

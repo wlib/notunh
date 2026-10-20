@@ -6,7 +6,7 @@
 
 import { createInterface } from "node:readline"
 import { Readable } from "node:stream"
-import { createGunzip, createZstdDecompress } from "node:zlib"
+import { createZstdDecompress } from "node:zlib"
 import { decode, fromHex, observe, type ObservedRow, type Source } from "../src/transit/observations/raw.mts"
 import { archiveUrl, fetchCatalog, type Catalog, type Manifest } from "../src/transit/observations/archive.mts"
 import { serviceDayStart } from "../src/transit/feed.mts"
@@ -59,9 +59,9 @@ export const storedRows = async (day: Day, skip = false) =>
     Promise.all((await readRows<{ at: number, body: string }>(source, day)).map(row => decoded(source, row, skip)))
   ))).flat(2)
 
-/** The rows an archive holds, a line each, as its file's bytes come: zstd, or gzip for a .gz archived before 2026-10-20 */
-export const unpack = async (file: string, bytes: AsyncIterable<Uint8Array>) => {
-  const lines = createInterface({ input: Readable.from(bytes).pipe(file.endsWith(".gz") ? createGunzip() : createZstdDecompress()), crlfDelay: Infinity })
+/** The rows an archive holds, a line each, as its file's zstd bytes come */
+export const unpack = async (bytes: AsyncIterable<Uint8Array>) => {
+  const lines = createInterface({ input: Readable.from(bytes).pipe(createZstdDecompress()), crlfDelay: Infinity })
   const rows: ObservedRow[] = []
   for await (const line of lines)
     if (line)
@@ -82,7 +82,7 @@ export const archivedRows = async (manifest: Manifest, load = fetch) => {
       out.enqueue(chunk)
     }
   })).tee()
-  const [hash, rows] = await Promise.all([contentHash(hashing), unpack(url, reading).catch(() => undefined)])
+  const [hash, rows] = await Promise.all([contentHash(hashing), unpack(reading).catch(() => undefined)])
   if (bytes !== manifest.bytes || hash !== manifest.sha256 || !rows)
     throw new Error(`${url} isn't the file its manifest names`)
   return rows

@@ -43,7 +43,10 @@ jobs:
       - run: node scripts/data.mts acquire
       # Nothing is written to the Worker until the code that writes it passes its checks, on the fixtures
       - run: NOTUNH_OFFLINE=1 node scripts/inputs.mts && npm run typecheck && npm test
-      - run: node scripts/data.mts learn --store ${{ inputs.rebuild && '--rebuild' || '' }}
+      # A model that didn't learn every day fails the job, but only once what was learned is published
+      - id: learn
+        run: node scripts/data.mts learn --store ${{ inputs.rebuild && '--rebuild' || '' }}
+        continue-on-error: true
         env:
           BUILD_TOKEN: ${{ secrets.BUILD_TOKEN }}
       # Only inputs the site builds and passes its tests with are published, as Workers Builds will build it
@@ -57,3 +60,5 @@ jobs:
           folder: release
           notes: The timetable, style, menus, laundry rooms, and models a build of the site installs, made by the Inputs workflow, whole in one archive with a manifest of its hashes
           deploy-hook: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}
+      - if: steps.learn.outcome == 'failure'
+        run: echo "::error::Learning stopped short; its log says where" && exit 1

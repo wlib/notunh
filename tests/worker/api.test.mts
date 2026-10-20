@@ -248,9 +248,14 @@ const daysFrom = (from: number, to: number) =>
 
 test("learning stores every day past the model stored, a day it can't read stopping it there, and the next run carries on from what it stored", async () => {
   expect(await learnThrough(1, addDays(SUNDAY, 18))).toEqual({ folded: daysFrom(0, 18), bundled: { version: 1, through: addDays(SUNDAY, 18) } })
-  // A new version starts afresh, and is stored however far it gets, since the model of another version is no use to it
+  expect(process.exitCode ?? 0).toBe(0)
+  // A new version starts afresh, and is stored however far it gets, since the model of another version is no use to it,
+  // but the run fails once it's done, so a day that never folds is seen
   expect(await learnThrough(2, addDays(SUNDAY, 18), { unreadable: addDays(SUNDAY, 11) })).toEqual({ folded: daysFrom(0, 10), bundled: { version: 2, through: addDays(SUNDAY, 10) } })
+  expect(process.exitCode).toBe(1)
+  process.exitCode = 0
   expect(await learnThrough(2, addDays(SUNDAY, 18))).toEqual({ folded: daysFrom(11, 18), bundled: { version: 2, through: addDays(SUNDAY, 18) } })
+  expect(process.exitCode).toBe(0)
   expect(await learnThrough(2, addDays(SUNDAY, 18))).toEqual({ folded: [], bundled: { version: 2, through: addDays(SUNDAY, 18) } })
 })
 

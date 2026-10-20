@@ -45,7 +45,8 @@ const archivedDays = () =>
 
 const nightly = async (env: Env, at: number) => {
   const today = localDay(at)
-  await prune(env, today, await archivedDays())
+  // A prune that fails is logged, and the workflows still start, since archiving is what lets the next one drop samples
+  await prune(env, today, await archivedDays()).catch(console.error)
   if (!env.GITHUB_TOKEN) {
     console.warn("No GITHUB_TOKEN secret, so no workflow is started, and the site isn't rebuilt")
     return

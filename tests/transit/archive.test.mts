@@ -3,7 +3,6 @@ import fc from "fast-check"
 import { Readable } from "node:stream"
 import { type ObservedRow, RAW_VERSION } from "../../src/transit/observations/raw.mts"
 import { CATALOG, type Manifest, archiveUrl, fetchCatalog, fileOf } from "../../src/transit/observations/archive.mts"
-import { gzipSync } from "node:zlib"
 import { serviceDayStart } from "../../src/transit/feed.mts"
 import { addDays, daysBetween } from "../../src/shared/time.mts"
 import { catalogWith, daysToArchive, manifestOf, pack } from "../../scripts/archive.mts"
@@ -48,7 +47,7 @@ const rows = fc.uniqueArray(
 test("an archive reads back as exactly the rows it was packed from, in the order of their minutes, and packs to the same bytes again", () =>
   fc.assert(fc.asyncProperty(rows, async rows => {
     const file = await pack(rows)
-    expect(await unpack(fileOf(DAY), Readable.from([file]))).toEqual(rows.toSorted(byMinute))
+    expect(await unpack(Readable.from([file]))).toEqual(rows.toSorted(byMinute))
     expect(await pack(rows.toReversed())).toEqual(file)
   }))
 )
@@ -74,7 +73,7 @@ test("a manifest counts each source's rows, samples, versions, and polls, and na
 
 const manifest = (day: string, sha256 = "0".repeat(64)): Manifest => {
   const counts = { rows: 1, samples: 1, versions: [RAW_VERSION], polls: 1, failed: 0 }
-  return { day, sha256, bytes: 1, sources: { buses: counts, predictions: counts } }
+  return { day, file: fileOf(day), sha256, bytes: 1, sources: { buses: counts, predictions: counts } }
 }
 
 test("merging manifests into the catalog keeps one per day, the latest merged, in order of day", () =>
@@ -100,7 +99,7 @@ test("the days to archive are those asked for that have settled and aren't archi
   }))
 )
 
-test("an archived day is read only when its file is exactly what its manifest names, gzipped as it was before 2026-10-20 or zstd's", async () => {
+test("an archived day is read only when its file is exactly what its manifest names", async () => {
   const rows: ObservedRow[] = [{ source: "buses", at: START, version: RAW_VERSION, samples: [], polls: [[0.5, 0]] }]
   const file = await pack(rows)
   const named = await manifestOf(DAY, rows, file)
@@ -115,12 +114,6 @@ test("an archived day is read only when its file is exactly what its manifest na
   await expect(archivedRows({ ...named, sha256: "f".repeat(64) }, serve(file))).rejects.toThrow("isn't the file")
   await expect(archivedRows({ ...named, bytes: named.bytes + 1 }, serve(file))).rejects.toThrow("isn't the file")
   await expect(archivedRows(named, serve(file, 404))).rejects.toThrow("404")
-  // A day archived before manifests named their file is the gzipped one
-  const gzipped = gzipSync(`${JSON.stringify(rows[0])}\n`)
-  const { file: _, ...older } = await manifestOf(DAY, rows, gzipped)
-  expect(await archivedRows(older, serve(gzipped))).toEqual(rows)
-  expect(urls.at(-1)).toMatch(/\.ndjson\.gz$/)
-  await expect(archivedRows({ ...older, file: named.file }, serve(gzipped))).rejects.toThrow("isn't the file")
 })
 
 test("the catalog is empty while there's none, and anything else wrong with it fails", async () => {

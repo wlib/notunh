@@ -1,9 +1,8 @@
 // The lossless archive of what the Worker observed (raw.mts), written by scripts/archive.mts from
 // .github/workflows/archive.yml. Each completed service day's stored rows of both sources, decoded, become one
-// zstd-compressed ndjson file (gzipped for days before 2026-10-20) on its own immutable GitHub release,
-// observations-<day>, with a manifest. catalog.json, on the one mutable release, observations, lists every day
-// archived and is uploaded last. The Worker deletes a day's samples after RETAIN_ARCHIVED_DAYS only once the catalog
-// lists it
+// zstd-compressed ndjson file on its own immutable GitHub release, observations-<day>, with a manifest. catalog.json,
+// on the one mutable release, observations, lists every day archived and is uploaded last. The Worker deletes a day's
+// samples after RETAIN_ARCHIVED_DAYS only once the catalog lists it
 
 import * as v from "valibot"
 import { getJson } from "../../shared/json.mts"
@@ -12,13 +11,13 @@ import { Day } from "../../shared/time.mts"
 const RELEASES = "https://github.com/wlib/notunh/releases/download/"
 export const CATALOG = `${RELEASES}observations/catalog.json`
 
-/** The name of a day's archive as it's written now */
+/** The name of a day's archive */
 export const fileOf = (day: Day) =>
   `observations-${day}.ndjson.zst`
 
-/** Where a day's archive is, as its manifest names it, or before manifests named it, the gzipped file it was */
+/** Where a day's archive is, as its manifest names it */
 export const archiveUrl = ({ day, file }: Pick<Manifest, "day" | "file">) =>
-  `${RELEASES}observations-${day}/${file ?? `observations-${day}.ndjson.gz`}`
+  `${RELEASES}observations-${day}/${file}`
 
 /** What a source's rows of a day hold, and when it was looking */
 export const Counts = v.object({
@@ -35,8 +34,7 @@ export type Counts = v.InferOutput<typeof Counts>
 /** An archived day, as its manifest.json says: the file's name, SHA-256, and size, and each source's counts */
 export const Manifest = v.object({
   day:     Day,
-  /** Present from 2026-10-20, when files became zstd. Older manifests leave it out for the gzipped name */
-  file:    v.optional(v.string()),
+  file:    v.string(),
   sha256:  v.string(),
   bytes:   v.number(),
   sources: v.object({ buses: Counts, predictions: Counts })

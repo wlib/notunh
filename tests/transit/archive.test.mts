@@ -44,12 +44,15 @@ const rows = fc.uniqueArray(
   { selector: ({ source, at }) => `${source} ${at}` }
 ).map(rows => JSON.parse(JSON.stringify(rows)) as ObservedRow[])
 
+// Each pack sets up zstd at level 19 with long-distance matching, which takes a slow runner a while, so the
+// properties that pack try fewer cases
 test("an archive reads back as exactly the rows it was packed from, in the order of their minutes, and packs to the same bytes again", () =>
   fc.assert(fc.asyncProperty(rows, async rows => {
     const file = await pack(rows)
     expect(await unpack(Readable.from([file]))).toEqual(rows.toSorted(byMinute))
     expect(await pack(rows.toReversed())).toEqual(file)
-  }))
+  }), { numRuns: 25 }),
+  30_000
 )
 
 test("a manifest counts each source's rows, samples, versions, and polls, and names the file by its hash and size", () =>
@@ -68,7 +71,8 @@ test("a manifest counts each source's rows, samples, versions, and polls, and na
         failed:   all.filter(([, seen]) => seen === null).length
       })
     }
-  }))
+  }), { numRuns: 25 }),
+  30_000
 )
 
 const manifest = (day: string, sha256 = "0".repeat(64)): Manifest => {

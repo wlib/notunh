@@ -56,10 +56,15 @@ export default () =>
 
           <details id="usage">
             <summary>Usage stats</summary>
+            <p>notunh records basic info like page views and errors for everyone.</p>
+            <p>If you opt in, notunh also collects stats without identifying you, like:</p>
+            <ul>
+              <li>which features people use and how</li>
+              <li>which bus stops and buildings are popular</li>
+            </ul>
             <p>
-              notunh counts page views and errors with <a href="https://posthog.com">PostHog</a>, storing nothing on
-              your device. Sharing usage stats also counts which features get used and which stops trips go between,
-              each trip on its own. Never your exact location, what you type, or who you are, and never ads.
+              It never collects your exact location or what you type. Stats are kept in{" "}
+              <a href="https://posthog.com">PostHog</a> and aren't shared with anyone else or used for ads.
             </p>
             <label class="choice">
               <input type="checkbox" data-usage />

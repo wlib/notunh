@@ -98,13 +98,10 @@ document.body.append(
   <div class="usage-prompt-slot">
     {r(() => !choice.value && !isPrivate &&
       <aside class="usage-prompt" aria-label="Usage stats">
-        <p>
-          <strong>Help improve notunh?</strong>
-          Share which features you use, never who you are. <a href="/#usage">Details</a>
-        </p>
+        <p>Let notunh collect non-identifying usage stats? <a href="/#usage">See details</a></p>
         <div class="actions">
-          <button class="button" type="button" onclick={() => choice.value = "no"}>No thanks</button>
-          <button class="button primary" type="button" onclick={() => choice.value = "yes"}>Sure</button>
+          <button class="button" type="button" onclick={() => choice.value = "no"}>No</button>
+          <button class="button primary" type="button" onclick={() => choice.value = "yes"}>Ok</button>
         </div>
       </aside>
     )}

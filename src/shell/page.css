@@ -17,7 +17,7 @@
   margin: 0;
 }
 
-.page section p + p {
+.page :is(section, details) p + p {
   margin-block-start: 0.75rem;
 }
 

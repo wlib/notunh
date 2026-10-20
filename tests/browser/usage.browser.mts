@@ -62,7 +62,7 @@ const kept = async (context: BrowserContext, page: Page) => ({
 
 test("a first visit is asked once, the answer is the home page's setting, and nothing reaches PostHog off notunh.app", async ({ page, fixture, posthog }) => {
   await page.goto(`${fixture.origin}/dining/`)
-  await page.getByRole("button", { name: "Sure" }).click()
+  await page.getByRole("button", { name: "Ok", exact: true }).click()
   await expect(page.locator(".usage-prompt")).toHaveCount(0)
 
   await page.goto(`${fixture.origin}/#usage`)
@@ -91,7 +91,7 @@ test("on notunh.app, page views are counted keeping nothing until a yes, which r
   expect(view.properties.$geoip_disable).toBe(true)
   expect(await kept(context, page)).toEqual({ cookies: [], storage: [] })
 
-  await page.getByRole("button", { name: "Sure" }).click()
+  await page.getByRole("button", { name: "Ok", exact: true }).click()
   await page.locator(".room-open").first().click()
   const [opened] = await sent(posthog, "laundry_room_opened")
   expect(Object.keys(opened.properties)).not.toContain("room")
@@ -125,7 +125,7 @@ test("on notunh.app, PostHog's code is kept with the page, so a page opened offl
 
 test("on notunh.app, a trip planned after a yes is counted by its ends' places and the hour, linked to nothing", async ({ page, usageOrigin, posthog }) => {
   await page.goto(`${usageOrigin.origin}/map/`)
-  await page.getByRole("button", { name: "Sure" }).click()
+  await page.getByRole("button", { name: "Ok", exact: true }).click()
   for (const [field, place] of [["Search or tap the map", "Holloway"], ["Where to?", "Kingsbury"]]) {
     await page.getByPlaceholder(field).click()
     await page.getByPlaceholder(field).fill(place)

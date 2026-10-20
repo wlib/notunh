@@ -20,11 +20,9 @@ export type Env = {
   RETAIN_VISIT_DAYS:      number,
   /** How many days of daily statistics and evaluations it keeps */
   RETAIN_STATISTICS_DAYS: number,
-  /** Workers Builds' deploy hook, a secret */
-  DEPLOY_HOOK?:           string,
-  /** Lets the build read and write rows and models through /api/, so it needs no D1 credentials, a secret */
+  /** Lets the workflows read and write rows and models through /api/, so they need no D1 credentials, a secret */
   BUILD_TOKEN?:           string,
-  /** A GitHub token with the actions scope, a secret, for the nightly run to start the Observations and Map data workflows */
+  /** A GitHub token that can start the workflows, a secret, for the nightly run to start them */
   GITHUB_TOKEN?:          string
 }
 

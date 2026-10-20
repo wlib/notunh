@@ -22,8 +22,8 @@
       // Laundry machines: a quarter of the rooms in each minute but every fifth, so each room is polled every 5
       // minutes, and every 15 from 1 to 6 AM
       "1-4,6-9,11-14,16-19,21-24,26-29,31-34,36-39,41-44,46-49,51-54,56-59 * * * *",
-      // Nightly: prune, then rebuild the site with a fresh timetable and menus (4:17 AM in Durham under EDT, 3:17
-      // under EST)
+      // Nightly: prune, then start the workflows that archive the samples and make the inputs, which rebuild the site
+      // with a fresh timetable, menus, and models (4:17 AM in Durham under EDT, 3:17 under EST)
       "17 8 * * *"
     ]
   },
@@ -38,8 +38,8 @@
   "vars": {
     // Days the nightly prune keeps (worker/rows.mts, docs/storage.md):
     // - RETAIN_DAYS: laundry's transitions and polls
-    // - RETAIN_ARCHIVED_DAYS: samples once the observations archive has their day, since builds and refits read older
-    //   days from it. A day the archive doesn't have yet is never pruned
+    // - RETAIN_ARCHIVED_DAYS: samples once the observations archive has their day, since learning reads older days
+    //   from it. A day the archive doesn't have yet is never pruned
     // - RETAIN_VISIT_DAYS: the visits derived from each day, which a refit with the same extractor reuses. With the
     //   models' 4-week half-life, a day 180 days back weighs 1 % of today's
     // - RETAIN_STATISTICS_DAYS: each day's statistics and evaluation, about 25 KB gzipped, so a week can be compared
@@ -50,9 +50,7 @@
     "RETAIN_STATISTICS_DAYS": 400
   },
   // Secrets, set once with `wrangler secret put` (locally, in .dev.vars):
-  // - DEPLOY_HOOK: the Workers Builds hook the nightly run calls to rebuild the site
-  // - BUILD_TOKEN: what the build reads and writes rows and models with
-  // - GITHUB_TOKEN, optional: for the nightly run to start the Observations workflow every night and the Map data
-  //   workflow on Mondays, since GitHub pauses schedules after 60 days without a commit
+  // - BUILD_TOKEN: what the workflows read and write rows and models with
+  // - GITHUB_TOKEN: for the nightly run to start the Observations and Inputs workflows, and Map data on Mondays
   "observability": { "enabled": true }
 }

@@ -31,7 +31,7 @@ src/map/          The map page: state/ (made by createMapState, nothing started 
                   basemap/ (style and tiles)
 src/dining/, src/laundry/   Those pages: state.mts, ui/, and their logic
 worker/           The Cloudflare Worker (Hono, Drizzle on D1): API, crons, laundry proxy
-scripts/          The build's data pipeline, model training and replay, archiving, map data generation
+scripts/          The pipeline: acquiring and installing inputs, model training and replay, archiving, map data
 tests/            Vitest + fast-check, mirroring src/; tests/browser/ runs the service worker in Playwright
 ```
 
@@ -55,58 +55,67 @@ Observations as stored never depend on what's inferred from them. No domain impo
 ## Running
 
 ```sh
-npm run dev           # http://localhost:5173, fetching data first if it's missing (never learns)
+npm run dev           # http://localhost:5173, after installing the inputs and map data the releases point at
 npm test              # vitest + fast-check
 npm run test:browser  # the service worker in Chromium and WebKit (once: npx playwright install chromium webkit)
 npm run typecheck
 npm run worker        # the Worker on http://localhost:8787 with a local D1; fire a cron with
                       # curl "localhost:8787/cdn-cgi/handler/scheduled?cron=*+*+*+*+*"
-npm run data          # refresh every data file from upstream, and the models (`-- fetch` or `-- learn` for one stage)
-npm run fixtures      # remake tests/fixtures/data from the data fetched
+npm run fresh         # the whole pipeline locally: acquire from upstream, learn, and build from those inputs
+                      # (`node scripts/data.mts acquire` or `learn` for one stage; `-- --store` to store what's learned)
+npm run fixtures      # remake tests/fixtures/data from the data installed
 npm run icons         # regenerate PNG icons from public/icon.svg
-npm run osm:refresh   # take the latest map data release, and rematch places
 npm run model -- --local --store   # fit the bus model against `npm run worker` (BUILD_TOKEN here and in .dev.vars)
 npm run storage       # D1's size in bytes and rows per table (needs BUILD_TOKEN)
 npm run db:generate   # a migration in worker/migrations/ for changes to worker/schema.mts
 ```
 
 Environment:
-- `NOTUNH_OFFLINE=1` asks nothing upstream: every data file is copied from `tests/fixtures/data/` and nothing is learned. Pull requests build this way.
-- `NOTUNH_STORE=1` (or `--store`) lets a build that isn't `main`'s store what it learns. Without it only Cloudflare's build of `main` (`WORKERS_CI_BRANCH=main`) writes models; anything else reads them as stored.
-- `BUILD_TOKEN` is the Worker's bearer token for its rows, models, and storage routes. The build needs only this, never D1 credentials.
-- `MODEL_REBUILD=1` (or `--rebuild`) refits the models from the first stored day.
+- `NOTUNH_OFFLINE=1` asks nothing upstream or of GitHub: the fixtures in `tests/fixtures/data/` are installed as the inputs and map data. Pull requests build this way.
+- `NOTUNH_INPUTS` and `NOTUNH_MAP_DATA` pin what a build or `npm run dev` installs: a generation's version, or for the inputs a folder laid out as the repository, given by a path starting with `.` or `/`, like `./inputs`, where `npm run fresh` makes them. Without them, it's what the releases' pointers name.
+- `BUILD_TOKEN` is the Worker's bearer token for its rows, models, timetables, and storage routes, which learning and archiving use instead of D1 credentials. `--store` asks learning to store what it learns in D1, which production then uses; without it, learning only reads. `--rebuild` learns afresh from the first day observed.
 
 ## Building and deploying
 
-Cloudflare Workers Builds builds `main` on every push and nightly (the Worker's 4:17 AM cron POSTs the Deploy Hook). The build command is `npm run build`, the deploy command `npm run deploy`. Keep both steps in `package.json` so the dashboard never needs editing.
+Building only installs what it's pinned to and builds; collecting, archiving, acquiring, and learning are steps of their own that publish what a build takes ([docs/storage.md](docs/storage.md#the-pipeline)). Cloudflare Workers Builds builds `main` on every push and whenever a workflow publishes new inputs or map data (it POSTs the Deploy Hook). The build command is `npm run build`, the deploy command `npm run deploy`. Keep both steps in `package.json` so the dashboard never needs editing.
 
-1. `prebuild` fetches data (timetable, style, menus, rooms, map data, places), runs the typecheck and tests, then learns the bus and laundry models through the Worker (`scripts/data.mts`). Learning never fails the build: without the token or the Worker the last model stays.
+1. `prebuild` installs the inputs and map data generations the releases' pointers name (`scripts/inputs.mts`), keeps what the site serves now beside them for open pages, matches the places, and runs the typecheck and tests. It needs no secrets and writes nothing but its own folder, so any branch's build is safe.
 2. `vite build`.
 3. `predeploy` applies D1 migrations (`npm run db:migrate`); a failed migration stops the deploy.
 4. `wrangler deploy` ships the Worker and site together.
 
-Learning always talks to the Worker deployed before this push, so a change to the model API must work against the previous Worker too. If upstream is down the build fails and the last deploy stays up.
+Each night the Worker's 4:17 AM cron starts the Inputs workflow, which acquires the timetable, style, menus, and laundry rooms, runs the tests, learns the models through the Worker, builds the site with all of that to check it, publishes it as `inputs-<version>`, and POSTs the Deploy Hook. If upstream is down, nothing is published and the site keeps the inputs before. `/inputs.json` on the site says which inputs and map data it was built from.
 
-**Rolling back.** Clients never step back to a release older than the one they have, so `wrangler rollback` only reaches new visitors. To go back for everyone, publish the old release again: rebuild its commit, or stamp a folder an old build wrote with `node scripts/republish.mts <folder>` and deploy it with `wrangler deploy --assets <folder>` (after `npm run db:migrate`; Worker versions don't roll D1 back).
+**Rolling back.** Clients never step back to a release older than the one they have, so `wrangler rollback` only reaches new visitors. To go back for everyone, publish the old release again: rebuild its commit with the `NOTUNH_INPUTS` and `NOTUNH_MAP_DATA` its `/inputs.json` names, or stamp a folder an old build wrote with `node scripts/republish.mts <folder>` and deploy it with `wrangler deploy --assets <folder>` (after `npm run db:migrate`; Worker versions don't roll D1 back).
+
+**Deploying from a Worker that predates the Inputs workflow.** Production's D1 then has migrations 0000 and 0001, and nothing is released as `inputs` or `map-data`.
+
+1. Secrets: the Worker needs `GITHUB_TOKEN` (`wrangler secret put GITHUB_TOKEN`, a fine-grained token for this repository with Actions read and write), and the repository `BUILD_TOKEN` and `CLOUDFLARE_DEPLOY_HOOK`. Check with `npx wrangler secret list` and `gh secret list`.
+2. Merge to `main`. Workers Builds' build of it fails at install, as nothing is released yet, so nothing is migrated or deployed and the site stays as it is.
+3. `gh workflow run map.yml`, and wait for it (`gh run watch`); the build its Deploy Hook starts fails the same way. Then `gh workflow run inputs.yml`. It learns against the Worker still deployed, which refuses learning's writes, so nothing is stored in D1 and the inputs carry an empty bus model (the stored one is of an older version) and the stored laundry model. It publishes `inputs-<version>` and POSTs the Deploy Hook.
+4. That build applies `0002_models_derived_feeds` (columns with defaults the Worker before keeps working with, and new tables), then deploys. Check `npx wrangler d1 migrations list notunh --remote` shows nothing left, and `curl https://notunh.app/inputs.json`.
+5. `gh workflow run inputs.yml` again, or wait for the night: it acquires the timetable into D1, derives each day, refits the bus model from the first day observed, stores both models, and deploys them.
+6. Once that's done and no rollback to the Worker before is wanted, `git mv worker/migrations/after-deploy/0003_drop_visits.sql worker/migrations/` and push; the next deploy drops the old `visits` table. Not before: the Worker before deletes from it in its nightly prune's batch, which would fail every night without it.
+7. Optionally, delete what nothing reads any more: the Worker secret `DEPLOY_HOOK` (`wrangler secret delete DEPLOY_HOOK`) and the Workers Builds variable `BUILD_TOKEN`.
 
 ### Workflows and secrets
 
 | Workflow | When | Does | Needs |
 |---|---|---|---|
 | Check (`check.yml`) | Pull requests | Offline build with fixtures, unit and browser tests | Nothing (read-only token, no secrets) |
+| Inputs (`inputs.yml`) | Worker dispatch nightly, or by hand (`-f rebuild=true` to learn afresh) | Acquires the timetable, style, menus, and rooms, learns the models, publishes them as release `inputs-<version>`, then rebuilds the site | `BUILD_TOKEN`, `CLOUDFLARE_DEPLOY_HOOK` |
 | Observations (`archive.yml`) | Nightly 9:30 UTC, Worker dispatch, or `-f from= -f to=` | Archives each settled service day's samples as release `observations-<day>` and updates `catalog.json` | `BUILD_TOKEN` |
-| Map data (`map.yml`) | Mondays, Worker dispatch, or by hand | Builds walk network, gazetteer, and tiles from OSM as release `map-data-<version>` | `CLOUDFLARE_DEPLOY_HOOK` (optional, to rebuild after) |
-| Refresh (`refresh.yml`) | By hand | POSTs the Deploy Hook | `CLOUDFLARE_DEPLOY_HOOK` |
+| Map data (`map.yml`) | Mondays, Worker dispatch, or by hand | Builds walk network, gazetteer, and tiles from OSM as release `map-data-<version>`, then rebuilds the site | `CLOUDFLARE_DEPLOY_HOOK` (optional) |
 
-Worker secrets (`wrangler secret put`): `DEPLOY_HOOK`, `BUILD_TOKEN` (also a Workers Builds variable and a repository secret; locally in `.dev.vars`), and optionally `GITHUB_TOKEN` with the `actions` scope. GitHub pauses scheduled workflows after 60 days without a commit, so the Worker's nightly run dispatches Observations every night and Map data on Mondays when it has `GITHUB_TOKEN`.
+Worker secrets (`wrangler secret put`): `BUILD_TOKEN` (also a repository secret; locally in `.dev.vars`) and `GITHUB_TOKEN`, which can start this repository's workflows. The Worker's nightly run starts Observations and Inputs every night, and Map data on Mondays. Inputs has no schedule of its own, since GitHub pauses schedules after 60 days without a commit, so without `GITHUB_TOKEN` the site keeps the inputs it has.
 
 ## Data sources
 
 - **Buses**: the Umo IQ rider API (no key, open CORS), polled by browsers directly and archived by the Worker's crons.
-- **Timetable**: Wildcat Transit's GTFS feed on National RTAP, converted at build time (no CORS). Umo's trip and stop ids match it.
+- **Timetable**: Wildcat Transit's GTFS feed on National RTAP, converted nightly as an input (no CORS). Umo's trip and stop ids match it.
 - **OpenStreetMap**: Geofabrik's New Hampshire extract, made weekly into the walking network, gazetteer, and tiles.
-- **Base map**: OpenFreeMap's Liberty style, restyled and partly self-hosted at build time.
-- **Menus**: Nutrislice, fetched at build time and split into content-addressed files under `public/data/dining/`.
+- **Base map**: OpenFreeMap's Liberty style, restyled and partly self-hosted, acquired nightly as an input.
+- **Menus**: Nutrislice, acquired nightly as an input and split into content-addressed files under `public/data/dining/`.
 - **Laundry**: LaundryConnect (Speed Queen), through the Worker. The proxy forwards the asker's own User-Agent; the cron sends none and polls each room every 5 minutes (15 overnight). Nothing else asks the vendor.
 
 ## Further notes

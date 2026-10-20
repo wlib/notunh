@@ -1,20 +1,15 @@
-// What the nightly build stores whole:
-// - the models it publishes, and its checkpoints of learning them (scripts/learn.mts), each by name and the day it
-//   runs through. The latest of each is the last stored, whatever day it runs through, and the last KEEP writes are
-//   kept to roll back to
-// - every timetable it acquires, kept for as long as the observations it interprets, which is forever
+// What learning stores whole (scripts/learn.mts):
+// - the models, each by name and the day it runs through. The latest of each is the last stored, whatever day it runs
+//   through, and the last KEEP writes are kept to roll back to
+// - every timetable acquired, kept for as long as the observations it interprets, which is forever
 
 import type { DrizzleD1Database } from "drizzle-orm/d1"
 import { and, asc, desc, eq, lt, max, sql } from "drizzle-orm"
 import type { Day } from "../src/shared/time.mts"
-import { checkpointOf } from "../src/shared/learn.mts"
 import { feeds, models } from "./schema.mts"
 
 /** What's learned: the map's buses and laundry's rooms */
 export const MODELS = ["buses", "laundry"]
-
-/** What's stored: those, plus their checkpoints, which the build continues from */
-export const STORED = [...MODELS, ...MODELS.map(checkpointOf)]
 
 // Writes kept of each name: a month of nightly models
 const KEEP = 30
@@ -26,9 +21,9 @@ export const latestModel = (db: DrizzleD1Database, name: string) =>
 
 /**
  * Stores a state through a day as the latest, replacing any through the same day, but only if the latest stored is
- * still the revision the writer read (or there's none, for null). Resolves to whether it stored. This settles two
- * builds learning at once: the loser rereads the winner's work and goes on from it. Every write gets a new revision,
- * so two writers can't both succeed. Writes older than the last KEEP are deleted
+ * still the revision the writer read (or there's none, for null). Resolves to whether it stored. This settles two runs
+ * learning at once: the loser's write is refused, and what it writes among the inputs is the winner's. Every write gets
+ * a new revision, so two writers can't both succeed. Writes older than the last KEEP are deleted
  */
 export const saveModel = async (db: DrizzleD1Database, name: string, through: Day, state: unknown, expect: string | null) => {
   const { meta } = await db.run(sql`

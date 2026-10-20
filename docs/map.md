@@ -10,7 +10,7 @@ The **Map data** workflow (`.github/workflows/map.yml`) downloads Geofabrik's Ne
 - `src/map/gazetteer.json`: every place OSM names, with its kind, middle, and extent, and each building's outline and doors;
 - our own vector tiles, made with [Planetiler](https://github.com/onthegomap/planetiler) (`scripts/map/tiles.mts`).
 
-The three are one **generation**, each file stamped with where it came from (`src/shared/made.mts`): the extract's date and a hash of the generating code, `campus.yml`, the packages it uses as `package-lock.json` resolves them, and Planetiler's version. Together those name the version, `<extract date>-<generator8>`. A generation is published whole as the immutable release `map-data-<version>` (one `map-data.tar.gz` and a manifest of hashes), then `latest.json` on the `map-data` release is moved to point at it (`scripts/map/release.mts`). A build takes all of a generation or fails; hashes are checked before anything is swapped in. A build only falls back (to the fixtures' walk and gazetteer and OpenFreeMap's tiles) on a 404 of `latest.json`, meaning nothing has been published yet.
+The three are one **generation**, each file stamped with where it came from (`src/shared/made.mts`): the extract's date and a hash of the generating code, `campus.yml`, the packages it uses as `package-lock.json` resolves them, and Planetiler's version. Together those name the version, `<extract date>-<generator8>`. A generation is published whole as the immutable release `map-data-<version>` (one `map-data.tar.gz` and a manifest of hashes), then `latest.json` on the `map-data` release is moved to point at it (`scripts/release.mts`, `.github/actions/publish`). A build installs the generation it pins (`installMapData` in `scripts/inputs.mts`): all of it or none, hashes checked before anything is swapped in, and it fails while nothing is published. Only an offline build takes the fixtures' walk and gazetteer instead, with OpenFreeMap's tiles alone.
 
 The workflow publishes only when the pointer doesn't already name the generation, so the schedule and the Worker's Monday dispatch can both fire safely.
 
@@ -21,8 +21,6 @@ To make a generation locally (needs Java 21+):
 ```sh
 node scripts/map/osm.mts <extract.osm.pbf> <planetiler.jar> [--release <folder>]
 ```
-
-`npm run osm:refresh` takes the latest published generation instead.
 
 ## Tiles
 
@@ -37,13 +35,13 @@ Tiles are stored uncompressed: gzip only saves a quarter, and MapLibre can't rea
 
 ## Base map
 
-OpenFreeMap's Liberty style, made ours at build time (`scripts/map/style.mts`, `src/map/basemap/style.mts`) into a folder under `public/data/map/` named by a hash of everything in it, so style, sprite, and fonts always match. `src/map/style.json` names that folder and is bundled like other data.
+OpenFreeMap's Liberty style, made ours as the inputs are made each night (`scripts/map/style.mts`, `src/map/basemap/style.mts`) into a folder under `public/data/map/` named by a hash of everything in it, so style, sprite, and fonts always match. `src/map/style.json` names that folder and is bundled like other data.
 
 - Sprite and the Latin and punctuation glyph ranges are served from our origin; rarer ranges still come from OpenFreeMap.
-- Tile URLs point at ours where we have them, else at the planet build current at build time, so they never change under a running page.
+- Tile URLs point at ours where we have them, else at the planet build current when the style was acquired, so they never change under a running page.
 - Our campus layers are added, and layers are redrawn where they hide what's in the tiles: house numbers, bicycle parking, ATMs, woods, railways and platforms, campus land use and pitches. Unnamed flowerbeds, barriers, and OSM bus stops (our own stops already show) are left out.
 
-On the origin, the previously served style folder stays one more build beside the new one.
+On the origin, the previously served style folder stays one more build beside the new one (`keepServedStyle`).
 
 ## Walking
 

@@ -1,7 +1,8 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { readFileSync } from "node:fs"
-import { POINTER, fetchPointer, lockedClosure, manifestOf, mismatches } from "../../scripts/map/release.mts"
+import { fetchPointer, mismatches, pointerOf } from "../../scripts/release.mts"
+import { lockedClosure } from "../../scripts/map/generator.mts"
 import { contentHash } from "../../src/shared/hash.mts"
 import { walkGraph } from "../../scripts/map/walkable.mts"
 import { gazetteerOf } from "../../scripts/map/gazetteer.mts"
@@ -42,13 +43,13 @@ test("the generator's packages are as package-lock.json resolves them, with all 
 
 test("an archive is as its manifest says only when every file it names has exactly those bytes", () =>
   fc.assert(fc.asyncProperty(files, fc.nat(), fc.nat(), async (contents, pick, flip) => {
-    const manifest = await manifestOf(MADE, Object.fromEntries(Object.entries(contents).map(([path, data]) => [path, () => data])))
-    expect(manifest).toMatchObject({ ...MADE, version: versionOf(MADE) })
-    expect(Object.keys(manifest.files).sort()).toEqual(Object.keys(contents).sort())
+    const hashesOf = async (found: Record<string, Uint8Array>): Promise<Record<string, string>> =>
+      Object.fromEntries(await Promise.all(Object.entries(found).map(async ([path, data]) => [path, await contentHash(data)])))
     const hashOf = async (found: Record<string, Uint8Array>) => {
-      const hashes = new Map(await Promise.all(Object.entries(found).map(async ([path, data]) => [path, await contentHash(data)] as const)))
-      return (path: string) => hashes.get(path)
+      const hashes = await hashesOf(found)
+      return (path: string) => hashes[path]
     }
+    const manifest = { version: versionOf(MADE), files: await hashesOf(contents) }
     expect(mismatches(manifest, await hashOf(contents))).toEqual([])
     // Files beyond the manifest's don't matter; one missing or changed does
     expect(mismatches(manifest, await hashOf({ ...contents, extra: new Uint8Array() }))).toEqual([])
@@ -60,23 +61,23 @@ test("an archive is as its manifest says only when every file it names has exact
   }))
 )
 
-test("only a 404 of the pointer means no release yet; any other failure fails the build, and a pointer must name a version", async () => {
+test("only a 404 of the pointer means no release yet; any other failure fails, and a pointer must name a version", async () => {
   const answering = (status: number, body?: unknown) => async (url: string | URL | Request) => {
-    expect(url).toBe(POINTER)
+    expect(url).toBe(pointerOf("map-data"))
     return body === undefined ? new Response(null, { status }) : Response.json(body, { status })
   }
-  expect(await fetchPointer(answering(404))).toBeNull()
-  expect(await fetchPointer(answering(200, { version: "2026-10-13-3fa880d8" }))).toEqual({ version: "2026-10-13-3fa880d8" })
+  expect(await fetchPointer("map-data", answering(404))).toBeNull()
+  expect(await fetchPointer("map-data", answering(200, { version: "2026-10-13-3fa880d8" }))).toEqual({ version: "2026-10-13-3fa880d8" })
   for (const status of [500, 502, 403, 301])
-    await expect(fetchPointer(answering(status))).rejects.toThrow(`${status}`)
-  await expect(fetchPointer(answering(200, {}))).rejects.toThrow("version")
-  await expect(fetchPointer(async () => { throw new TypeError("fetch failed") })).rejects.toThrow("fetch failed")
+    await expect(fetchPointer("map-data", answering(status))).rejects.toThrow(`${status}`)
+  await expect(fetchPointer("map-data", answering(200, {}))).rejects.toThrow("version")
+  await expect(fetchPointer("map-data", async () => { throw new TypeError("fetch failed") })).rejects.toThrow("fetch failed")
 })
 
-// The fallbacks while there's no release, which must be what the generator would make today
+// The fixtures offline builds take, which must be what the generator would make today
 const fixture = <T,>(name: string): T => JSON.parse(readFileSync(new URL(`src/map/${name}.json`, FIXTURES), "utf8"))
 
-test("the walk and gazetteer fallbacks carry where they came from, together, and are shaped as the generator shapes them", () => {
+test("the fixtures' walk and gazetteer carry where they came from, together, and are shaped as the generator shapes them", () => {
   const walk = fixture<{ made: Made } & WalkData>("walk")
   const gazetteer = fixture<Gazetteer>("gazetteer")
   expect(walk.made).toEqual(gazetteer.made)

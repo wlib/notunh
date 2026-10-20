@@ -1,5 +1,5 @@
 // The Worker behind notunh.app's static assets: cron triggers that keep raw samples of the live APIs and laundry's
-// changes in D1, a nightly one that prunes what's past keeping and rebuilds the site, and the routes in api.mts
+// changes in D1, a nightly one that prunes what's past keeping and starts the workflows, and the routes in api.mts
 
 import { CATALOG, fetchCatalog } from "../src/transit/observations/archive.mts"
 import { localDay, weekday } from "../src/shared/time.mts"
@@ -16,9 +16,11 @@ const NIGHTLY = "17 8 * * *"
 // A run past this would overlap the next minute's
 const DEADLINE_MS = 58_000
 
-// The workflows GitHub stops scheduling after 60 days without a commit, so the nightly run starts them too, given
-// a token: Observations every night, which archives the samples before D1 drops them, and Map data on Mondays. A
-// run that finds its work published already does nothing
+// The workflows the nightly run starts, given a token: Observations, which archives the samples before D1 drops them,
+// and Inputs, which acquires the timetable and menus, learns, and rebuilds the site with them, every night, and Map
+// data on Mondays. Inputs has no schedule of its own, so this is the site's nightly clock, which unlike GitHub's
+// schedules doesn't pause after 60 days without a commit. The others' schedules also start them, and a run that finds
+// its work published already does nothing
 const WORKFLOWS = "https://api.github.com/repos/wlib/notunh/actions/workflows/"
 const MONDAY = 0
 
@@ -44,19 +46,16 @@ const archivedDays = () =>
 const nightly = async (env: Env, at: number) => {
   const today = localDay(at)
   await prune(env, today, await archivedDays())
-  // A dispatch that fails, as with a token run out, is logged, and the night's rebuild still goes ahead
-  if (env.GITHUB_TOKEN)
-    for (const workflow of weekday(today) === MONDAY ? ["archive.yml", "map.yml"] : ["archive.yml"])
-      await post(`${WORKFLOWS}${workflow}/dispatches`, {
-        headers: { authorization: `Bearer ${env.GITHUB_TOKEN}`, accept: "application/vnd.github+json", "user-agent": HEADERS["user-agent"] },
-        body:    JSON.stringify({ ref: "main" })
-      }, `${workflow} dispatch`).catch(console.error)
-  // Workers Builds rebuilds main with a fresh timetable and menus, and with whatever the build learns from samples
-  if (!env.DEPLOY_HOOK) {
-    console.warn("No DEPLOY_HOOK secret, so the site isn't rebuilt")
+  if (!env.GITHUB_TOKEN) {
+    console.warn("No GITHUB_TOKEN secret, so no workflow is started, and the site isn't rebuilt")
     return
   }
-  await post(env.DEPLOY_HOOK, {}, "Deploy hook")
+  // Each dispatch is its own, so one that fails, as with a token run out, is logged and the others still go ahead
+  for (const workflow of weekday(today) === MONDAY ? ["archive.yml", "inputs.yml", "map.yml"] : ["archive.yml", "inputs.yml"])
+    await post(`${WORKFLOWS}${workflow}/dispatches`, {
+      headers: { authorization: `Bearer ${env.GITHUB_TOKEN}`, accept: "application/vnd.github+json", "user-agent": HEADERS["user-agent"] },
+      body:    JSON.stringify({ ref: "main" })
+    }, `${workflow} dispatch`).catch(console.error)
 }
 
 const jobs: Job[] = [sampling(buses), sampling(predictions), collector, { cron: NIGHTLY, run: nightly }]

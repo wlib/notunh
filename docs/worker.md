@@ -11,7 +11,7 @@ The free plan allows five cron triggers per account and 10 ms of CPU per invocat
 | `* * * * *` | Buses: polls Umo's vehicles six times, 10 s apart (`worker/buses.mts`) |
 | `*/5 * * * *` | Umo's predictions for routes with a bus out (`worker/predictions.mts`) |
 | every minute but every fifth | Laundry: a quarter of the rooms each minute, so each room every 5 min, and every 15 min from 1 to 6 AM (`worker/laundry.mts`) |
-| `17 8 * * *` (4:17 AM EDT) | Prune, dispatch the Observations workflow (and Map data on Mondays) given `GITHUB_TOKEN`, then POST the Deploy Hook so Cloudflare rebuilds with fresh menus, timetable, and models |
+| `17 8 * * *` (4:17 AM EDT) | Prune, then start the Observations and Inputs workflows (and Map data on Mondays) given `GITHUB_TOKEN`. Inputs makes fresh menus, timetable, and models, and rebuilds the site with them, so this is the site's nightly clock |
 
 Bus samples are stored as one gzipped row per source per minute polled, even when nothing was seen (`src/transit/observations/raw.mts`). Each row names the normalization version it was packed by and records every poll it made, failed ones included, so a minute without a fix tells "no bus out" from "no answer". Requests to Umo and GitHub identify as `notunh/1 (+https://notunh.app)`.
 
@@ -23,9 +23,9 @@ Retention, in `wrangler.jsonc` `vars` and explained in [storage.md](storage.md):
 
 | Route | Auth | |
 |---|---|---|
-| `GET /api/health` | public | The API's version (`API` in `worker/schema.mts`), when each table's rows start and the last was stored (in its own unit), and the day each model runs through. Cheap: two index lookups per table |
+| `GET /api/health` | public | When each table's rows start and the last was stored (in its own unit), and the day each model runs through. Cheap: two index lookups per table |
 | `GET /api/rows/:name?day=YYYY-MM-DD&after=…` | token | A page of rows from one table in the registry (`worker/rows.mts`: `buses`, `predictions`, `transitions`, `polls`, `machines`), by Durham day or service day |
-| `GET /api/models/:name` | token | The latest stored `buses`, `laundry`, or their checkpoints `buses.training` and `laundry.training`, with its revision |
+| `GET /api/models/:name` | token | The latest stored `buses` or `laundry`, with its revision |
 | `POST /api/models/:name` `{ expect, state }` | token | Stores a new state only if the latest's revision is still `expect` (`null` for none), else 409 |
 | `GET /api/feeds`, `GET /api/feeds/:id` | token | Every timetable acquired, the earliest first, without contents; one's converted JSON by its SHA-256 |
 | `POST /api/feeds` (form: `id`, `source`, `version`, `start`, `end`, `feed`, `original`) | token | Acquires a timetable as of now unless it's the one acquired last; says whether it did |
@@ -35,9 +35,11 @@ Retention, in `wrangler.jsonc` `vars` and explained in [storage.md](storage.md):
 | `GET /api/storage` | token | D1's size in bytes and rows per table. Counts every row, so on demand only |
 | `GET /api/laundry/rooms`, `GET /api/laundry/rooms/:id` | public | See Laundry below |
 
-Every route under `/api/` but health and laundry's takes `Authorization: Bearer $BUILD_TOKEN` and answers 401 without it. Requests are validated by `@hono/standard-validator` against Valibot schemas. Build steps use `scripts/worker.mts`, which also works by hand: `BUILD_TOKEN=… node scripts/worker.mts health`, `storage`, or `rows <name> [day]`, with `--local` for `npm run worker`.
+Every route under `/api/` but health and laundry's takes `Authorization: Bearer $BUILD_TOKEN` and answers 401 without it. Requests are validated by `@hono/standard-validator` against Valibot schemas. The workflows' scripts use `scripts/worker.mts`, which also works by hand: `BUILD_TOKEN=… node scripts/worker.mts health`, `storage`, or `rows <name> [day]`, with `--local` for `npm run worker`.
 
-Schema changes: edit `worker/schema.mts`, run `npm run db:generate`, and commit the migration in `worker/migrations/`. Deploys apply migrations first (`predeploy`). Since the build learns against the *previous* Worker, bump `API` with any change to the routes the build uses: a build only reads from a Worker of another version, and the next build, against the new Worker, learns.
+Schema changes: edit `worker/schema.mts`, run `npm run db:generate`, and commit the migration in `worker/migrations/`. Deploys apply migrations first (`predeploy`), while the Worker before is still serving, so a migration must leave it working: add with defaults, and drop only what it no longer reads. A drop the Worker before still needs waits in `worker/migrations/after-deploy/`, which wrangler doesn't read, until that Worker is gone for good, and is then moved up and pushed (README, Deploying). `tests/worker/migrations.test.mts` applies the chain to the deployed schema with rows in it and checks it ends at what `schema.mts` declares.
+
+Learning runs main's code against the Worker main deployed, so a change to the routes it uses meets the Worker before it only while a deploy is under way. Keep such a change one the Worker before refuses (a route it doesn't have, or a body its validator rejects) rather than misreads: learning then stores nothing that night, and the inputs carry the model already stored.
 
 ## Laundry
 
@@ -56,4 +58,4 @@ The collector writes status changes to `transitions` and `latest`, each poll to 
 
 `src/laundry/infer.mts` decides what to claim about each machine: a running machine's countdown is its own while it keeps reporting, a quiet one past its end is probably done, and a finished one sits done until its door opens.
 
-**Usual busyness.** Each build (`scripts/laundry/model.mts`) folds every whole day since the last into `src/laundry/model.mts`'s statistics (same fold as the bus model, 4-week half-life) and writes `src/laundry/usual.json`: for every room, machine kind, and hour of the week, the time-weighted free count and chance of any free. Stretches nobody watched are left out, as are days a room did under 15 % of its usual business (breaks). Each hour leans on the room's all-hours average until it has six hours of watching; held out, that tied the average alone and beat the hours alone.
+**Usual busyness.** Each night the Inputs workflow (`scripts/laundry/model.mts`) folds every whole day since the last into `src/laundry/model.mts`'s statistics (same fold as the bus model, 4-week half-life) and writes `src/laundry/usual.json`: for every room, machine kind, and hour of the week, the time-weighted free count and chance of any free. Stretches nobody watched are left out, as are days a room did under 15 % of its usual business (breaks). Each hour leans on the room's all-hours average until it has six hours of watching; held out, that tied the average alone and beat the hours alone.

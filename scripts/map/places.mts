@@ -1,15 +1,14 @@
 // Finds the buildings UNH's laundry rooms and dining halls are in, from OpenStreetMap, into src/map/places.json. The
 // laundry vendor puts every room at the same spot, so rooms are matched to their residence halls by name instead,
-// against the campus's buildings in the gazetteer, which scripts/map/osm.mts refreshes. Run after the laundry rooms
-// and dining menus, whose names it reads. With --if-missing, places already there are kept while they were derived
-// from the same gazetteer, rooms, menus, and code, which the file records as a hash
+// against the campus's buildings in the gazetteer, which scripts/map/osm.mts makes. A build runs it once its inputs
+// are installed (scripts/inputs.mts), since it reads the rooms' and dining halls' names. The file records a hash of
+// the gazetteer, rooms, menus, and code it was derived from
 
 import { readFile, writeFile } from "node:fs/promises"
 import { Readable } from "node:stream"
 import { slug } from "../../src/shared/slug.mts"
 import { contentHash } from "../../src/shared/hash.mts"
 import type { Building, Places } from "../../src/places/buildings.mts"
-import { exists } from "../files.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { type Box, holds } from "../../src/geo/boxes.mts"
 
@@ -34,9 +33,6 @@ const ALIASES: Record<string, string> = {
 const [gazetteerJson, roomsJson, menusJson] = await Promise.all([GAZETTEER, ROOMS, MENUS].map(url => readFile(url, "utf8")))
 const inputs = [gazetteerJson, roomsJson, menusJson, await readFile(new URL(import.meta.url))]
 const derivedFrom = (await contentHash(Readable.from(inputs.flatMap(input => [input, "\0"])), "base64url")).slice(0, 16)
-
-if (process.argv.includes("--if-missing") && await exists(OUTPUT) && (JSON.parse(await readFile(OUTPUT, "utf8")) as Places).inputs === derivedFrom)
-  process.exit(0)
 
 // The campus's buildings by name, each where OSM has its middle
 const { places: gazetteer }: Gazetteer = JSON.parse(gazetteerJson)
@@ -69,7 +65,7 @@ const places = [
   ...halls.flatMap(hall => locate("dining", hall.name))
 ]
 if (unresolved.length)
-  throw new Error(`No building in OpenStreetMap for ${unresolved.join(", ")}; run npm run osm:refresh or add it to ALIASES`)
+  throw new Error(`No building in OpenStreetMap for ${unresolved.join(", ")}; add it to ALIASES, or wait for map data that has it`)
 
 await writeFile(OUTPUT, JSON.stringify({ inputs: derivedFrom, buildings: places } satisfies Places, null, 2) + "\n")
 console.log(`${places.length} places`)

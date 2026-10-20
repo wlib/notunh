@@ -23,7 +23,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # Copies the fixtures in as the data, then typechecks and tests before building (package.json prebuild)
+      # Installs the fixtures as the inputs and map data, then typechecks and tests before building (package.json prebuild)
       - run: npm run build
         env:
           NOTUNH_OFFLINE: 1

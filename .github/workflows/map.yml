@@ -1,7 +1,7 @@
 # Makes the map's OpenStreetMap data each week from Geofabrik's latest New Hampshire extract (scripts/map/osm.mts):
 # the walking network, the gazetteer, and our tiles, made with Planetiler. Each generation is published whole as its
 # own immutable release, map-data-<version>. Then the pointer every build reads, latest.json on the map-data release,
-# is moved to it (scripts/map/release.mts), so a build gets all of a generation or none. Run it by hand with
+# is moved to it (scripts/release.mts), so a build gets all of a generation or none. Run it by hand with
 # `gh workflow run map.yml`.
 #
 # Needs no secrets beyond the job's own token, plus the optional CLOUDFLARE_DEPLOY_HOOK to rebuild the site with the
@@ -25,6 +25,8 @@ concurrency:
 
 jobs:
   map:
+    # Only main's generation is the one builds take
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       # Part of every generation's version, so a new Planetiler is a new generation
@@ -62,35 +64,9 @@ jobs:
       - run: |
           cp tests/fixtures/data/src/laundry/rooms.json src/laundry/ && cp tests/fixtures/data/src/dining/menus.json src/dining/
           node scripts/map/places.mts
-      # A generation is immutable once its manifest is up. One published before (the pointer since moved past it) is
-      # pointed at again as it is, never replaced. A release a failed run left without its manifest was never read,
-      # so it's filled in again
-      - name: Publish
-        id: publish
-        run: |
-          [ -f release/latest.json ] || { echo "Nothing new to publish"; exit 0; }
-          VERSION=$(jq -r .version release/latest.json)
-          EXTRACT=$(jq -r .extract release/manifest.json)
-          if gh release download "map-data-$VERSION" -p manifest.json -O published.json 2>/dev/null; then
-            echo "map-data-$VERSION is published already, and is pointed at as it is"
-          elif gh release view "map-data-$VERSION" >/dev/null 2>&1; then
-            gh release upload "map-data-$VERSION" release/map-data.tar.gz release/manifest.json --clobber
-          else
-            gh release create "map-data-$VERSION" release/map-data.tar.gz release/manifest.json --latest=false \
-              --title "Map data $VERSION" \
-              --notes "The map's OpenStreetMap data made from Geofabrik's New Hampshire extract of $EXTRACT by the Map data workflow, whole in one archive with a manifest of its hashes. Builds take the generation latest.json on the map-data release names"
-          fi
-          gh release view map-data >/dev/null 2>&1 ||
-            gh release create map-data --title "Map data" --latest=false \
-              --notes "latest.json names the map data generation every build takes, each published whole as its own map-data-<version> release by the Map data workflow"
-          gh release upload map-data release/latest.json --clobber
-          echo "published=true" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-      # Rebuilds the site with the new generation, if the hook secret is set
-      - if: steps.publish.outputs.published == 'true'
-        run: |
-          [ -z "$DEPLOY_HOOK" ] || curl -fsS --retry 3 -X POST "$DEPLOY_HOOK"
-        env:
-          DEPLOY_HOOK: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}
+      - uses: ./.github/actions/publish
+        with:
+          kind: map-data
+          folder: release
+          notes: The map's OpenStreetMap data made from Geofabrik's New Hampshire extract by the Map data workflow, whole in one archive with a manifest of its hashes
+          deploy-hook: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}

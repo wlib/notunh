@@ -1,6 +1,6 @@
-// The few requests that reach the Worker: the build's token-gated rows, models, timetables, and what it derives,
-// public health, the laundry page's rooms, and the laundry page under each room's own address. Every other page and
-// asset is served without it
+// The few requests that reach the Worker: learning's and archiving's token-gated rows, models, timetables, and what
+// learning derives, public health, the laundry page's rooms, and the laundry page under each room's own address. Every
+// other page and asset is served without it
 
 import { Hono } from "hono/tiny"
 import { bearerAuth } from "hono/bearer-auth"
@@ -14,7 +14,7 @@ import { Day } from "../src/shared/time.mts"
 import { describeIssues } from "../src/shared/json.mts"
 import type { Env } from "./collect.mts"
 import { ROWS, health, read, storage } from "./rows.mts"
-import { STORED, acquireFeed, feedJson, feedList, latestModel, saveModel } from "./models.mts"
+import { MODELS, acquireFeed, feedJson, feedList, latestModel, saveModel } from "./models.mts"
 import { DERIVED, commit, derivedOf, putPart } from "./derived.mts"
 import { room, rooms } from "./laundry.mts"
 
@@ -22,7 +22,7 @@ type Worker = { Bindings: Env }
 
 export const app = new Hono<Worker>()
 
-/** Only the build, by BUILD_TOKEN, which with none set is nobody */
+/** Only the workflows, by BUILD_TOKEN, which with none set is nobody */
 const isBuild = bearerAuth<Worker>({
   verifyToken: async (token, c) => Boolean(c.env.BUILD_TOKEN) && timingSafeEqual(token, c.env.BUILD_TOKEN!)
 })
@@ -48,7 +48,7 @@ app.get("/api/health", async c =>
   c.json(await health(c.env), 200, { "cache-control": "no-store" })
 )
 
-// Counting every row reads every row, so only on demand, and only the build's
+// Counting every row reads every row, so only on demand, and only the workflows'
 app.get("/api/storage", async c =>
   c.json(await storage(c.env), 200, { "cache-control": "no-store" })
 )
@@ -63,7 +63,7 @@ app.get("/api/rows/:name", async c => {
 // The latest stored, with its revision
 app.get("/api/models/:name", async c => {
   const name = c.req.param("name")
-  if (!STORED.includes(name))
+  if (!MODELS.includes(name))
     return c.notFound()
   const [model] = await latestModel(drizzle(c.env.DB), name)
   return c.json({ state: model?.state ?? null, revision: model?.revision ?? null })
@@ -72,7 +72,7 @@ app.get("/api/models/:name", async c => {
 // Stores a state through a day if the latest is still the one the writer expects, by its revision or null for none, else 409
 app.post("/api/models/:name", valid(v.object({ expect: v.nullable(v.string()), state: v.looseObject({ through: Day }) })), async c => {
   const name = c.req.param("name")
-  if (!STORED.includes(name))
+  if (!MODELS.includes(name))
     return c.notFound()
   const { expect, state } = c.req.valid("json")
   return await saveModel(drizzle(c.env.DB), name, state.through, state, expect)
@@ -90,7 +90,7 @@ app.get("/api/feeds/:id", async c => {
   return feed === undefined ? c.notFound() : c.body(feed, 200, { "content-type": "application/json" })
 })
 
-// A timetable the build has, as a form of what the feed says of itself and its two files, acquired now unless it's
+// A timetable learning has, as a form of what the feed says of itself and its two files, acquired now unless it's
 // the one last acquired
 const Acquired = v.object({
   id:       SHA256,

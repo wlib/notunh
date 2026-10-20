@@ -2,7 +2,7 @@
 // lead times before it left, three forecasts are scored: the timetable alone, the model from where the bus was, and
 // Umo's own prediction sampled then. Where the bus was is what the map would have made of its fixes then, replayed
 // through the same location model and pace in the order they arrived. Each day is replayed against the timetable in
-// effect then, of those the build has acquired. Run directly on a day of samples to see how each did:
+// effect then, of those acquired. Run directly on a day of samples to see how each did:
 // BUILD_TOKEN=… node scripts/map/replay.mts 2026-10-07 [--local]
 
 import { readFile } from "node:fs/promises"
@@ -22,10 +22,11 @@ import { contentHash } from "../../src/shared/hash.mts"
 import { type Day, addDays, localDay } from "../../src/shared/time.mts"
 import { groupBy } from "../../src/shared/group.mts"
 import { readModel, request } from "../worker.mts"
+import { STAGED } from "../files.mts"
 
-const FEED = new URL("../../src/map/gtfs.json", import.meta.url)
-/** The GTFS zip this build's timetable was converted from, which gtfs.mts keeps beside it */
-export const ORIGINAL = new URL("../../src/map/gtfs.zip", import.meta.url)
+/** Where the timetable is among the inputs, and the GTFS zip it was converted from, which gtfs.mts keeps beside it */
+export const FEED = "src/map/gtfs.json"
+export const ORIGINAL = "src/map/gtfs.zip"
 
 // The version of replaying and scoring here, bumped with any change to how a day is evaluated
 const REPLAY = 1
@@ -64,11 +65,12 @@ export const feedFor = async (day: Day) => {
 }
 
 /**
- * Acquires this build's timetable, with the GTFS it was converted from, unless it's the one last acquired
+ * Acquires the timetable among the inputs being made, with the GTFS it was converted from, unless it's the one last
+ * acquired
  * @returns whether it was
  */
 export const acquireFeed = async () => {
-  const [json, original] = await Promise.all([readFile(FEED, "utf8"), readFile(ORIGINAL)])
+  const [json, original] = await Promise.all([readFile(new URL(FEED, STAGED), "utf8"), readFile(new URL(ORIGINAL, STAGED))])
   const { version, start, end } = JSON.parse(json) as FeedData
   const form = new FormData()
   for (const [name, value] of Object.entries({ id: await contentHash(json), source: await contentHash(original), version, start, end }))

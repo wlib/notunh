@@ -159,10 +159,15 @@ export const drive = (meters: number, from: number, to: number, cruise: number) 
   // Meters to get from one speed to another, speeding up or braking
   const between = (v: number, w: number) =>
     w >= v ? (w * w - v * v) / (2 * ACCELERATION) : (v * v - w * w) / (2 * BRAKING)
-  // As fast as it gets, which is the cruising speed, unless there's not the room to get to it and back
+  // As fast as it gets, which is the cruising speed, unless there's not the room to get to it and back: then as near
+  // to it as the room allows, the top of a rise when it's faster than both ends, the bottom of a dip when slower, and
+  // when it's between them, no nearer than where it starts
   let peak = Math.max(cruise, 0.1)
   if (between(from, peak) + between(peak, to) > meters)
-    peak = Math.max(from, to, Math.sqrt((meters + from * from / (2 * ACCELERATION) + to * to / (2 * BRAKING)) / (1 / (2 * ACCELERATION) + 1 / (2 * BRAKING))))
+    peak =
+      peak > Math.max(from, to) ? Math.max(from, to, Math.sqrt((meters + from * from / (2 * ACCELERATION) + to * to / (2 * BRAKING)) / (1 / (2 * ACCELERATION) + 1 / (2 * BRAKING)))) :
+      peak < Math.min(from, to) ? Math.min(from, to, Math.sqrt(Math.max(0, (from * from / (2 * BRAKING) + to * to / (2 * ACCELERATION) - meters) / (1 / (2 * BRAKING) + 1 / (2 * ACCELERATION))))) :
+      from
   const first = Math.min(meters, between(from, peak))
   const last = Math.min(meters - first, between(peak, to))
   const middle = meters - first - last
@@ -170,7 +175,7 @@ export const drive = (meters: number, from: number, to: number, cruise: number) 
   const across = (v: number, a: number, x: number) =>
     Math.abs(a) < 1e-9 ? x / Math.max(v, 0.1) : (Math.sqrt(Math.max(0, v * v + 2 * a * x)) - v) / a
   const [a1, a3] = [peak >= from ? ACCELERATION : -BRAKING, to >= peak ? ACCELERATION : -BRAKING]
-  const [t1, t2] = [across(from, a1, first), middle / peak]
+  const [t1, t2] = [across(from, a1, first), middle > 0 ? middle / peak : 0]
   return {
     time: t1 + t2 + across(peak, a3, last),
     timeTo: (x: number) =>

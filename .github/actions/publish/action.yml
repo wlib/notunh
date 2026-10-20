@@ -1,0 +1,50 @@
+# Publishes a generation that scripts/release.mts staged in a folder: its archive and manifest as the release
+# <kind>-<version>, then latest.json on the release <kind>, uploaded last, so a build takes all of it or none. A
+# generation is immutable once its manifest is up: one published before, which the pointer has since moved past, is
+# pointed at again as it is, never replaced, and a release a failed run left without its manifest was never read, so
+# it's filled in again. Then, if a deploy hook is given, the site is rebuilt, which takes the new generation. A folder
+# with nothing staged publishes nothing
+
+name: Publish a generation
+description: Publishes a staged generation of a release and points builds at it
+
+inputs:
+  kind:
+    description: inputs or map-data
+    required: true
+  folder:
+    description: Where it was staged
+    required: true
+  notes:
+    description: What the generation's release says of it
+    required: true
+  deploy-hook:
+    description: The Workers Builds deploy hook to rebuild the site with, once it's published
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        [ -f "$FOLDER/latest.json" ] || { echo "Nothing new to publish"; exit 0; }
+        TAG="$KIND-$(jq -r .version "$FOLDER/latest.json")"
+        if gh release view "$TAG" --json assets -q '.assets[].name' 2>/dev/null | grep -x manifest.json >/dev/null; then
+          echo "$TAG is published already, and is pointed at as it is"
+        else
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --latest=false --title "$TAG" --notes "$NOTES"
+          gh release upload "$TAG" "$FOLDER/$KIND.tar.gz" --clobber
+          gh release upload "$TAG" "$FOLDER/manifest.json" --clobber
+        fi
+        gh release view "$KIND" >/dev/null 2>&1 ||
+          gh release create "$KIND" --latest=false --title "$KIND" \
+            --notes "latest.json names the generation of $KIND every build takes, each published whole as its own $KIND-<version> release"
+        gh release upload "$KIND" "$FOLDER/latest.json" --clobber
+        [ -z "$DEPLOY_HOOK" ] || curl -fsS --retry 3 -X POST "$DEPLOY_HOOK"
+      env:
+        KIND: ${{ inputs.kind }}
+        FOLDER: ${{ inputs.folder }}
+        NOTES: ${{ inputs.notes }}
+        DEPLOY_HOOK: ${{ inputs.deploy-hook }}
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}

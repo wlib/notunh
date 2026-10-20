@@ -11,7 +11,7 @@ import { HOUR, addDays, dayStart, type Day } from "../src/shared/time.mts"
 import { serviceDayStart } from "../src/transit/feed.mts"
 import { ROOMS } from "../src/laundry/rooms.mts"
 import * as schema from "./schema.mts"
-import { API, latest, polls, roomSnapshots, samples, transitions } from "./schema.mts"
+import { latest, polls, roomSnapshots, samples, transitions } from "./schema.mts"
 import { MODELS, throughs } from "./models.mts"
 import { expired } from "./derived.mts"
 import type { Env } from "./collect.mts"
@@ -163,8 +163,8 @@ export const storage = async (env: Env) => {
 }
 
 /**
- * The API version, when each table with days starts and ends, in its own unit, from two index lookups each, and the
- * day each model runs through
+ * When each table with days starts and ends, in its own unit, from two index lookups each, and the day each model runs
+ * through
  */
 export const health = async (env: Env) => {
   const db = drizzle(env.DB)
@@ -174,7 +174,6 @@ export const health = async (env: Env) => {
   const [stored, ...ends] = await db.batch([throughs(db), ...timed.flatMap(([, entry]) => [end(entry, asc), end(entry, desc)])])
   const through = new Map(stored.map(({ name, through }) => [name, through]))
   return {
-    api: API,
     ...Object.fromEntries(timed.map(([name], i) => [name, { since: ends[2 * i][0]?.at ?? null, last: ends[2 * i + 1][0]?.at ?? null }])),
     models: Object.fromEntries(MODELS.map(name => [name, through.get(name) ?? null]))
   }

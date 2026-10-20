@@ -1,23 +1,22 @@
 // Downloads OpenFreeMap's Liberty style, with its sprite and the fonts the map's labels need, and makes it ours
-// (src/map/basemap/style.mts). It goes in a folder under public/data/map/ named by a hash of everything in it, so the
-// style, sprite, and fonts the map loads always match. src/map/style.json names the folder; the map's page bundles
-// it, loads the style by it, and keeps the folder offline. The style's tiles are OpenFreeMap's current planet build,
-// whose URLs never change, and the site rebuilds nightly to pick up a new build. The folder the site serves stays one
-// more build beside the new one, as the tiles' does, for a map tab still on it. With --if-missing, a style already
-// there is kept. The fixtures (tests/fixtures/make.mts) bundle a style the same way, from the Liberty the tests have
+// (src/map/basemap/style.mts), as the inputs are made each night (scripts/data.mts). It goes in a folder under
+// public/data/map/ named by a hash of everything in it, so the style, sprite, and fonts the map loads always match.
+// src/map/style.json names the folder; the map's page bundles it, loads the style by it, and keeps the folder
+// offline. The style's tiles are OpenFreeMap's current planet build, whose URLs never change, and the inputs are made
+// nightly to pick up a new build. A build keeps the folder the site serves one more build beside the new one, as the
+// tiles' does, for a map tab still on it. The fixtures (tests/fixtures/make.mts) bundle a style the same way, from the
+// Liberty the tests have
 
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import { Readable } from "node:stream"
 import type { StyleSpecification, VectorSourceSpecification } from "maplibre-gl"
-import { getJson, objectOf } from "../../src/shared/json.mts"
+import { checked, getJson, objectOf } from "../../src/shared/json.mts"
 import { contentHash } from "../../src/shared/hash.mts"
 import { BASE, GLYPH_RANGES, LIBERTY, STYLE_ROOT, StyleManifest, type TileJson, fontsOf, restyle } from "../../src/map/basemap/style.mts"
-import { PUBLIC, isKept, keepServed } from "../files.mts"
+import { REPO, keepServed, writeInput } from "../files.mts"
 import { deployed, served } from "../site.mts"
 
-const ROOT = new URL(`.${STYLE_ROOT}`, PUBLIC)
-// Written last, so it only ever names a folder with everything in it
-const MANIFEST = new URL("../../src/map/style.json", import.meta.url)
+const MANIFEST = "src/map/style.json"
 
 /** A style's folder, by path in it: its sprite and fonts as files, and the style itself */
 export type StyleFolder = { folder: string, files: Map<string, Uint8Array | string>, manifest: StyleManifest }
@@ -49,7 +48,19 @@ const download = async (url: string) => {
   return new Uint8Array(await response.arrayBuffer())
 }
 
-if (import.meta.main && !await isKept(MANIFEST)) {
+/**
+ * Keeps the style folder the site serves now, every file of it fetched back, beside the one installed, as a build
+ * starts from nothing. Gives back how many files were kept
+ */
+export const keepServedStyle = async () => {
+  const installed = await checked(StyleManifest, JSON.parse(await readFile(new URL(MANIFEST, REPO), "utf8")), MANIFEST)
+  const serving = await deployed("/map/", "style", StyleManifest)
+  const servedFolder = serving?.folders?.[0]
+  const servedStyle = servedFolder && servedFolder !== installed.folders?.[0] ? await served(serving.url, objectOf<StyleSpecification>()) : undefined
+  return servedStyle ? (await keepServed(pathsOf(fontsOf(servedStyle)).map(path => servedFolder + path))).length : 0
+}
+
+if (import.meta.main) {
   const liberty = await getJson<StyleSpecification>(LIBERTY)
   const { url } = liberty.sources[BASE] as VectorSourceSpecification
   const tiles = await getJson<TileJson>(url!)
@@ -64,24 +75,10 @@ if (import.meta.main && !await isKept(MANIFEST)) {
     ))
   )
   const { folder, files, manifest } = await bundle(liberty, tiles, [...sprite, ...glyphs])
-
-  // The folder the site serves stays, every file of it fetched back, as a build starts from nothing. Other folders
-  // named like this one are earlier runs', so they go (the tiles beside them are another step's)
-  const serving = await deployed("/map/", "style", StyleManifest)
-  const servedFolder = serving?.folders?.[0]
-  const servedStyle = servedFolder && servedFolder !== folder ? await served(serving.url, objectOf<StyleSpecification>()) : undefined
-  for (const entry of await readdir(ROOT, { withFileTypes: true }).catch(() => []))
-    if (entry.isDirectory() && /^[\w-]{16}$/.test(entry.name) && `${STYLE_ROOT}${entry.name}/` !== folder)
-      await rm(new URL(`${entry.name}/`, ROOT), { recursive: true })
-  const kept = servedStyle ? await keepServed(pathsOf(fontsOf(servedStyle)).map(path => servedFolder + path)) : []
-
-  for (const [path, data] of files) {
-    const file = new URL(`.${folder}${path}`, PUBLIC)
-    await mkdir(new URL(".", file), { recursive: true })
-    await writeFile(file, data)
-  }
-  await writeFile(MANIFEST, JSON.stringify(manifest) + "\n")
+  for (const [path, data] of files)
+    await writeInput(`public${folder}${path}`, data)
+  await writeInput(MANIFEST, JSON.stringify(manifest) + "\n")
 
   const kb = (sizes: number[]) => `${Math.round(sizes.reduce((a, b) => a + b, 0) / 1024)} KB`
-  console.log(`Wrote the style (${kb([files.get("style.json")!.length])}, tiles ${tiles.tiles[0]}), sprite (${kb(sprite.map(([, data]) => data.length))}), and ${fonts.length} fonts in ${GLYPH_RANGES.length} ranges (${kb(glyphs.map(([, data]) => data.length))}) to ${folder}${kept.length ? `, keeping ${kept.length} files of ${servedFolder}` : ""}`)
+  console.log(`Wrote the style (${kb([files.get("style.json")!.length])}, tiles ${tiles.tiles[0]}), sprite (${kb(sprite.map(([, data]) => data.length))}), and ${fonts.length} fonts in ${GLYPH_RANGES.length} ranges (${kb(glyphs.map(([, data]) => data.length))}) to ${folder}`)
 }

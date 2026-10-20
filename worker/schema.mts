@@ -4,13 +4,6 @@
 import { customType, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core"
 import type { Kind, Status, Machine } from "../src/laundry/infer.mts"
 
-/**
- * The version of what the Worker's /api/ routes take and give the build, which /api/health reports. Bumped with any
- * change to them, so a build learns only against a Worker of its own version, and only reads from another, as from
- * the Worker it runs before deploying (scripts/learn.mts)
- */
-export const API = 2
-
 /** Raw bytes, which D1 takes as they are */
 const bytes = customType<{ data: Uint8Array<ArrayBuffer>, driverData: Uint8Array<ArrayBuffer> }>({
   dataType: () => "blob"
@@ -29,7 +22,7 @@ export const samples = sqliteTable("samples", {
 }, table => [primaryKey({ columns: [table.source, table.at] })])
 
 /**
- * What the build derives from a service day's observations (scripts/map/model.mts), by name (visits, statistics,
+ * What learning derives from a service day's observations (scripts/map/model.mts), by name (visits, statistics,
  * evaluation) and the day's start, each published whole. Its content is written first, as immutable chunks under a
  * generation of its own, and this row, its manifest, commits it: the generation, and how many parts it has. Readers
  * go by the manifest alone, so they see a generation whole or not at all. identity is exactly what it was derived
@@ -51,10 +44,10 @@ export const chunks = sqliteTable("chunks", {
 }, table => [primaryKey({ columns: [table.generation, table.part] })])
 
 /**
- * Every timetable a build has acquired, by id, the SHA-256 of the JSON it was converted to (src/map/gtfs.json), with
- * the original GTFS zip and its SHA-256, source. A row per acquisition, made when a build sees another than the last
- * acquired, at the Worker's time then. version, start, and end are what the feed itself says, "" where it says
- * nothing. Kept forever: a few a year, about 0.5 MB each
+ * Every timetable acquired, by id, the SHA-256 of the JSON it was converted to (src/map/gtfs.json), with the original
+ * GTFS zip and its SHA-256, source. A row per acquisition, made when learning sees another than the last acquired
+ * (scripts/map/replay.mts), at the Worker's time then. version, start, and end are what the feed itself says, "" where
+ * it says nothing. Kept forever: a few a year, about 0.5 MB each
  */
 export const feeds = sqliteTable("feeds", {
   id:       text().notNull(),
@@ -68,10 +61,10 @@ export const feeds = sqliteTable("feeds", {
 }, table => [index("feeds_id").on(table.id)])
 
 /**
- * Each model the nightly build fitted, by name and the last day in it, read and written whole. Each write gets its
+ * Each model learned (scripts/learn.mts), by name and the last day in it, read and written whole. Each write gets its
  * own revision, and a writer must have read the latest revision to store over it. written numbers writes in order,
- * and that order, not through, decides the latest, since a refit's checkpoint can run through an earlier day than
- * what it replaces
+ * and that order, not through, decides the latest, since a model of a new version can run through an earlier day
+ * than the one it replaces
  */
 export const models = sqliteTable("models", {
   name:     text().notNull(),
@@ -115,7 +108,7 @@ export const latest = sqliteTable("latest", {
   cycle:     text()
 })
 
-/** Each laundry run, with the rooms it couldn't fetch, so the build knows which stretches of time each room was watched */
+/** Each laundry run, with the rooms it couldn't fetch, so learning knows which stretches each room was watched */
 export const polls = sqliteTable("polls", {
   at:     integer().primaryKey(),
   failed: text({ mode: "json" }).$type<string[]>().notNull()

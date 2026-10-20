@@ -1,13 +1,13 @@
-// Learns the bus model in the build through scripts/learn.mts, and writes src/map/model.json for the map to bundle.
+// Learns the bus model through scripts/learn.mts, and writes src/map/model.json among the inputs for the map to bundle.
 // Each whole service day is folded in from what's derived from its observations, read from the day's archive or the
 // Worker while it keeps them (scripts/observations.mts), against the timetable in effect then (replay.mts), of those
-// the build has acquired. This build's own is acquired first. What's derived is published to the Worker, each by
+// acquired. The timetable among the inputs is acquired first. What's derived is published to the Worker, each by
 // exactly what it was derived from, and reused for that alone (worker/derived.mts):
 // - visits: what the extractor reads of the observations, with the timetable
 // - statistics: what the visits show (fit.mts summarize), which the model folds
 // - evaluation: how the model as it stood before the day forecast it, scored by replaying the day (replay.mts score),
 //   which calibrates its bands while the predictor stays the same
-// With --rebuild (or MODEL_REBUILD=1), the model is learned afresh from the first day observed. --local uses
+// With --store it learns and stores, and with --rebuild, afresh from the first day observed. --local uses
 // `wrangler dev`
 
 import { fetchCatalog } from "../../src/transit/observations/archive.mts"
@@ -18,16 +18,14 @@ import { contentHash } from "../../src/shared/hash.mts"
 import { localDay } from "../../src/shared/time.mts"
 import { lastSettled, observationsOf } from "../observations.mts"
 import { learn } from "../learn.mts"
+import { STAGED } from "../files.mts"
 import { derived, health } from "../worker.mts"
 import { PREDICTOR, acquireFeed, describe, feedFor, listeningOf, score, visitsOf } from "./replay.mts"
 
-const OUTPUT = new URL("../../src/map/model.json", import.meta.url)
-
-const model = await learn("buses", OUTPUT, {
+const model = await learn("buses", new URL("src/map/model.json", STAGED), {
   empty:   emptyModel,
-  // Only a build that learns acquires its timetable
-  prepare: async learning => {
-    if (learning && await acquireFeed())
+  prepare: async () => {
+    if (await acquireFeed())
       console.log("buses: acquired the timetable")
   },
   // The first day archived or with samples in the Worker
@@ -61,10 +59,7 @@ const model = await learn("buses", OUTPUT, {
     )
     console.log(`buses: ${day}, ${observed.fixes.length} fixes`)
     return fold(model, day, statistics, evaluation)
-  },
-  // Of the build's 20 minutes, what fitting can take
-  budgetMs: 8 * 60_000
+  }
 })
 
-if (model)
-  console.log(describe(model.scores))
+console.log(describe(model.scores))

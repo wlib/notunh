@@ -4,9 +4,11 @@ dist/
 # Playwright's traces and reports, from `npm run test:browser`
 test-results/
 playwright-report/
-# Generated from upstream data, by `npm run data` or on demand before dev and build; the fixtures under
-# tests/fixtures/data/ are small committed copies, and the walk and gazetteer there the fallbacks while there's no
-# map data release
+# The inputs and map data a build installs before dev and build (scripts/inputs.mts), and the record of them; the
+# fixtures under tests/fixtures/data/ are small committed copies, installed offline. inputs/ is where the inputs are
+# made (scripts/data.mts)
+inputs/
+public/inputs.json
 src/map/gtfs.json
 src/map/gtfs.zip
 src/map/walk.json

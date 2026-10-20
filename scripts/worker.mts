@@ -1,6 +1,6 @@
-// How build steps reach the Worker: through its token-gated /api/ routes, so the build needs no D1 credentials of
-// its own, only BUILD_TOKEN. The origin is notunh.app, or WORKER_ORIGIN, or with --local, `wrangler dev` on
-// localhost:8787, which checks against the BUILD_TOKEN in .dev.vars (site.mts). Run directly to look:
+// How the scripts that learn and archive reach the Worker: through its token-gated /api/ routes, so they need no D1
+// credentials of their own, only BUILD_TOKEN. The origin is notunh.app, or WORKER_ORIGIN, or with --local,
+// `wrangler dev` on localhost:8787, which checks against the BUILD_TOKEN in .dev.vars (site.mts). Run directly to look:
 // BUILD_TOKEN=… node scripts/worker.mts health | storage | rows <name> [day] [--local]
 
 import type { Day } from "../src/shared/time.mts"
@@ -8,13 +8,8 @@ import { gunzipJson, gzipJson } from "../src/shared/json.mts"
 import { fromHex } from "../src/transit/observations/raw.mts"
 import { ORIGIN } from "./site.mts"
 
-/**
- * The version of the API the Worker serves, which a Worker from before versions doesn't say, when each table's rows
- * start and end, in its own unit, and the last day each model has learned through
- */
+/** When each table's rows start and end, in its own unit, and the last day each model has learned through */
 export type Health = {
-  api?:   number
-} & {
   [name in "buses" | "predictions" | "transitions" | "polls"]: { since: number | null, last: number | null }
 } & {
   models: Record<string, Day | null>

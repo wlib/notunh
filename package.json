@@ -4,11 +4,10 @@
   "type": "module",
   "scripts": {
     "icons": "node scripts/icons.mts",
-    "data": "node scripts/data.mts",
     "fixtures": "node tests/fixtures/make.mts",
-    "predev": "node scripts/data.mts fetch --if-missing",
+    "predev": "node scripts/inputs.mts",
     "dev": "vite",
-    "prebuild": "node scripts/data.mts fetch --if-missing && npm run typecheck && npm test && node scripts/data.mts learn --if-missing",
+    "prebuild": "node scripts/inputs.mts && npm run typecheck && npm test",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p worker",
@@ -18,12 +17,11 @@
     "db:generate": "drizzle-kit generate --config drizzle.config.mts",
     "db:migrate": "wrangler d1 migrations apply notunh --remote",
     "db:migrate:local": "wrangler d1 migrations apply notunh --local",
-    "worker": "node scripts/laundry/rooms.mts --if-missing && npm run db:migrate:local && wrangler dev --test-scheduled",
+    "worker": "node scripts/inputs.mts && npm run db:migrate:local && wrangler dev --test-scheduled",
     "storage": "node scripts/worker.mts storage",
     "predeploy": "npm run db:migrate",
     "deploy": "wrangler deploy",
-    "deploy:fresh": "npm run data && npm run build && npm run deploy",
-    "osm:refresh": "node scripts/map/osm.mts && node scripts/map/places.mts"
+    "fresh": "node scripts/data.mts"
   },
   "dependencies": {
     "@hono/standard-validator": "^0.4.0",

@@ -21,8 +21,11 @@ const SETTLE_MS = 15 * 60_000
 
 /** The last service day all of whose samples have arrived at an instant */
 export const lastSettled = (now: number): Day => {
-  const today = localDay(now)
-  return addDays(today, serviceDayStart(today) + SETTLE_MS <= now ? -1 : -2)
+  // Service days start at noon less 12 hours, so the day after the clocks spring forward starts the evening before
+  let day = addDays(localDay(now), 1)
+  while (serviceDayStart(addDays(day, 1)) + SETTLE_MS > now)
+    day = addDays(day, -1)
+  return day
 }
 
 /** Rows in the order of their minutes, buses before predictions, as an archive keeps them */

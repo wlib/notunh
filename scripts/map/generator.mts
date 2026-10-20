@@ -1,27 +1,9 @@
-// The map's OpenStreetMap data as GitHub releases. Each generation is its own immutable release, tagged
-// map-data-<version>, holding one archive of the walk, the gazetteer, and the tiles, with a manifest hashing each.
-// The one mutable release, map-data, holds only latest.json, uploaded last, naming the generation builds take. A
-// generation's version is its extract's date and its generator (src/shared/made.mts), so the same extract made again
-// by changed code is a new generation, at a new URL
+// What a map data generation is made by (scripts/map/osm.mts), whose hash is part of its version
+// (src/shared/made.mts): our code that reads and shapes the extract, the packages it reads it and measures with, and
+// Planetiler. So the same extract made again by changed code is a new generation, at a new URL
 
 import { readFile } from "node:fs/promises"
-import * as v from "valibot"
-import { checked } from "../../src/shared/json.mts"
-import { type Chunks, contentHash } from "../../src/shared/hash.mts"
-import { Made, versionOf } from "../../src/shared/made.mts"
-
-const RELEASES = "https://github.com/wlib/notunh/releases/download/"
-export const POINTER = `${RELEASES}map-data/latest.json`
-export const ARCHIVE = "map-data.tar.gz"
-
-export const archiveUrl = (version: string) =>
-  `${RELEASES}map-data-${version}/${ARCHIVE}`
-
-const Pointer = v.object({ version: v.string() })
-
-/** What an archive holds, as its manifest.json says: where it came from, and each file's SHA-256, by path in it */
-export const Manifest = v.object({ ...Made.entries, version: v.string(), files: v.record(v.string(), v.string()) })
-export type Manifest = v.InferOutput<typeof Manifest>
+import { contentHash } from "../../src/shared/hash.mts"
 
 // Everything whose change makes different data from the same extract, hashed with Planetiler's version
 const GENERATOR = [
@@ -72,26 +54,4 @@ export const generator = async (planetiler = process.env.PLANETILER ?? "") => {
     for (const name of GENERATOR)
       yield await readFile(new URL(name, import.meta.url))
   }())
-}
-
-/** The manifest of some files, by path, each read as it's hashed, one at a time */
-export const manifestOf = async (made: Made, files: Record<string, () => Chunks>): Promise<Manifest> => {
-  const hashes: Record<string, string> = {}
-  for (const [path, read] of Object.entries(files))
-    hashes[path] = await contentHash(read())
-  return { ...made, version: versionOf(made), files: hashes }
-}
-
-/** The files of a manifest that aren't as it says, missing or with other bytes, by path */
-export const mismatches = (manifest: Manifest, hashOf: (path: string) => string | undefined) =>
-  Object.entries(manifest.files).flatMap(([path, hash]) => hashOf(path) === hash ? [] : [path])
-
-/** The pointer, or null while there's no release, which only a 404 means: anything else fails the build */
-export const fetchPointer = async (load = fetch) => {
-  const response = await load(POINTER)
-  if (response.status === 404)
-    return null
-  if (!response.ok)
-    throw new Error(`${response.status} from ${POINTER}`)
-  return checked(Pointer, await response.json(), POINTER)
 }

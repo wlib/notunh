@@ -2,13 +2,12 @@
 // the OpenMapTiles schema Liberty draws, and the campus set in our own (campus.yml). Each set is cut to exactly the
 // tiles it covers, with an empty one wherever Planetiler made none, so every tile the map asks here for is here
 
-import { spawn } from "node:child_process"
 import { copyFile, mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { TILES_FOLDER, TILE_SETS, type TileSetName, type TilesManifest, extentOf, tilesOf } from "../../src/map/basemap/tiles.mts"
-import { exists } from "../files.mts"
+import { exists, run } from "../files.mts"
 
 /** Where the tiles are served from, each version (src/shared/made.mts) in a folder of its own */
 export const TILES = new URL(`../../public${TILES_FOLDER}`, import.meta.url)
@@ -20,13 +19,6 @@ const PROFILES: Record<TileSetName, (extract: string) => string[]> = {
   openmaptiles: extract => ["--download", `--osm_path=${extract}`],
   campus:       extract => [fileURLToPath(new URL("campus.yml", import.meta.url)), `--extract=${extract}`]
 }
-
-const run = (command: string, args: string[], cwd: string) =>
-  new Promise<void>((resolve, reject) =>
-    spawn(command, args, { cwd, stdio: "inherit" })
-      .on("error", reject)
-      .on("exit", code => code === 0 ? resolve() : reject(new Error(`${command} ${args.join(" ")} exited with ${code}`)))
-  )
 
 /** Notes which version of the tiles is there, if any, and its folder, which the service worker keeps with the map */
 export const writeManifest = (version?: string) =>
@@ -46,7 +38,7 @@ export const makeTiles = async (extract: string, jar: string, version: string) =
       `--bounds=${extentOf(set).join(",")}`, `--minzoom=${set.minzoom}`, `--maxzoom=${set.maxzoom}`,
       // Left whole, as the host compresses what it serves
       "--tile_compression=none", `--output=${made}?format=files`, "--force"
-    ], dirname(jar))
+    ], { cwd: dirname(jar) })
 
     let [kept, empty, bytes] = [0, 0, 0]
     for (const [z, x, y] of tilesOf(set)) {

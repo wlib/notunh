@@ -10,13 +10,11 @@ import { type Day, HOUR, addDays, dayStart } from "../../src/shared/time.mts"
 import { contentHash } from "../../src/shared/hash.mts"
 import { app } from "../../worker/api.mts"
 import { archivedSpans, prune } from "../../worker/rows.mts"
-import { API } from "../../worker/schema.mts"
 import type { Env } from "../../worker/collect.mts"
 import { ROOMS } from "../../src/laundry/rooms.mts"
 import { derived, health, readModel, readRows, request, storage, writeModel } from "../../scripts/worker.mts"
 import { learn } from "../../scripts/learn.mts"
 import { type Acquisition, inEffect } from "../../scripts/map/replay.mts"
-import { checkpointOf } from "../../src/shared/learn.mts"
 import { gunzipJson, gzipJson } from "../../src/shared/json.mts"
 import { fromHex } from "../../src/transit/observations/raw.mts"
 import { d1 } from "./d1.mts"
@@ -208,26 +206,25 @@ test("the latest model of a name is the last stored, whatever day it's through, 
   await expect(writeModel("anything", { through: SUNDAY }, null)).rejects.toThrow("404")
 })
 
-test("a refit's checkpoint through an earlier day than the model it replaces is what's read back, kept however old, and only stored over by a writer that read it", async () => {
+test("a model of a new version through an earlier day than the one it replaces is what's read back, kept however old, and only stored over by a writer that read it", async () => {
   for (let i = 0; i < 40; i++)
     await store("buses", { through: addDays(SUNDAY, i), version: "1" })
   const { revision: old } = await readModel("buses")
   await writeModel("buses", { through: SUNDAY, version: "2" }, old!)
   expect(await readModel("buses")).toMatchObject({ state: { through: SUNDAY, version: "2" } })
   expect((await health()).models.buses).toBe(SUNDAY)
-  // A build that read the model before the checkpoint can't replace the checkpoint, or store past it
+  // A writer that read the model before the new version's can't replace it, or store past it
   await expect(writeModel("buses", { through: SUNDAY, version: "1" }, old!)).rejects.toThrow("409")
   await expect(writeModel("buses", { through: addDays(SUNDAY, 40), version: "1" }, old!)).rejects.toThrow("409")
   expect((await readModel("buses")).state).toEqual({ through: SUNDAY, version: "2" })
 })
 
 /**
- * Learns a model of a version through a day as production's build does, failing to read one day if asked, with the
- * days it folded and what it bundled
+ * Learns a model of a version through a day, as the Inputs workflow does when asked to store, failing to read one day
+ * if asked, with the days it folded and what it wrote for the page
  */
-const learnThrough = async (version: number, last: Day, unreadable?: Day) => {
+const learnThrough = async (version: number, last: Day, { unreadable, store = true, rebuild = false }: { unreadable?: Day, store?: boolean, rebuild?: boolean } = {}) => {
   type Model = { version: number, through: Day | null }
-  vi.stubEnv("WORKERS_CI_BRANCH", "main")
   const folded: Day[] = []
   const output = pathToFileURL(`${tmpdir()}/notunh-learn-${crypto.randomUUID()}.json`)
   await learn<Model>("buses", output, {
@@ -239,7 +236,9 @@ const learnThrough = async (version: number, last: Day, unreadable?: Day) => {
         throw new Error("unreadable")
       folded.push(day)
       return { ...model, through: day }
-    }
+    },
+    store,
+    rebuild
   })
   return { folded, bundled: JSON.parse(await readFile(output, "utf8")) as Model }
 }
@@ -247,53 +246,48 @@ const learnThrough = async (version: number, last: Day, unreadable?: Day) => {
 const daysFrom = (from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) => addDays(SUNDAY, from + i))
 
-test("a refit of a new version stopped partway is stored, and the next build carries on from it rather than starting over", async () => {
-  await learnThrough(1, addDays(SUNDAY, 18))
-  expect((await learnThrough(2, addDays(SUNDAY, 18), addDays(SUNDAY, 11))).folded).toEqual(daysFrom(0, 10))
-  const { folded, bundled } = await learnThrough(2, addDays(SUNDAY, 18))
-  expect(folded).toEqual(daysFrom(11, 18))
-  expect(bundled).toEqual({ version: 2, through: addDays(SUNDAY, 18) })
+test("learning stores every day past the model stored, a day it can't read stopping it there, and the next run carries on from what it stored", async () => {
+  expect(await learnThrough(1, addDays(SUNDAY, 18))).toEqual({ folded: daysFrom(0, 18), bundled: { version: 1, through: addDays(SUNDAY, 18) } })
+  // A new version starts afresh, and is stored however far it gets, since the model of another version is no use to it
+  expect(await learnThrough(2, addDays(SUNDAY, 18), { unreadable: addDays(SUNDAY, 11) })).toEqual({ folded: daysFrom(0, 10), bundled: { version: 2, through: addDays(SUNDAY, 10) } })
+  expect(await learnThrough(2, addDays(SUNDAY, 18))).toEqual({ folded: daysFrom(11, 18), bundled: { version: 2, through: addDays(SUNDAY, 18) } })
+  expect(await learnThrough(2, addDays(SUNDAY, 18))).toEqual({ folded: [], bundled: { version: 2, through: addDays(SUNDAY, 18) } })
 })
 
-test("a build by hand, or a preview's, only reads, unless told to store what it learns", async () => {
+test("a run not asked to store writes the model stored as it is, or an empty one if it's another version's, and stores nothing", async () => {
   await learnThrough(1, addDays(SUNDAY, 3))
-  const published = await readModel("buses")
-  for (const [branch, store] of [["", ""], ["preview", ""], ["", "1"]]) {
-    vi.stubEnv("WORKERS_CI_BRANCH", branch || undefined as unknown as string)
-    vi.stubEnv("NOTUNH_STORE", store)
-    const output = pathToFileURL(`${tmpdir()}/notunh-learn-${crypto.randomUUID()}.json`)
-    await learn<{ version: number, through: Day | null }>("buses", output, { empty: () => ({ version: 1, through: null }), first: async () => SUNDAY, last: addDays(SUNDAY, 5), fold: async (model, day) => ({ ...model, through: day }) })
-    expect((await readModel("buses")).state).toEqual(store ? { version: 1, through: addDays(SUNDAY, 5) } : published.state)
-  }
+  const { revision } = await readModel("buses")
+  expect(await learnThrough(1, addDays(SUNDAY, 5), { store: false })).toEqual({ folded: [], bundled: { version: 1, through: addDays(SUNDAY, 3) } })
+  expect(await learnThrough(2, addDays(SUNDAY, 5), { store: false })).toEqual({ folded: [], bundled: { version: 2, through: null } })
+  expect((await readModel("buses")).revision).toBe(revision)
 })
 
-test("a rebuild learns on in its checkpoint over several builds while the model it replaces stays published and bundled, until it's caught up", async () => {
+test("a rebuild cut short of the days stored stores nothing, leaving the model stored written, and one that gets there replaces it", async () => {
   await learnThrough(1, addDays(SUNDAY, 18))
-  vi.stubEnv("MODEL_REBUILD", "1")
-  const first = await learnThrough(1, addDays(SUNDAY, 18), addDays(SUNDAY, 8))
-  vi.stubEnv("MODEL_REBUILD", "")
-  expect(first).toEqual({ folded: daysFrom(0, 7), bundled: { version: 1, through: addDays(SUNDAY, 18) } })
+  expect(await learnThrough(1, addDays(SUNDAY, 18), { rebuild: true, unreadable: addDays(SUNDAY, 8) })).toEqual({ folded: daysFrom(0, 7), bundled: { version: 1, through: addDays(SUNDAY, 18) } })
   expect((await readModel("buses")).state).toEqual({ version: 1, through: addDays(SUNDAY, 18) })
-  expect((await readModel(checkpointOf("buses"))).state).toEqual({ version: 1, through: addDays(SUNDAY, 7) })
-  expect(await learnThrough(1, addDays(SUNDAY, 19))).toEqual({ folded: daysFrom(8, 19), bundled: { version: 1, through: addDays(SUNDAY, 19) } })
-  expect((await readModel("buses")).state).toEqual({ version: 1, through: addDays(SUNDAY, 19) })
+  expect(await learnThrough(1, addDays(SUNDAY, 19), { rebuild: true })).toEqual({ folded: daysFrom(0, 19), bundled: { version: 1, through: addDays(SUNDAY, 19) } })
 })
 
-test("against a Worker of another API version, as a build meets before its own Worker deploys, a build only reads, storing nothing, and bundles what's stored if it's of this version", async () => {
+test("against a Worker that refuses learning's writes, as the one deployed before a change to its API may, what it stores is written as it was", async () => {
   const stored = { version: 1, through: addDays(SUNDAY, 3) }
   const posts: unknown[] = []
-  // As a Worker from before API versions answers: health without one, the latest state alone, and a POST of a state
-  // stored over whatever's there
+  // As the Worker before revisions answers: the latest state alone, and a 400 for a state sent with what it expects
   vi.stubGlobal("fetch", async (_: string, init?: RequestInit) => {
     if (init?.method !== "POST")
       return Response.json({ state: stored })
-    const { through } = JSON.parse(`${init.body}`)
-    posts.push(through)
-    return new Response(null, { status: typeof through === "string" ? 204 : 400 })
+    posts.push(JSON.parse(`${init.body}`).state.through)
+    return new Response(null, { status: 400 })
   })
-  expect(await learnThrough(1, addDays(SUNDAY, 18))).toEqual({ folded: [], bundled: stored })
-  expect((await learnThrough(2, addDays(SUNDAY, 18))).bundled).toEqual({ version: 2, through: null })
-  expect(posts).toEqual([])
+  expect(await learnThrough(1, addDays(SUNDAY, 6))).toEqual({ folded: daysFrom(4, 6), bundled: stored })
+  expect(await learnThrough(2, addDays(SUNDAY, 1))).toEqual({ folded: daysFrom(0, 1), bundled: { version: 2, through: null } })
+  expect(posts).toEqual([addDays(SUNDAY, 6), addDays(SUNDAY, 1)])
+})
+
+test("without BUILD_TOKEN, a run asked to store fails, and any other writes an empty model", async () => {
+  vi.stubEnv("BUILD_TOKEN", "")
+  await expect(learnThrough(1, SUNDAY)).rejects.toThrow("BUILD_TOKEN")
+  expect(await learnThrough(1, SUNDAY, { store: false })).toEqual({ folded: [], bundled: { version: 1, through: null } })
 })
 
 test("a model is only stored over the revision its writer read, so of two builds learning at once the second's 409s, even replacing the same day", async () => {
@@ -364,13 +358,12 @@ test("storage says how big the database is, in bytes and rows a table", async ()
   expect(rows).toEqual({ samples: 0, derived: 1, chunks: 1, feeds: 0, models: 0, transitions: 0, latest: 0, polls: 0, room_snapshots: 0 })
 })
 
-test("health says the API's version, when each table's rows start and end, in its own unit, and the day each model runs through", async () => {
+test("health says when each table's rows start and end, in its own unit, and the day each model runs through", async () => {
   const at = Date.parse("2026-10-07T16:00:00Z")
   for (const minutes of [0, 1, 7])
     sqlite.prepare("insert into samples (source, at, body) values ('buses', ?, x'00')").run(at + minutes * 60_000)
   sqlite.prepare("insert into polls (at, failed) values (?, '[]')").run(at)
   expect(await health()).toEqual({
-    api:         API,
     buses:       { since: at, last: at + 7 * 60_000 },
     predictions: { since: null, last: null },
     transitions: { since: null, last: null },

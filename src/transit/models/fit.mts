@@ -3,10 +3,12 @@
 // takes over within a month. Changing the half-life only takes folding the same summaries again.
 //
 // Weighing visits by how sure their times are measured no better than weighing them all the same. A visit last seen
-// still at its stop is left out of how long buses stay, as its stay was cut short
+// still at its stop, or first seen already there, teaches only the leg driven to or from it, as its stay was cut
+// short. Counting when one first seen there left changed nothing held out
 
 import { type Cell, type Model, type Tally, ANY_LAYOVER, ANY_LEG, ANY_STOP, CONTEXTS, LINGERED, contextAt, dayTypeAt, emptyModel, emptyScores, hourAt, zoneKey } from "./model.mts"
-import { type Visit, INCOMPLETE } from "../inference/events.mts"
+import { type Visit, INCOMPLETE, JOINED } from "../inference/events.mts"
+import { alwaysListening } from "../observations/raw.mts"
 import { foldDay } from "../../shared/learn.mts"
 import { groupBy } from "../../shared/group.mts"
 import type { Day } from "../../shared/time.mts"
@@ -82,9 +84,10 @@ const GRACE = 30 // s
 
 /**
  * What a service day's visits show, and how forecasts did that day, as sums over the day, undecayed, which fold
- * into a model as they are
+ * into a model as they are. A headway is only counted where the Worker was listening throughout, as it may have
+ * missed a bus between otherwise
  */
-export const summarize = (visits: readonly Visit[], scores = emptyScores()): Model => {
+export const summarize = (visits: readonly Visit[], scores = emptyScores(), isListening = alwaysListening): Model => {
   const next = emptyModel()
   const linger = (key: string, seconds: number) => {
     const sums = next.lingers[key] ??= Array(2 * LINGERED.length).fill(0)
@@ -122,8 +125,7 @@ export const summarize = (visits: readonly Visit[], scores = emptyScores()): Mod
       else if (previous && previous.stop !== stop && !((previous.flags ?? 0) & INCOMPLETE) && arrive - previous.depart < MAX_GAP)
         addTo(next.legs, `${route}:${previous.stop}>${stop}`, CONTEXTS, contextAt(arrive), Math.log(Math.max(1, arrive - previous.depart)))
 
-      // Last seen still there, when it left is unknown
-      if (flags & INCOMPLETE)
+      if (flags & (INCOMPLETE | JOINED))
         return
       const dwell = depart - arrive
       if (dwell >= 0 && dwell < MAX_ZONE && position !== undefined)
@@ -148,12 +150,12 @@ export const summarize = (visits: readonly Visit[], scores = emptyScores()): Mod
   }
 
   // Each bus leaving a stop after another of its route did
-  const byStop = groupBy(visits.filter(({ flags = 0 }) => !(flags & INCOMPLETE)), ({ route, stop }) => `${route}@${stop}`)
+  const byStop = groupBy(visits.filter(({ flags = 0 }) => !(flags & (INCOMPLETE | JOINED))), ({ route, stop }) => `${route}@${stop}`)
   for (const own of byStop.values()) {
     own.sort((a, b) => a.depart - b.depart)
     own.forEach(({ route, vehicle, depart }, i) => {
       const previous = own[i - 1]
-      if (previous && previous.vehicle !== vehicle && depart - previous.depart < MAX_HEADWAY)
+      if (previous && previous.vehicle !== vehicle && depart - previous.depart < MAX_HEADWAY && isListening(previous.depart * 1000, depart * 1000))
         addTo(next.headways, route, 2 * 24, hourAt(depart), depart - previous.depart)
     })
   }

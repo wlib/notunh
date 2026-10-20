@@ -56,8 +56,10 @@ test("the buses are replayed as the map got their fixes, each once a poll got it
 
 // How far off the model's forecasts were on the recording: mean absolute error in seconds at leads of 1, 3, 5, 10,
 // and 20 minutes. Changes to extraction or the model should only bring these down, or explain why. The 5- and
-// 10-minute leads rest on only 50 to 110 departures in this half hour, so a few seconds either way can be noise
-const MAE = [62, 116, 171, 192, 260]
+// 10-minute leads rest on only 50 to 110 departures in this half hour, so a few seconds either way can be noise. The
+// 20-minute one rests on 7: following a bus from the stop it was first seen at, rather than the stop after, chains
+// one WestEdge bus into its next loop 14 minutes off, as the connectors' detours do, which held out cost nothing
+const MAE = [62, 116, 172, 192, 341]
 
 test("forecasts from the model do no worse on the recording than they did", () => {
   const scored = score(emptyModel(), feed, visits, fixes)

@@ -121,13 +121,6 @@ const DAY_COLUMNS = ["monday", "tuesday", "wednesday", "thursday", "friday", "sa
 const dayOf = (date = "") =>
   date.replace(/^(\d{4})(\d\d)(\d\d)$/, "$1-$2-$3")
 
-const groupBy = <T,>(items: T[], key: (item: T) => string) => {
-  const groups = new Map<string, T[]>()
-  for (const item of items)
-    groups.set(key(item), [...groups.get(key(item)) ?? [], item])
-  return groups
-}
-
 export const convert = (table: (name: string) => Row[]): FeedData => {
   const [feedInfo] = table("feed_info.txt")
 
@@ -159,7 +152,7 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
       service.removed.push(dayOf(exception.date))
   }
 
-  const stopTimesByTrip = groupBy(table("stop_times.txt"), stopTime => stopTime.trip_id)
+  const stopTimesByTrip = Map.groupBy(table("stop_times.txt"), stopTime => stopTime.trip_id)
   for (const stopTimes of stopTimesByTrip.values())
     stopTimes.sort((a, b) => +a.stop_sequence - +b.stop_sequence)
 
@@ -209,7 +202,7 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
   })
 
   const shapes: Record<string, [number, number][]> = {}
-  for (const [id, points] of groupBy(table("shapes.txt"), point => point.shape_id))
+  for (const [id, points] of Map.groupBy(table("shapes.txt"), point => point.shape_id))
     shapes[id] = smoothShape(
       points
         .sort((a, b) => +a.shape_pt_sequence - +b.shape_pt_sequence)

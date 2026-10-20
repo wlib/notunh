@@ -1,11 +1,10 @@
 /** @jsxImportSource bruh/browser */
 
 import { type Route, routeLabel } from "../../transit/feed.mts"
-import { feed } from "../state/data.mts"
-import { selectedStop } from "../state/view.mts"
 import { ClockTime } from "../../shell/intl.tsx"
+import { state } from "../state/map.mts"
 
-export const route = (id: string) => feed.peek().routesById.get(id)!
+export const route = (id: string) => state.feed.peek().routesById.get(id)!
 
 /** Epoch seconds, as plans and schedules count time */
 export const Time = ({ seconds }: { seconds: number }) =>
@@ -21,6 +20,6 @@ export const RouteBadge = ({ route }: { route: Route }) =>
   </span>
 
 export const StopLink = ({ stop }: { stop: number }) =>
-  <button type="button" class="stop-link" onclick={() => selectedStop.value = stop}>
-    {feed.peek().stops[stop].name}
+  <button type="button" class="stop-link" onclick={() => state.selectedStop.value = stop}>
+    {state.feed.peek().stops[stop].name}
   </button>

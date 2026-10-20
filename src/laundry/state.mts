@@ -4,7 +4,7 @@
 import { r, watch } from "bruh/reactive"
 import { ROOMS, pathOf, roomAtPath, roomName } from "./rooms.mts"
 import { KINDS, assessRoom, type Kind, type RoomLive, type RoomSummary, type Summaries } from "./infer.mts"
-import { Usual, emptyUsual, slotOf, unpack, type Week } from "./model.mts"
+import { Usual, emptyUsual, slotOf, unpack, type UsualWeek } from "./model.mts"
 import { getJson } from "../shared/json.mts"
 import { type Live, live, poll } from "../shell/poll.mts"
 import { latest } from "../shell/build.mts"
@@ -86,18 +86,18 @@ export const summaryOf = (id: string, at: number): RoomSummary | undefined => {
 
 //#region Usually
 
-/** When each room is usually busy, learned nightly, and swapped for a newer build's as it comes; empty until it loads */
-export const usual = await latest("usual", Usual, emptyUsual)
+const bundled = await latest("usual", Usual, emptyUsual)
 
-const unpacked = new WeakMap<Week, ReturnType<typeof unpack>>()
-
-/** A room's usual week for a kind, by hour, each leaning on the room's usual at any hour, or nothing for a room never watched */
-export const usualWeek = (id: string, kind: Kind) => {
-  const week = usual.value.rooms[id]?.[kind]
-  if (week && !unpacked.has(week))
-    unpacked.set(week, unpack(week))
-  return week && unpacked.get(week)
-}
+/**
+ * When each room is usually busy, by kind, learned nightly and read from each newer build's as it comes, leaving out
+ * kinds never watched; empty until it loads
+ */
+export const usual = r(() => Object.fromEntries(Object.entries(bundled.value.rooms).map(([room, kinds]) => [room, Object.fromEntries(
+  Object.entries(kinds).flatMap(([kind, week]) => {
+    const read = unpack(week)
+    return read ? [[kind, read]] : []
+  })
+) as Partial<Record<Kind, UsualWeek>>])))
 
 // Any free this share of the hour or more is usually quiet, and this or less usually busy
 const QUIET = 0.8
@@ -106,7 +106,7 @@ const BUSY = 0.4
 /** "quiet" or "busy" when a room usually is in an hour of the week, going by whichever kind is tighter */
 export const usually = (id: string, slot: number) => {
   const chances = KINDS
-    .map(kind => usualWeek(id, kind)?.[slot].any)
+    .map(kind => usual.value[id]?.[kind]?.hours[slot].any)
     .filter(any => any !== undefined)
   if (!chances.length)
     return undefined

@@ -37,6 +37,9 @@ export const remembered = <T,>(key: string, read: (stored: unknown) => T, write:
 
 //#endregion
 
+/** Takes what stops something that's been started, as a page's state collects to stop all it started at once */
+export type Own = (stop: () => void) => void
+
 /**
  * A derived value that reaches what depends on it only when it changes by isEqual, which bruh 2.0.0-beta.5's own
  * derived values don't manage; drop this once they do. It follows f a microtask late, as effects run

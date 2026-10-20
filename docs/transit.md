@@ -10,11 +10,11 @@ How the map knows where each bus is, when it'll leave each stop, and how to get 
 
 ## Where each bus is: the location model
 
-`src/transit/inference/locate.mts`. GPS puts a bus within a few meters, but only every 10 to 30 s, so what's uncertain is what it did between fixes.
+`src/transit/inference/`. GPS puts a bus within a few meters, but only every 10 to 30 s, so what's uncertain is what it did between fixes.
 
-1. **Matching.** Each fix is matched to a place along one of its route's shapes by an HMM: weighed by how far off the street it is, its heading, and whether driving there from the previous place is plausible. Viterbi over a whole day for extraction; only the fixes so far when live.
-2. **Between fixes.** The bus drove as buses do: accelerating to a cruising speed and braking, stopping or not at each stop on the way and dwelling there, or halting somewhere, for whatever time the gap leaves. This is integrated deterministically over a grid of cruising speeds and time splits.
-3. **Output.** Each stop's arrival and departure as quantiles (10th, 50th, 90th percentile), how likely the bus stopped there, and how its time was spent along the leg from the previous stop.
+1. **Matching** (`matching.mts`). Each fix is matched to a place along one of its route's shapes by an HMM: weighed by how far off the street it is and its heading (`likelihoods.mts`), and whether driving there from the previous place is plausible. Viterbi over a whole day for extraction. Live (`locate.mts`), each fix goes greedily to its likeliest place given where the one before was put, so live passages are conditional on that one track rather than a posterior over every way the bus could have come.
+2. **Between fixes** (`passages.mts`). The bus drove as buses do: accelerating to a cruising speed and braking, stopping or not at each stop on the way and dwelling there, or halting somewhere, for whatever time the gap leaves. This is integrated deterministically over a grid of cruising speeds and time splits. Where no way of driving fits the gap, a stop's times are anywhere between the fixes either side, not a point.
+3. **Output.** Each stop's arrival and departure as quantiles (10th, 50th, 90th percentile), how likely the bus stopped there, and how its time was spent along the leg from the previous stop. A bus already at a stop when first seen, or still there when last seen, gives a passage flagged as such (`isJoined`, `isIncomplete`): when it got there, or when it left, is only bounded by that fix. The extraction keeps both, flagged (`JOINED`, `INCOMPLETE`), and the model learns only the legs driven to or from them.
 
 The GPS likelihoods are fitted on the fixes of Oct 7 to 19, and describe the receivers and where buses stand rather than traffic, so they don't drift with the timetable:
 
@@ -35,7 +35,7 @@ A particle filter was tried for this and measured too noisy.
 - its time along the leg spent as buses' is (slower pulling out and in, and wherever the leg holds them up);
 - each stop as long as buses dwell there, or until the scheduled time where the trip waits for the timetable.
 
-The same course gives both where the map draws the bus and when it leaves each stop ahead, so the drawing and the departures never disagree. `tracking.mts` follows a bus one fix at a time through the location model and its pace, as the map does live and the nightly scoring replays.
+Forecasting builds each followed bus's course once, along its trip, and a run's arrivals and departures are that course's up to the timetable handoff. The map draws the bus along the same course object, so at every stop ahead the drawn bus is there from the run's arrival to its departure; `tests/transit/forecast.test.mts` checks this against the planner's connections, and `tests/map/buses.test.mts` checks a newer course for the same fix reaches the drawing. A bus on no trip the timetable has is drawn along its line instead, with nothing to wait for. `tracking.mts` follows a bus one fix at a time through the location model and its pace, as the map does live and the nightly scoring replays.
 
 Pace noise and leg noise are fitted on Oct 7 to 19 and stable from one held-out day to the next. Resetting pace after a break, a per-time-of-day pace per bus, and a mixture model for held-up legs all measured no better than one bounded spread.
 
@@ -48,7 +48,7 @@ Pace noise and leg noise are fitted on Oct 7 to 19 and stable from one held-out 
 - **Headway routes** with no bus followed: a stop's list says how often buses come and how soon the next likely does, rather than timetable times that say nothing of when they'll actually come.
 - **Umo's predictions** say which buses run which trips and which runs aren't coming, and set times only for a bus on a trip the map isn't following, or a route the model knows nothing of. Umo's schedule-based guesses at when a bus will start a run are no better than the model's, so they're ignored.
 
-A run's times are left as forecast rather than forced into order: a stop can come out sooner than the one before. Anything that needs a chronology (the planner's connections) sorts it.
+A run's times are left as forecast rather than forced into order: past the handoff, or from Umo's predictions, a stop can come out sooner than the one before. The planner's connections never go back in time (`buildConnections`), which a property test checks.
 
 Held out a day at a time on Oct 7 to 19, this took the median error of a followed bus's departures from 60, 126, and 202 s to 28, 50, and 75 s at 1, 5, and 10 minutes ahead, and of every departure from 65, 128, and 186 s to 32, 60, and 90 s. Following buses with the location model rather than zone crossings took a further 2 to 5 s off the median at 1 to 5 minutes on most days.
 
@@ -65,13 +65,13 @@ The model keeps, keyed by stop and route ids (which last across timetables, unli
 - how a leg's time is spent along it;
 - dwell at each stop and layover at trip starts, by route, and how much longer a bus that's been at a stop a while still stays;
 - whether early buses wait for their scheduled time;
-- how late each route runs, and its headways by hour.
+- how late each route runs, and its headways by hour, counted only where the Worker was listening throughout, as its polls record, so a failed poll or a missing minute isn't taken for no bus.
 
 Every estimate leans on a broader one while it has little data (`src/transit/models/estimates.mts`): a leg's mean on legs of that length, a time of day on the leg's overall. An empty model has no estimates, and the map falls back on built-in constants.
 
 What's learned from is bounded where the data has a clear gap between two kinds of thing, documented in `fit.mts` (a bus not driving a leg for over 10 min was doing something else; over 15 min at a stop is out of service). Weighing visits by how sure their times are made no difference worth keeping.
 
-**Scoring.** Each day is also replayed (`scripts/map/replay.mts`): at 1, 3, 5, 10, 20, 30, and 60 minutes before each departure, the forecast the map would have made from the fixes it would have seen, in arrival order, against Umo's prediction and the timetable. How many of its own standard deviations the model turned out off sizes the slack the planner leaves.
+**Scoring.** Each day is also replayed (`scripts/map/replay.mts`): at 1, 3, 5, 10, 20, 30, and 60 minutes before each departure, the forecast the map would have made from the fixes it would have seen, in the order the Worker's polls got them (timed when each was answered, from raw version 3), against Umo's prediction and the timetable. A moment the Worker wasn't listening for the minute before isn't scored, as the map could have seen more then. How many of its own standard deviations the model turned out off sizes the slack the planner leaves.
 
 **Versions.** The model's shape has a `version` (3). A stored model of another version is refit from the first day the Worker still has data for.
 

@@ -1,6 +1,6 @@
 // Every fix the buses report: moving ones report about every 11 s and stopped ones every 30 s, so polling every 10 s
-// misses only the odd pair of fixes a few seconds apart. Each poll is recorded, with how many live buses it listed,
-// and each fix with the poll that first saw it
+// misses only the odd pair of fixes a few seconds apart. Each poll is recorded when its answer came, or it failed,
+// with how many live buses it listed, and each fix with the poll that first saw it
 
 import { STALE_VEHICLE_SECONDS, fetchVehicles } from "../src/transit/observations/umo.mts"
 import { packFixes, packPoll, type RawFix, type RawPoll } from "../src/transit/observations/raw.mts"
@@ -23,7 +23,6 @@ export const buses: Source<RawFix> = {
     for (let poll = 0; poll < POLLS && !signal.aborted; poll++) {
       if (poll)
         await sleep(started + poll * POLL_MS - Date.now())
-      const made = Date.now()
       try {
         // Parked buses repeat the same old fix all day
         const live = (await fetchVehicles(AbortSignal.any([signal, AbortSignal.timeout(POLL_MS)]), HEADERS))
@@ -35,12 +34,12 @@ export const buses: Source<RawFix> = {
           return isNew
         })
         samples.push(...packFixes(at, fresh, polls.length))
-        polls.push(packPoll(at, made, live.length))
+        polls.push(packPoll(at, Date.now(), live.length))
       }
       catch (error) {
         // A missed poll costs a few fixes, and the rest of the minute still counts
         console.warn(error)
-        polls.push(packPoll(at, made, null))
+        polls.push(packPoll(at, Date.now(), null))
       }
     }
     return { samples, polls }

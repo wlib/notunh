@@ -5,11 +5,10 @@
 import { r, type SourceNode } from "bruh/reactive"
 import type { Place } from "../../places/search.mts"
 import { nameAt, type MapHints } from "../../places/gazetteer.mts"
-import { gazetteer } from "../state/data.mts"
-import { from, to } from "../state/trip.mts"
+import { state } from "../state/map.mts"
 
 export const PlaceCard = ({ place, hints, close }: { place: Place, hints: MapHints, close: () => void }) => {
-  const found = nameAt(gazetteer.peek(), place, hints).catch(() => undefined)
+  const found = nameAt(state.gazetteer.peek(), place, hints).catch(() => undefined)
   const name = r<string>()
   found.then(result => name.value = result ?? place.name)
 
@@ -28,8 +27,8 @@ export const PlaceCard = ({ place, hints, close }: { place: Place, hints: MapHin
     <div class="map-card-body">
       <strong>{r(() => name.value ?? "Finding this place…")}</strong>
       <div class="map-card-actions">
-        <button type="button" class="button" onclick={pick(from)}>Directions from here</button>
-        <button type="button" class="button" onclick={pick(to)}>Directions to here</button>
+        <button type="button" class="button" onclick={pick(state.from)}>Directions from here</button>
+        <button type="button" class="button" onclick={pick(state.to)}>Directions to here</button>
       </div>
     </div>
   )

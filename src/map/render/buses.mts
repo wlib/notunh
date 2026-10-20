@@ -1,16 +1,15 @@
 // Buses drawn where we expect them to be now. Each moves along its course (movement.mts) from where the location
-// model had it at its last fix. The course's legs run at the pace the model expects and this bus has kept, slower
-// pulling out and in as buses are, and wait at stops as long as buses do there, or as long as the trip holds for its
-// timetable. Each new fix is eased into without backing up, and a bus fades the longer it's been since one. The easing
-// is the drawing's alone: what's learned of how the buses run comes from the fixes, never from where one was drawn
+// model had it at its last fix, which is the course forecasting chained it along (forecast.mts), so it's at each stop
+// when its forecast says. Every leg, stop, and wait is the course's. Each new fix or course is eased into without
+// backing up, and a bus fades the longer it's been since a fix. The easing is the drawing's alone: what's learned of
+// how the buses run comes from the fixes, never from where one was drawn
 
 import { watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, Map as MapLibre } from "maplibre-gl"
 import { routeLabel, type Feed } from "../../transit/feed.mts"
-import type { Vehicle } from "../../transit/observations/umo.mts"
-import { pointAt } from "../../geo/lines.mts"
+import { along, pointAt } from "../../geo/lines.mts"
 import type { Coordinates } from "../../geo/projection.mts"
-import type { Followed } from "../state/following.mts"
+import type { Drawn } from "../state/following.mts"
 
 const MAX_EXTRAPOLATION = 45 // s of driving guessed past a fix
 const BLEND_MS = 1500        // to ease from where a bus was drawn to where a new fix puts it
@@ -22,14 +21,11 @@ export const confidence = (age: number) =>
   Math.min(1, Math.max(0.3, 1 - (age - 5) / 100))
 
 type Fix = {
-  vehicle: Vehicle,
+  /** The bus as last reported, where on its route that is, and its course from there, if it's on its route */
+  bus: Drawn,
   /** Epoch milliseconds the GPS fix was taken, by our clock */
   at: number,
-  /** Where on its route the fix is, and its course from there, if it's on its route */
-  followed: Followed,
-  /** Waiting out a layover before its next trip, so going nowhere */
-  isLayover: boolean,
-  /** Meters along the line that the bus was drawn ahead (+) or behind (-) of this fix's model when it arrived */
+  /** Meters along the line that the bus was drawn ahead (+) or behind (-) of this course when it came */
   lag: number,
   /** How far the drawn bus was from this fix's model off the line, eased away */
   correction: Coordinates,
@@ -40,8 +36,8 @@ type Fix = {
  * Meters along its line that a fix's bus has likely got to by now. The course is timed from the fix, by our clock,
  * and guessed at most MAX_EXTRAPOLATION past it
  */
-const modeledDistance = ({ followed: { location, course }, isLayover, at }: Fix, now: number) =>
-  isLayover || !course
+const modeledDistance = ({ bus: { location, course }, at }: Fix, now: number) =>
+  !course
     ? location!.distance
     : course.from + course.course.distanceAt(location!.at + Math.min(MAX_EXTRAPOLATION, Math.max(0, now - at) / 1000))
 
@@ -53,9 +49,9 @@ const drawn = (fix: Fix, now: number) => {
   })
 
   // Off its route there's no telling where it's headed, so it stays where it reported
-  const { location } = fix.followed
+  const { vehicle, location } = fix.bus
   if (!location)
-    return { ...ease({ point: [fix.vehicle.lon, fix.vehicle.lat], bearing: fix.vehicle.heading ?? 0 }), distance: 0 }
+    return { ...ease({ point: [vehicle.lon, vehicle.lat], bearing: vehicle.heading ?? 0 }), distance: 0 }
 
   const modeled = modeledDistance(fix, now)
   // A bus drawn ahead of its fix waits there until the model catches up, rather than reversing. One drawn behind
@@ -71,10 +67,8 @@ const drawn = (fix: Fix, now: number) => {
 export const animateBuses = (
   map: MapLibre,
   feed: Reactive<Feed>,
-  /** The buses as followed, each with its course */
-  followed: Reactive<ReadonlyMap<string, Followed>>,
-  /** Ids of buses on a layover */
-  layovers: Reactive<ReadonlySet<string>>,
+  /** The buses as drawn, each with its course */
+  buses: Reactive<ReadonlyMap<string, Drawn>>,
   /** Buses to draw larger with the rest faded, or a route whose buses stay bright with the rest faded */
   focus: Reactive<{ vehicles?: ReadonlySet<string>, route?: string }>
 ) => {
@@ -85,31 +79,27 @@ export const animateBuses = (
     // The wall clock, as the monotonic one stops while a phone sleeps, which would leave old fixes looking fresh
     const now = Date.now()
     const next = new Map<string, Fix>()
-    for (const [id, bus] of followed.value) {
-      const { vehicle } = bus
+    for (const [id, bus] of buses.value) {
+      const { vehicle, location, course } = bus
       const previous = fixes.get(id)
-      if (previous?.vehicle === vehicle) {
+      const isSameFix = previous?.bus.vehicle === vehicle
+      if (isSameFix && previous.bus.course === course) {
         next.set(id, previous)
         continue
       }
       const fix: Fix = {
-        vehicle,
-        at: now - vehicle.secsSinceReport * 1000,
-        followed: bus,
-        isLayover: layovers.peek().has(id),
+        bus,
+        at: isSameFix ? previous.at : now - vehicle.secsSinceReport * 1000,
         lag: 0,
         correction: [0, 0],
         correctedAt: now
       }
       if (previous) {
         const was = drawn(previous, now)
-        const { location } = bus
-        if (location && previous.followed.location?.line === location.line) {
+        if (location && previous.bus.location?.line === location.line) {
           // Along the street, the short way around a loop
-          const { length, isLoop } = location.line
-          const lag = was.distance - modeledDistance(fix, now)
-          const shortest = isLoop ? ((lag + length / 2) % length + length) % length - length / 2 : lag
-          fix.lag = Math.abs(shortest) <= MAX_LAG ? shortest : 0
+          const lag = along(location.line, was.distance - modeledDistance(fix, now))
+          fix.lag = Math.abs(lag) <= MAX_LAG ? lag : 0
         }
         else {
           const is = drawn(fix, now).point
@@ -132,21 +122,22 @@ export const animateBuses = (
     const { vehicles: focused, route: focusedRoute } = focus.peek()
     positions.clear()
     const features = [...fixes.values()].flatMap((fix): GeoJSON.Feature[] => {
-      const route = feed.peek().routesById.get(fix.vehicle.route!.id)
+      const { vehicle } = fix.bus
+      const route = feed.peek().routesById.get(vehicle.route!.id)
       // Gone from a newer timetable
       if (!route)
         return []
       const { point, bearing } = drawn(fix, now)
       const isFocused =
-        focused      ? focused.has(fix.vehicle.id) :
+        focused      ? focused.has(vehicle.id) :
         focusedRoute ? focusedRoute === route.id :
                        undefined
       const sureness = confidence((now - fix.at) / 1000)
-      positions.set(fix.vehicle.id, point)
+      positions.set(vehicle.id, point)
       return [{
         type: "Feature",
         properties: {
-          id:      fix.vehicle.id,
+          id:      vehicle.id,
           route:   route.id,
           label:   routeLabel(route),
           text:    route.text,

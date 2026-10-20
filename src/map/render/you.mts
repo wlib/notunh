@@ -2,10 +2,10 @@
 // are, with how sure the fix is around it and which way you're going. On a bus you're shown as the bus. The
 // locate button keeps the map following you until it's moved by hand
 
-import { watch, type Reactive } from "bruh/reactive"
+import { watch } from "bruh/reactive"
 import type { GeoJSONSource, IControl, Map as MapLibre } from "maplibre-gl"
 import { MIN_SPEED, reckon, type Fix } from "../../geo/fixes.mts"
-import { location, locationProblem, currentLocation } from "../state/location.mts"
+import type { MapState } from "../state/map.mts"
 import type { Coordinates } from "../../geo/projection.mts"
 import { coveredPadding, metersPerPixel } from "./camera.mts"
 
@@ -39,8 +39,8 @@ const headingIcon = () => {
 export const showYou = (
   map: MapLibre,
   panel: HTMLElement,
-  /** The bus you're on, which you're drawn as instead */
-  riding: Reactive<string | undefined>,
+  /** Where you are, and the bus you're on, which you're drawn as instead */
+  { location, locationProblem, currentLocation, riding }: Pick<MapState, "location" | "locationProblem" | "currentLocation" | "riding">,
   busPosition: (id: string) => Coordinates | undefined
 ) => {
   let fix: Fix | undefined

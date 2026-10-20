@@ -1,7 +1,7 @@
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
 import { type StopPredictions, type Vehicle, fetchVehicles } from "../../src/transit/observations/umo.mts"
-import { type ObservedRow, type RawFix, type RawPoll, type RawPrediction, RAW_VERSION, decode, encode, fromHex, observe, packFixes, packPoll, packPredictions, unpackFixes, unpackPredictions } from "../../src/transit/observations/raw.mts"
+import { type ObservedRow, type RawFix, type RawPoll, type RawPrediction, RAW_VERSION, decode, encode, fromHex, listening, observe, packFixes, packPoll, packPredictions, unpackFixes, unpackPredictions } from "../../src/transit/observations/raw.mts"
 
 // The epoch millisecond a row's minute starts
 const AT = 1_791_360_000_000
@@ -156,3 +156,26 @@ test("observing rows gives every fix and prediction in the order of their minute
     }
   ))
 )
+
+test("a source was listening throughout a span with answered polls either side of it and no silence across it longer than the gap", () =>
+  fc.assert(fc.property(
+    fc.array(fc.record({ at: fc.integer({ min: 0, max: 300_000 }), seen: fc.option(fc.nat(5), { nil: null }) })),
+    fc.integer({ min: 1000, max: 60_000 }),
+    fc.integer({ min: -10_000, max: 310_000 }),
+    fc.nat(120_000),
+    (polls, gap, from, length) => {
+      const to = from + length
+      const heard = polls.filter(({ seen }) => seen !== null).map(({ at }) => at).sort((a, b) => a - b)
+      const isQuiet = heard.some((at, i) => i > 0 && at > from && heard[i - 1] < to && at - heard[i - 1] > gap)
+      const expected = heard.some(at => at <= from) && heard.some(at => at >= to) && !isQuiet
+      expect(listening({ polls: polls.toSorted((a, b) => a.at - b.at), unrecorded: [] }, gap)(from, to)).toBe(expected)
+    }
+  ))
+)
+
+test("a failed poll isn't listening, and rows from before polls were recorded say nothing of when it was", () => {
+  const polls = [{ at: AT, seen: 2 }, { at: AT + 10_000, seen: null }, { at: AT + 20_000, seen: 0 }]
+  expect(listening({ polls, unrecorded: [] }, 15_000)(AT + 2000, AT + 18_000)).toBe(false)
+  expect(listening({ polls, unrecorded: [] }, 25_000)(AT + 2000, AT + 18_000)).toBe(true)
+  expect(listening({ polls, unrecorded: [AT - 60_000] }, 15_000)(AT + 2000, AT + 18_000)).toBe(true)
+})

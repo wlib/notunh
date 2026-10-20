@@ -10,15 +10,16 @@
 import type { StopPredictions, Vehicle } from "./umo.mts"
 
 /**
- * The version of this normalization, named in every row. 2 adds the minute's polls, and on each fix the poll that
- * first saw it. 1 is the tuples without them. Rows from before versioning are bare arrays of version 1's tuples,
- * which read as version 0
+ * The version of this normalization, named in every row. 3 times each poll by when its answer came, or it failed. 2
+ * timed it by when it was asked, up to its timeout earlier, and was the first with the minute's polls, and on each fix
+ * the poll that first saw it. 1 is the tuples without them. Rows from before versioning are bare arrays of version
+ * 1's tuples, which read as version 0
  */
-export const RAW_VERSION = 2
+export const RAW_VERSION = 3
 
-export type Version = 0 | 1 | typeof RAW_VERSION
+export type Version = 0 | 1 | 2 | typeof RAW_VERSION
 
-/** A poll as stored: when it was made, at seconds relative to the start of the row's minute, and how many live vehicles Umo listed, or null if it failed */
+/** A poll as stored: when it was answered or failed, at seconds relative to the start of the row's minute, and how many live vehicles Umo listed, or null if it failed */
 export type RawPoll = [at: number, seen: number | null]
 
 /** A vehicle's fix as stored, at seconds relative to the start of the row's minute */
@@ -68,7 +69,7 @@ export type BusFix = {
   trip:      string | null,
   route:     string | null,
   stop:      string | null,
-  /** Epoch milliseconds of the poll that first saw it, for rows of version 2 on */
+  /** Epoch milliseconds the poll that first saw it was answered, from version 3, or asked, in version 2 */
   received?: number
 }
 
@@ -83,7 +84,7 @@ export type SampledPrediction = {
   isLayover: boolean
 }
 
-/** A poll as read back: the epoch millisecond it was made, and how many live vehicles Umo listed, or null if it failed */
+/** A poll as read back: the epoch millisecond it was answered or failed, and how many live vehicles Umo listed, or null if it failed */
 export type Poll = { at: number, seen: number | null }
 
 /** What a source's rows say of when it was looking */
@@ -108,7 +109,7 @@ const relative = (at: number, ms: number) =>
 const absolute = (at: number, seconds: number) =>
   at + Math.round(seconds * 1000)
 
-/** A poll made at an epoch millisecond, seeing some live vehicles, or null for none as it failed */
+/** A poll answered at an epoch millisecond, seeing some live vehicles, or null for none as it failed then */
 export const packPoll = (at: number, made: number, seen: number | null): RawPoll =>
   [relative(at, made), seen]
 
@@ -173,6 +174,27 @@ export const observe = (rows: readonly ObservedRow[]): Observations => {
   return observed
 }
 
+/** For what's known with nothing said of when it was looked for, like visits stored without their fixes */
+export const alwaysListening = (_from: number, _to: number) => true
+
+/**
+ * Whether a source was listening throughout a span of epoch milliseconds, so what it didn't see then wasn't there:
+ * answered polls either side of the span, none of them further apart than `gap` across it. Rows from before polls
+ * were recorded say nothing of when it was listening, so with any of them, it's taken to have been
+ */
+export const listening = ({ polls, unrecorded }: Coverage, gap: number) => {
+  if (unrecorded.length)
+    return alwaysListening
+  const heard = polls.flatMap(({ at, seen }) => seen === null ? [] : [at])
+  // How many silences longer than gap come before each answered poll
+  let silences = 0
+  const before = heard.map((at, i) => silences += +(i > 0 && at - heard[i - 1] > gap))
+  return (from: number, to: number) => {
+    const [first, last] = [heard.findLastIndex(at => at <= from), heard.findIndex(at => at >= to)]
+    return first >= 0 && last >= 0 && before[first] === before[last]
+  }
+}
+
 /** A row's body: gzipped JSON of the version, the samples, and the polls */
 export const encode = async (samples: readonly unknown[], polls: readonly RawPoll[]) =>
   new Uint8Array(await new Response(new Blob([JSON.stringify({ version: RAW_VERSION, samples, polls })]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer())
@@ -185,7 +207,7 @@ export const decode = async <T,>(body: Uint8Array<ArrayBuffer>): Promise<Row<T>>
   const { version, samples, polls } = Object(row) as { version?: unknown, samples?: unknown, polls?: unknown }
   if (version === 1 && Array.isArray(samples))
     return { version, samples, polls: null }
-  if (version === RAW_VERSION && Array.isArray(samples) && Array.isArray(polls))
+  if ((version === 2 || version === RAW_VERSION) && Array.isArray(samples) && Array.isArray(polls))
     return { version, samples, polls }
   throw new Error(`Not a row this reads, of version ${version}, as it reads up to ${RAW_VERSION}`)
 }

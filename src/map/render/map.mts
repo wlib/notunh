@@ -1,17 +1,11 @@
 import "maplibre-gl/dist/maplibre-gl.css"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
 import { Map as MapLibre, AttributionControl, NavigationControl, addProtocol, setWorkerUrl } from "maplibre-gl"
-import { watch, type Reactive, type SourceNode } from "bruh/reactive"
+import { watch } from "bruh/reactive"
 import type { StyleSpecification } from "maplibre-gl"
-import type { Feed } from "../../transit/feed.mts"
-import type { Itinerary } from "../../routing/plan.mts"
-import type { Place } from "../../places/search.mts"
-import type { GazetteerPlace } from "../../places/gazetteer.mts"
-import type { Building } from "../../places/buildings.mts"
 import type { Coordinates } from "../../geo/projection.mts"
-import type { Followed } from "../state/following.mts"
-import type { LegPath } from "../state/trip.mts"
-import { DRAWN_ICONS, type LoadedStyle, glyphsFrom, hostedAt, upstreamGlyphs } from "../basemap/style.mts"
+import type { MapState } from "../state/map.mts"
+import { DRAWN_ICONS, glyphsFrom, hostedAt, upstreamGlyphs } from "../basemap/style.mts"
 import { PROTOCOL, tileLoader } from "../basemap/tiles.mts"
 import { framing } from "./camera.mts"
 import { DENSITY, poiIcon } from "./icons.mts"
@@ -34,24 +28,7 @@ const DURHAM: Coordinates = [-70.9345, 43.1365]
 export const createMap = (
   container: HTMLElement,
   panel: HTMLElement,
-  state: {
-    feed:             Reactive<Feed>,
-    gazetteer:        Reactive<readonly GazetteerPlace[]>,
-    buildings:        Reactive<readonly Building[]>,
-    tiles:            Reactive<{ version?: string }>,
-    style:            Reactive<LoadedStyle>,
-    followed:         Reactive<ReadonlyMap<string, Followed>>,
-    layovers:         Reactive<ReadonlySet<string>>,
-    shownRoutes:      Reactive<ReadonlySet<string>>,
-    highlightedRoute: Reactive<string | undefined>,
-    from:             SourceNode<Place | undefined>,
-    to:               SourceNode<Place | undefined>,
-    selectedStopId:   Reactive<string | undefined>,
-    itinerary:        Reactive<Itinerary | undefined>,
-    legPaths:         Reactive<LegPath[]>,
-    focusedBuses:     Reactive<{ vehicles?: ReadonlySet<string>, route?: string }>,
-    riding:           Reactive<string | undefined>
-  },
+  state: MapState,
   onTap: (tap: Tap) => void
 ) => {
   // The style's tiles, ours where we have them, from the folder of the week the data names
@@ -105,7 +82,7 @@ export const createMap = (
   map.addControl(new NavigationControl({ visualizePitch: true }), "top-right")
   // Buses are only drawn once the map has loaded, but the location button is wanted right away
   let busPosition: (id: string) => Coordinates | undefined = () => undefined
-  const drawYou = showYou(map, panel, state.riding, id => busPosition(id))
+  const drawYou = showYou(map, panel, state, id => busPosition(id))
 
   const show = framing(container, panel)
   show(padding => map.jumpTo({ center: DURHAM, padding }))
@@ -126,7 +103,7 @@ export const createMap = (
       show(padding => map.easeTo({ center: [stop.lon, stop.lat], zoom, padding }))
     })
 
-    busPosition = animateBuses(map, state.feed, state.followed, state.layovers, state.focusedBuses)
+    busPosition = animateBuses(map, state.feed, state.drawn, state.focusedBuses)
     drawYou()
   })
 

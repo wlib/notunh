@@ -40,7 +40,11 @@ const bus = (id: string, secsSinceReport = 0): Vehicle => ({
   route: { id: "R" }, dir: null
 })
 
+// What stops the state the test made
+let stop = () => {}
+
 afterEach(() => {
+  stop()
   leavePage()
   vi.restoreAllMocks()
 })
@@ -82,13 +86,10 @@ const load = async ({ at = NOON, saved = {} as Record<string, unknown>, permissi
       throw new TypeError("Load failed")
     return Response.json(await umo.vehicles())
   })
-  const state = {
-    ...await import("../../src/map/state/data.mts"),
-    ...await import("../../src/map/state/live.mts"),
-    ...await import("../../src/map/state/riding.mts"),
-    ...await import("../../src/map/state/trip.mts"),
-    ...await import("../../src/map/state/view.mts")
-  }
+  const { loadMapData } = await import("../../src/map/state/data.mts")
+  const { createMapState } = await import("../../src/map/state/map.mts")
+  const state = createMapState(await loadMapData())
+  stop = state.stop
   const { receive } = await import("../../src/shell/build.mts")
   await vi.advanceTimersByTimeAsync(0)
   return {
@@ -133,6 +134,20 @@ test("buses drop off as they age, though Umo can't be reached to say so", async 
       expect(state.ageOf(reports[0] ?? bus("x"), Date.now())).toBe((reports[0]?.secsSinceReport ?? 0) + (Date.now() - updated) / 1000)
     }
   ))
+})
+
+test("stopping the map's state ends its polling and its watching where you are", async () => {
+  const state = await load()
+  let asked = 0
+  state.umo.vehicles = async () => (asked++, [bus("a")])
+  await vi.advanceTimersByTimeAsync(10_000)
+  expect(asked).toBeGreaterThan(0)
+  const cleared = vi.spyOn(navigator.geolocation, "clearWatch")
+  state.stop()
+  const before = asked
+  await vi.advanceTimersByTimeAsync(60_000)
+  expect(asked).toBe(before)
+  expect(cleared).toHaveBeenCalled()
 })
 
 test("the list of buses is the same list while the same buses are in it", async () => {

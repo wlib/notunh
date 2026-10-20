@@ -149,6 +149,16 @@ test("buses evenly spaced are next due half a headway away, as likely as not", (
   expect(waitEstimate(headways(300), "R", NOON + 1800)!.wait).toBeCloseTo(150, -1)
 )
 
+test("no bus seen while the Worker wasn't listening isn't a gap between buses", () => {
+  const visits = [0, 600, 1200].map((offset, i): Visit => ({ vehicle: `V${i}`, route: "R", stop: "0", arrive: NOON + offset, depart: NOON + offset + 5 }))
+  // Deaf from 5 to 15 minutes past noon, so a bus may have come between the first two
+  const isListening = (from: number, to: number) => to <= (NOON + 300) * 1000 || from >= (NOON + 900) * 1000
+  expect(summarize(visits).headways.R.flatMap(cell => cell ?? [])).toEqual([2, 1200, 720_000])
+  expect(summarize(visits, emptyScores(), isListening).headways.R).toBeUndefined()
+  const heard = (from: number, to: number) => to <= (NOON + 300) * 1000 || from >= (NOON + 500) * 1000
+  expect(summarize(visits, emptyScores(), heard).headways.R.flatMap(cell => cell ?? [])).toEqual([1, 600, 360_000])
+})
+
 test("each lead is scored at its own, and the band is as wide as the forecasts turned out to be, or a normal one's before there are enough", () => {
   LEADS.forEach((minutes, i) => expect(leadIndex(minutes * 60)).toBe(i))
   expect(bandScale(emptyModel(), 300, 0.8)).toBeCloseTo(probit(0.9), 6)

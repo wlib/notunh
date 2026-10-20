@@ -105,7 +105,7 @@ test("a day adds just what was watched, which stays within the room and an hour'
 test("quantizing keeps order, clamps, and reads back within a step, each hour leaning on the room's average as far as it's been watched less", () =>
   fc.assert(fc.property(fc.array(fc.double({ min: 0, max: 30, noNaN: true }), { minLength: SLOTS, maxLength: SLOTS }), fc.integer({ min: 1, max: 60 }), (means, hours) => {
     const stats: Stats = { free: means.map(x => x * hours * 3600), any: means.map(x => Math.min(1, x / 30) * hours * 3600), weight: Array(SLOTS).fill(hours * 3600) }
-    const read = unpack(quantize(stats, 4))!.map(hour => hour.free)
+    const read = unpack(quantize(stats, 4))!.hours.map(hour => hour.free)
     const clamped = means.map(mean => Math.min(mean, 255 / 16))
     const average = clamped.reduce((sum, x) => sum + x, 0) / SLOTS
     const own = hours / (hours + 6)
@@ -139,7 +139,7 @@ test("a room watched for weeks with one washer free and one busy says so, and sa
   expect(usual.through).toBe("2026-09-30")
   expect(Object.keys(usual.rooms.r)).toEqual(["washer"])
   expect(usual.rooms.r.washer!.total).toBe(2)
-  for (const hour of unpack(usual.rooms.r.washer!)!)
+  for (const hour of unpack(usual.rooms.r.washer!)!.hours)
     expect(hour).toEqual({ free: 1, any: 1 })
   // What's carried between nights survives being stored as JSON, and a day fed twice changes nothing
   expect(JSON.parse(JSON.stringify(learned))).toEqual(learned)
@@ -187,6 +187,6 @@ test("a room never watched says nothing, and one watched at all says something o
     }
     const week = unpack(quantize(stats, 2))
     expect(week === undefined).toBe(!watched.length)
-    week?.forEach(hour => expect(hour).toEqual({ free: 1, any: 1 }))
+    week?.hours.forEach(hour => expect(hour).toEqual({ free: 1, any: 1 }))
   }))
 )

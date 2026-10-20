@@ -32,11 +32,15 @@ const serve = (reply: number | string | { id: string, report: number, isParked: 
   : typeof reply === "string" ? new Response(reply)
   : Response.json(reply.map(({ id, report, isParked }) => vehicle(id, AT + report * 11_000, isParked ? 3600 : 5)))
 
-test("the buses source stores every distinct fresh fix once, through rate limits and garbage, within the minute, and records every poll", async () =>
-  fc.assert(fc.asyncProperty(fc.array(reply, { minLength: POLLS, maxLength: POLLS }), async replies => {
+test("the buses source stores every distinct fresh fix once, through rate limits and garbage, within the minute, and records every poll when it's answered", async () =>
+  fc.assert(fc.asyncProperty(fc.array(reply, { minLength: POLLS, maxLength: POLLS }), fc.integer({ min: 0, max: 5000 }), async (replies, latency) => {
     vi.useFakeTimers({ now: AT })
     let poll = 0
-    vi.stubGlobal("fetch", async () => serve(replies[poll++]))
+    vi.stubGlobal("fetch", async () => {
+      const answer = serve(replies[poll++])
+      await new Promise(resolve => setTimeout(resolve, latency))
+      return answer
+    })
 
     const collected = buses.collect(AT, new AbortController().signal)
     await vi.runAllTimersAsync()
@@ -44,14 +48,15 @@ test("the buses source stores every distinct fresh fix once, through rate limits
     const stored = unpackFixes(AT, { version: RAW_VERSION, samples, polls })
 
     expect(poll).toBe(POLLS)
-    // Each poll ten seconds after the one before, failed where the reply wasn't a list, else counting the live buses
+    // Each poll asked ten seconds after the one before and timed when answered, failed where the reply wasn't a
+    // list, else counting the live buses
     expect(polls).toEqual(replies.map((reply, i) =>
-      packPoll(AT, AT + i * 10_000, Array.isArray(reply) ? reply.filter(({ isParked }) => !isParked).length : null)
+      packPoll(AT, AT + i * 10_000 + latency, Array.isArray(reply) ? reply.filter(({ isParked }) => !isParked).length : null)
     ))
-    // A fix is received by the first poll that listed it
+    // A fix is received when the first poll that listed it was answered
     for (const fix of stored) {
       const first = replies.findIndex(reply => Array.isArray(reply) && reply.some(({ id, report, isParked }) => !isParked && id === fix.vehicle && AT + report * 11_000 === fix.at))
-      expect(fix.received).toBe(AT + first * 10_000)
+      expect(fix.received).toBe(AT + first * 10_000 + latency)
     }
     expect(Date.now() - AT).toBeLessThan(60_000)
     const expected = new Set(

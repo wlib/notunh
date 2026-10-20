@@ -3,12 +3,14 @@ import fc from "fast-check"
 import { serviceDayStart, withIndexes, type Trip } from "../../src/transit/feed.mts"
 import type { Visit } from "../../src/transit/inference/events.mts"
 import { NO_FORECAST } from "../../src/transit/observations/predictions.mts"
-import { type Run, type Sighting, buildRuns, spread, timeAt } from "../../src/transit/models/forecast.mts"
+import { type Run, type Sighting, buildRuns, spread } from "../../src/transit/models/forecast.mts"
 import { NO_PACE } from "../../src/transit/models/movement.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
 import { update } from "../../src/transit/models/fit.mts"
 import { zoneEstimate } from "../../src/transit/models/estimates.mts"
 import { forecastOf } from "../../src/transit/observations/umo.mts"
+import { lineOf, positionsOf } from "../../src/transit/shapes.mts"
+import { buildConnections } from "../../src/routing/plan.mts"
 import { addDays } from "../../src/shared/time.mts"
 
 const TODAY = "2026-10-01"
@@ -63,12 +65,12 @@ test("a bus the map follows is forecast along its trip from where it was seen, a
     const run = runOn(runs, "T0")
     expect(run.isLive && run.tracked && run.vehicle === "V").toBeTruthy()
     for (let i = position + 1; i < 6; i++) {
-      expect(timeAt(run, i)).toBeGreaterThan(timeAt(run, i - 1))
-      expect(timeAt(run, i)).toBeLessThan(at + 5000)
+      expect(run.departures[i]).toBeGreaterThan(run.departures[i - 1])
+      expect(run.departures[i]).toBeLessThan(at + 5000)
     }
     // Where it had been by then
     for (let i = 0; i < position; i++)
-      expect(timeAt(run, i)).toBeLessThanOrEqual(at)
+      expect(run.departures[i]).toBeLessThanOrEqual(at)
     expect(runOn(runs, "T1")).toBeUndefined()
   }))
 )
@@ -79,8 +81,8 @@ test("with no bus followed on it, a run is its timetable shifted by how late its
     const forecast = forecastOf([{ route: { id: "R" }, stop: { id: "2" }, values: [{ timestamp: (BASE + 36720 + umo) * 1000, vehicleId: "V", tripId: "T0", affectedByLayover: !isLive }] }], -Infinity)
     const known = runOn(buildRuns(feed, TODAY, forecast, learned(300, 30, late)), "T0")
     expect(known.vehicle).toBe("V")
-    expect(timeAt(known, 2) - (BASE + 36720)).toBeCloseTo(isLive ? umo : late, 2)
-    expect(timeAt(runOn(buildRuns(feed, TODAY, forecast, emptyModel()), "T0"), 2)).toBe(BASE + 36720 + umo)
+    expect(known.departures[2] - (BASE + 36720)).toBeCloseTo(isLive ? umo : late, 2)
+    expect(runOn(buildRuns(feed, TODAY, forecast, emptyModel()), "T0").departures[2]).toBe(BASE + 36720 + umo)
   }))
 )
 
@@ -90,8 +92,8 @@ test("a route that keeps to its timetable is back on it half an hour ahead, howe
   // A bus an hour late at the first stop, with legs taking a quarter of an hour
   const runs = buildRuns(feed, TODAY, NO_FORECAST, learned(900, 0), [seen("0", BASE + times[0] + 3600, true)])
   const run = runOn(runs, "T0")
-  expect(timeAt(run, 1) - (BASE + times[1])).toBeGreaterThan(1800)
-  expect(timeAt(run, 5)).toBeCloseTo(BASE + times[5], -1)
+  expect(run.departures[1] - (BASE + times[1])).toBeGreaterThan(1800)
+  expect(run.departures[5]).toBeCloseTo(BASE + times[5], -1)
 })
 
 test("a loop's bus goes on into the next loop starting where it ends, after laying over there, and only one bus runs a loop", () =>
@@ -107,9 +109,9 @@ test("a loop's bus goes on into the next loop starting where it ends, after layi
     const first = runOn(alone, "T0")
     const next = alone.find(run => run !== first && run.vehicle === "V")!
     // It leaves the next loop's first stop a layover after it gets in at the end of T0
-    expect(timeAt(next, 0) - timeAt(first, 3)).toBeCloseTo(layover, -1)
+    expect(next.departures[0] - first.departures[3]).toBeCloseTo(layover, -1)
     if (isTaken) {
-      const taken = seen("1", timeAt(next, 1), false, { vehicleId: "W", tripId: next.trip.id })
+      const taken = seen("1", next.departures[1], false, { vehicleId: "W", tripId: next.trip.id })
       const runs = buildRuns(feed, TODAY, NO_FORECAST, model, [seen("1", BASE + 36300, false), taken])
       expect(runOn(runs, next.trip.id).vehicle).toBe("W")
       expect(runs.filter(run => run.vehicle === "V").length).toBe(2)
@@ -135,14 +137,14 @@ test("a loop's bus goes on only into a loop of its own service day due to start 
       for (const run of runs.filter(run => run !== own)) {
         const scheduled = run.base + run.trip.times[0]
         if (run.vehicle === undefined)
-          expect(timeAt(run, 0)).toBe(scheduled)
+          expect(run.departures[0]).toBe(scheduled)
         else {
           // Only a later loop of today's, and not long after the bus could start it, or long before, for a bus running
           // late
           expect(run.base).toBe(BASE)
           expect(run.trip.times[0]).toBeGreaterThan(starts[on])
-          expect(timeAt(run, 0) - scheduled).toBeGreaterThanOrEqual(-1800)
-          expect(timeAt(run, 0) - scheduled).toBeLessThanOrEqual(3600)
+          expect(run.departures[0] - scheduled).toBeGreaterThanOrEqual(-1800)
+          expect(run.departures[0] - scheduled).toBeLessThanOrEqual(3600)
         }
       }
     }
@@ -163,7 +165,7 @@ test("a followed bus's spread grows the further along it is, within what a plann
     const feed = lineFeed([{ times: hours(10, 10.1, 10.2, 10.3, 10.4, 10.5) }])
     const at = BASE + 36000 + position * 360
     const run = runOn(buildRuns(feed, TODAY, NO_FORECAST, learned(300, 30), [seen(`${position}`, at, false)]), "T0")
-    const spreads = run.trip.stops.map((_, i) => spread(run, i, timeAt(run, i), at)).slice(position)
+    const spreads = run.trip.stops.map((_, i) => spread(run, i, run.departures[i], at)).slice(position)
     spreads.slice(1).forEach((value, i) => expect(value).toBeGreaterThanOrEqual(spreads[i]))
   }))
 )
@@ -174,7 +176,41 @@ test("a bus at the stop its loop starts and ends at is starting the trip it's ta
     const at = BASE + 36000 + late
     const run = runOn(buildRuns(feed, TODAY, NO_FORECAST, learned(300, 0), [seen("0", at, true)]), "T0")
     expect(run.tracked).toBeDefined()
-    expect(timeAt(run, 0)).toBeGreaterThanOrEqual(at)
-    expect(timeAt(run, 1)).toBeGreaterThan(timeAt(run, 0))
+    expect(run.departures[0]).toBeGreaterThanOrEqual(at)
+    expect(run.departures[1]).toBeGreaterThan(run.departures[0])
+  }))
+)
+
+test("an early bus waits at a timepoint for its scheduled time, as its course does, getting there before it leaves", () => {
+  // Leaving stop 0 at 10:00, a few minutes' drive from a timepoint it's scheduled to leave at 10:10
+  const feed = lineFeed([{ times: [36000, 36600, 37200], timepoints: [1] }])
+  const run = runOn(buildRuns(feed, TODAY, NO_FORECAST, emptyModel(), [seen("0", BASE + 36000, false)]), "T0")
+  expect(run.holdChance[1]).toBeCloseTo(0.8)
+  expect(run.arrivals[1]).toBeLessThan(BASE + 36300)
+  expect(run.departures[1]).toBe(BASE + 36600)
+  expect(run.tracked!.trajectory.course.departures[1]).toBe(run.departures[1])
+})
+
+test("the stop list, the planner, and the drawn bus agree on when a followed bus gets to and leaves each stop ahead", () =>
+  fc.assert(fc.property(fc.integer({ min: 0, max: 3 }), fc.boolean(), fc.integer({ min: -600, max: 900 }), fc.boolean(), (position, isThere, late, isTimed) => {
+    const data = lineFeed([{ times: hours(10, 10.1, 10.2, 10.3, 10.4, 10.5), timepoints: isTimed ? [0, 2, 4] : [] }])
+    const feed = withIndexes({ ...data, trips: data.trips.map(trip => ({ ...trip, shape: "S" })), shapes: { S: data.stops.map(({ lon, lat }) => [lon, lat]) } })
+    const at = BASE + 36000 + position * 360 + late
+    const runs = buildRuns(feed, TODAY, NO_FORECAST, learned(150, 30), [seen(`${position}`, at, isThere)])
+    const run = runOn(runs, "T0")
+    const { course, line, from } = run.tracked!.trajectory
+    const positions = positionsOf(feed, run.trip)!
+    expect(line).toBe(lineOf(feed, run.trip))
+    const connections = buildConnections(runs, at).filter(connection => runs[connection.run] === run)
+    for (let p = position + 1; p < run.trip.stops.length; p++) {
+      // Drawn at the stop from when the run gets there to when it leaves
+      for (const time of [run.arrivals[p], (run.arrivals[p] + run.departures[p]) / 2, run.departures[p]])
+        expect(from + course.distanceAt(time)).toBeCloseTo(positions[p], 3)
+      // Ridden from there when it leaves, and off there when it gets there
+      const leaving = connections.find(connection => connection.position === p)
+      if (leaving)
+        expect(leaving.departure).toBe(run.departures[p])
+      expect(connections.find(connection => connection.position === p - 1)?.arrival ?? run.arrivals[p]).toBe(run.arrivals[p])
+    }
   }))
 )

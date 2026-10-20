@@ -23,13 +23,6 @@ export const segmentMeters = (a: Coordinates, b: Coordinates) =>
 export const distance = (a: Point, b: Point) =>
   segmentMeters([a.lon, a.lat], [b.lon, b.lat])
 
-/** Streets wind this much more than the straight line between two places */
-export const STREET_DETOUR = 1.25
-
-/** How far it is along the streets between two points, from the straight line, allowing for them winding */
-export const straightMeters = (from: Point, to: Point) =>
-  distance(from, to) * STREET_DETOUR
-
 /** Degrees clockwise from north */
 export const bearing = (a: Coordinates, b: Coordinates) =>
   (ruler(a[1]).bearing(a, b) + 360) % 360

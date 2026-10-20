@@ -6,12 +6,7 @@ import "./index.css"
 import { r, watch } from "bruh/reactive"
 import { Popup } from "maplibre-gl"
 import { createMap } from "./render/map.mts"
-import { feed, gazetteer, buildings, tiles, style } from "./state/data.mts"
-import { followed, layovers } from "./state/live.mts"
-import { riding, suggested } from "./state/riding.mts"
-import { from, to, selected, itinerary, legPaths, directTo } from "./state/trip.mts"
-import { selectedStop, selectedStopId, selectedBus, viewedBus, highlightedRoute, focusedBuses, shownRoutes } from "./state/view.mts"
-import { locationProblem } from "./state/location.mts"
+import { startMap } from "./state/map.mts"
 import { AppTitle, Icon } from "../shell/ui.tsx"
 import { Planner, Suggestions, editing } from "./ui/Planner.tsx"
 import { Itineraries } from "./ui/Itineraries.tsx"
@@ -20,6 +15,9 @@ import { RouteList, Status } from "./ui/RouteList.tsx"
 import { PlaceCard } from "./ui/cards.tsx"
 import { BusView, RideSuggestion } from "./ui/BusView.tsx"
 import { makeSheet, raise } from "./ui/sheet.mts"
+
+const state = await startMap()
+const { from, to, selected, selectedStop, selectedBus, viewedBus, suggested, locationProblem, directTo } = state
 
 const clearTrip = () => {
   from.value = undefined
@@ -84,10 +82,7 @@ const openCard = (lngLat: [number, number], content: Node) => {
 const { map } = createMap(
   mapElement,
   panel,
-  {
-    feed, gazetteer, buildings, tiles, style, followed, layovers, shownRoutes, highlightedRoute, from, to,
-    selectedStopId, itinerary, legPaths, focusedBuses, riding
-  },
+  state,
   tap => {
     if (card) {
       card.remove()

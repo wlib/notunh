@@ -72,14 +72,14 @@ const model = await learn("buses", OUTPUT, {
     // them
     const observed = await extractDay(feed, day)
     const isObserved = observed.fixes.length > 0
-    const { visits, fixes } = isObserved
+    const { visits, fixes, isListening } = isObserved
       ? observed
-      : { visits: (await readRows<Visit>("visits", day)).filter(visit => (visit.extractor ?? 1) === EXTRACTOR), fixes: undefined }
+      : { visits: (await readRows<Visit>("visits", day)).filter(visit => (visit.extractor ?? 1) === EXTRACTOR), fixes: undefined, isListening: undefined }
     // Days the stored model covers had their visits stored then. A rebuild, or a refit of a model of an older shape,
     // leaves them be, as storing them all again would take far more than D1's daily write allowance
     if (isObserved && day > (storedThrough ?? ""))
       await writeRows("visits", visits, day)
-    const summary = summarize(visits, score(model, feed, visits, fixes))
+    const summary = summarize(visits, score(model, feed, visits, fixes, isListening), isListening)
     await summaries.write(day, { at: serviceDayStart(day), version: model.version, extractor: EXTRACTOR, state: summary })
     console.log(`buses: ${day}, ${visits.length} visits`)
     return fold(model, day, summary)

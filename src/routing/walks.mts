@@ -4,7 +4,7 @@
 
 import { type Following, type Tracking, follow } from "../geo/follow.mts"
 import type { Line } from "../geo/lines.mts"
-import { type Coordinates, type Point, straightMeters } from "../geo/projection.mts"
+import { type Coordinates, type Point, distance } from "../geo/projection.mts"
 import { type Anchor, type Graph, type Reach, anchors, componentOf, metersTo, pathTo, reach } from "./graph.mts"
 import { type GazetteerPlace, buildingsAt } from "../places/gazetteer.mts"
 import type { Fix } from "../geo/fixes.mts"
@@ -12,6 +12,7 @@ import type { Fix } from "../geo/fixes.mts"
 const WALK_SPEED = 1.3                // m/s
 const WALK_WIGGLE = 0.1               // a walk along the network may take this much longer: a slow day, or a longer way round
 const ESTIMATE_WIGGLE = 0.3           // an estimate may take this much longer, as the way round what's between is anyone's guess
+const DETOUR = 1.25                   // an estimate's streets wind this much more than the straight line between its ends
 export const MAX_ACCESS_WALK = 2000   // m walked, to the first stop or from the last
 export const MAX_TRANSFER_WALK = 500  // m walked, between stops
 /** Further than this from every path, a place is off the network, and walked to in a straight line */
@@ -26,6 +27,10 @@ export const walkSeconds = (meters: number) =>
 
 /** How a walk is known: along the network, or a straight line's estimate where the network doesn't join its ends */
 export type Via = "network" | "estimate"
+
+/** Meters an estimate guesses a walk off the network is: the straight line between its ends, allowing for streets winding */
+export const estimatedMeters = (from: Point, to: Point) =>
+  distance(from, to) * DETOUR
 
 /** How long to allow for a walk, for a slow day or a longer way round. An estimate gets more, as its way round is a guess */
 export const walkAllowance = (meters: number, via: Via) =>
@@ -64,7 +69,7 @@ const doorsOf = (places: readonly GazetteerPlace[], place: Named): Point[] => {
 }
 
 const straight = (from: Point, to: Point): Walk =>
-  ({ meters: straightMeters(from, to), coordinates: [[from.lon, from.lat], [to.lon, to.lat]], via: "estimate" })
+  ({ meters: estimatedMeters(from, to), coordinates: [[from.lon, from.lat], [to.lon, to.lat]], via: "estimate" })
 
 /** Walking among some stops, along a network where one joins them, to and from the doors of the gazetteer's buildings */
 export const createWalks = (stops: Named[], graph?: Graph, places: readonly GazetteerPlace[] = []): Walks => {
@@ -105,7 +110,7 @@ export const createWalks = (stops: Named[], graph?: Graph, places: readonly Gaze
     const reached = from.length ? reachOf(place, limit) : undefined
     const via = stops.map((stop): Via => reached && joins(from, anchorsOf(stop)) ? "network" : "estimate")
     const meters = Float64Array.from(stops, (stop, i) => {
-      const walked = via[i] === "network" ? nearest(reached!, anchorsOf(stop)).meters : straightMeters(place, stop)
+      const walked = via[i] === "network" ? nearest(reached!, anchorsOf(stop)).meters : estimatedMeters(place, stop)
       return walked <= limit ? walked : Infinity
     })
     return { meters, via }

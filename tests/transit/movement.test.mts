@@ -3,7 +3,7 @@ import fc from "fast-check"
 import { type Coordinates, ruler } from "../../src/geo/projection.mts"
 import { toRouteLine } from "../../src/transit/shapes.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
-import type { Location } from "../../src/transit/inference/locate.mts"
+import type { Location } from "../../src/transit/inference/passages.mts"
 import { NO_PACE, type Waypoint, type Whereabouts, course, courseAlong, drifted, paced } from "../../src/transit/models/movement.mts"
 
 const NOW = 1_791_900_000
@@ -47,14 +47,14 @@ test("along its course, a bus leaves each stop after it gets there and after lea
       const way = wayOf(meters)
       const usual = course(emptyModel(), way, where, NO_PACE, NOW)
       const slower = course(emptyModel(), way, where, { mean: bias, variance: 0, at: NOW }, NOW)
-      usual.times.slice(1).forEach((time, i) => {
-        expect(time).toBeGreaterThan(usual.times[i])
+      usual.departures.slice(1).forEach((time, i) => {
+        expect(time).toBeGreaterThan(usual.departures[i])
         expect(usual.arrivals[i + 1]).toBeLessThanOrEqual(time)
         expect(usual.variances[i + 1]).toBeGreaterThanOrEqual(usual.variances[i])
         // Further on, the bus's pace has had longer to wear off, but never turns around
-        expect((slower.times[i + 1] - time) * bias).toBeGreaterThanOrEqual(-1e-6)
+        expect((slower.departures[i + 1] - time) * bias).toBeGreaterThanOrEqual(-1e-6)
       })
-      expect(usual.times[0]).toBeGreaterThanOrEqual(where.depart ?? NOW)
+      expect(usual.departures[0]).toBeGreaterThanOrEqual(where.depart ?? NOW)
     }
   ))
 )
@@ -66,16 +66,16 @@ test("where a bus is along its course never goes back, starts where it is, is at
     fc.array(fc.double({ min: 0, max: 7200, noNaN: true }), { minLength: 2, maxLength: 20 }),
     (meters, where, offsets) => {
       const way = wayOf(meters)
-      const { arrivals, times, distanceAt } = course(emptyModel(), way, where, NO_PACE, NOW)
+      const { arrivals, departures, distanceAt } = course(emptyModel(), way, where, NO_PACE, NOW)
       const marks = way.map((_, i) => way.slice(1, i + 1).reduce((sum, { meters }) => sum + meters, 0))
       const at = offsets.map(offset => NOW + offset).sort((a, b) => a - b)
       at.slice(1).forEach((time, i) => expect(distanceAt(time)).toBeGreaterThanOrEqual(distanceAt(at[i]) - 1e-6))
       expect(distanceAt(NOW)).toBeCloseTo(where.depart === undefined ? 0 : Math.max(0, Math.min(1, where.progress ?? distanceAt(NOW) / way[1].meters)) * way[1].meters, 6)
       for (let i = 1; i < way.length; i++) {
         expect(distanceAt(arrivals[i])).toBeCloseTo(marks[i], 3)
-        expect(distanceAt((arrivals[i] + times[i]) / 2)).toBeCloseTo(marks[i], 3)
+        expect(distanceAt((arrivals[i] + departures[i]) / 2)).toBeCloseTo(marks[i], 3)
       }
-      expect(distanceAt(times.at(-1)! + 1000)).toBeCloseTo(marks.at(-1)!, 6)
+      expect(distanceAt(departures.at(-1)! + 1000)).toBeCloseTo(marks.at(-1)!, 6)
     }
   ))
 )
@@ -83,8 +83,8 @@ test("where a bus is along its course never goes back, starts where it is, is at
 test("a bus waits at a stop its trip waits at until its scheduled time, and goes on after", () =>
   fc.assert(fc.property(fc.array(fc.integer({ min: 100, max: 3000 }), { minLength: 3, maxLength: 6 }), fc.integer({ min: 0, max: 3600 }), (meters, late) => {
     const hold = NOW + late
-    const { times, distanceAt } = course(emptyModel(), wayOf(meters, [undefined, hold]), { arrive: NOW - 60, depart: NOW - 30 }, NO_PACE, NOW)
-    expect(times[1]).toBeGreaterThanOrEqual(hold)
+    const { departures, distanceAt } = course(emptyModel(), wayOf(meters, [undefined, hold]), { arrive: NOW - 60, depart: NOW - 30 }, NO_PACE, NOW)
+    expect(departures[1]).toBeGreaterThanOrEqual(hold)
     expect(distanceAt(hold - 1e-3)).toBeLessThanOrEqual(meters[1] + 1e-6)
   }))
 )

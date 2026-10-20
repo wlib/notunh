@@ -1,6 +1,9 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { type Observation, drive as kinematics, locator, match, passagesOf } from "../../src/transit/inference/locate.mts"
+import type { Observation } from "../../src/transit/inference/likelihoods.mts"
+import { match } from "../../src/transit/inference/matching.mts"
+import { GENERIC, drive as kinematics } from "../../src/transit/inference/passages.mts"
+import { locator, passagesOf } from "../../src/transit/inference/locate.mts"
 import { type Coordinates, ruler } from "../../src/geo/projection.mts"
 import { toRouteLine } from "../../src/transit/shapes.mts"
 import { feedOf, drive, scenario, type Stay } from "./driving.mts"
@@ -41,14 +44,15 @@ test("driving a stretch takes longer the slower it cruises, and gets each way al
   ))
 )
 
-test("a bus's fixes show each stop it went through, in order, each time within the fixes either side of it, and as sure as they are", () =>
+test("a bus's fixes show each stop it went through, in order, each time within the fixes either side of it, and as sure as they are, or when first or last seen there", () =>
   fc.assert(fc.property(scenario, plan => {
     const feed = feedOf(plan.vertices)
     const { fixes, stays, line } = drive(feed, plan)
     const seen = observed(fixes)
     const passages = passagesOf([line], seen).flat()
-    // Every stop but the very first, as the bus is only followed from its first fix
+    // Every stop but the very first, unless the bus was still there at its first fix
     expect(passages.length).toBeGreaterThanOrEqual(stays.length - 1)
+    expect(passages[0].isJoined).toBe(passages[0].arrive.median === seen[0].at)
     passages.slice(1).forEach((passage, i) => {
       expect(passage.index).toBeGreaterThan(passages[i].index)
       expect(passage.arrive.median).toBeGreaterThanOrEqual(passages[i].depart.median - 1)
@@ -60,7 +64,10 @@ test("a bus's fixes show each stop it went through, in order, each time within t
       }
       expect(passage.depart.median).toBeGreaterThanOrEqual(passage.arrive.median)
       const stay = stayOf(stays, passage.stop, passage.arrive.median)
-      expect(Math.abs(passage.arrive.median - stay.arrive)).toBeLessThanOrEqual(bracket(seen, stay.arrive) + 2)
+      if (passage.isJoined)
+        expect(stay.arrive).toBeLessThanOrEqual(passage.arrive.median)
+      else
+        expect(Math.abs(passage.arrive.median - stay.arrive)).toBeLessThanOrEqual(bracket(seen, stay.arrive) + 2)
       if (!passage.isIncomplete)
         expect(Math.abs(passage.depart.median - stay.depart)).toBeLessThanOrEqual(bracket(seen, stay.depart) + 2)
     }
@@ -122,3 +129,14 @@ test("a fix is matched to the pass along a street it's heading along, where a li
     expect(distance).toBeCloseTo(isBack ? 2000 - at * 10 : at * 10, 0)
   }))
 )
+
+test("a stop gone through quicker than a bus is thought to drive is timed anywhere between the fixes either side of it, not exactly", () => {
+  const east = ruler(CENTER.lat).kx
+  const at = (meters: number, seconds: number): Observation => ({ at: seconds, lat: CENTER.lat, lon: CENTER.lon + meters / east, heading: 90, kph: 36 })
+  const street = Array.from({ length: 101 }, (_, i): Coordinates => [CENTER.lon + i * 10 / east, CENTER.lat])
+  const line = toRouteLine("R", street, [[200, 600].map((meters, i) => ({ id: `s${i}`, lat: CENTER.lat, lon: CENTER.lon + meters / east }))])
+  const [[passage]] = passagesOf([line], [at(100, 0), at(400, 10)], { ...GENERIC, cruise: () => 0.1 })
+  expect(passage.stop).toBe("s0")
+  for (const time of [passage.arrive, passage.depart])
+    expect(time).toEqual({ low: 0, median: expect.closeTo(10 / 3, 6), high: 10 })
+})

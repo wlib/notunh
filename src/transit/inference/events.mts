@@ -8,15 +8,17 @@
 
 import { tripBase, type Feed, type Trip } from "../feed.mts"
 import { LOOP_GAP, positionsOf, routeLines } from "../shapes.mts"
-import { type Passage, passagesOf } from "./locate.mts"
+import { along } from "../../geo/lines.mts"
+import { passagesOf } from "./locate.mts"
+import { type Passage, drove } from "./passages.mts"
 import type { BusFix } from "../observations/raw.mts"
 
 /**
  * The version of how visits are read from fixes, stored on each visit. 1 is zone crossings, which stored visits from
- * before 2026-10-20 carry. 2 is the location model, and 3 the location model with what's uncertain fitted as
- * likelihoods
+ * before 2026-10-20 carry. 2 is the location model, 3 the location model with what's uncertain fitted as
+ * likelihoods, and 4 adds passages of buses already at a stop when first seen, and leaves out what wasn't listened to
  */
-export const EXTRACTOR = 3
+export const EXTRACTOR = 4
 
 // Longer at a stop, or between the end of one trip and the start of the next, is a bus out of service
 const MAX_VISIT = 1800      // s
@@ -25,8 +27,13 @@ const MAX_SILENCE = 120_000 // ms
 // Further ahead of its timetable, a bus joining a trip partway is on its way to where it starts
 const MAX_EARLY = 900       // s
 
-/** A visit flag: the bus was last seen still at the stop, so when it left is unknown */
+/** A visit flag: the bus was last seen still at the stop, so when it left is unknown, and depart is when it was last seen */
 export const INCOMPLETE = 2
+/**
+ * A visit flag: the bus was first seen already at the stop, so when it got there is unknown, and arrive is when it was
+ * first seen. Extractor 3 read these from 2026-10-20, and left such visits out before
+ */
+export const JOINED = 4
 
 /** A bus going through a stop, all times in epoch seconds, as the timetable's are compared in */
 export type Visit = {
@@ -40,7 +47,7 @@ export type Visit = {
   spread?: number[],
   /** How likely it stopped there, rather than going straight through */
   dwelled?: number,
-  /** INCOMPLETE, and before extractor 3, 1 where it was in a gap between fixes */
+  /** INCOMPLETE and JOINED, and before extractor 3, 1 where it was in a gap between fixes */
   flags?:  number,
   /** The trip it left on, when the timetable has it */
   trip?:   string,
@@ -125,8 +132,8 @@ const extractRun = (feed: Feed, trips: ReadonlyMap<string, Trip>, fixes: readonl
       ended = undefined
 
     // Driven from the stop before, along the same track
-    const isDriven = before && before.line === passage.line && before.index === passage.index - 1 && !before.isIncomplete
-    const flags = passage.isIncomplete ? INCOMPLETE : 0
+    const isDriven = drove(before, passage)
+    const flags = (passage.isIncomplete ? INCOMPLETE : 0) | (passage.isJoined ? JOINED : 0)
     const seen: Visit = {
       vehicle,
       route: route!,
@@ -156,14 +163,11 @@ const extractRun = (feed: Feed, trips: ReadonlyMap<string, Trip>, fixes: readonl
     const { base, position: previous } = run
     // Where the trip has the stop along the shape the bus went through it on, as a loop may pass one stop twice
     const { line } = passage
-    const along = line.coordinates === feed.shapes[after.shape] ? positionsOf(feed, after) : undefined
-    const apart = (p: number) => {
-      const off = along![p] - passage.distance
-      return line.isLoop ? Math.abs(((off % line.length) + line.length * 1.5) % line.length - line.length / 2) : Math.abs(off)
-    }
+    const shaped = line.coordinates === feed.shapes[after.shape] ? positionsOf(feed, after) : undefined
+    const apart = (p: number) => Math.abs(along(line, shaped![p] - passage.distance))
     // The trip's positions at this stop near that spot. LOOP_GAP is how near, as the line merges a stop at both ends
     // of a loop
-    const positions = after.stops.flatMap((_, p) => stopId(after, p) === stop && (!along || apart(p) < LOOP_GAP) ? [p] : [])
+    const positions = after.stops.flatMap((_, p) => stopId(after, p) === stop && (!shaped || apart(p) < LOOP_GAP) ? [p] : [])
     const position =
       previous >= 0 || base === undefined || positions[0] === 0
         ? positions.find(p => p > previous)

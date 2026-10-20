@@ -9,7 +9,9 @@ import { emptyModel } from "../../src/transit/models/model.mts"
 import { update } from "../../src/transit/models/fit.mts"
 import { NO_PACE } from "../../src/transit/models/movement.mts"
 import { routeLines } from "../../src/transit/shapes.mts"
-import { type Fixed, follow } from "../../src/map/state/following.mts"
+import { buildRuns } from "../../src/transit/models/forecast.mts"
+import { localDay } from "../../src/shared/time.mts"
+import { type Fixed, drawing, follow } from "../../src/map/state/following.mts"
 
 // The recording replay.test.mts scores: half an hour of seven buses' fixes, and the timetable then
 const { feed: data, rows }: { feed: FeedData, rows: { source: string, at: number, body: unknown[] }[] } =
@@ -22,6 +24,8 @@ const learned = update(emptyModel(), "2026-10-06", extract(withIndexes(data), fi
 const following = (share: number) => {
   const [feed, model, vehicles] = [r(withIndexes(data)), r(learned), r<Fixed[]>([])]
   const { followed, sightings } = follow(feed, model, vehicles)
+  const runs = r(() => buildRuns(feed.value, localDay(fixes[0].at), undefined, model.value, sightings.value))
+  const drawn = drawing(model, followed, runs)
   const latest = new Map<string, Fixed>()
   for (const fix of fixes.slice(0, Math.floor(share * fixes.length))) {
     latest.set(fix.vehicle, {
@@ -31,16 +35,16 @@ const following = (share: number) => {
     vehicles.value = [...latest.values()]
     flush()
   }
-  return { feed, model, vehicles, followed, sightings }
+  return { feed, model, vehicles, followed, sightings, runs, drawn }
 }
 
 test("a newer model keeps where each bus is, as that's what its fixes say, and starts its pace afresh and draws its course by the new model at once", () => {
-  const { model, followed, sightings } = following(0.6)
-  const before = followed.value
+  const { model, drawn, sightings } = following(0.6)
+  const before = drawn.value
   expect([...before.values()].some(({ pace }) => pace !== NO_PACE)).toBe(true)
   model.value = update(learned, "2026-10-07", [])
   flush()
-  for (const [id, { vehicle, location, pace, course }] of followed.value) {
+  for (const [id, { vehicle, location, pace, course }] of drawn.value) {
     expect(vehicle).toEqual(before.get(id)!.vehicle)
     expect(location).toBe(before.get(id)!.location)
     expect(pace).toBe(NO_PACE)

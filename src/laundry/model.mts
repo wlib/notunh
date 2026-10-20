@@ -145,8 +145,8 @@ export const quantize = (stats: Stats, total: number): Week => {
 }
 
 /**
- * Each hour of the week's usual free count and chance of any free, as watched then and leaning on the room's
- * all-hours average, or nothing for a room never watched
+ * A room and kind's week as the page reads it: how many machines, and each hour's usual free count and chance of any
+ * free, as watched then and leaning on the room's all-hours average, or nothing for a room never watched
  */
 export const unpack = (week: Week) => {
   const [free, any, known] = [week.free, week.any, week.known].map(fromBase64)
@@ -157,11 +157,16 @@ export const unpack = (week: Week) => {
   const average = (values: Uint8Array, scale: number) =>
     values.reduce((sum, value, h) => sum + value / scale * hours[h], 0) / watched
   const [freeAll, anyAll] = [average(free, 16), average(any, 255)]
-  return hours.map((h, slot) => {
-    const own = h / (h + POOLED_HOURS)
-    return { free: own * free[slot] / 16 + (1 - own) * freeAll, any: own * any[slot] / 255 + (1 - own) * anyAll }
-  })
+  return {
+    total: week.total,
+    hours: hours.map((h, slot) => {
+      const own = h / (h + POOLED_HOURS)
+      return { free: own * free[slot] / 16 + (1 - own) * freeAll, any: own * any[slot] / 255 + (1 - own) * anyAll }
+    })
+  }
 }
+
+export type UsualWeek = NonNullable<ReturnType<typeof unpack>>
 
 /**
  * What the build keeps from night to night: each room and kind's sums, each machine's status as the last day

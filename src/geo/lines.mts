@@ -3,7 +3,7 @@
 
 import type CheapRuler from "cheap-ruler"
 import { boxOf } from "./boxes.mts"
-import { type Coordinates, type Point, bearing, ruler, segmentMeters } from "./projection.mts"
+import { type Coordinates, type Point, ruler, segmentMeters } from "./projection.mts"
 
 /** A line measured out for moving along */
 export type Line = {
@@ -47,6 +47,12 @@ export const nearestOnSegment = (line: Line, index: number, point: Point) => {
   const { px, py, dx, dy } = offsets(line, index, point)
   const t = alongSegment(px, py, dx, dy)
   return { t, meters: Math.hypot(px - t * dx, py - t * dy) }
+}
+
+/** Degrees clockwise from north that one of a line's segments heads, measured by the line's ruler */
+export const segmentBearing = ({ coordinates, ruler: { kx, ky } }: Line, index: number) => {
+  const [a, b] = [coordinates[index], coordinates[index + 1]]
+  return (Math.atan2((b[0] - a[0]) * kx, (b[1] - a[1]) * ky) * 180 / Math.PI + 360) % 360
 }
 
 /** Meters along a line that a fraction of the way along one of its segments is */
@@ -116,7 +122,7 @@ const pointOnSegment = ({ coordinates, distances }: Line, index: number, distanc
 
 /** Where a distance along a line is, wrapping around loops and stopping at the ends of other lines */
 export const pointAt = (line: Line, distance: number) => {
-  const { coordinates, length, isLoop } = line
+  const { length, isLoop } = line
   distance =
     isLoop
       ? (distance % length + length) % length
@@ -124,7 +130,7 @@ export const pointAt = (line: Line, distance: number) => {
   const index = segmentAt(line, distance)
   return {
     point: pointOnSegment(line, index, distance),
-    bearing: bearing(coordinates[index], coordinates[index + 1])
+    bearing: segmentBearing(line, index)
   }
 }
 

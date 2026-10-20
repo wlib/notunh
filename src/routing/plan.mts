@@ -6,7 +6,7 @@
 
 import { type Feed, canAlight, canBoard } from "../transit/feed.mts"
 import { type Via, type Walks, walkAllowance, walkSeconds } from "./walks.mts"
-import { type Run, arrivalAt, slack, spread, timeAt } from "../transit/models/forecast.mts"
+import { type Run, slack, spread } from "../transit/models/forecast.mts"
 import type { Place } from "../places/search.mts"
 
 export const HORIZON = 4 * 3600      // s, how far ahead to look for buses
@@ -85,7 +85,7 @@ export const isSameItinerary = (a: Itinerary, b: Itinerary) =>
       leg.run.trip === other.run.trip &&
       leg.run.isLive === other.run.isLive &&
       leg.run.vehicle === other.run.vehicle &&
-      positions.every(position => leg.run.delays[position] === other.run.delays[position] && leg.run.holds[position] === other.run.holds[position])
+      positions.every(position => leg.run.arrivals[position] === other.run.arrivals[position] && leg.run.departures[position] === other.run.departures[position])
     )
   })
 
@@ -106,11 +106,12 @@ export const buildConnections = (runs: Run[], start: number) => {
   const connections: Connection[] = []
   runs.forEach((run, runIndex) => {
     const { stops } = run.trip
-    // Uneven delays could have a bus leave a stop before reaching it, so never go back in time
+    // A live source's uneven delays, or the handoff back to the timetable, could have a bus leave a stop before
+    // reaching it, so never go back in time
     let departure = -Infinity
     for (let position = 0; position + 1 < stops.length; position++) {
-      departure = Math.max(departure, timeAt(run, position))
-      const arrival = Math.max(departure, arrivalAt(run, position + 1))
+      departure = Math.max(departure, run.departures[position])
+      const arrival = Math.max(departure, run.arrivals[position + 1])
       if (departure >= start && departure <= start + HORIZON)
         connections.push({
           run: runIndex,

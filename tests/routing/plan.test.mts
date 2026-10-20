@@ -1,9 +1,9 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { canAlight, canBoard, serviceDayStart, withIndexes, type Feed, type FeedData, type Trip } from "../../src/transit/feed.mts"
-import { distance, straightMeters } from "../../src/geo/projection.mts"
+import { distance } from "../../src/geo/projection.mts"
 import { type StopPredictions, forecastOf } from "../../src/transit/observations/umo.mts"
-import { BOARDING, type Run, arrivalAt, buildRuns as runsOf, slack, spread, timeAt, uncertainty } from "../../src/transit/models/forecast.mts"
+import { BOARDING, type Run, buildRuns as runsOf, lateness, slack, spread, uncertainty } from "../../src/transit/models/forecast.mts"
 import {
   ALTERNATIVES, HORIZON, MIN_TIME_SAVED, MIN_TRANSFER_GAIN,
   buildConnections, cost, itineraryKey, plan, rides, scan, walkOnly,
@@ -11,7 +11,7 @@ import {
 } from "../../src/routing/plan.mts"
 import type { Place } from "../../src/places/search.mts"
 import {
-  MAX_ACCESS_WALK, MAX_TRANSFER_WALK, createWalks, walkAllowance, walkSeconds, type Walks
+  MAX_ACCESS_WALK, MAX_TRANSFER_WALK, createWalks, estimatedMeters, walkAllowance, walkSeconds, type Walks
 } from "../../src/routing/walks.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
 import { update } from "../../src/transit/models/fit.mts"
@@ -121,12 +121,12 @@ const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: numb
   const stops = feed.stops
 
   const finish = (stop: number, time: number) => {
-    if (straightMeters(stops[stop], to) <= MAX_ACCESS_WALK)
-      best = Math.min(best, time + walkSeconds(straightMeters(stops[stop], to)))
+    if (estimatedMeters(stops[stop], to) <= MAX_ACCESS_WALK)
+      best = Math.min(best, time + walkSeconds(estimatedMeters(stops[stop], to)))
     stops.forEach((other, i) => {
-      const meters = straightMeters(stops[stop], other)
-      if (i !== stop && meters <= MAX_TRANSFER_WALK && straightMeters(other, to) <= MAX_ACCESS_WALK)
-        best = Math.min(best, time + walkSeconds(meters) + walkSeconds(straightMeters(other, to)))
+      const meters = estimatedMeters(stops[stop], other)
+      if (i !== stop && meters <= MAX_TRANSFER_WALK && estimatedMeters(other, to) <= MAX_ACCESS_WALK)
+        best = Math.min(best, time + walkSeconds(meters) + walkSeconds(estimatedMeters(other, to)))
     })
   }
 
@@ -136,16 +136,16 @@ const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: numb
         for (let j = i + 1; j < run.trip.stops.length; j++)
           if (
             canBoard(run.trip, i) && canAlight(run.trip, j) &&
-            timeAt(run, i) >= ready(run.trip.stops[i]) + slack(run, i, timeAt(run, i), start) &&
-            timeAt(run, i) >= start &&
-            timeAt(run, j - 1) <= start + HORIZON
+            run.departures[i] >= ready(run.trip.stops[i]) + slack(run, i, run.departures[i], start) &&
+            run.departures[i] >= start &&
+            run.departures[j - 1] <= start + HORIZON
           )
-            yield { run, alight: run.trip.stops[j], arrival: arrivalAt(run, j) }
+            yield { run, alight: run.trip.stops[j], arrival: run.arrivals[j] }
   }
 
   const access = (stop: number) =>
-    straightMeters(from, stops[stop]) <= MAX_ACCESS_WALK
-      ? start + walkAllowance(straightMeters(from, stops[stop]), "estimate")
+    estimatedMeters(from, stops[stop]) <= MAX_ACCESS_WALK
+      ? start + walkAllowance(estimatedMeters(from, stops[stop]), "estimate")
       : Infinity
 
   for (const first of rides(access)) {
@@ -155,7 +155,7 @@ const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: numb
 
     const ready = first.arrival + uncertainty(first.arrival - start)
     const transfer = (stop: number) => {
-      const meters = straightMeters(stops[first.alight], stops[stop])
+      const meters = estimatedMeters(stops[first.alight], stops[stop])
       return (
         stop === first.alight       ? ready :
         meters <= MAX_TRANSFER_WALK ? ready + walkAllowance(meters, "estimate") :
@@ -182,7 +182,7 @@ const expectValid = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, s
     expect(leg.start).toBeGreaterThanOrEqual(time)
     if (leg.kind === "walk") {
       expect(distance(at, leg.from)).toBe(0)
-      expect(leg.meters).toBeCloseTo(straightMeters(leg.from, leg.to), 3)
+      expect(leg.meters).toBeCloseTo(estimatedMeters(leg.from, leg.to), 3)
       expect(leg.end - leg.start).toBe(walkSeconds(leg.meters))
       ready += walkAllowance(leg.meters, "estimate")
       at = leg.to
@@ -194,8 +194,8 @@ const expectValid = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, s
       expect(canBoard(run.trip, fromPosition)).toBe(true)
       expect(canAlight(run.trip, toPosition)).toBe(true)
       expect(distance(at, feed.stops[run.trip.stops[fromPosition]])).toBe(0)
-      expect(leg.start).toBe(timeAt(run, fromPosition))
-      expect(leg.end).toBe(arrivalAt(run, toPosition))
+      expect(leg.start).toBe(run.departures[fromPosition])
+      expect(leg.end).toBe(run.arrivals[toPosition])
       if (run !== previousRun)
         expect(leg.start).toBeGreaterThanOrEqual(ready + slack(run, fromPosition, leg.start, start) - 1e-6)
       previousRun = run
@@ -295,7 +295,8 @@ test("a timetable with its stops numbered otherwise plans the same itineraries, 
 
 test("a run's connections keep a chronology however unevenly its stops are delayed, as the timetable's handoff or a source can leave them", () =>
   fc.assert(fc.property(feed, fc.array(fc.integer({ min: -1800, max: 3600 }), { minLength: 1, maxLength: 12 }), (feed, shifts) => {
-    const runs = buildRuns(feed, TODAY, []).map(run => ({ ...run, delays: run.delays.map((delay, i) => delay + shifts[i % shifts.length]) }))
+    const shifted = (times: number[]) => times.map((time, i) => time + shifts[i % shifts.length])
+    const runs = buildRuns(feed, TODAY, []).map(run => ({ ...run, arrivals: shifted(run.arrivals), departures: shifted(run.departures) }))
     const connections = buildConnections(runs, BASE + 6 * 3600)
     fc.pre(connections.length > 0)
     for (const connection of connections)
@@ -319,7 +320,7 @@ test("plan's best option feels no worse than catching a bus from a nearer stop",
     const meters = quickest!.legs[0].kind === "walk" ? quickest!.legs[0].meters : 0
     const walking = cost(walkOnly(walksOf(feed), from, to, start), start)
     feed.stops.forEach((stop, access) => {
-      if (straightMeters(from, stop) >= meters)
+      if (estimatedMeters(from, stop) >= meters)
         return
       const nearer = scan(feed, walksOf(feed), runs, connections, from, to, start, { now: start, direct: true, access })
       if (nearer && cost(nearer, start) < walking - MIN_TIME_SAVED)
@@ -370,8 +371,8 @@ test("a bus that waits at a stop gets there before it leaves, and a ride ends on
   const arrivals = [8 * 3600, 8 * 3600 + 600, 8 * 3600 + 1200]
   const feed = lineFeed([{ times, arrivals, timepoints: [] }])
   const run = runOn(buildRuns(feed, TODAY, []), "T0")
-  expect(arrivalAt(run, 1)).toBe(BASE + arrivals[1])
-  expect(timeAt(run, 1)).toBe(BASE + times[1])
+  expect(run.arrivals[1]).toBe(BASE + arrivals[1])
+  expect(run.departures[1]).toBe(BASE + times[1])
   const from = { ...CENTER, lat: CENTER.lat + 0.0001, name: "" }
   const to = { ...CENTER, lat: CENTER.lat + 0.0101, name: "" }
   const [itinerary] = plan(feed, createWalks(feed.stops), buildRuns(feed, TODAY, []), from, to, BASE + times[0] - 300)
@@ -393,7 +394,7 @@ test("live delays shift a trip's times", () =>
     const runs = buildRuns(feed, TODAY, [predict(stop, trip.id, scheduled + delay)])
     const run = runs.find(run => run.trip === trip && run.base === serviceDayStart(TODAY) / 1000)!
     expect(run.isLive).toBe(true)
-    expect(timeAt(run, trip.stops.length - 1)).toBe(scheduled + delay)
+    expect(run.departures[trip.stops.length - 1]).toBe(scheduled + delay)
   }))
 )
 
@@ -444,8 +445,8 @@ test("an early bus waits at a timepoint for its scheduled time, and a late one g
     const run = runOn(buildRuns(feed, TODAY, [predict(feed.stops[0], "T0", BASE + times[0] + delay)]), "T0")
     times.forEach((_, position) => {
       const isHeld = delay < 0 && position >= timepoint
-      expect(run.delays[position]).toBe(isHeld ? 0 : delay)
-      expect(run.holds[position]).toBe(isHeld && position === timepoint ? -delay : 0)
+      expect(lateness(run, position)).toBe(isHeld ? 0 : delay)
+      expect(run.departures[position] - run.arrivals[position]).toBe(isHeld && position === timepoint ? -delay : 0)
     })
   }))
 )
@@ -456,7 +457,7 @@ test("with an empty model, how far off a bus may be is the uncertainty for its l
     for (const run of runs.slice(0, 5)) {
       run.isLive = isLive
       run.trip.stops.forEach((_, position) => {
-        const time = timeAt(run, position)
+        const time = run.departures[position]
         const now = time - lead
         expect(spread(run, position, time, now)).toBe(uncertainty(lead))
         // The timetable's own word on waiting is the prior, and the slack covers the rest of the ways it might leave
@@ -473,11 +474,11 @@ test("a bus as likely as not to wait for its time gets the slack of one that doe
   const feed = lineFeed([{ times, timepoints: [1] }])
   const [run] = buildRuns(feed, TODAY, [])
   const now = BASE + times[1] - 600
-  const at = (holdChance: number[], delays = [0, 0, 0]) => slack({ ...run, holdChance, delays }, 1, BASE + times[1] + delays[1], now)
+  const at = (holdChance: number[], late = 0) => slack({ ...run, holdChance, departures: run.departures.map(time => time + late) }, 1, BASE + times[1] + late, now)
   expect(at([0, 0.5, 0])).toBeGreaterThan(at([0, 0, 0]) * 0.5)
   expect(at([0, 0.9, 0])).toBe(BOARDING)
   // Running late, it isn't waiting for anything
-  expect(at([0, 0.9, 0], [60, 60, 60])).toBe(at([0, 0, 0], [60, 60, 60]))
+  expect(at([0, 0.9, 0], 60)).toBe(at([0, 0, 0], 60))
 })
 
 test("a stop where buses turn out to wait for their time is held at", () => {

@@ -15,28 +15,35 @@ import { latest } from "../../shell/build.mts"
 /** The middle of campus, which search prefers the nearer of two places by one name to */
 const CAMPUS = { lat: 43.1365, lon: -70.9345 }
 
-// The bundled data, each swapped for a newer build's as it comes, which everything derived from it follows. The
-// map works without a model, so it starts with an empty one if its own can't load
-export const [feed, model, network, gazetteerData, tiles, style, places] = await Promise.all([
-  latest("gtfs", loadFeed),
-  latest("model", Model, emptyModel),
-  latest("walk", WalkData),
-  latest("gazetteer", Gazetteer),
-  latest("tiles", TilesManifest),
-  latest("style", loadStyle),
-  latest("places", Places)
-])
-const graph = r(() => loadGraph(network.value))
-export const gazetteer = r(() => gazetteerData.value.places)
-export const buildings = r(() => places.value.buildings)
-export const walks = r(() => createWalks(feed.value.stops, graph.value, gazetteer.value))
+/**
+ * The bundled data, loaded, each swapped for a newer build's as it comes, which everything derived from it follows.
+ * The map works without a model, so it starts with an empty one if its own can't load
+ */
+export const loadMapData = async () => {
+  const [feed, model, network, gazetteerData, tiles, style, places] = await Promise.all([
+    latest("gtfs", loadFeed),
+    latest("model", Model, emptyModel),
+    latest("walk", WalkData),
+    latest("gazetteer", Gazetteer),
+    latest("tiles", TilesManifest),
+    latest("style", loadStyle),
+    latest("places", Places)
+  ])
+  const graph = r(() => loadGraph(network.value))
+  const gazetteer = r(() => gazetteerData.value.places)
+  const buildings = r(() => places.value.buildings)
+  const walks = r(() => createWalks(feed.value.stops, graph.value, gazetteer.value))
 
-/** Places by name, laundry and dining first, then the stops buses pick up at, then the rest of Durham */
-export const searchPlaces = r(() => {
-  const boardable = boardableStops(feed.value)
-  return createPlaceSearch([
-    ...buildings.value.map(({ lat, lon, name }) => ({ lat, lon, name })),
-    ...feed.value.stops.filter((_, i) => boardable.has(i)).map(({ lat, lon, name }) => ({ lat, lon, name })),
-    ...gazetteer.value.map(({ name, at: [lon, lat] }) => ({ lat, lon, name }))
-  ], CAMPUS)
-})
+  /** Places by name, laundry and dining first, then the stops buses pick up at, then the rest of Durham */
+  const searchPlaces = r(() => {
+    const boardable = boardableStops(feed.value)
+    return createPlaceSearch([
+      ...buildings.value.map(({ lat, lon, name }) => ({ lat, lon, name })),
+      ...feed.value.stops.filter((_, i) => boardable.has(i)).map(({ lat, lon, name }) => ({ lat, lon, name })),
+      ...gazetteer.value.map(({ name, at: [lon, lat] }) => ({ lat, lon, name }))
+    ], CAMPUS)
+  })
+  return { feed, model, tiles, style, gazetteer, buildings, walks, searchPlaces }
+}
+
+export type MapData = Awaited<ReturnType<typeof loadMapData>>

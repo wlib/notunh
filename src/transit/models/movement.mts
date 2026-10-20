@@ -3,13 +3,15 @@
 // pace). Its time along the leg is spent as buses' is: slower pulling out and in, and wherever the leg holds them
 // up. Each stop takes as long as buses spend there, or until its scheduled time where the bus waits for that.
 //
-// The course is read for when the bus leaves each stop ahead, which is the forecast (forecast.mts), and for where it
-// is at any moment, which is where the map draws it (src/map/render/buses.mts), so the two never disagree. Where the
+// A bus's course is built once, by forecasting (forecast.mts) along its trip, and read for when it gets to and leaves
+// each stop ahead and for where it is at any moment, which is where the map draws it (src/map/render/buses.mts). A
+// bus on no trip the timetable has is drawn along its line instead (courseAlong), with nothing to wait for. Where the
 // bus is comes from the location model (locate.mts), and its pace from the legs that model has seen it drive
 
 import type { Model } from "./model.mts"
 import { legMu, lingerEstimate, profileEstimate, zoneEstimate } from "./estimates.mts"
-import { type Location, stopAhead, stopDistance, stopId } from "../inference/locate.mts"
+import type { Location } from "../inference/passages.mts"
+import { type RouteLine, stopAhead, stopDistance, stopId } from "../shapes.mts"
 import { meanResidual } from "../../shared/normal.mts"
 
 // A bus's pace drifts back to usual over about PACE_MEMORY, and strays from it by about PACE_SIGMA. A leg strays
@@ -71,15 +73,22 @@ export type Waypoint = { stop: string, route: string, isFirst: boolean, meters: 
  */
 export type Whereabouts = { arrive: number, depart?: number, progress?: number, speed?: number, halted?: number }
 
-/** A bus's expected course: when it gets to and leaves each stop of its way, how sure each departure is, and where it is when */
+/**
+ * A bus's expected course: when it gets to and leaves each stop of its way, in epoch seconds, how sure each departure
+ * is, and where it is when. It's at each stop from its arrival to its departure: distanceAt is that stop's meters
+ * throughout
+ */
 export type Course = {
-  arrivals:  number[],
-  /** Departures, in epoch seconds, and their variance, in s² */
-  times:     number[],
-  variances: number[],
+  arrivals:   number[],
+  departures: number[],
+  /** s² each departure varies by */
+  variances:  number[],
   /** Meters along the way from its first stop at an epoch second, before which it's where it was, and after, at its last */
   distanceAt: (at: number) => number
 }
+
+/** A course laid along a line, its first stop `from` meters along it, laps and all, or along no line the map has */
+export type Trajectory = { course: Course, line: RouteLine | undefined, from: number }
 
 /** How much of a leg's time a bus has taken to get some share of the way along it, by the leg's profile */
 const timeShareOf = (profile: readonly number[], share: number) => {
@@ -117,7 +126,7 @@ export const course = (model: Model, way: readonly Waypoint[], where: Whereabout
     variance = (CURRENT_SPREAD * left) ** 2
     reach(time, 0)
   }
-  const times = [where.depart ?? time]
+  const departures = [where.depart ?? time]
   const variances = [variance]
   for (let i = 1; i < way.length; i++) {
     const mu = expectedMu(model, way[i].route, way[i - 1].stop, way[i].stop, way[i].meters, now)
@@ -147,7 +156,7 @@ export const course = (model: Model, way: readonly Waypoint[], where: Whereabout
     time = Math.max(time + stop.mean, way[i].hold ?? -Infinity)
     variance += stop.variance
     reach(time, meters)
-    times.push(time)
+    departures.push(time)
     variances.push(variance)
   }
 
@@ -167,7 +176,7 @@ export const course = (model: Model, way: readonly Waypoint[], where: Whereabout
     const span = knots[high] - knots[low]
     return marks[low] + (span > 0 ? (at - knots[low]) / span : 1) * (marks[high] - marks[low])
   }
-  return { arrivals, times, variances, distanceAt }
+  return { arrivals, departures, variances, distanceAt }
 }
 
 /**
@@ -219,39 +228,44 @@ const along = (meters: number, took: number, profile: readonly number[], where: 
 const DRAWN_STOPS = 8
 
 /**
- * A bus's course along its line from where the location model has it, through the next few stops, for drawing it:
- * with when its trip waits at stops for their scheduled times, by stop id
- * @returns the course, and the meters along the line its way starts from
+ * Where the location model has a bus on its way, from the stop it's at or last left, or followed since before any,
+ * the stop behind it: that stop's index along its line, its meters along it, and the bus's whereabouts from there
  */
-export const courseAlong = (model: Model, location: Location, pace: Pace, holds?: ReadonlyMap<string, number>) => {
+export const whereaboutsOf = (location: Location) => {
   const { line, last } = location
-  // Followed since before any stop, from the one behind it
   const start = last?.index ?? stopAhead(line, location.distance) - 1
-  const from = stopDistance(line, start)
+  const [from, to] = [stopDistance(line, start), stopDistance(line, start + 1)]
+  const where: Whereabouts = location.mode === "dwelling"
+    ? { arrive: location.since }
+    : {
+      arrive:   last?.arrive ?? location.since,
+      depart:   last?.depart ?? location.since,
+      progress: Number.isFinite(to - from) && to > from ? (location.distance - from) / (to - from) : 0,
+      speed:    location.speed,
+      ...location.mode === "halted" && { halted: location.since }
+    }
+  return { start, from, where }
+}
+
+/**
+ * A bus's course along its line from where the location model has it, through the next few stops, for drawing a bus
+ * on no trip forecasting knows of, so with nowhere to wait for a scheduled time
+ */
+export const courseAlong = (model: Model, location: Location, pace: Pace): Trajectory | undefined => {
+  const { line } = location
+  const { start, from, where } = whereaboutsOf(location)
   if (!Number.isFinite(from))
     return
   const way = Array.from({ length: DRAWN_STOPS + 1 }, (_, i): Waypoint | undefined => {
     const distance = stopDistance(line, start + i)
     if (!Number.isFinite(distance))
       return
-    const stop = stopId(line, start + i)
     return {
-      stop,
-      route: line.route,
+      stop:    stopId(line, start + i),
+      route:   line.route,
       isFirst: false,
-      meters: i ? distance - stopDistance(line, start + i - 1) : 0,
-      ...i && holds?.has(stop) && { hold: holds.get(stop) }
+      meters:  i ? distance - stopDistance(line, start + i - 1) : 0
     }
   }).filter(waypoint => waypoint !== undefined)
-  const meters = way[1]?.meters
-  const where: Whereabouts = location.mode === "dwelling" && last
-    ? { arrive: last.arrive }
-    : {
-      arrive:   last?.arrive ?? location.since,
-      depart:   last?.depart ?? location.since,
-      progress: meters ? (location.distance - from) / meters : 0,
-      speed:    location.speed,
-      ...location.mode === "halted" && { halted: location.since }
-    }
-  return { course: course(model, way, where, pace, location.at), from }
+  return { course: course(model, way, where, pace, location.at), line, from }
 }

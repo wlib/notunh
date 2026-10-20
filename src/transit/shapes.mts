@@ -51,25 +51,32 @@ export const toRouteLine = (route: string, coordinates: Coordinates[], trips: { 
   }
 }
 
-/** A stop on a line, counting on around a loop: index n is the first stop on the second lap */
-export const stopAt = ({ stops, length, isLoop }: RouteLine, lap: number, index: number) => {
-  const n = stops.length
-  const wrapped = ((index % n) + n) % n
-  return {
-    index: wrapped,
-    id: stops[wrapped].id,
-    distance: stops[wrapped].distance + (isLoop ? (lap + Math.floor(index / n)) * length : 0)
-  }
+/** Meters along a line of the stop at an index counting on around a loop, or ±Infinity off either end of one that isn't */
+export const stopDistance = (line: RouteLine, index: number) => {
+  const n = line.stops.length
+  if (!line.isLoop && (index < 0 || index >= n) || !n)
+    return index < 0 ? -Infinity : Infinity
+  const lap = Math.floor(index / n)
+  return line.stops[index - lap * n].distance + lap * line.length
 }
 
-export const lapOf = ({ length, isLoop }: RouteLine, distance: number) =>
-  isLoop ? Math.floor(distance / length) : 0
+export const stopId = (line: RouteLine, index: number) =>
+  line.stops[((index % line.stops.length) + line.stops.length) % line.stops.length].id
 
-/** The index of the first stop past a distance, which is the stop count past the end of a line that isn't a loop */
-export const firstAhead = (line: RouteLine, distance: number) => {
-  const offset = distance - lapOf(line, distance) * (line.isLoop ? line.length : 0)
-  const i = line.stops.findIndex(stop => stop.distance > offset)
-  return i === -1 ? line.stops.length : i
+/** The index of the first stop past a distance along a line, counting on around a loop */
+export const stopAhead = (line: RouteLine, distance: number) => {
+  const n = line.stops.length
+  const lap = line.isLoop ? Math.floor(distance / line.length) : 0
+  const offset = distance - lap * line.length
+  let [low, high] = [0, n]
+  while (low < high) {
+    const middle = (low + high) >> 1
+    if (line.stops[middle].distance > offset)
+      high = middle
+    else
+      low = middle + 1
+  }
+  return lap * n + low
 }
 
 const linesCache = new WeakMap<Feed, Map<string, RouteLine[]>>()
@@ -96,12 +103,16 @@ export const routeLines = (feed: Feed) => {
   return lines
 }
 
+/** The line a trip follows, if its route has its shape */
+export const lineOf = (feed: Feed, trip: Trip) =>
+  feed.shapes[trip.shape] && routeLines(feed).get(trip.route)?.find(line => line.coordinates === feed.shapes[trip.shape])
+
 const tripPositions = new WeakMap<Trip, number[] | undefined>()
 
-/** Meters along its shape each of a trip's stops is at, if its route has the shape */
+/** Meters along its line each of a trip's stops is at, if its route has its shape */
 export const positionsOf = (feed: Feed, trip: Trip) => {
   if (!tripPositions.has(trip)) {
-    const line = feed.shapes[trip.shape] && routeLines(feed).get(trip.route)?.find(line => line.coordinates === feed.shapes[trip.shape])
+    const line = lineOf(feed, trip)
     tripPositions.set(trip, line && positionsAlong(line, trip.stops.map(stop => feed.stops[stop])))
   }
   return tripPositions.get(trip)
@@ -113,7 +124,7 @@ export const ridePath = (feed: Feed, leg: { run: { trip: Trip }, fromPosition: n
   const [first, last] = [leg.fromPosition, leg.toPosition]
     .map(position => feed.stops[trip.stops[position]])
     .map(({ lon, lat }): Coordinates => [lon, lat])
-  const line = routeLines(feed).get(trip.route)?.find(line => line.coordinates === feed.shapes[trip.shape])
+  const line = lineOf(feed, trip)
   const positions = positionsOf(feed, trip)
   if (!line || !positions)
     return [first, last]

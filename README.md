@@ -21,12 +21,14 @@ src/geo/          Geometry: projections, lines measured in meters, boxes, map ma
 src/places/       Gazetteer, place search, Photon, laundry and dining buildings
 src/transit/      The GTFS timetable (feed.mts) and route shapes
   observations/   What was observed: the Worker's stored rows, the archive, Umo's API as a live source
-  inference/      What's inferred from fixes: the location model and the nightly visit extraction
+  inference/      What's inferred from fixes: GPS likelihoods, matching to shapes, passages between fixes, the
+                  location model that joins them, and the nightly visit extraction
   models/         The learned model, its fit, bus movement, tracking, and the forecast
 src/routing/      Walking network, walks, and the trip planner
 src/shell/        Shared page shell: <head>, theme, Intl, clock and visibility, polling, release manifests, data loading
 src/sw/           The service worker, built to /sw.js
-src/map/          The map page: state/, render/ (MapLibre), ui/, basemap/ (style and tiles)
+src/map/          The map page: state/ (made by createMapState, nothing started on import), render/ (MapLibre), ui/,
+                  basemap/ (style and tiles)
 src/dining/, src/laundry/   Those pages: state.mts, ui/, and their logic
 worker/           The Cloudflare Worker (Hono, Drizzle on D1): API, crons, laundry proxy
 scripts/          The build's data pipeline, model training and replay, archiving, map data generation

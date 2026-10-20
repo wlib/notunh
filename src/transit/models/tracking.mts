@@ -4,8 +4,10 @@
 // from the same, and nothing is learned from where a bus was drawn
 
 import type { RouteLine } from "../shapes.mts"
-import { type Location, type Observation, type Passage, locator, stopDistance } from "../inference/locate.mts"
-import { type Pace, NO_PACE, expectedMu, paced } from "./movement.mts"
+import type { Observation } from "../inference/likelihoods.mts"
+import { type Location, type Passage, drove } from "../inference/passages.mts"
+import { locator } from "../inference/locate.mts"
+import { type Pace, NO_PACE, expectedMu, paced, whereaboutsOf } from "./movement.mts"
 import type { Model } from "./model.mts"
 import type { Sighting } from "./forecast.mts"
 
@@ -18,8 +20,7 @@ export const isNews = (last: { at: number, route?: string | null } | undefined, 
 
 /** A bus's pace, having finished a leg: from the stop before along the same line, as long as the model expects, or not */
 export const pacedBy = (model: Model, pace: Pace, before: Passage | undefined, passage: Passage) => {
-  const isLeg = before && before.line === passage.line && before.index === passage.index - 1 && !before.isIncomplete
-  const seconds = isLeg && passage.arrive.median - before.depart.median
+  const seconds = drove(before, passage) && passage.arrive.median - before.depart.median
   return seconds && seconds > 0
     ? paced(pace, Math.log(seconds) - expectedMu(model, passage.line.route, before.stop, passage.stop, passage.distance - before.distance, passage.arrive.median), passage.arrive.median)
     : pace
@@ -49,23 +50,5 @@ export const busOn = (lines: readonly RouteLine[]) => {
 }
 
 /** A bus on a trip, at the stop it's at or last left and how far it's got from there, as forecasting chains from */
-export const sightingOf = (vehicleId: string, tripId: string | null | undefined, location: Location | undefined, pace: Pace): Sighting | undefined => {
-  const last = location?.last
-  if (!tripId || !location || !last)
-    return
-  const meters = stopDistance(location.line, last.index + 1) - last.distance
-  return {
-    vehicleId,
-    tripId,
-    stop:   last.stop,
-    arrive: last.arrive,
-    ...location.mode !== "dwelling" && {
-      depart:   last.depart ?? location.since,
-      progress: Number.isFinite(meters) && meters > 0 ? (location.distance - last.distance) / meters : 0,
-      speed:    location.speed,
-      ...location.mode === "halted" && { halted: location.since }
-    },
-    pace,
-    at: location.at
-  }
-}
+export const sightingOf = (vehicleId: string, tripId: string | null | undefined, location: Location | undefined, pace: Pace): Sighting | undefined =>
+  tripId && location?.last ? { vehicleId, tripId, stop: location.last.stop, ...whereaboutsOf(location).where, pace, at: location.at } : undefined

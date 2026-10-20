@@ -93,7 +93,8 @@ export const drive = (feed: Feed, { cruise, waits, layover, every }: { cruise: n
     return { distance: from + peak * up / 2 + peak * cruising + (peak * down / 2 - BRAKING * left * left / 2), speed: BRAKING * left }
   }
 
-  const stays: Stay[] = []
+  // Starting from the first stop, which it leaves at once
+  const stays: Stay[] = [{ stop: 0, lap: 0, arrive: BASE + 9 * 3600, depart: BASE + 9 * 3600 }]
   const stretches: Stretch[] = []
   let time = BASE + 9 * 3600
   let from = 0

@@ -9,11 +9,11 @@ import { readFile } from "node:fs/promises"
 import { URL } from "node:url"
 import { withIndexes, type Feed, type FeedData } from "../../src/transit/feed.mts"
 import { extract, type Visit } from "../../src/transit/inference/events.mts"
-import type { BusFix, SampledPrediction } from "../../src/transit/observations/raw.mts"
+import { type BusFix, type SampledPrediction, alwaysListening, listening } from "../../src/transit/observations/raw.mts"
 import { observationsOf } from "../observations.mts"
 import { NO_PACE, expectedMu, paced } from "../../src/transit/models/movement.mts"
 import { NO_FORECAST } from "../../src/transit/observations/predictions.mts"
-import { type Sighting, buildRuns, timeAt } from "../../src/transit/models/forecast.mts"
+import { type Sighting, buildRuns } from "../../src/transit/models/forecast.mts"
 import { busOn, isNews, sightingOf } from "../../src/transit/models/tracking.mts"
 import { routeLines } from "../../src/transit/shapes.mts"
 import { LEADS, asModel, dayTypeAt, emptyScores, scored, type Model, type Scores } from "../../src/transit/models/model.mts"
@@ -73,6 +73,10 @@ export const archiveFeed = async (feed: FeedData, today: Day) => {
 const SAMPLED = 300 // s
 // A bus last seen at a stop longer ago than this, without leaving the route, is out of service
 const OUT_OF_SERVICE = 1800 // s
+// The Worker polls buses every 10 s, so a silence longer than this between answers may have missed a bus. A forecast
+// is only scored where the Worker was listening for the minute before, so what replay saw then is what the map would
+const QUIET = 30_000 // ms
+const LISTENED = 60  // s
 
 /** When forecasts of a departure are made at each of LEADS: the last sample at least that long before it */
 const forecastTimes = (depart: number) =>
@@ -168,12 +172,12 @@ export const replayed = (feed: Feed, model: Model, fixes: readonly BusFix[]) => 
 }
 
 /**
- * How each way of forecasting did on a day's visits, as scores to fold into the model. At each sample time, every
- * departure a lead away is forecast as the map would have from what it saw then, by the model as it stood before the
- * day. That's scored beside Umo's prediction sampled then and the timetable shifted by how late its route runs. What
- * the map saw is the day's fixes replayed, where they're kept, else its visits
+ * How each way of forecasting did on a day's visits, as scores to fold into the model. At each sample time the
+ * Worker was listening up to, every departure a lead away is forecast as the map would have from what it saw then, by
+ * the model as it stood before the day. That's scored beside Umo's prediction sampled then and the timetable shifted
+ * by how late its route runs. What the map saw is the day's fixes replayed, where they're kept, else its visits
  */
-export const score = (model: Model, feed: Feed, visits: readonly Visit[], fixes?: readonly BusFix[]): Scores => {
+export const score = (model: Model, feed: Feed, visits: readonly Visit[], fixes?: readonly BusFix[], isListening = alwaysListening): Scores => {
   const scores = emptyScores()
   const trips = new Map(feed.trips.map(trip => [trip.id, trip]))
   const sightingsAt = fixes ? replayed(feed, model, fixes) : sightingsOf(model, visits)
@@ -183,12 +187,14 @@ export const score = (model: Model, feed: Feed, visits: readonly Visit[], fixes?
       forecastTimes(visit.depart).forEach((at, i) => due.set(at, [...due.get(at) ?? [], { visit, lead: visit.depart - at, umo: visit.umo?.[i] }]))
 
   for (const at of [...due.keys()].sort((a, b) => a - b)) {
+    if (!isListening((at - LISTENED) * 1000, at * 1000))
+      continue
     const runs = groupBy(buildRuns(feed, localDay(at * 1000), NO_FORECAST, model, sightingsAt(at)), run => `${run.trip.id}@${run.base}`)
     for (const { visit, lead, umo } of due.get(at)!) {
       const trip = trips.get(visit.trip!)!
       const run = runs.get(`${trip.id}@${visit.scheduled! - trip.times[visit.position!]}`)?.[0]
       if (run?.tracked)
-        scored(scores, "model", lead, visit.depart - timeAt(run, visit.position!), Math.sqrt(run.tracked.variances[visit.position!]))
+        scored(scores, "model", lead, visit.depart - run.departures[visit.position!], Math.sqrt(run.tracked.variances[visit.position!]))
       if (umo !== null && umo !== undefined)
         scored(scores, "umo", lead, visit.depart - umo)
       scored(scores, "schedule", lead, visit.depart - visit.scheduled! - (offsetEstimate(model, visit.route, dayTypeAt(visit.depart))?.mean ?? 0))
@@ -207,18 +213,19 @@ export const describe = (scores: Scores) =>
   }).join("\n")
 
 /**
- * Each visit a service day's observations show, with Umo's predictions for them, and the fixes they were read from,
- * from the day's archive, or the Worker while it keeps them (scripts/observations.mts)
+ * Each visit a service day's observations show, with Umo's predictions for them, the fixes they were read from, and
+ * when the Worker was listening for buses, from the day's archive, or the Worker while it keeps them
+ * (scripts/observations.mts)
  */
 export const extractDay = async (feed: Feed, day: Day) => {
-  const { fixes, predictions } = await observationsOf(day)
-  return { visits: attachPredictions(extract(feed, fixes), predictions), fixes }
+  const { fixes, predictions, coverage } = await observationsOf(day)
+  return { visits: attachPredictions(extract(feed, fixes), predictions), fixes, isListening: listening(coverage.buses, QUIET) }
 }
 
 if (import.meta.main) {
   const day = process.argv.slice(2).find(arg => !arg.startsWith("--"))!
   const feed = await feedFor(day)
   const model = asModel((await readModel("buses")).state)
-  const { visits, fixes } = await extractDay(feed, day)
-  console.log(`${day}: ${visits.length} visits on timetable ${feed.version}, scored with the model through ${model.through ?? "nothing"}\n${describe(score(model, feed, visits, fixes))}`)
+  const { visits, fixes, isListening } = await extractDay(feed, day)
+  console.log(`${day}: ${visits.length} visits on timetable ${feed.version}, scored with the model through ${model.through ?? "nothing"}\n${describe(score(model, feed, visits, fixes, isListening))}`)
 }

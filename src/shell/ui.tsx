@@ -1,4 +1,7 @@
-/** @jsxImportSource bruh/browser */
+/** @jsxImportSource #jsx */
+
+// Rendered on either side: #jsx is bruh's browser JSX in a page's code and its server JSX where pages are rendered at
+// build time (package.json imports), so a page's shell and its app share these
 
 /** The app's name leading home, then the page's own */
 export const AppTitle = ({ page }: { page: string }) =>

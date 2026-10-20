@@ -80,9 +80,10 @@ Environment:
 Building only installs what it's pinned to and builds; collecting, archiving, acquiring, and learning are steps of their own that publish what a build takes ([docs/storage.md](docs/storage.md#the-pipeline)). Cloudflare Workers Builds builds `main` on every push and whenever a workflow publishes new inputs or map data (it POSTs the Deploy Hook). The build command is `npm run build`, the deploy command `npm run deploy`. Keep both steps in `package.json` so the dashboard never needs editing.
 
 1. `prebuild` installs the inputs and map data generations the releases' pointers name (`scripts/inputs.mts`), keeps what the site serves now beside them for open pages, matches the places, and runs the typecheck and tests. It needs no secrets and writes nothing but its own folder, so any branch's build is safe.
-2. `vite build`.
+2. `vite build`, then `postbuild` (`scripts/search.mts`) adds the social images, the sitemap, and IndexNow's key file.
 3. `predeploy` applies D1 migrations (`npm run db:migrate`); a failed migration stops the deploy.
 4. `wrangler deploy` ships the Worker and site together.
+5. `postdeploy` (`scripts/indexnow.mts`) submits the pages the deploy changed to IndexNow, on Workers Builds' deploys of `main` only.
 
 Each night the Worker's 4:17 AM cron starts the Inputs workflow, which acquires the timetable, style, menus, and laundry rooms, runs the tests, learns the models through the Worker, builds the site with all of that to check it, publishes it as `inputs-<version>`, and POSTs the Deploy Hook. If upstream is down, nothing is published and the site keeps the inputs before. Both learners are attempted when either stalls; compatible previous or empty outputs can still be published, and the workflow reports the stall afterward. A hard failure that leaves a required model or asset missing prevents publication. Installation validates the complete input bundle before clearing the prior generated sources, so fixtures cannot fill gaps in production inputs. Rerunning publication retries the Deploy Hook even if its pointer already advanced. `/inputs.json` on the site says which inputs and map data it was built from.
 
@@ -105,6 +106,20 @@ Secrets live on two sides, and `node scripts/secrets.mts check` says whether eac
 - The `production` environment on GitHub, which only `main` can use: `BUILD_TOKEN` and `CLOUDFLARE_DEPLOY_HOOK`, the URL of a Workers Builds deploy hook of `main`. Inputs and Map data record each run as a deployment of notunh.app.
 
 `BUILD_TOKEN` is on both sides and in `.dev.vars`, so it's only changed with `node scripts/secrets.mts rotate`, which sets all three.
+
+## Search and sharing
+
+- Each page's title, description, and structured data are in `src/shell/pages.mts`, which `Head.tsx` makes into the canonical URL, Open Graph and Twitter cards, and JSON-LD (`WebSite` on the home page for Google's site name, a free `WebApplication` on each). No ratings, so no rich result.
+- `/map/`, `/dining/`, and `/laundry/` render their header and what they do on the server, and laundry every room as a link, so crawlers and link previews see more than an empty `#app`. `src/shell/ui.tsx` renders on either side: `#jsx` is bruh's browser or server JSX by the build's conditions (`imports` in `package.json`).
+- Laundry rooms (`/laundry/<room>/`) are the laundry page itself, so their canonical URL is `/laundry/` and they're not in the sitemap. Their only content of their own is live.
+- At build: `/social/<page>/card.png` per page (`scripts/social.mts`, text drawn as Inter's outlines so no fonts need be installed), `/sitemap.xml`, and `/<key>.txt`. A page's `lastmod` is this build's release only if the page differs from the one served by more than its release, so nightly menus move dining's and leave the home page's.
+- After a deploy: changed pages go to IndexNow (Bing, Yandex, Naver, Seznam, Yep). Google has nothing like it for these pages; it reads the sitemap that `robots.txt` names.
+- Cloudflare's managed robots.txt prepends its content signals to `public/robots.txt`, so nothing needs toggling.
+
+Once, by hand:
+- Google Search Console: add the domain property `notunh.app`, verify it with the TXT record it gives, added in Cloudflare DNS, then submit `https://notunh.app/sitemap.xml` under Sitemaps.
+- Bing Webmaster Tools: import the site from Search Console, which also covers IndexNow's reports.
+- Check previews with the [Rich Results Test](https://search.google.com/test/rich-results) and a link pasted in iMessage, Slack, or Discord.
 
 ## Data sources
 

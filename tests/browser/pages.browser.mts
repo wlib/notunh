@@ -68,3 +68,21 @@ test("dining first opens on a day with a menu showing it", async ({ page, fixtur
   await expect(page.locator(".stations .station").first()).toBeVisible()
   expect(fixture.requests.filter(path => path.startsWith("/data/dining/"))).toHaveLength(1)
 })
+
+test("each page shows its header and what it does before any script runs, where its app then puts its header", async ({ browser, fixture }) => {
+  // Every other origin, like Umo and the map's tiles, is out of reach
+  const proxy = { server: "http://127.0.0.1:9", bypass: "127.0.0.1" }
+  const shell = await (await browser.newContext({ javaScriptEnabled: false, proxy })).newPage()
+  const app = await (await browser.newContext({ proxy })).newPage()
+  await app.clock.setFixedTime(WITH_MENUS)
+  for (const [path, loaded] of [["/map/", ".routes"], ["/dining/", ".controls"], ["/laundry/", ".rooms-head"]]) {
+    await shell.goto(fixture.origin + path)
+    await expect(shell.locator("#app .shell")).toBeVisible()
+    await app.goto(fixture.origin + path)
+    await expect(app.locator(loaded).first()).toBeAttached()
+    expect(await app.locator(".app-title").boundingBox(), path).toEqual(await shell.locator(".app-title").boundingBox())
+  }
+  await expect(shell.locator("a.room-open").first()).toHaveAttribute("href", /^\/laundry\/[\w-]+\/$/)
+  await shell.context().close()
+  await app.context().close()
+})

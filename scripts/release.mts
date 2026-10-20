@@ -6,7 +6,7 @@
 
 import { createReadStream } from "node:fs"
 import { lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises"
-import { isAbsolute, join, normalize, relative } from "node:path"
+import { isAbsolute, join, normalize, relative, resolve } from "node:path"
 import * as v from "valibot"
 import { checked } from "../src/shared/json.mts"
 import { contentHash } from "../src/shared/hash.mts"
@@ -76,7 +76,9 @@ export const stage = async (kind: Kind, manifest: Manifest, folder: string, to: 
   await rm(to, { recursive: true, force: true })
   await mkdir(to, { recursive: true })
   await writeFile(join(to, "manifest.json"), JSON.stringify(manifest))
-  await run("tar", ["-czf", join(to, `${kind}.tar.gz`), "-C", folder, ".", "-C", to, "manifest.json"])
+  // Without extended attributes, which macOS gives every file and Linux's tar warns of once a file as it unpacks. The
+  // manifest's folder is absolute, since tar takes each -C from the one before
+  await run("tar", ["--no-xattrs", "-czf", join(to, `${kind}.tar.gz`), "-C", folder, ".", "-C", resolve(to), "manifest.json"])
   await writeFile(join(to, "latest.json"), JSON.stringify({ version: manifest.version }))
   console.log(`Staged ${kind}-${manifest.version} in ${to}`)
   return true

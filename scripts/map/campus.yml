@@ -1,6 +1,7 @@
 # What OpenMapTiles leaves out that a campus map wants, as Planetiler's custom profile for the campus tile set
-# (src/map/basemap/tiles.mts), drawn by the campus layers in src/map/basemap/style.mts. Each layer starts at the zoom it's first
-# drawn at, or the set's deepest, which is overzoomed past it
+# (src/map/basemap/tiles.mts), drawn by the campus layers in src/map/basemap/style.mts. Each layer starts at the zoom
+# it's first drawn at, or at the set's deepest zoom if it's drawn deeper still, where the map overzooms it.
+# Changing this file makes a new map data generation (scripts/map/release.mts)
 
 schema_name: notunh campus
 schema_description: Building names, parking lots, doors, benches, phones, fences, and trees

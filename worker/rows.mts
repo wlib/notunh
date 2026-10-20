@@ -1,7 +1,7 @@
 // Every table the build reads and writes, by name, each with the column its days are on when it has one: epoch
-// milliseconds, or schedule seconds for visits, as src/transit/inference/events.mts keeps them. Reads page by rowid, so rows come
-// back in the order they were stored, and the build sorts where it must. The nightly prune drops what each keeps no
-// longer, and samples sooner for days the observations archive has
+// milliseconds, or schedule seconds for visits, as src/transit/inference/events.mts keeps them. Reads page by rowid,
+// so rows come back in the order they were stored, and the build sorts where it must. The nightly prune drops what
+// each table no longer keeps, and samples sooner for days the observations archive has
 
 import { drizzle } from "drizzle-orm/d1"
 import type * as v from "valibot"
@@ -132,8 +132,8 @@ export const write = (env: Env, entry: Entry, rows: readonly Record<string, unkn
 }
 
 /**
- * The service days archived that samples go of before the rest: those older than the window and not yet past the
- * cap, which every table's keeping prunes anyway, as spans of epoch milliseconds, those that meet merged
+ * The archived service days whose samples are dropped early: older than the window but not past the cap, which the
+ * ordinary prune covers anyway. As spans of epoch milliseconds, with adjacent ones merged
  */
 export const archivedSpans = (today: Day, archived: readonly Day[], window: number, cap: number) => {
   const spans: [number, number][] = []

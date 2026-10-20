@@ -1,5 +1,5 @@
-// Your location, watched with GPS while the map is in view, from when it's first asked for.
-// High accuracy is what makes it GPS at all on iOS, rather than Wi-Fi a hundred meters off
+// Your location, watched with GPS while the map is in view, from when it's first asked for. High accuracy is what
+// makes it GPS at all on iOS, rather than Wi-Fi a hundred meters off
 
 import { r, watch } from "bruh/reactive"
 import { isWorthTaking, type Fix } from "../../geo/fixes.mts"
@@ -42,8 +42,8 @@ const take = ({ coords, timestamp }: GeolocationPosition) => {
   settle({ fix: location.peek()! })
 }
 
-// Denied is final; the rest is GPS losing its signal for a moment, as iOS reports indoors, which watching rides
-// out, so those waiting on a fix wait out their own timeout instead
+// Denied is final. Any other error is GPS losing its signal for a moment, as iOS reports indoors, which the watch
+// rides out, so those waiting on a fix wait out their own timeout instead
 const fail = (error: GeolocationPositionError) => {
   if (error.code !== error.PERMISSION_DENIED)
     return

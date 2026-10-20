@@ -14,7 +14,7 @@ const FRAME_MS    = 50     // ~20 fps, unless the map is following, which moves 
 const STALE_MS    = 60_000 // an older fix is shown faded, as you may have moved since
 const FOLLOW_ZOOM = 16
 
-// The page's accent, light, which reads on the map either way
+// The page's light-theme accent, which reads on the map in either theme
 const COLOR = "#1a469d"
 
 const headingIcon = () => {

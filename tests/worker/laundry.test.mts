@@ -57,7 +57,8 @@ test("replaying Stoke G05's four snapshots records just dryer 10 finishing and w
   })
   const number = (id: string) => snapshots[0].find(m => m.id === id)!.number
   expect(recorded.map(({ machine, status }) => [number(machine), status])).toEqual([["3", "free"], ["10", "done"]])
-  // Dryer 10 reported finishing at 16:30:23, after the poll before, but washer 3's stamp predates it, so it's put halfway
+  // Dryer 10 reported finishing at 16:30:23, after the poll before. Washer 3's stamp predates that poll, so its change
+  // is put halfway between the two
   expect(recorded.map(({ at }) => new Date(at).toISOString())).toEqual(["2026-10-07T16:31:34.500Z", "2026-10-07T16:30:23.270Z"])
 })
 

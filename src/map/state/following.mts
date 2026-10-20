@@ -1,6 +1,6 @@
-// The buses the map follows, each one's fixes through the location model and its pace (src/transit/models/tracking.mts),
-// and its course from there, which is where it's drawn (render/buses.mts), as the timetable and the model are
-// swapped for newer ones
+// The buses the map follows. Each one's fixes go through the location model and its pace
+// (src/transit/models/tracking.mts), and its course from there is where it's drawn (render/buses.mts). This holds up
+// as the timetable and the model are swapped for newer ones
 
 import { r, watch, type Reactive } from "bruh/reactive"
 import { tripBase, type Feed } from "../../transit/feed.mts"
@@ -16,8 +16,8 @@ import { busOn, isNews, sightingOf } from "../../transit/models/tracking.mts"
 export type Fixed = Vehicle & { accuracy?: number }
 
 /**
- * A bus as last reported, where on its route the location model has it, if it's on its route, how it's been
- * driving, and its course from there, drawn from the meters along its line its way starts at
+ * A bus as last reported, with where on its route the location model has it (if it's on its route), how it's been
+ * driving, and its course from there. `from` is the meters along its line the course starts at
  */
 export type Followed = { vehicle: Fixed, location?: Location, pace: Pace, course?: { course: Course, from: number } }
 
@@ -25,8 +25,8 @@ export const follow = (feed: Reactive<Feed>, model: Reactive<Model>, vehicles: R
   const trips = r(() => new Map(feed.value.trips.map(trip => [trip.id, trip])))
 
   /**
-   * When a bus's trip is scheduled to leave the stops it waits at when early, between its first and last, which on a
-   * loop are the same stop, where waiting is a layover
+   * By stop id, the epoch seconds a bus's trip is scheduled to leave each stop it likely waits at when early. The
+   * first and last stops are left out: on a loop they're the same stop, and waiting there is a layover
    */
   const holdsOf = (vehicle: Vehicle) => {
     const trip = vehicle.tripTag ? trips.peek().get(vehicle.tripTag) : undefined
@@ -43,10 +43,10 @@ export const follow = (feed: Reactive<Feed>, model: Reactive<Model>, vehicles: R
   const followedAs = (vehicle: Fixed, location: Location | undefined, pace: Pace): Followed =>
     ({ vehicle, location, pace, course: location && courseAlong(model.peek(), location, pace, holdsOf(vehicle)) })
 
-  // Each bus, on its route's lines, and the timetable and model it was last followed by. What survives a change of
-  // either is what the fixes say: a newer timetable's buses are followed afresh along its lines from their last fix,
-  // as its lines may run otherwise; and a newer model's keep where they are, but their paces start afresh, as they
-  // were measured against the old one's legs, and their courses are drawn by the new one, both at once
+  // Each bus on its route's lines, and the timetable and model it was last followed by. Only what the fixes say
+  // survives a change of either. Under a newer timetable, buses are followed afresh along its lines from their last
+  // fix, as its lines may run otherwise. Under a newer model, buses keep where they are, but their paces start afresh,
+  // as they were measured against the old model's legs, and their courses are redrawn by the new one
   let buses = new Map<string, { route: string, bus: ReturnType<typeof busOn> }>()
   let [lastFeed, lastModel] = [feed.peek(), model.peek()]
 
@@ -72,7 +72,7 @@ export const follow = (feed: Reactive<Feed>, model: Reactive<Model>, vehicles: R
         next.set(vehicle.id, isNewModel ? followedAs(vehicle, previous.location, NO_PACE) : previous)
         continue
       }
-      // A bus put on another route starts afresh, as the nightly extraction has it
+      // A bus put on another route starts afresh, as the nightly extraction treats it too
       if (own?.route !== route) {
         own = { route, bus: busOn(linesByRoute.get(route)!) }
         buses.set(vehicle.id, own)

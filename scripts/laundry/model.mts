@@ -1,6 +1,6 @@
-// Learns when each laundry room usually has a machine free in the build: folds each whole day since the last model
-// from the collector's transitions and runs, and writes src/laundry/usual.json for the page to load as a hashed
-// asset. Everything goes through the Worker with BUILD_TOKEN and never fails the build (see scripts/learn.mts);
+// Learns, in the build, when each laundry room usually has a machine free. Folds in each whole day since the last
+// model from the collector's transitions and polls, and writes src/laundry/usual.json for the page to load as a
+// hashed asset. Everything goes through the Worker with BUILD_TOKEN and never fails the build (scripts/learn.mts).
 // --local uses `wrangler dev`
 
 import { addDays, localDay } from "../../src/shared/time.mts"

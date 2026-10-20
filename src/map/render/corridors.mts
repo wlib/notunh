@@ -1,5 +1,5 @@
-// Routes sharing a street drawn side by side like a transit diagram, rather than on top of each other,
-// one lane per route whichever way it goes
+// Routes sharing a street drawn side by side like a transit diagram, rather than on top of each other, one lane per
+// route whichever way it goes
 
 import { indexBoxes } from "../../geo/boxes.mts"
 import { alongSegment } from "../../geo/lines.mts"
@@ -11,9 +11,9 @@ const PARALLEL = 35 // degrees, lines crossing at more than this only meet at an
 const MIN_RUN = 8   // segments, shorter lane changes are noise where routes merge and split
 const TAPER = 30    // m a lane change slides across over, eased in and out
 const FINE = 3      // m between points within a slide, so it curves rather than bends
-// Lanes are ordered across a street as seen facing along it in a direction folded into [AXIS, AXIS + 180),
-// so every route on the street agrees on the order. A street running along the fold could fall either side of it,
-// so this is the fold that, tried against Durham's routes, crosses and overlaps them least
+// Lanes are ordered across a street as seen facing along it in a direction folded into [AXIS, AXIS + 180), so every
+// route on the street agrees on the order. A street running along the fold could fall either side of it. Of the folds
+// tried against Durham's routes, this one crosses and overlaps them least
 const AXIS = 152 // degrees
 
 export type Strand = {
@@ -101,7 +101,7 @@ export const measureCorridors = (strands: Strand[]): Corridors => {
     )
   )
 
-  // Segments indexed by their boxes, so only nearby ones get compared, which there is one of for any segment asked about
+  // Segments indexed by their boxes, so only nearby ones get compared. The index exists whenever a segment does
   const index = indexBoxes(segments.map(({ a, b }) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]))
 
   const alongside = (segment: Segment) => {
@@ -128,7 +128,7 @@ export const measureCorridors = (strands: Strand[]): Corridors => {
   }))
 }
 
-/** A run of segments' slots, with each change between runs eased over TAPER, at points FINE apart within it */
+/** Points and their slots, with each change of slot eased over TAPER meters, at points FINE apart within the slide */
 const taper = (points: Coordinates[], slots: number[]) => {
   const along = [0]
   for (let i = 1; i < points.length; i++)
@@ -183,8 +183,8 @@ export const laneSlots = (corridors: Corridors, shown: ReadonlySet<string>, orde
 }
 
 /**
- * Each strand's lane in pieces at one slot each: runs between slides, and a step for each pair of points within
- * one, each a fraction of a lane over from the last, which round caps join without a seam
+ * Each strand's lane in pieces at one slot each: runs between slides, and a step for each pair of points within a
+ * slide. Each step is a fraction of a lane over from the last, and round caps join them without a seam
  */
 export const lanePieces = (lanes: LaneSlots[]): Lane[] =>
   lanes.flatMap(({ route, points, slots }) => {

@@ -1,9 +1,12 @@
-// The buildings laundry rooms and dining halls are in, as scripts/map/places.mts finds them in OpenStreetMap, which
-// the map shows quietly and the laundry and dining pages link to directions to, like /map/?to=laundry/stoke-hall-g05
+// The buildings laundry rooms and dining halls are in, as scripts/map/places.mts finds them in OpenStreetMap. The map
+// shows them quietly, and the laundry and dining pages link to directions to them, like /map/?to=laundry/stoke-hall-g05
 
 import * as v from "valibot"
 
-/** Every building, with a hash of the gazetteer, rooms, menus, and code they were derived from, which a build keeps them by */
+/**
+ * Every building, with a hash of the gazetteer, rooms, menus, and code they were derived from. A build keeps the file
+ * while that hash still matches
+ */
 export const Places = v.object({ inputs: v.string(), buildings: v.array(v.lazy(() => Building)) })
 export type Places = v.InferOutput<typeof Places>
 

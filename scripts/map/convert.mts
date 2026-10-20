@@ -55,7 +55,7 @@ export const interpolateTimes = (known: (number | undefined)[], along: number[])
   return times as number[]
 }
 
-/** GTFS's text color, unless it isn't readable on the route color as small text (WCAG 2.1 AA) */
+/** GTFS's text color, unless it isn't readable on the route color as small text (WCAG 2.1 AA), then black or white */
 export const readableText = (color: string, text: string) => {
   const background = parse(color)
   const contrast = (foreground: string) => contrastWCAG21(background, parse(foreground))
@@ -69,8 +69,8 @@ export const readableText = (color: string, text: string) => {
 // Degrees to about a meter for stops, and a decimeter for shapes, finer than the curves drawn along them
 const round = (x: number, digits = 5) => Math.round(x * 10 ** digits) / 10 ** digits
 
-// Shapes are traced from GPS, wobbling a meter or two either way every 10 m or so, which draws as a jagged line
-// and turns buses at every wobble. Wobbles within this are dropped, then each corner left is rounded off over up to
+// Shapes are traced from GPS, wobbling a meter or two either way every 10 m or so. That draws as a jagged line and
+// turns buses at every wobble. Wobbles within WOBBLE are dropped, then each corner left is rounded off over up to
 // CORNER either side of it, so a straight street stays straight however far apart its points are
 const WOBBLE = 4    // m
 const CORNER = 15   // m, about a bus's turning radius
@@ -186,7 +186,8 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
     // A stop's departure, or its arrival where that's all it has, and the other way round
     const times = interpolateTimes(stopTimes.map(stopTime => parseTime(stopTime.departure_time || stopTime.arrival_time)), along)
     const arrivals = interpolateTimes(stopTimes.map(stopTime => parseTime(stopTime.arrival_time || stopTime.departure_time)), along)
-    // Where nobody can get on, short of the last stop, and off, past the first, which never count anyway
+    // Stops where nobody can get on, before the last, and where nobody can get off, after the first. Pickup at the
+    // last stop and drop-off at the first never happen anyway
     const positions = (column: string, isMeaningful: (i: number) => boolean) =>
       stopTimes.flatMap((stopTime, i) => stopTime[column] === "1" && isMeaningful(i) ? [i] : [])
     const noPickup = positions("pickup_type", i => i < last)

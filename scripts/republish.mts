@@ -1,7 +1,7 @@
-// Rolls the site back by publishing a build made before as new: every page of a built site is stamped as published
-// now, after it was built, so open pages and the service worker, which never go back to a copy published before the
-// one they have, take it in over whatever was published since, and not what it replaced again from an edge not yet
-// caught up (src/shell/manifest.mts). Run on the folder a build of the release to go back to wrote, then deploy it:
+// Rolls the site back by publishing an earlier build as new. Open pages and the service worker never go back to a
+// copy published before the one they have (src/shell/manifest.mts), which keeps a lagging edge from undoing an
+// update. So every page of the old build is stamped as published now, and clients take it over whatever was
+// published since. Run on the folder a build of the release to go back to wrote, then deploy it:
 // node scripts/republish.mts <folder>
 
 import { readdir, readFile, writeFile } from "node:fs/promises"

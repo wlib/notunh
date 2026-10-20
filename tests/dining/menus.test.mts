@@ -169,7 +169,7 @@ test("the files published before stay published while the index the site serves 
 )
 
 test("a build an hour after the last still carries the files of the index before it, two nights on, which one carry alone wouldn't", () => {
-  // Astra's sequence: A, then B an hour later, then C an hour after that, with a tab still on A
+  // Index A, then B an hour later, then C an hour after that, with a tab still on A
   const night = Date.parse("2026-10-18T04:00:00Z")
   const a = { fetched: night, files: ["/data/dining/a.json", "/data/dining/shared.json"] }
   const b = { fetched: night + HOUR, files: ["/data/dining/b.json", "/data/dining/shared.json"] }

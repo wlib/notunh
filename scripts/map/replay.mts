@@ -1,8 +1,8 @@
-// How well departures could have been foreseen on a day: for every visit on a known trip, at each of the model's
-// lead times before it left, a forecast from the timetable alone, one from where the bus was and the model, and
+// How well departures could have been foreseen on a day. For every visit on a known trip, at each of the model's
+// lead times before it left, three forecasts are scored: the timetable alone, the model from where the bus was, and
 // Umo's own prediction sampled then. Where the bus was is what the map would have made of its fixes then, replayed
-// through the same location model and pace in the order they came, or with only stored visits to go on, the stop it
-// was last at. Run directly on a day of samples to see how each did:
+// through the same location model and pace in the order they arrived. With only stored visits to go on, it's the
+// stop the bus was last at. Run directly on a day of samples to see how each did:
 // BUILD_TOKEN=… node scripts/map/replay.mts 2026-10-07 [--local]
 
 import { readFile } from "node:fs/promises"
@@ -24,7 +24,7 @@ import { ApiError, readModel, writeModel } from "../worker.mts"
 
 export const FEED = new URL("../../src/map/gtfs.json", import.meta.url)
 
-/** The timetable as the Worker archives each version of it: the feed, as of the day the build first saw it */
+/** The timetable as the Worker archives each version of it: the feed, with the day a build first saw it */
 export type ArchivedFeed = FeedData & { through: Day }
 
 /** The timetable fetched for this build */
@@ -54,9 +54,9 @@ export const feedFor = async (day: Day): Promise<Feed> => {
 }
 
 /**
- * Archives a timetable if its version is new: as of a day, or where another version was archived as of that day or
- * after, as of the day after it, so no two versions share a day and neither replaces the other, a day's timetable
- * being the first version seen on it. Another build archiving it first is fine
+ * Archives a timetable if its version is new, as of a day. If the latest version is archived as of that day or
+ * later, the new one is as of the day after it, so no two versions share a day and a day's timetable is the first
+ * version seen on it. Another build archiving it first is fine
  * @returns whether it was new
  */
 export const archiveFeed = async (feed: FeedData, today: Day) => {
@@ -79,14 +79,19 @@ const forecastTimes = (depart: number) =>
   LEADS.map(minutes => Math.floor((depart - minutes * 60) / SAMPLED) * SAMPLED)
 
 /**
- * Each visit with what Umo predicted for it at each lead: the soonest prediction sampled then for its bus at its
- * stop, when this visit is the bus's next one there and on the same trip
+ * Each visit with what Umo predicted for it at each lead (epoch seconds): the prediction sampled then for its bus at
+ * its stop, when this visit is the bus's next one there and on the same trip. A bus predicted at a stop for more
+ * than one loop is taken at the soonest, which is the next visit's
  */
 export const attachPredictions = (visits: readonly Visit[], samples: readonly { at: number, predictions: readonly SampledPrediction[] }[]) => {
   const predicted = new Map<string, SampledPrediction>()
   for (const { at, predictions } of samples)
-    for (const prediction of predictions)
-      predicted.set(`${at / 1000} ${prediction.route} ${prediction.stop} ${prediction.vehicle}`, prediction)
+    for (const prediction of predictions) {
+      const key = `${at / 1000} ${prediction.route} ${prediction.stop} ${prediction.vehicle}`
+      const kept = predicted.get(key)
+      if (!kept || prediction.at < kept.at)
+        predicted.set(key, prediction)
+    }
 
   const previous = new Map<string, number>()
   return visits.map(visit => {
@@ -132,10 +137,10 @@ export const sightingsOf = (model: Model, visits: readonly Visit[]) => {
 }
 
 /**
- * What the map would have seen of the buses at any epoch second of a day, asked in order, from their fixes: each
- * bus's fixes in the order the Worker's polls got them, as the map gets them, each once it was got (as it was taken,
- * for samples from before polls were kept), through the location model, passing over those older than one already
- * followed as the map does, and its trip as its last fix had it tagged
+ * What the map would have seen of the buses at any epoch second of a day, asked in increasing order, from their
+ * fixes. Each fix is fed through the location model once the Worker's poll received it, in the order received, as the
+ * map gets them (fixes without a receipt time are taken as received when taken). Like the map, it passes over fixes
+ * older than one already followed, and takes a bus's trip as its last fix had it tagged
  */
 export const replayed = (feed: Feed, model: Model, fixes: readonly BusFix[]) => {
   const lines = routeLines(feed)
@@ -163,10 +168,10 @@ export const replayed = (feed: Feed, model: Model, fixes: readonly BusFix[]) => 
 }
 
 /**
- * How each way of forecasting did on a day's visits, as scores to fold into the model: at each sample time, every
- * departure still to come at a lead is forecast as the map would have from what it would have seen then, by the
- * model as it stood before the day, against Umo's prediction sampled then and the timetable shifted by how late its
- * route runs. What the map saw is the day's fixes replayed, where they're kept, else its visits
+ * How each way of forecasting did on a day's visits, as scores to fold into the model. At each sample time, every
+ * departure a lead away is forecast as the map would have from what it saw then, by the model as it stood before the
+ * day. That's scored beside Umo's prediction sampled then and the timetable shifted by how late its route runs. What
+ * the map saw is the day's fixes replayed, where they're kept, else its visits
  */
 export const score = (model: Model, feed: Feed, visits: readonly Visit[], fixes?: readonly BusFix[]): Scores => {
   const scores = emptyScores()

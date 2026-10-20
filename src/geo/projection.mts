@@ -1,7 +1,7 @@
-// The one model of the ground every meter in the app is measured by: cheap-ruler's flat frame on the WGS84
-// ellipsoid, laid at the latitude of what's measured, which is exact to a part in a thousand for some kilometers
-// around it, and the same whether a distance is taken between two places, along a line, or in a frame around an
-// origin. Nothing here knows of stops, routes, or the map
+// The one model of the ground every meter in the app is measured by: cheap-ruler's flat frame on the WGS84 ellipsoid,
+// laid at the latitude of what's measured. It's exact to a part in a thousand for some kilometers around it. Distances
+// between two places, along a line, and in a frame around an origin all agree. Nothing here knows of stops, routes,
+// or the map
 
 import CheapRuler from "cheap-ruler"
 

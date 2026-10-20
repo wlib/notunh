@@ -1,16 +1,20 @@
 // Where a bus is along its route, and when it got to and left each stop, as distributions rather than points.
 // GPS puts a bus within a few meters, but only every 10 to 30 s, so what's uncertain is what it did between fixes,
-// and that's what this models. Each fix is matched to a place along one of its route's shapes (an HMM over the
-// places it could be, weighed by how far off each is and its heading, and by whether getting there from the place
-// before is a plausible drive: Viterbi over a day's fixes, and only what's come so far live). Between two matched
-// fixes, the bus drove as buses do: up to a cruising speed and braking to a stop, stopping or not at each stop on
-// the way, and dwelling there, or halted somewhere, for however long the time between the fixes leaves, which is
-// integrated over a grid of cruising speeds and ways of splitting that time. That gives each stop's arrival and
-// departure as quantiles, how likely the bus stopped there, and when it was a quarter, half, and three quarters of
-// the way there from the stop before. Whether a fix is of a bus at a stop, halted elsewhere, or moving is a
-// posterior, from how fixes' speeds read when buses stand still and how far from stops buses stand, all fitted on
-// what the fixes of Oct 7 to 19 show (notunh-model-research/2026-10-19_probabilistic/). Nothing here knows of
-// trips or the timetable; a passage is of a stop along a shape
+// and that's what this models.
+//
+// Each fix is matched to a place along one of its route's shapes by an HMM over the places it could be. Places are
+// weighed by how far off each is and its heading, and by whether getting there from the place before is a plausible
+// drive. A day's fixes are matched as a whole (Viterbi), and live fixes by only what's come so far.
+//
+// Between two matched fixes, the bus drove as buses do: up to a cruising speed and braking to a stop, stopping or
+// not at each stop on the way. It dwelled at those stops, or halted somewhere, for however long the time between the
+// fixes leaves. This is integrated over a grid of cruising speeds and ways of splitting that time. That gives each
+// stop's arrival and departure as quantiles, how likely the bus stopped there, and when it was a quarter, half, and
+// three quarters of the way there from the stop before.
+//
+// Whether a fix is of a bus at a stop, halted elsewhere, or moving is a posterior, from how fixes' speeds read when
+// buses stand still and how far from stops buses stand, fitted on the fixes of Oct 7 to 19. Nothing here knows of
+// trips or the timetable: a passage is of a stop along a shape
 
 import { type Line } from "../../geo/lines.mts"
 import { angleBetween } from "../../geo/projection.mts"
@@ -85,72 +89,75 @@ export type Expectations = {
   stops:  (line: RouteLine, index: number) => number
 }
 
-// How fast buses usually drive between stops, and how much that varies, in log m/s
+// How fast buses usually drive between stops, median m/s, and how much that varies, in log m/s
 const CRUISE = 9
 const CRUISE_SPREAD = 0.45
 // m/s² a bus speeds up and slows down by
 const ACCELERATION = 0.8
 const BRAKING = 1
-// How long a bus stopping at a stop stays, and one halted elsewhere, median s and log spread, and how much longer,
-// on average, it's held up on the way between fixes, and how likely it is to stop at a stop it passes: the priors
-// the time between two fixes is integrated over
+// The priors the time between two fixes is integrated over. DWELL and HALT are how long a bus stopping at a stop
+// stays and one halted elsewhere, median s, with STAY_SPREAD their log spread. DELAY is the mean s it's held up on
+// the way between fixes, and STOP_CHANCE how likely it is to stop at a stop it passes
 const DWELL = 15
 const HALT = 10
 const STAY_SPREAD = 0.9
 const DELAY = 4
 const STOP_CHANCE = 0.5
 // How far off the time between two fixes is, in s, from their whole seconds and where along the street they put
-// the bus, which with every other fix left out puts 79 % of arrivals and 90 % of departures inside the 80 % band
-// the fixes either side of it give
+// the bus. With every other fix left out, this puts 79 % of arrivals and 90 % of departures inside the 80 % band
+// the fixes either side give
 const TIME_SIGMA = 2.5
 
-// What follows is fitted on the fixes of Oct 7 to 19 (notunh-model-research/2026-10-19_probabilistic/), and is how
-// the GPS reads and where buses stand, which doesn't drift as the timetable or the traffic does.
-// A fix is off the street it's on by about FIX_SIGMA, half-normally, but for a bus parked beside its route, as at a
-// terminal's lot, which LOT_SHARE of fixes are, about LOT_SIGMA off
+// What follows is fitted on the fixes of Oct 7 to 19. It's how the GPS reads and where buses stand, which doesn't
+// drift as the timetable or the traffic does.
+// A fix is off the street it's on by about FIX_SIGMA, half-normally. A bus parked beside its route, as at a
+// terminal's lot, is about LOT_SIGMA off, which LOT_SHARE of fixes are
 const FIX_SIGMA = 2.5 // m
 const LOT_SIGMA = 26  // m
 const LOT_SHARE = 0.03
 // How far a fix's heading is off its street's at each speed it reads, in km/h, interpolated between: half-normally
-// by a spread, in degrees, or any way at all, some share of the time. A bus standing still has mostly lost its
-// heading, and one turning a corner that the street's few bends cut short is off the most
+// by a spread in degrees, or any way at all some share of the time. A bus standing still has mostly lost its
+// heading. One turning a corner, which the street's few bends cut short, is off the most
 const HEADINGS: [kph: number, sigma: number, wild: number][] = [
   [0, 12.5, 0.62], [1, 9.9, 0.12], [2.5, 7.7, 0.03], [8, 14.9, 0.02], [17, 8.6, 0.04], [25, 5.4, 0.03], [35, 2.4, 0.02], [45, 1.4, 0.02]
 ]
 // How likely a bus is to be standing still at each speed a fix reads, in whole km/h, as how far it moved between the
-// fixes either side says, and faster, not at all: the GPS reads a bus standing still as 0, and one reading 1 to 5
-// is creeping along. A fix without a speed is as likely as any to be standing still
+// fixes either side says, and faster, not at all. The GPS reads a bus standing still as 0, and one reading 1 to 5
+// is creeping along. A fix without a speed is as likely as any (STILL_SHARE) to be standing still
 const STILL = [0.969, 0.028, 0.009, 0.01, 0.014, 0.014, 0.002, 0]
 const STILL_SHARE = 0.08
 // Creeping up to a stop or away from it, as buses read 1 to 3 km/h doing, counts as being at it: that's what a stay
-// at a stop is taken to be, rather than a reading of whether the bus moved. Counting creeping as moving, as STILL
-// has it, put departures from every other fix 2.4 times as far from where all of them put them (90th percentile
-// 11 s against 4.6 s), as the drive between two fixes can't creep
+// at a stop is taken to be, rather than whether the bus moved. Counting creeping as moving, as STILL has it, put
+// departures from every other fix 2.4 times as far from where all fixes put them (90th percentile 11 s against
+// 4.6 s), as the drive between two fixes can't creep
 const CREEP = 3 // km/h
-// Where a bus standing at a stop stands, in m past the stop: about STAND_OFFSET past where the timetable has it,
-// mostly within a few meters, as each stop has buses stand in one place, and some stops further off, as shares
-// and spreads; against standing still anywhere else, halted, which buses do so many times per meter as often
+// Where a bus standing at a stop stands, in m past the stop: about STAND_OFFSET past where the timetable has it. A
+// mixture of shares and spreads: mostly within a few meters, as each stop has buses stand in one place, and at some
+// stops further off. HALTED is the rate per m of standing still anywhere else, against which standing at a stop is
+// weighed
 const STANDS: [share: number, sigma: number][] = [[0.598, 2.58], [0.13, 5.91]]
 const STAND_OFFSET = 3.85 // m
 const HALTED = 0.272 / 200 // per m
-// The drive between two fixes is as long as their speeds say, give or take, Laplace distributed, by SLACK and
-// SLACK_SHARE of it. That's looser than the drives fit (about 1.3 m for each second between the fixes, or 20 m and
-// 8 % of the drive), and both fits, at least as likely, lost 1 to 3 s at 10 and 20 minutes ahead: the drives
-// they're fitted on are only those the looser one matched, and what it's for is which pass of a line a fix is on
+// The drive between two fixes is as long as their speeds say, give or take, Laplace distributed, by SLACK plus
+// SLACK_SHARE of it. That's looser than the drives fit (about 1.3 m per second between fixes, or 20 m and 8 % of
+// the drive). Both tighter fits lost 1 to 3 s at 10 and 20 minutes ahead: the drives were fitted only on what the
+// looser bound matched, and its job is picking which pass of a line a fix is on
 const SLACK = 20 // m
 const SLACK_SHARE = 0.5
-// What switching to another of the route's shapes is worth, in log odds: matched fixes switch about every 450th
-// (6.1), but at that, more passages were lost when every other fix was dropped, so it's as rare as it was set
+// What switching to another of the route's shapes costs, in log odds. Matched fixes switch about every 450th (6.1),
+// but at that rate more passages were lost with every other fix dropped, so it's kept rarer
 const SWITCH = 8
 
-// These are bounds rather than estimates. A fix further than SNAP from every line isn't on the route: fixes of
-// buses standing still are 30 to 45 m off it at terminals' lots and 80 m and more where buses are out of service,
-// with next to none between. A line this much further from a fix than it was has passed it, six times as far off
-// as fixes are. A bus doesn't back up along its route, which GPS puts it BACK, twelve times as far off as fixes
-// are, never does. A bus gets no faster. Longer between fixes starts a new track, as with nothing to go on, the bus
-// may have gone off its route and come back. And the grid integrated over, the cruising speeds and samples of
-// each way of splitting the time between fixes, and how many stops between two fixes each could be stopped at
-// before only one of them is, which bound the work
+// These are bounds rather than estimates.
+// - SNAP: further from every line, a fix isn't on the route. Fixes of buses standing still are 30 to 45 m off it at
+//   terminals' lots and 80 m and more where buses are out of service, with next to none between
+// - PASSED: a line this much further from a fix than it was has passed it, six times as far off as fixes are
+// - BACK: GPS never puts a bus this far back along its route, twelve times as far off as fixes are
+// - MAX_SPEED: a bus gets no faster
+// - MAX_SILENCE: longer between fixes starts a new track, as with nothing to go on, the bus may have gone off its
+//   route and come back
+// - SPEEDS, SPLITS, MAX_STOPS bound the work: the cruising speeds and samples of each way of splitting the time
+//   between fixes, and how many stops between two fixes each could be stopped at before only one of them is
 const SNAP = 60       // m
 const PASSED = 15     // m
 const BACK = 30       // m

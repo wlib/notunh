@@ -1,9 +1,9 @@
-// The model fitted in the nightly build a service day at a time: a day's visits make a summary of sums (summarize), and the
-// model is those summaries folded together, each decayed by half every HALF_LIFE days, so a new semester takes over
-// within a month, and folding the same summaries with another half-life is all a change of it takes. Weighing
-// visits by how sure their times are was measured and made no difference worth keeping
-// (notunh-model-research/2026-10-19_location/), but a visit last seen still at its stop says nothing of how long
-// buses stay there, as its stay was cut short
+// The model fitted in the nightly build a service day at a time. A day's visits make a summary of sums (summarize),
+// and the model is those summaries folded together, each decayed by half every HALF_LIFE days, so a new semester
+// takes over within a month. Changing the half-life only takes folding the same summaries again.
+//
+// Weighing visits by how sure their times are measured no better than weighing them all the same. A visit last seen
+// still at its stop is left out of how long buses stay, as its stay was cut short
 
 import { type Cell, type Model, type Tally, ANY_LAYOVER, ANY_LEG, ANY_STOP, CONTEXTS, LINGERED, contextAt, dayTypeAt, emptyModel, emptyScores, hourAt, zoneKey } from "./model.mts"
 import { type Visit, INCOMPLETE } from "../inference/events.mts"
@@ -11,12 +11,15 @@ import { foldDay } from "../../shared/learn.mts"
 import { groupBy } from "../../shared/group.mts"
 import type { Day } from "../../shared/time.mts"
 
-// Bounds on what's learned from, each where the data has a gap between two kinds of thing rather than a spread of
-// one (notunh-model-research/2026-10-19_probabilistic/). A bus not driven between two stops it visited, off its
-// route or lost to its GPS, took longer than MAX_GAP doing something else than driving the leg: such gaps take two
-// minutes, or the better part of an hour, and few between. Longer at a stop is out of service, and longer still
-// not a visit at all: one stay in 10,000 is over 7 minutes. Further off its timetable, a bus is on another trip
-// than the one it's tagged with, as a connector running a lap late on its last lap's tag is
+// Bounds on what's learned from, each set where the data has a gap between two kinds of thing rather than a spread
+// of one.
+// - MAX_GAP: a bus not seen driving between two stops it visited (off its route, or lost to its GPS) that took longer
+//   was doing something other than driving the leg. Such gaps take about two minutes or the better part of an hour,
+//   with few between
+// - MAX_ZONE, MAX_LINGER: longer at a stop is out of service, and longer still not a visit at all. One stay in 10,000
+//   is over 7 minutes
+// - MAX_OFFSET: further off its timetable, a bus is on another trip than the one it's tagged with, like a connector
+//   running a lap late on its last lap's tag
 const MAX_GAP = 600      // s
 const MAX_ZONE = 900     // s
 const MAX_LINGER = 1800  // s
@@ -102,8 +105,8 @@ export const summarize = (visits: readonly Visit[], scores = emptyScores()): Mod
   for (const own of byVehicle.values()) {
     own.sort((a, b) => a.arrive - b.arrive)
     own.forEach(({ stop, route, arrive, depart, scheduled, position, from, meters, left, profile: shares, flags = 0 }, i) => {
-      // Every leg between stops visited one after the other: driven, or where the bus was lost between them, the
-      // time from leaving one to getting to the other, as long as that could have been driving
+      // Every leg between stops visited one after the other, as the time from leaving one to getting to the other.
+      // Where the bus was lost between them, only as long as that could have been driving
       const previous = own[i - 1]
       if (from !== undefined && left !== undefined && arrive > left) {
         addTo(next.legs, `${route}:${from}>${stop}`, CONTEXTS, contextAt(arrive), Math.log(arrive - left))

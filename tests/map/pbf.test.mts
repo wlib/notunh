@@ -205,7 +205,7 @@ test("a file cut short at any byte is refused as truncated, or read up to the la
   fc.assert(fc.asyncProperty(elements, coding, async (written, coding) => {
     const parts = blobs(written, coding, 1_760_000_000)
     const whole = file(parts)
-    // Where each blob but the first ends, which is where a shorter file could end whole
+    // Where each blob but the last ends, which is where a shorter file could end whole
     const ends = new Set(parts.slice(1).map((_, i) => file(parts.slice(0, i + 1)).length))
     for (let length = 0; length < whole.length; length++) {
       const cut = read(whole.subarray(0, length))

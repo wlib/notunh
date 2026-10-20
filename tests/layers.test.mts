@@ -1,7 +1,7 @@
 // Which way the source's dependencies run, read from every import, so a shortcut across layers fails here rather
-// than tangling quietly: geometry and the transit, places, and routing domains import only what's beneath them and
-// never the browser, observations as stored never depend on what's made of them, and the Worker and the scripts
-// that train and replay reach none of the pages
+// than tangling quietly. Geometry and the transit, places, and routing domains import only what's beneath them and
+// never the browser. Observations as stored never depend on what's made of them. The Worker and the scripts that
+// train and replay reach none of the pages
 
 import { test, expect } from "vitest"
 import { globSync, readFileSync } from "node:fs"
@@ -10,8 +10,9 @@ import { dirname, join, normalize } from "node:path"
 const ROOT = new URL("..", import.meta.url).pathname
 
 /**
- * Each domain layer, by its folder, and the layers it may import besides its own: the timetable (src/transit/
- * itself) under what's observed, what's inferred from that, and the models over both, and routing over all of it
+ * Each domain layer, by its folder, and the layers it may import besides its own. The timetable (src/transit/
+ * itself) and what's observed sit side by side, what's inferred sits over both, the models over that, and routing
+ * over all of it
  */
 const LAYERS: Record<string, string[]> = {
   "src/shared":               [],

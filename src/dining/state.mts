@@ -28,7 +28,7 @@ const load = <T,>(file: string) => {
 export const loadFood = (file: string) =>
   load<Food>(file)
 
-/** Every day with a menu, from the day the page loaded on */
+/** Every day with a menu from today on, recomputed when the index changes */
 export const days = r(() =>
   [...new Set(Object.values(index.value.days).flatMap(Object.keys))].filter(day => day >= today.peek()).sort()
 )

@@ -1,7 +1,7 @@
-// Fetching JSON, which the pages, the Worker, and the build all do the same way, checked against a schema where
-// it's given one, any Standard Schema (https://standardschema.dev), so an answer or a file of the wrong shape fails
-// where it's fetched, as a failed fetch does, rather than wherever it's first misread. Ours are Valibot's, and these
-// are the few of them every boundary shares
+// Fetching JSON, which the pages, the Worker, and the build all do the same way. Given a schema (any Standard Schema,
+// https://standardschema.dev), the answer is checked against it, so a file or answer of the wrong shape fails where
+// it's fetched, like a failed fetch, rather than wherever it's first misread. Ours are Valibot's, and the helpers
+// below are the few every boundary shares
 
 import * as v from "valibot"
 import type { StandardSchemaV1 } from "@standard-schema/spec"

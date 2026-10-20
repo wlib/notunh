@@ -64,8 +64,8 @@ const silence = r(() =>
 )
 
 /**
- * Umo has failed to answer from the start, or stopped answering for a while since we've been looking, until it
- * answers again, so that going away and coming back doesn't forget it
+ * Whether Umo has failed to answer from the start, or stopped answering for a while since we've been looking. It
+ * stays set until Umo answers again, so going away and coming back doesn't forget it
  */
 export const isLiveDown = r(false)
 watch(() => {
@@ -78,9 +78,8 @@ watch([listed], () => {
 })
 
 /**
- * Buses still reporting; the rest are parked or off duty, and drop off as they age even when Umo can't be
- * reached, though only once it's had a chance to answer. Only a change in which buses those are reaches what
- * depends on them
+ * Buses still reporting. The rest are parked or off duty, and drop off as they age, even when Umo can't be reached,
+ * though only once it's had a chance to answer. Only a change in which buses those are reaches what depends on them
  */
 export const vehicles = distinct(() => {
   // Silence is negative for a moment on coming back, before the clock catches up

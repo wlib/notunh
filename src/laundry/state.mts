@@ -16,8 +16,8 @@ import { distinct, remembered, toggled } from "../shell/state.mts"
 const ROOM_POLL_MS = 30_000
 const SUMMARIES_POLL_MS = 5 * 60_000
 /**
- * Counts made longer ago than this are shown as of when, whatever the asking says: the collector polls every 5
- * minutes, 15 overnight, and its answer is shared for 5, so they're older only once something has fallen behind
+ * Counts older than this say when they were made, even while asking succeeds. The collector polls every 5 minutes
+ * (15 overnight) and its answer is cached for 5, so counts only get this old once something has fallen behind
  */
 export const COUNTS_FRESH_MS = 30 * 60_000
 

@@ -1,6 +1,6 @@
-// The gazetteer: the places OpenStreetMap names around Durham, as scripts/map/osm.mts saves them, with the doors of
-// its buildings. The map searches it, names taps by it, and walks to buildings' doors by it, and reads Photon's
-// answers into the same shape for anywhere else
+// The gazetteer: the places OpenStreetMap names around Durham, with the doors of its buildings, as scripts/map/osm.mts
+// saves them. The map searches it, names taps by it, and walks to buildings' doors by it. Photon's answers are read
+// into the same shape for anywhere else
 
 import * as v from "valibot"
 import { type Box, area, holds, outlineHolds } from "../geo/boxes.mts"
@@ -48,8 +48,8 @@ export const buildingsAt = (places: readonly GazetteerPlace[], point: Point) =>
     .sort((a, b) => area(a.extent!) - area(b.extent!))
 
 /**
- * The place a point is in or beside: the building it's in, first one whose middle is within the outline the map
- * draws there, else the nearest place within MAX_NEARBY
+ * The place a point is in or beside. Among the buildings it's in, the first whose middle is within the outline the map
+ * draws there wins, else the smallest. Outside any building, it's the nearest place within MAX_NEARBY
  */
 export const placeAt = (places: readonly GazetteerPlace[], point: Point, outline?: MapHints["outline"]) => {
   const within = buildingsAt(places, point)

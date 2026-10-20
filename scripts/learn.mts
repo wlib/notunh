@@ -1,20 +1,20 @@
 // A build step that learns a model through the Worker and writes it for a page to bundle. It never fails the
 // build, since menus and the timetable still need deploying: without BUILD_TOKEN or the Worker, the file written
-// last stays, or an empty one. Each whole day since the last one learned is folded in, within a budget of the
-// build's 20 minutes, and the next build carries on from wherever this one stopped. With --if-missing, a file
-// already there is kept; with --rebuild (or MODEL_REBUILD=1), learning starts over from the first day there is.
+// last stays, or an empty one. Each whole day since the last one learned is folded in, within a time budget per
+// model (the build has 20 minutes in all), and the next build carries on from wherever this one stopped. With
+// --if-missing, a file already there is kept. With --rebuild (or MODEL_REBUILD=1), learning starts over from the
+// first day there is.
 //
-// Learning writes what production has learned, so only a build of the branch production deploys from learns, as
-// Cloudflare's builds name it, or a command told to with --store (or NOTUNH_STORE=1); any other, like a preview's
-// or a build by hand, bundles what's stored as it is, only reading. So does a build reaching a Worker from before
-// models had revisions and checkpoints, as the first build of a version that brings them does, since it runs
-// before its Worker deploys: the next build, against the new Worker, learns.
+// Learning writes what production uses, so only a build of the production branch (as Cloudflare's builds name it in
+// WORKERS_CI_BRANCH) learns, or a command given --store (or NOTUNH_STORE=1). Any other build, like a preview or one
+// by hand, only reads and bundles what's stored. So does a build whose Worker lacks model revisions or checkpoints:
+// a build runs before its own Worker deploys, so the next build, against the new Worker, learns.
 //
-// What's being learned and what's published are stored apart: learning carries on from its checkpoint
-// ("<name>.training"), stored by every build that learns, and the model is published only once the checkpoint has
-// caught up with the one published, so a refit or a rebuild that takes several builds never puts a model through
-// fewer days in the place of one through more, and the pages bundle the published model meanwhile, or the
-// checkpoint where the published one is of another shape than this build's
+// What's being learned and what's published are stored apart. Learning carries on from its checkpoint
+// ("<name>.training"), stored by every build that learns. The model is published only once the checkpoint has
+// caught up with the published one, so a refit or rebuild spanning several builds never replaces a model through
+// more days with one through fewer. Meanwhile pages bundle the published model, or the checkpoint when the published
+// one is of another shape than this build's
 
 import { writeFile } from "node:fs/promises"
 import type { URL } from "node:url"
@@ -70,7 +70,7 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
     const started = Date.now()
     const ofThisShape = (state: M | null | undefined) => state?.version === empty().version ? state : null
     const { state: found, revision, throughs } = await readModel<M>(name)
-    // A Worker from before checkpoints has no such name
+    // A Worker without checkpoints 404s on the name
     const checkpoint = await readModel<M>(checkpointOf(name)).catch(error => error instanceof ApiError && error.status === 404 ? undefined : Promise.reject(error))
     const learning = isStoring() && revision !== undefined && checkpoint?.revision !== undefined
     if (isStoring() && !learning)
@@ -96,7 +96,7 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
         break
       }
     }
-    // Caught up with what's published, of whatever shape, it's published
+    // Once caught up with what's published, of whatever shape, it's published
     const isCaughtUp = model.through !== null && model.through >= (found?.through ?? "")
     let bundled = isCaughtUp ? model : published ?? model
     if (learning && model.through !== null && folded)
@@ -106,8 +106,8 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
           await writeModel(name, model, revision!)
       }
       catch (error) {
-        // Another build learned meanwhile, from the same checkpoint, or published from it, so what's published is
-        // bundled, if it's of this shape: one another version of the build stored isn't this one's to bundle
+        // Another build learned from the same checkpoint meanwhile, or published from it. Bundle what's published,
+        // if it's of this shape: a model another version of the build stored isn't this one's to bundle
         if (!isConflict(error))
           throw error
         console.warn(`${name}: learned by another build meanwhile, whose model is bundled if it's of this shape`)

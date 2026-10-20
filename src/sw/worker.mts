@@ -1,13 +1,16 @@
-// Offline first: every page, its code, and its data come from the cache at once, and the network is asked behind
-// them. A page's head is its release manifest (src/shell/manifest.mts): a newer copy is kept only once everything
-// it names is confirmed kept, so it opens whole offline, and the pages' windows are told, to swap in its data or
-// reload for its code. Hashed files never change, so they're kept until no generation needs them (retention.mts);
-// the icons and the manifest keep their names, so they're fetched fresh; live data is never cached.
+// Offline first: every page, its code, and its data are answered from the cache at once, and the network is checked
+// behind them. A page's head is its release manifest (src/shell/manifest.mts). A newer copy of a page is kept only
+// once everything it names is confirmed kept, so any kept page opens whole offline. The page's windows are then told,
+// so they can swap in its data or reload for its code. Hashed files never change, so they're kept until no
+// generation needs them (retention.mts). The icons and the web manifest keep fixed names, so they're fetched fresh.
+// Live data (/api/) is never cached.
 //
-// Two contracts, kept apart: answering a request is best effort about the cache, so a put that fails, a full quota,
-// or a cache that won't open never fails a response; staging a release is strict, so a file that can't be kept, that
-// answers as something other than what its name says, or that doesn't arrive in time, keeps the release from being
-// promoted. Neither holds up the other's writes for long: whatever stalls is given up on at a deadline
+// Two contracts, kept apart:
+// - Answering a request is best effort about the cache. A failed put, a full quota, or a cache that won't open
+//   never fails a response.
+// - Staging a release is strict. A file that can't be kept, that answers as something other than what its name
+//   says, or that doesn't arrive in time keeps the release from being promoted.
+// Neither holds up the other's writes for long: whatever stalls is given up on at DEADLINE_MS
 
 import { type Build, type Generation, buildOf, closureOf, isOlder, isSameBuild, retainOf } from "../shell/manifest.mts"
 import { TILES_FOLDER } from "../map/basemap/tiles.mts"
@@ -31,15 +34,18 @@ export type Scope = {
   location: { origin: string }
 }
 
-// Named anew when what's kept changes meaning, as it did when pages began naming their data, so activating lets go
-// of every older cache: the first worker's pages named only their code, which loaded their data by URL, so what one
-// needs can't be told, and it's fetched afresh like a page not visited yet
+// Renamed whenever what's kept changes meaning, so activating deletes every older cache. The first worker's pages
+// named only their code and loaded their data by URL, so what they need can't be told. Their pages are fetched
+// afresh instead, like pages not visited yet
 const CACHE = "app-v2"
 /** Where a page's previous generation is kept, beside its current one, for windows that can't say they run it */
 const PREVIOUS = "?gen=prev"
-/** How long windows get to say what they run; one that can't, as frozen or in the back-forward cache, is covered by its page's previous generation */
+/**
+ * How long windows get to answer the census. One that can't, being frozen or in the back-forward cache, is covered
+ * by its page's previous generation
+ */
 const CENSUS_MS = 1000
-/** How long a page, a staging's files, or a file kept behind an answer may take, bodies and all, as the page's own loads may */
+/** How long a page fetch, a staging, or a put behind an answer may take, bodies included, as long as a page's loads */
 const DEADLINE_MS = 60_000
 
 /** A controller that aborts at the deadline, if nothing aborts it first */
@@ -50,14 +56,14 @@ const deadline = () => {
 }
 
 /**
- * What a file's name says its type must be, which what answers in its place with a 200, a sign-in page or a host's
- * error, isn't; anything else only mustn't be a page
+ * The content type a file's extension requires. Whatever answers in a file's place with a 200, like a captive
+ * portal's sign-in page or a host's error page, fails it. A file with no entry here only mustn't be HTML
  */
 const TYPE_OF: [name: RegExp, type: RegExp][] = [[/\.m?js$/, /javascript/], [/\.css$/, /css/], [/\.json$/, /json/]]
 
 /**
- * Whether a response passes for the file its name says, by its status and type, to keep at a URL that never changes:
- * a check of the transport, against what answers in a file's place, not of its bytes
+ * Whether a response passes for the file its name says, by status and content type, so it can be kept at a URL that
+ * never changes. This guards against something else answering in the file's place; it doesn't verify the bytes
  */
 const isKeepable = (pathname: string, response: Response) => {
   if (!response.ok)
@@ -90,11 +96,11 @@ export const start = (scope: Scope) => {
   const census = async (): Promise<Generation[]> =>
     (await Promise.all((await windows()).map(generationIn))).filter(generation => generation !== undefined)
 
-  // Windows already sent to their page afresh, so one whose page fails again isn't sent round and round
+  // Windows already reloaded by recover, so one whose page fails again isn't reloaded in a loop
   const reloaded = new Set<string>()
   /**
-   * Sends a window whose file is gone to its page afresh, when it's a page too old to answer what it runs, as one from
-   * before the worker kept what each page names, whose code has no way to recover. A page that answers retries its own
+   * Reloads a window whose hashed file is gone, if its page is too old to answer the census: one from the first
+   * worker, before pages named their data, whose code can't recover on its own. A page that answers retries its loads
    */
   const recover = async (clientId?: string) => {
     if (!clientId || reloaded.has(clientId))
@@ -106,24 +112,24 @@ export const start = (scope: Scope) => {
     await client.navigate(client.url)
   }
 
-  // Generations being taken in, whose files are kept through any pruning meanwhile
+  // Generations being staged, whose files survive any pruning that runs meanwhile
   const incoming = new Set<Generation>()
   const live = async () => [...incoming, ...await census()]
 
-  // What can be let go when the origin's quota is hit, cheapest to refill first, each a whole class so there's no
-  // record of use to keep: what no generation needs, then the tiles, then the style's fonts and sprites. Pages, what
-  // they name, and the style itself stay
+  // What can be deleted when the origin's quota is hit, cheapest to refill first: what no generation needs, then the
+  // map tiles, then the style's fonts and sprites. Each rung is a whole class of files, so no record of use is needed.
+  // Pages, what they name, and style.json itself always stay
   const SURRENDERABLE = [
     (cache: CacheLike) => prune(cache, live),
     (cache: CacheLike) => deleteWhere(cache, pathname => pathname.startsWith(TILES_FOLDER)),
     (cache: CacheLike) => deleteWhere(cache, pathname => pathname.startsWith(STYLE_ROOT) && !pathname.endsWith("/style.json"))
   ]
-  // The rungs surrendered in the storm of quota failures under way, which lasts until a put succeeds or a page is
-  // next taken in: every put failing in it shares each rung's surrender, under way or done, rather than climbing one
-  // of its own
+  // The rungs surrendered in the current storm of quota failures. A storm lasts until a put succeeds or the next page
+  // is taken in. Every put failing during it shares each rung's surrender, pending or done, rather than climbing the
+  // ladder again on its own
   let storm: Promise<void>[] = []
 
-  /** Keeps a response if there's room, making room a rung at a time if there isn't: whether it's kept */
+  /** Puts a response, making room a rung at a time on QuotaExceededError; resolves to whether it was kept */
   const keep = async (cache: CacheLike, request: Request | string, response: Response) => {
     const surrendered = storm
     for (let rung = 0; ; ) {
@@ -143,17 +149,17 @@ export const start = (scope: Scope) => {
     }
   }
 
-  // Every write to the cache, and every pruning, happens one at a time on this queue: one page is taken in at a
-  // time, so what one brings in is never mistaken for leftovers by another's pruning, and no file is kept while a
-  // pruning is under way. Reads, which answer requests, don't wait for it
+  // Every cache write and every pruning runs one at a time on this queue. Only one page is taken in at a time, so
+  // another's pruning never mistakes what it brings in for leftovers, and nothing is put while a pruning runs. Reads,
+  // which answer requests, don't wait for it
   let queue: Promise<unknown> = Promise.resolve()
   const serially = (task: () => Promise<unknown>) =>
     queue = queue.then(task, task)
 
   /**
-   * Keeps a response behind the answer, if it's whole and the cache allows, which never fails the answer. A body
-   * that stalls holds the queue only until the deadline: a put that lands after it only adds a file that never
-   * changes, for pruning to let go of if nothing needs it
+   * Keeps a response behind the answer if it's keepable and the cache allows; never fails the answer. A stalled body
+   * holds the queue only until the deadline. A put that lands later only adds an immutable file, which pruning
+   * deletes if nothing needs it
    */
   const store = (request: Request, response: Response) =>
     isKeepable(new URL(request.url).pathname, response)
@@ -164,9 +170,8 @@ export const start = (scope: Scope) => {
       : Promise.resolve()
 
   /**
-   * A hashed file: the copy we have, unless asked past it with cache: "reload", as a page asks again for a file
-   * that didn't fit, else the network's, kept behind the answer, and the copy we have after all if the network
-   * can't answer
+   * A hashed file: the cached copy, unless the request says cache: "reload", as a page's retry of a failed load
+   * does. Otherwise the network's, kept behind the answer, falling back to the cached copy offline
    */
   const cachedFirst = async (event: FetchLike) => {
     const { request } = event
@@ -180,8 +185,8 @@ export const start = (scope: Scope) => {
   }
 
   /**
-   * Every task done, the rest called off at the first failure, which is thrown once all have settled, so nothing of
-   * a failed staging outlives it
+   * Waits for every task, aborting the rest at the first failure. The failure is thrown only once all have settled,
+   * so nothing of a failed staging outlives it
    */
   const all = async (tasks: Promise<unknown>[], controller: AbortController) => {
     await Promise.allSettled(tasks.map(task => task.catch(error => controller.abort(error))))
@@ -190,8 +195,8 @@ export const start = (scope: Scope) => {
   }
 
   /**
-   * A file in the cache, fetched and confirmed kept if it isn't, failing if it can't be, isn't what its name says,
-   * or is called off before it's kept
+   * Makes sure a file is cached, fetching and keeping it if it isn't. Fails if it can't be kept, isn't what its name
+   * says, or is aborted first
    */
   const ensure = async (cache: CacheLike, asset: string, signal: AbortSignal) => {
     if (await cache.match(asset, ANY))
@@ -204,8 +209,8 @@ export const start = (scope: Scope) => {
   }
 
   /**
-   * Everything a generation needs in the cache: its build's code and data, and what its data files say they can't
-   * work without, which it then retains, so no pruning meanwhile lets go of any of it, all by the deadline
+   * Caches everything a generation needs by the deadline: its build's code and data, then what those data files say
+   * they require. The generation's retain is filled in as it goes, so no pruning meanwhile deletes any of it
    */
   const stage = async (cache: CacheLike, generation: Generation) => {
     const controller = deadline()
@@ -216,10 +221,10 @@ export const start = (scope: Scope) => {
   }
 
   /**
-   * The network's own copy of a page, asked past the browser's cache, with its HTML and build if it's one of ours.
-   * Anything that isn't a page, like an error, passes through, as does one of ours reached by a redirect, like /map
-   * to /map/, which is kept under its own path when that's visited; but a page without a release is a captive
-   * portal's sign-in or the like, answering in place of ours. One that hasn't arrived whole by the deadline failed
+   * The network's copy of a page, revalidated past the browser's cache, with its HTML and build if it's one of ours.
+   * A response that isn't an HTML page, like an error, passes through without a build. So does one of ours reached
+   * by a redirect, like /map to /map/, which gets kept under its own path when that's visited. An HTML page without a
+   * release meta is foreign: a captive portal's sign-in or the like. A page not whole by the deadline fails
    */
   const fetchPage = async (url: string) => {
     const response = await scope.fetch(url, { cache: "no-cache", signal: deadline().signal })
@@ -233,11 +238,12 @@ export const start = (scope: Scope) => {
   }
 
   /**
-   * Takes in the network's copy of a page, fetched behind the one served. One published before the copy kept, as
-   * from an edge not yet caught up, is left alone, and the same build again changes nothing. A newer copy
-   * is kept only once everything it needs is confirmed kept, with the copy before it as the page's previous
-   * generation, and then sent to the page's open windows, which swap in its data, or reload for its code once out of
-   * view, and what no generation needs any more is let go
+   * Takes in the network's copy of a page, fetched behind the one served:
+   * - One published before the kept copy, as from an edge not yet caught up, is ignored.
+   * - The same build again changes nothing, though a republished copy replaces the page itself.
+   * - A newer build is staged, and kept only once everything it needs is confirmed kept, with the copy before it
+   *   kept as the page's previous generation. Then it's posted to the page's open windows, which swap in its data or
+   *   reload for its code once out of view, and whatever no generation needs any more is pruned
    */
   const revalidate = async (page: string, fresh: ReturnType<typeof fetchPage>) => {
     const { copy, html, build } = await fresh
@@ -248,7 +254,7 @@ export const start = (scope: Scope) => {
     const current = cached && buildOf(await cached.clone().text())
     if (current && isOlder(build, current))
       return
-    // Taking a page in is a fresh try at making room, whatever a storm before it gave up on
+    // Each page taken in starts a fresh storm, whatever an earlier one gave up on
     storm = []
     if (current && isSameBuild(current, build)) {
       if (isOlder(current, build))
@@ -273,7 +279,7 @@ export const start = (scope: Scope) => {
     await prune(cache, live)
   }
 
-  // The home page is kept from the start, whole, to show offline in place of any page not visited yet
+  // The home page is staged whole at install, to show offline in place of any page not visited yet
   scope.addEventListener("install", event => {
     event.waitUntil(serially(() => revalidate("/", fetchPage("/"))).then(() => scope.skipWaiting()))
   })
@@ -289,16 +295,16 @@ export const start = (scope: Scope) => {
     )
   })
 
-  // A page asks for its own copy to be checked, as on coming back into view, since a window that never navigates
-  // would otherwise never learn of a newer build: the copy is fetched at once, as a navigation's is, and taken in
-  // in turn
+  // A page asks for its copy to be revalidated, as on coming back into view, since a window that never navigates
+  // would otherwise never learn of a newer build. The copy is fetched at once, as a navigation's is, and taken in
+  // when the queue reaches it
   scope.addEventListener("message", event => {
     const { revalidate: path } = Object(event.data) as { revalidate?: unknown }
     if (typeof path !== "string")
       return
     const page = pageOf(new URL(path, scope.location.origin).pathname)
     const fresh = fetchPage(page)
-    // Its failure is for the revalidation to find, however long that waits its turn
+    // Its failure is handled by revalidate, however long that waits in the queue
     fresh.catch(() => {})
     event.waitUntil(serially(() => revalidate(page, fresh)).catch(() => {}))
   })
@@ -306,13 +312,12 @@ export const start = (scope: Scope) => {
   scope.addEventListener("fetch", event => {
     const { request } = event
     const url = new URL(request.url)
-    // The API is live, so it's never cached here
+    // The API is live, so it's never cached
     if (request.method !== "GET" || url.origin !== scope.location.origin || url.pathname.startsWith("/api/"))
       return
 
-    // Pages: the copy we have right away, checked behind it. Without one, or without a cache that opens, the
-    // network's, though not a captive portal's in place of ours while there's the home page to show instead, and
-    // failing that the home page
+    // Pages: the cached copy right away, revalidated behind it. Without one, or without a cache that opens, the
+    // network's. A captive portal's page is skipped for the cached home page when there is one
     if (request.mode === "navigate") {
       const page = pageOf(url.pathname)
       const fresh = fetchPage(url.href)
@@ -338,8 +343,8 @@ export const start = (scope: Scope) => {
           })
           .catch(async () => (await (await open()).match(request, ANY))!)
       )
-    // The hashed files, code, data, the map's style and tiles, and the dining files: cached first, filled on first
-    // use. Nothing else of the origin's is ours to keep, so what the cache can hold stays bounded by what's published
+    // Hashed files (code, data, the map's style and tiles, the dining files): cache first, filled on first use.
+    // Nothing else on the origin is kept, so the cache stays bounded by what's published
     else if (isHashed(url.pathname)) {
       const answer = cachedFirst(event)
       event.respondWith(answer)

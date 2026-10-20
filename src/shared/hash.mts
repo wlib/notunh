@@ -1,5 +1,5 @@
-// The one name content goes by, in the scripts and anywhere else: its SHA-256, through Node's crypto a chunk at a
-// time wherever there's Node, and the platform's WebCrypto, whole, anywhere else
+// The one name content goes by, in the scripts and everywhere else: its SHA-256. Under Node it streams through
+// node:crypto a chunk at a time; anywhere else it's hashed whole with WebCrypto
 
 /** Bytes, or text, or what a stream of either yields */
 export type Chunks = Uint8Array | string | AsyncIterable<Uint8Array | string>

@@ -1,9 +1,9 @@
-// Whether the page is in view and since when, for things that only run while it is or count from then; the one
-// clock every page reads; and a fresh start after long enough away that nothing in memory is worth keeping, as
-// phones have long since let go of the page anyway and what was on screen an hour ago is stale, or once there's
-// newer code, which only a reload brings in. Neither comes while the page is in the middle of something a reload
-// would lose, like a bus ride, and newer code only out of view, so no one sees it. Newer data needs no reload, as
-// pages swap it in live (build.mts)
+// Whether the page is in view and since when, for things that only run while it is; the one clock every page reads;
+// and reloads. The page reloads after LONG_AWAY_MS or a new day away, when nothing in memory is worth keeping: phones
+// have long since evicted the page anyway, and what was on screen an hour ago is stale. It also reloads for newer
+// code, which nothing else can bring in. Neither happens while the page is busy with something a reload would lose,
+// like a bus ride, and a deferred reload waits until the page is out of view, so no one sees it. Newer data needs no
+// reload, as pages swap it in live (build.mts)
 
 import { r, watch } from "bruh/reactive"
 import { HOUR, localDay } from "../shared/time.mts"
@@ -21,7 +21,7 @@ let hiddenAt = document.visibilityState === "hidden" ? Date.now() : undefined
 export const isVisible = r(hiddenAt === undefined)
 /** Epoch milliseconds the page was loaded or last brought back into view, or undefined while it's out of view */
 export const visibleSince = r(hiddenAt === undefined ? Date.now() : undefined)
-/** Epoch milliseconds, every TICK_MS and on coming back, since timers sleep with the page; one clock for every page */
+/** Epoch milliseconds, updated every TICK_MS and on coming back, since timers sleep with the page */
 export const now = r(Date.now())
 /** Today in Durham, reaching what depends on it only when the day changes */
 export const today = distinct(() => localDay(now.value))
@@ -61,8 +61,7 @@ document.addEventListener("visibilitychange", () => {
 // Back from the back-forward cache, in case the visibility event didn't come with it
 addEventListener("pageshow", resume)
 
-// Newer code, or a fresh start put off while busy, comes in out of view, as soon as it's due, the page goes out of
-// view, and nothing's lost, whichever is last
+// Newer code, or a fresh start put off while busy, reloads once it's due, the page is out of view, and it isn't busy
 watch([isNewBuild, isStale, isVisible, isBusy], () => {
   if ((isNewBuild.value || isStale.value) && !isVisible.value && !isBusy.value)
     location.reload()

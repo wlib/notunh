@@ -1,6 +1,6 @@
 // How build steps reach the Worker: through its token-gated /api/ routes, so the build needs no D1 credentials of
-// its own, only BUILD_TOKEN. With --local, from `wrangler dev` on localhost:8787, which takes the BUILD_TOKEN in
-// .dev.vars; otherwise from WORKER_ORIGIN, or notunh.app (site.mts). Run directly to look:
+// its own, only BUILD_TOKEN. The origin is notunh.app, or WORKER_ORIGIN, or with --local, `wrangler dev` on
+// localhost:8787, which checks against the BUILD_TOKEN in .dev.vars (site.mts). Run directly to look:
 // BUILD_TOKEN=… node scripts/worker.mts health | storage | rows <name> [day] [--local]
 
 import type { Day } from "../src/shared/time.mts"
@@ -65,8 +65,8 @@ export const writeRows = async (name: string, rows: readonly unknown[], clear?: 
 }
 
 /**
- * The latest stored under a name, or the latest through a day, null if there's none, with its revision, undefined
- * from a Worker that predates them, and every day it's stored through
+ * The latest state stored under a name, or the latest through a day, null if there's none. With its revision
+ * (undefined from a Worker without model revisions) and every day it's stored through
  */
 export const readModel = async <M,>(name: string, through?: Day) => {
   const { state, revision, throughs = [] } = await request<{ state: M | null, revision?: string | null, throughs?: Day[] }>(

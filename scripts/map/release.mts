@@ -1,8 +1,8 @@
-// The map's OpenStreetMap data as GitHub releases: each generation is its own immutable release, tagged
-// map-data-<version>, holding one archive of the walk, the gazetteer, the tiles, and a manifest with a hash of each,
-// and the one mutable release, map-data, holds only latest.json, uploaded last, naming the generation builds take.
-// A generation's version is its extract's date and its generator (src/shared/made.mts), so the same extract made
-// again by changed code is a new generation, at a new URL
+// The map's OpenStreetMap data as GitHub releases. Each generation is its own immutable release, tagged
+// map-data-<version>, holding one archive of the walk, the gazetteer, and the tiles, with a manifest hashing each.
+// The one mutable release, map-data, holds only latest.json, uploaded last, naming the generation builds take. A
+// generation's version is its extract's date and its generator (src/shared/made.mts), so the same extract made again
+// by changed code is a new generation, at a new URL
 
 import { readFile } from "node:fs/promises"
 import * as v from "valibot"
@@ -30,7 +30,7 @@ const GENERATOR = [
   "../../src/geo/boxes.mts", "../../src/geo/lines.mts", "../../src/geo/projection.mts"
 ]
 
-// The packages that code reads the extract and measures with, which, with all they depend on, are as much the
+// The packages that code reads the extract and measures with. With all they depend on, they're as much the
 // generator as our code
 const PACKAGES = ["@osmix/pbf", "cheap-ruler", "flatbush"]
 

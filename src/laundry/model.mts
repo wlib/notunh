@@ -1,7 +1,7 @@
-// When each room usually has a machine free, learned from the collector's transitions by the nightly build and
-// read by the page. For every room, kind, and hour of the week, it keeps time-weighted sums of the free count and
-// of whether any was free, folded a day at a time as src/shared/learn.mts does, so this semester's pattern takes
-// over within a month
+// When each room usually has a machine free, learned by the nightly build from the collector's transitions and read
+// by the page. For every room, kind, and hour of the week it keeps time-weighted sums of the free count and of
+// whether any was free. Days are folded in one at a time with src/shared/learn.mts' decay, so this semester's
+// pattern takes over within a month
 
 import * as v from "valibot"
 import { foldDay, type Learned as Folded } from "../shared/learn.mts"
@@ -11,11 +11,11 @@ import { KINDS, type Kind, type Known, type Poll, type Status, type Transition }
 /** Hours in a week, Monday midnight in Durham first */
 export const SLOTS = 168
 /**
- * How many hours of watching the room at any hour of the week its hour of the week is worth: each hour leans on the
- * room's all-hours average until it's been watched this long, decayed. A slot gains at most an hour a week, so it
- * levels off near 6, and an hour of the week then counts as much as the rest of the week. Held out on Oct 8 to 18,
- * with at most two weeks of any hour, this tied the room's all-hours average, which beat the hours alone by 0.007 to
- * 0.02 in Brier score, and the hours with no average beneath them said nothing at all
+ * The prior weight, in decayed hours watched, of a room's all-hours average behind each hour of the week. Each slot
+ * leans on that average until it's been watched about this long. A slot gains at most an hour a week, so with the
+ * 28-day half-life it levels off near 6, where its own hours and the average count equally. Held out on Oct 8 to 18
+ * (at most two weeks of any hour), this tied the plain all-hours average. Both beat the hours alone by 0.007 to 0.02
+ * in Brier score, and the hours alone, without the average beneath them, said nothing at all
  */
 const POOLED_HOURS = 6
 // A room doing less than this share of its usual business that day is on a break, and would teach us nothing

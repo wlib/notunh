@@ -1,6 +1,6 @@
-// Splits converted menus into the files the dining page loads: an index, a file of each hall's meals each day,
-// a file per food, and one of every food for searching. Every file but the index is named by a hash of what's in
-// it, so a food served all week is one file, and anything unchanged from last night stays cached
+// Splits converted menus into the files the dining page loads: an index, a file of each hall's meals each day, a
+// file per food, and one of every food for searching. Every file but the index is named by a hash of its contents,
+// so a food served all week is one file, and anything unchanged from last night stays cached
 
 import * as v from "valibot"
 import { DIETS, type FoodSummary, type Meal, type MenusData, type MenusIndex, type SearchFood, type Serving, fileUrl } from "../../src/dining/menus.mts"
@@ -11,16 +11,16 @@ import { contentHash } from "../../src/shared/hash.mts"
 const CARRY_MS = 48 * HOUR
 
 /**
- * The origin's record of the files published under /data/dining/ beyond the index's own, each by URL with when it
- * stops being published, kept beside them as published.json and read back by the next build
+ * The origin's record of the files published under /data/dining/ beyond the index's own: each URL with when it
+ * stops being published (epoch ms). Kept beside them as published.json and read back by the next build
  */
 export const Published = v.record(v.string(), v.number())
 export type Published = v.InferOutput<typeof Published>
 
 /**
- * What tonight's build publishes beyond its index's files: every file the index the site serves names, which stays
- * one more build whatever its age, as the previous generation does everywhere, and every file published before
- * whose time isn't up, each until two nights past the last index that named it
+ * What tonight's build publishes beyond its index's files. Every file named by the index the site serves now stays
+ * one more build whatever its age, as the previous generation does everywhere. Every file published before stays
+ * until its time is up, 48 hours past the fetch of the last index that named it
  */
 export const carried = (serving: Pick<MenusIndex, "fetched" | "files"> | undefined, published: Published | undefined, tonight: Pick<MenusIndex, "files">, now: number): Published => {
   const until: Published = {}

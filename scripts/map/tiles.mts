@@ -1,5 +1,5 @@
-// Our own map tiles (src/map/basemap/tiles.mts), made with Planetiler from an OpenStreetMap extract: the base map in the
-// OpenMapTiles schema Liberty draws, and the campus set in our own (campus.yml). Each set is cut to exactly the
+// Our own map tiles (src/map/basemap/tiles.mts), made with Planetiler from an OpenStreetMap extract: the base map in
+// the OpenMapTiles schema Liberty draws, and the campus set in our own (campus.yml). Each set is cut to exactly the
 // tiles it covers, with an empty one wherever Planetiler made none, so every tile the map asks here for is here
 
 import { spawn } from "node:child_process"

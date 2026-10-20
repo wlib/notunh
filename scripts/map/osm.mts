@@ -1,16 +1,15 @@
 // OpenStreetMap, from one extract of New Hampshire: the streets and paths people walk around Durham, as the network
-// at src/map/walk.json, the places people go, as the gazetteer at src/map/gazetteer.json, and with Planetiler, our
-// own map tiles (scripts/map/tiles.mts), all three marked with where they came from (src/shared/made.mts). Each week
-// the Map data workflow makes them from Geofabrik's latest extract and publishes them as a release (release.mts):
+// at src/map/walk.json; the places people go, as the gazetteer at src/map/gazetteer.json; and, with Planetiler, our
+// own map tiles (scripts/map/tiles.mts). All three are marked with where they came from (src/shared/made.mts). Each
+// week the Map data workflow makes them from Geofabrik's latest extract and publishes them as a release (release.mts):
 //
 //   node scripts/map/osm.mts <extract.osm.pbf> <planetiler.jar> [--release <folder>]
 //
-// which, given a folder, leaves the archive, its manifest, and the pointer there to publish, unless the pointer
-// already names this very generation. Without an extract, the build takes the generation the pointer names: the
-// archive is fetched, its hashes checked, and only then swapped in, whole, with the tiles the site serves now kept
-// beside the new ones for one more build, so a tab on the last build isn't left without. While there's no release,
-// the walk and gazetteer are the fixtures', and the tiles all OpenFreeMap's. With --if-missing, tiles already there
-// are kept
+// Given a folder, it stages the archive, its manifest, and the pointer there to publish, unless the pointer already
+// names this very generation. Without an extract, the build takes the generation the pointer names: the archive is
+// fetched, its hashes checked, and only then swapped in whole. The tiles the site serves now are kept beside the new
+// ones for one more build, so a tab on the last build isn't left without. While there's no release, the walk and
+// gazetteer are the fixtures', and the tiles all OpenFreeMap's. With --if-missing, tiles already there are kept
 
 import { createReadStream } from "node:fs"
 import { cp, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
@@ -37,7 +36,7 @@ import { deployed } from "../site.mts"
 const WALK      = new URL("../../src/map/walk.json", import.meta.url)
 const GAZETTEER = new URL("../../src/map/gazetteer.json", import.meta.url)
 
-// Durham, from Lee to the bay, and from Madbury to Packers Falls
+// Durham, from Lee to the bay, and from Madbury to Packers Falls, as [west, south, east, north]
 const DURHAM: Box = [-70.99, 43.08, -70.88, 43.17]
 
 const WALKABLE = new Set(HIGHWAYS)

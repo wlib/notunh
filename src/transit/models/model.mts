@@ -1,10 +1,11 @@
-// What weeks of the Worker's samples show of how the buses run, as the statistics the nightly build keeps of them
-// (fit.mts) and forecasting reads (estimates.mts): how long each leg between stops a bus visits one after the
-// other takes at each time of day, and how its time is spent along the way, how long buses spend at each stop and
-// lay over at the start of a trip, how much longer a bus already there still stays, whether buses wait at a stop
-// for its scheduled time, how far off the timetable each route runs, and how often its buses come, and how
-// forecasts from it have done. Keys are stop and route ids, which last across timetables, never trip ids, which
-// don't
+// What weeks of the Worker's samples show of how the buses run: the statistics the nightly build keeps (fit.mts) and
+// forecasting reads (estimates.mts). They cover
+// - how long each leg between consecutive stops takes at each time of day, and how its time is spent along the way
+// - how long buses spend at each stop and lay over at the start of a trip, and how much longer one already there stays
+// - whether buses wait at a stop for its scheduled time
+// - how far off the timetable each route runs, and how often its buses come
+// - how forecasts from it have done
+// Keys are stop and route ids, which last across timetables, never trip ids, which don't
 
 import * as v from "valibot"
 import { objectOf } from "../../shared/json.mts"

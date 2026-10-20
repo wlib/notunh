@@ -15,7 +15,10 @@ const TODAY = "2026-10-01"
 const BASE = serviceDayStart(TODAY) / 1000
 const CENTER = { lat: 43.135, lon: -70.93 }
 
-/** Trips of route R along stops a kilometer or so apart, at their own times, the last ending where the first starts for loops */
+/**
+ * Trips of route R along stops a kilometer or so apart, at their own times, the last ending where the first starts
+ * for loops
+ */
 const lineFeed = (trips: ({ times: number[] } & Partial<Trip>)[], isLoop = false) =>
   withIndexes({
     version: "test",
@@ -114,7 +117,7 @@ test("a loop's bus goes on into the next loop starting where it ends, after layi
   }))
 )
 
-test("a loop's bus goes on only into a loop of its own service day due to start about when it would, and isn't live on it until seen there (Astra's end-of-day probe)", () =>
+test("a loop's bus goes on only into a loop of its own service day due to start about when it would, and isn't live on it until seen there", () =>
   fc.assert(fc.property(
     fc.array(fc.integer({ min: 960, max: 6 * 3600 }), { maxLength: 3 }),
     fc.nat(3),
@@ -134,7 +137,8 @@ test("a loop's bus goes on only into a loop of its own service day due to start 
         if (run.vehicle === undefined)
           expect(timeAt(run, 0)).toBe(scheduled)
         else {
-          // Only a later loop of today's, and not long after the bus could start it, or long before, for a bus running late
+          // Only a later loop of today's, and not long after the bus could start it, or long before, for a bus running
+          // late
           expect(run.base).toBe(BASE)
           expect(run.trip.times[0]).toBeGreaterThan(starts[on])
           expect(timeAt(run, 0) - scheduled).toBeGreaterThanOrEqual(-1800)
@@ -164,7 +168,7 @@ test("a followed bus's spread grows the further along it is, within what a plann
   }))
 )
 
-test("a bus at the stop its loop starts and ends at is starting the trip it's tagged with, however late, as it measured best held out", () =>
+test("a bus at the stop its loop starts and ends at is starting the trip it's tagged with, however late, which measured best on held-out data", () =>
   fc.assert(fc.property(fc.integer({ min: 0, max: 1500 }), late => {
     const feed = lineFeed([{ times: [0, 300, 600, 900].map(s => 36000 + s) }], true)
     const at = BASE + 36000 + late

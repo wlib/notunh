@@ -92,7 +92,10 @@ test("a day's visits, written a request at a time, read back as they were sent, 
   30_000
 )
 
-/** Ways a body of rows can be wrong: a visit missing what it must have or with the wrong type of thing, too many rows, or no day to clear */
+/**
+ * Ways a body of rows can be wrong: a visit missing what it must have or with the wrong type of thing, too many rows,
+ * or no day to clear
+ */
 const wrong = fc.oneof(
   fc.tuple(fc.constantFrom("vehicle", "route", "stop", "arrive", "depart"), fc.constantFrom(undefined, null, true, [], {}, "the other type")).map(([key, value]) =>
     ([first, ...rest]: Visit[]) => {
@@ -150,7 +153,7 @@ test("the latest model of a name is the last stored, whatever day it's through, 
   await expect(writeModel("anything", { through: SUNDAY }, null)).rejects.toThrow("404")
 })
 
-test("a refit's checkpoint through an earlier day than the model it replaces is what's read back, kept however old, and only stored over by a writer that read it (Astra's checkpoint probe)", async () => {
+test("a refit's checkpoint through an earlier day than the model it replaces is what's read back, kept however old, and only stored over by a writer that read it", async () => {
   for (let i = 0; i < 40; i++)
     await store("buses", { through: addDays(SUNDAY, i), version: "1" })
   const { revision: old } = await readModel("buses")
@@ -224,7 +227,8 @@ test("a rebuild learns on in its checkpoint over several builds while the model 
 test("against a Worker from before model revisions, a build only reads, storing nothing, and bundles what's stored if it's of this version", async () => {
   const stored = { version: 1, through: addDays(SUNDAY, 3) }
   const posts: unknown[] = []
-  // As main's Worker answers: the latest state alone, and a POST of a state itself stored over whatever's there
+  // As a Worker from before revisions answers: the latest state alone, and a POST of a state stored over whatever's
+  // there
   vi.stubGlobal("fetch", async (_: string, init?: RequestInit) => {
     if (init?.method !== "POST")
       return Response.json({ state: stored })
@@ -245,7 +249,7 @@ test("a model is only stored over the revision its writer read, so of two builds
   await expect(writeModel("buses", { through: addDays(SUNDAY, 1), n: 3 }, first!)).rejects.toThrow("409")
   await expect(writeModel("buses", { through: addDays(SUNDAY, 2), n: 3 }, null)).rejects.toThrow("409")
   // The same day again, by a build that read it, replaces it, as a rebuild does, under a new revision, so a second
-  // writer that read the same day's earlier revision can't replace it too (Astra's same-day probe)
+  // writer that read the same day's earlier revision can't replace it too
   const { revision: second } = await readModel("buses")
   expect(second).not.toBe(first)
   await writeModel("buses", { through: addDays(SUNDAY, 1), n: 4 }, second!)
@@ -262,7 +266,7 @@ test("the timetable is read back by the day it was in force, as the version arch
   expect((await readModel("gtfs")).throughs).toEqual([SUNDAY, addDays(SUNDAY, 10)])
 })
 
-test("two timetable versions first seen the same day are both archived, the first as of that day and the second as of the next (Astra's same-day feed)", async () => {
+test("two timetable versions first seen the same day are both archived, the first as of that day and the second as of the next", async () => {
   const feed = (version: string) => ({ version, start: SUNDAY, end: SUNDAY, routes: [], stops: [], services: {}, trips: [], shapes: {} })
   expect(await archiveFeed(feed("spring"), SUNDAY)).toBe(true)
   expect(await archiveFeed(feed("fall"), SUNDAY)).toBe(true)
@@ -318,7 +322,7 @@ test("the nightly prune drops samples past two weeks only of days the archive ha
   for (const days of ages)
     for (const source of ["buses", "predictions"])
       sqlite.prepare("insert into samples (source, at, body) values (?, ?, x'00')").run(source, noon(days))
-  // Archived: one past the cap, two in the window's reach, and two it keeps however archived
+  // Archived: one past the cap, two between the window and the cap, and two within the window, kept however archived
   await prune(env, today, [70, 40, 20, 14, 1].map(days => addDays(today, -days)))
   const kept = sqlite.prepare("select distinct at from samples order by at").all().map(({ at }) => at)
   expect(kept).toEqual([60, 30, 15, 14, 13, 1].map(noon))

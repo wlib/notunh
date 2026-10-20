@@ -1,6 +1,7 @@
-# Typecheck, test, and build every pull request. Pull requests run with a read-only token and no secrets,
-# since their code, forks' included, is whatever the author wrote, and offline: the data comes from the fixtures
-# (tests/fixtures/data/), so no pull request asks anything of the GTFS host, Nutrislice, or the laundry vendor
+# Typechecks, tests, and builds every pull request. Needs no secrets: a pull request's code, a fork's included, is
+# whatever its author wrote, so it gets a read-only token and nothing else. It also runs offline (NOTUNH_OFFLINE):
+# the data comes from the fixtures (tests/fixtures/data/), so no pull request asks anything of the GTFS host,
+# Nutrislice, or the laundry vendor
 
 name: Check
 
@@ -22,7 +23,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # Copies the fixtures in as the data, typechecks, and tests first
+      # Copies the fixtures in as the data, then typechecks and tests before building (package.json prebuild)
       - run: npm run build
         env:
           NOTUNH_OFFLINE: 1

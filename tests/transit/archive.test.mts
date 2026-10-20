@@ -21,7 +21,10 @@ const seconds = fc.double({ min: -120, max: 120, noNaN: true })
 const nullable = <T,>(arbitrary: fc.Arbitrary<T>) => fc.option(arbitrary, { nil: null })
 const polls = nullable(fc.array(fc.tuple(seconds, nullable(fc.nat(20))), { minLength: 1, maxLength: 6 }))
 
-/** A day's rows, any version, each source at most once a minute, as decoded from the JSON the Worker stores, which has no -0 */
+/**
+ * A day's rows, any version, each source at most once a minute, as decoded from the JSON the Worker stores, which
+ * has no -0
+ */
 const rows = fc.uniqueArray(
   fc.oneof(
     fc.record({

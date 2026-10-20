@@ -1,10 +1,10 @@
-// The panel as a bottom sheet on phones, at one of three heights to drag or tap between: down to just its header
-// to leave the map, about half the screen, or taller for long directions. It's also lifted above the on-screen
-// keyboard, which iOS draws over the page rather than making room for
+// The panel as a bottom sheet on phones, at one of three heights to drag or tap between: down to just its header to
+// leave the map, about half the screen, or taller for long directions. It's also lifted above the on-screen keyboard,
+// which iOS draws over the page rather than making room for
 //
-// It only ever moves by translate, which the compositor handles on its own: while dragged or sliding between
-// detents its box is the taller of the heights involved, slid down to show the right amount, and once still the
-// box is swapped for the detent's own height in a single frame, so no frame has to lay out or paint its content
+// It only ever moves by translate, which the compositor handles on its own. While dragged or sliding between detents,
+// its box is the taller of the heights involved, slid down to show the right amount. Once still, the box is swapped
+// for the detent's own height in a single frame, so no frame of the motion has to lay out or paint its content
 
 import { r, watch } from "bruh/reactive"
 
@@ -129,8 +129,8 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   // Anything taking focus in the sheet, like a field, needs it up
   panel.addEventListener("focusin", raise)
 
-  // Dragged by the grabber or the header, or anywhere when there's nothing to scroll, as a height between lowered
-  // and tall. Tapping the grabber or the header toggles it, and tapping anything else is left to that
+  // Dragged to any height between lowered and tall, by the grabber or the header, or anywhere when there's nothing to
+  // scroll. Tapping the grabber or the header toggles it, and taps on anything else are left alone
   let drag: {
     y: number, from: number, extent: number, at: number, velocity: number, isHandle: boolean,
     box: number, scroll: number, scrolled: number, content: number, lowered: number, half: number, tall: number

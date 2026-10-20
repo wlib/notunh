@@ -1,7 +1,6 @@
-// What a model says to expect, for forecasting: every estimate leans on a broader one while it has little data of
-// its own, and an empty model has no estimates at all, so everything using it falls back on the constants it had
-// before there was a model. Held out a day at a time on Oct 7 to 19, chaining these along a bus's trip beat Umo by
-// half at every lead to 20 minutes (notunh-model-research/2026-10-19_heldout/IMPLEMENTED.md)
+// What a model says to expect, for forecasting. Every estimate leans on a broader one while it has little data of
+// its own. An empty model has no estimates at all, so everything using it falls back on fixed defaults. Held out a
+// day at a time on Oct 7 to 19, chaining these along a bus's trip had half Umo's error at every lead up to 20 minutes
 
 import type { FeedData, Trip } from "../feed.mts"
 import { type Cell, type Estimate, type Model, ANY_LAYOVER, ANY_LEG, ANY_STOP, CONTEXTS, LINGERED, RATIOS, contextAt, hourAt, leadIndex, zoneKey } from "./model.mts"
@@ -140,9 +139,9 @@ const lnGamma = (x: number): number => {
 
 /**
  * How long until the next of a route's buses leaves a stop, from an epoch second, knowing nothing of where its
- * buses are: buses that come every so often, gamma distributed as they were at that time of day, are next half the
- * time within this, and on average every this often. For a route that runs by headway, not by its timetable, this
- * beat the timetable's next departure by 50 s held out (fitted moments, rather than every headway seen, cost 10 s)
+ * buses are. Headways are gamma distributed with the moments seen at that time of day. `wait` is the median wait,
+ * and `headway` the mean time between buses. For a route that runs by headway, not by its timetable, this beat the
+ * timetable's next departure by 50 s held out. Fitted moments cost 10 s against using every headway seen
  */
 export const waitEstimate = (model: Model, route: string, at: number) => {
   const cell = model.headways[route]?.[hourAt(at)]
@@ -188,8 +187,8 @@ export const holdChances = (model: Model, feed: FeedData, trip: Trip) => {
 }
 
 /**
- * A bus more likely than not to wait is expected to, for where it's expected to be and when: of waiting or not,
- * whichever is likelier is the time off by the least, at the median
+ * Whether a bus is expected to wait, for where it's expected to be and when. Of waiting or not, the likelier one is
+ * the median, so it's off by the least at the median
  */
 export const isLikely = (chance: number) =>
   chance > 0.5

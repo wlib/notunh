@@ -34,8 +34,8 @@ const Delay = ({ seconds }: { seconds: number }) => {
 }
 
 /**
- * How sure a boarding is: a bus waiting for its scheduled time, when to be at the stop for the first one, or how
- * long there is to change buses
+ * What to know about a boarding: that the bus waits for its scheduled time, when to be at the stop for the first
+ * ride, or how long there is to change buses
  */
 const Boarding = ({ itinerary, leg }: { itinerary: Itinerary, leg: RideLeg }) => {
   const { run, fromPosition, start } = leg

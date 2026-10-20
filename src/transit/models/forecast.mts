@@ -1,12 +1,14 @@
-// Forecasting: when each bus will be at each stop, and how sure that is. A bus the map is following on its trip is
-// forecast along its course from where the location model has it (movement.mts), on into the next loop where its
-// trip ends where another starts; a route that keeps to its timetable is forecast from that, shifted by how late the route runs, once it's
-// far enough ahead that breaks and holds put the bus back on it; and a run with no bus followed is its timetable,
-// shifted likewise. A live source's word comes in as observations, a time it gives for a trip at a stop, and how
-// far ahead it covers each route at each stop (umo.mts makes these of Umo's predictions), so the planner never
-// reads a provider's shape itself: it says which bus runs which trip and which runs aren't coming, and stands in for
-// the model on a bus it has on a trip the map isn't following. What the model has learned replaces the constants
-// below wherever it has data
+// Forecasting: when each bus will be at each stop, and how sure that is.
+// - A bus the map is following is forecast along its course from where the location model has it (movement.mts),
+//   on into the next loop where its trip ends where another starts
+// - A route that keeps to its timetable is forecast from that, shifted by how late the route runs, once it's far
+//   enough ahead (HANDOFF) that breaks and holds put the bus back on it
+// - A run with no bus followed is its timetable, shifted likewise
+//
+// A live source's word comes in as a Forecast (predictions.mts), so the planner never reads a provider's shape
+// itself. It says which bus runs which trip and which runs aren't coming, and stands in for the model on a bus it
+// has on a trip the map isn't following. What the model has learned replaces the constants below wherever it has
+// data
 
 import { type Feed, type Trip, arrivalTime, isServiceActive, serviceDayStart } from "../feed.mts"
 import { straightMeters } from "../../geo/projection.mts"
@@ -28,16 +30,15 @@ const SCHEDULE_FACTOR = 2            // a time from the timetable, with no bus t
 export const BOARDING = 30           // s, to get on a bus waiting at the stop for its scheduled time
 // How sure the slack before a bus should be that it hasn't left yet
 const SURE_P = 0.85
-// A route that keeps to its timetable, as those it marks timepoints on do, is back on it this far ahead and more:
-// held out, its timetable shifted by how late it runs beat chaining a bus there 130 to 270 s at 30 and 60 minutes.
-// That can put a stop past it sooner than the one before, as can a source's uneven predictions, and a run's times
-// are left so rather than put in order: held out on Oct 8 to 19, having the timetable taken back up no sooner than
-// the bus left the stop before gained 2 to 3 s at 30 minutes but lost 1 to 2 s at 1 to 10, since a bus chained or
-// predicted that far behind its timetable is as often not. Whatever needs a chronology reads a run in order, as
-// the planner's connections do (plan.mts) (notunh-model-research/2026-10-19_followups/)
+// A route that keeps to its timetable, as those with timepoints do, is back on it this far ahead and more. Held out,
+// its timetable shifted by how late it runs beat chaining a bus there by 130 to 270 s at 30 and 60 minutes ahead.
+// That can put a stop past it sooner than the one before, as can a source's uneven predictions. A run's times are
+// left so rather than put in order, as forcing them in order lost at short leads about what it gained at 30
+// minutes. Whatever needs a chronology reads a run in order, as the planner's connections do (plan.mts)
 const HANDOFF = 1800 // s
-// A loop's bus goes on into a next loop of its route only due to start at most this much after it could, or this much
-// before, for a bus running late: replayed, going on into any loop due nearest did no better than this
+// A loop's bus goes on into a next loop of its route only if that's due to start at most this much after the bus
+// could, or this much before, for a bus running late. Replayed, going on into whichever loop is due nearest did no
+// better
 const CONTINUITY = { after: 1800, before: 3600 } // s
 
 /** A trip running on a specific service day */
@@ -83,10 +84,10 @@ export const uncertainty = (lead: number) =>
   Math.min(UNCERTAINTY_MAX, UNCERTAINTY_NOW + UNCERTAINTY_RATE * Math.max(0, lead) / 60)
 
 /**
- * How far off a bus's time at a stop may be, early when boarding or late when getting off, with probability p: as
- * far as the chain's spread for a bus the map is following, scaled to how far off its forecasts turn out, or with
- * no bus tracked, as far as its route's lateness varies; and with nothing learned, as it always was, wider for a
- * time from the timetable alone
+ * How far off a bus's time at a stop may be with probability p, early when boarding or late when getting off. For a
+ * bus the map is following, it's the chain's spread, scaled to how far off its forecasts turn out. With no bus
+ * tracked, it's how much its route's lateness varies. With nothing learned, it's a fixed spread growing with the
+ * lead, wider for boarding by a time from the timetable alone
  */
 const spreadTo = (run: Run, position: number, time: number, now: number, isBoarding: boolean, p: number) => {
   const { tracked, offset } = run
@@ -146,11 +147,11 @@ const placed = (feed: Feed, runsByTripId: ReadonlyMap<string, Run[]>, tripId: st
 }
 
 /**
- * Notes which bus each observed run is, and whether it's on it; and for a bus on it, or for any run of a route the
- * model knows nothing of, shifts its times by its delays, carried forward from the latest observation before each
- * stop, with an early bus holding at timepoints for its scheduled time, up to where a route that keeps to its
- * timetable is back on it. A source's guess at when a bus will start a run, from its own schedule, is no better than
- * the model's timetable shifted by how late the route runs, so it says only which bus will
+ * Notes which bus each observed run is, and whether it's on it. For a bus on it, or for any run of a route the model
+ * knows nothing of, shifts its times by its delays, carried forward from the latest observation before each stop. An
+ * early bus holds for its scheduled time where it likely waits, up to where a route that keeps to its timetable is
+ * back on it. A source's guess at when a bus will start a run, from its own schedule, is no better than the model's
+ * timetable shifted by how late the route runs, so it says only which bus will
  * @returns the runs observed
  */
 const applyObservations = (feed: Feed, { observations, at }: Forecast, runsByTripId: ReadonlyMap<string, Run[]>) => {
@@ -168,8 +169,8 @@ const applyObservations = (feed: Feed, { observations, at }: Forecast, runsByTri
       run.isLive = true
   }
 
-  // Each stop's delay is the latest prediction before it, pushed later by every timepoint the bus waited at so far:
-  // an early bus holds there for its scheduled time, and what's predicted after it runs that much later
+  // Each stop's delay is the latest prediction before it, pushed later by every stop the bus likely waited at so far.
+  // An early bus holds there for its scheduled time, and what's predicted after it runs that much later
   for (const [run, delays] of known) {
     if (run.offset && !run.isLive)
       continue
@@ -196,11 +197,10 @@ const metersTo = (feed: Feed, trip: Trip, position: number) => {
 }
 
 /**
- * Chains each bus the map is following from where it was seen along its run, and where that ends at the start of
- * a later one of its route's the same service day, on into the one due to start there nearest when the bus would,
- * if it's due about then, laying over first: up to where a route that keeps to its timetable is back on it. Only the
- * run a bus is seen on is live: the one after is what it's expected to run, which a run with nothing due after it,
- * as the day's last does, isn't
+ * Chains each bus the map is following from where it was seen along its run, up to where a route that keeps to its
+ * timetable is back on it. Where the run ends at the start of a later one of its route's the same service day, the
+ * chain lays over and goes on into the one due to start there nearest when the bus would, if it's due about then
+ * (CONTINUITY). Only the run a bus is seen on is live. The one after is only what it's expected to run
  * @returns the runs chained
  */
 const applySightings = (feed: Feed, model: Model, sightings: readonly Sighting[], runs: readonly Run[], runsByTripId: ReadonlyMap<string, Run[]>) => {

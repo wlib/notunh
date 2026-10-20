@@ -1,8 +1,9 @@
-// The lossless archive of what the Worker observed (src/transit/observations/raw.mts): each completed service day's stored rows of
-// both sources, decoded, as one zstd-compressed ndjson file (gzipped before 2026-10-20) on its own immutable GitHub
-// release, observations-<day>, with a manifest of it, and a catalog of every day archived, catalog.json on the one
-// mutable release, observations, uploaded last (scripts/archive.mts, .github/workflows/archive.yml). The Worker
-// keeps a day's samples past RETAIN_ARCHIVED_DAYS only while the catalog doesn't list it
+// The lossless archive of what the Worker observed (raw.mts), written by scripts/archive.mts from
+// .github/workflows/archive.yml. Each completed service day's stored rows of both sources, decoded, become one
+// zstd-compressed ndjson file (gzipped for days before 2026-10-20) on its own immutable GitHub release,
+// observations-<day>, with a manifest. catalog.json, on the one mutable release, observations, lists every day
+// archived and is uploaded last. The Worker deletes a day's samples after RETAIN_ARCHIVED_DAYS only once the catalog
+// lists it
 
 import * as v from "valibot"
 import { getJson } from "../../shared/json.mts"
@@ -34,7 +35,7 @@ export type Counts = v.InferOutput<typeof Counts>
 /** An archived day, as its manifest.json says: the file's name, SHA-256, and size, and each source's counts */
 export const Manifest = v.object({
   day:     Day,
-  /** From 2026-10-20, when the file became zstd's */
+  /** Present from 2026-10-20, when files became zstd. Older manifests leave it out for the gzipped name */
   file:    v.optional(v.string()),
   sha256:  v.string(),
   bytes:   v.number(),

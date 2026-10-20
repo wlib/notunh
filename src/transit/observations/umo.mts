@@ -57,9 +57,9 @@ const StopPredictions = v.object({
 export type StopPredictions = v.InferOutput<typeof StopPredictions>
 
 /**
- * Umo's predictions, as answered at an epoch second, as a forecast (predictions.mts): each with a trip an observation
- * of that trip at the stop, live unless Umo is predicting from its schedule before the bus starts the trip, and the
- * latest time so predicted at each of a route's stops as how far ahead Umo covers it there
+ * Umo's predictions, as answered at an epoch second, as a forecast (predictions.mts). Each prediction with a trip is
+ * an observation of that trip at the stop, live unless Umo is predicting from its schedule before the bus starts the
+ * trip. The latest time predicted at each of a route's stops is how far ahead Umo covers it there
  */
 export const forecastOf = (predictions: readonly StopPredictions[], at: number): Forecast => {
   const forecast: Forecast = { observations: [], at, coverage: new Map() }

@@ -1,11 +1,11 @@
-// What each cron trigger runs, and for the sources that are sampled, storing what one saw in a minute and every poll
-// it made to see it as a gzipped row in samples, so a minute polled is a row even when nothing was seen
+// What each cron trigger runs. A sampled source stores what it saw in a minute, plus every poll it made, as one
+// gzipped row in samples, so a polled minute is a row even when nothing was seen
 
 import { encode, type RawPoll } from "../src/transit/observations/raw.mts"
 import { samples } from "./schema.mts"
 import { inserts } from "./rows.mts"
 
-/** Who's asking, for Umo, which refuses a request without a User-Agent */
+/** Who's asking, for Umo, which refuses a request without a User-Agent. Never sent to the laundry vendor */
 export const HEADERS = { "user-agent": "notunh/1 (+https://notunh.app)" }
 
 export type Env = {

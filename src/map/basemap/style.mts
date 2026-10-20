@@ -1,7 +1,7 @@
-// OpenFreeMap's Liberty style, made ours: served from our own origin with its sprite and the fonts our labels
-// need, its tiles ours where we have them and else pinned to one planet build, redrawn where it hides what's already
-// in the tiles, and drawing our campus tiles too. The build (scripts/map/style.mts) writes it all into one folder
-// named by a hash of it, so the style, sprite, and fonts the map loads always match, and names the folder in a
+// OpenFreeMap's Liberty style, made ours. It's served from our own origin with its sprite and the fonts our labels
+// need. Its tiles are ours where we have them, else pinned to one planet build. It's redrawn where it hides what's
+// already in the tiles, and draws our campus tiles too. The build (scripts/map/style.mts) writes it all into one folder
+// named by a hash of it, so the style, sprite, and fonts the map loads always match. It names the folder in a
 // manifest the page bundles, which the map loads the style by
 
 import type { FilterSpecification, LayerSpecification, StyleSpecification } from "maplibre-gl"
@@ -14,7 +14,9 @@ export const LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
 /** Where each style's folder is, beside the tiles' */
 export const STYLE_ROOT = "/data/map/"
 
-/** What the map's page names as its style: where the style is, which is required with the page, and its folder to keep with it */
+/**
+ * What the map's page names as its style: where the style is, which the page requires, and the folder to keep with it
+ */
 export const StyleManifest = v.object({ ...Retain.entries, url: v.string() })
 export type StyleManifest = v.InferOutput<typeof StyleManifest>
 
@@ -22,8 +24,8 @@ export type StyleManifest = v.InferOutput<typeof StyleManifest>
 export type LoadedStyle = StyleManifest & { style: StyleSpecification }
 
 /**
- * The manifest and its style, loaded as one, so a style that can't be had is a load of the manifest that failed,
- * tried again like any other (src/shell/build.mts) rather than wanted by the map and never come
+ * The manifest and its style, loaded as one. A style that can't be had is then a failed load of the manifest, retried
+ * like any other (src/shell/build.mts), rather than a style the map waits on forever
  */
 export const loadStyle = async (url: string, init: RequestInit): Promise<LoadedStyle> => {
   const manifest = await getJson(url, { ...init, schema: StyleManifest })
@@ -220,9 +222,9 @@ const restyleLayer = (layer: LayerSpecification): LayerSpecification => {
 }
 
 /**
- * Liberty made ours: its fonts and sprite from a folder of our origin, its tiles ours where we have them
- * (src/map/basemap/tiles.mts) and else from one planet build, so their URLs never change, our campus tiles beside them, and
- * its layers redrawn and added to as above, the rest left as they are
+ * Liberty made ours: its fonts and sprite from a folder of our origin, and its tiles ours where we have them
+ * (src/map/basemap/tiles.mts), else from one planet build, so their URLs never change. Our campus tiles go beside
+ * them, and its layers are redrawn and added to as above, the rest left as they are
  */
 export const restyle = (liberty: StyleSpecification, tiles: TileJson, folder: string): StyleSpecification => ({
   ...liberty,

@@ -1,6 +1,6 @@
-// One fake page for every test of what runs in one: a document whose visibility changes, with a head naming its
-// data, a window that says when it's back from the back-forward cache, a reload to watch for, localStorage in a
-// Map, and timers and the clock faked, so a page's modules can be imported afresh at any moment
+// One fake page for every test of what runs in one. It has a document whose visibility changes, with a head naming
+// its data, a window that says when it's back from the back-forward cache, a reload to watch for, and localStorage in
+// a Map. Timers and the clock are faked, so a page's modules can be imported afresh at any moment
 
 import { vi } from "vitest"
 

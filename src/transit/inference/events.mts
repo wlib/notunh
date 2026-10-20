@@ -1,8 +1,10 @@
 // What a day of raw fixes shows each bus doing: going through stops, having come from the stop before, and laying
 // over between trips, as the location model (locate.mts) has it along its route, each time a distribution. Trips
-// come from Umo's tag on each fix, which is the timetable's trip id. These visits are what the Worker keeps long
-// after the fixes are pruned, but the fixes themselves are the record, archived whole every night, and visits are
-// only one reading of them: each names the extractor that read it, and another can read the fixes again
+// come from Umo's tag on each fix, which is the timetable's trip id.
+//
+// The Worker keeps these visits long after the fixes are pruned. But the fixes themselves are the record, archived
+// whole every night, and visits are only one reading of them. Each visit names the extractor that read it, so
+// another extractor can read the fixes again
 
 import { tripBase, type Feed, type Trip } from "../feed.mts"
 import { LOOP_GAP, positionsOf, routeLines } from "../shapes.mts"
@@ -10,8 +12,9 @@ import { type Passage, passagesOf } from "./locate.mts"
 import type { BusFix } from "../observations/raw.mts"
 
 /**
- * The version of how visits are read from fixes: 1 was zone crossings, before 2026-10-20, 2 the location model, and
- * 3 the location model with what's uncertain fitted as likelihoods
+ * The version of how visits are read from fixes, stored on each visit. 1 is zone crossings, which stored visits from
+ * before 2026-10-20 carry. 2 is the location model, and 3 the location model with what's uncertain fitted as
+ * likelihoods
  */
 export const EXTRACTOR = 3
 
@@ -22,7 +25,7 @@ const MAX_SILENCE = 120_000 // ms
 // Further ahead of its timetable, a bus joining a trip partway is on its way to where it starts
 const MAX_EARLY = 900       // s
 
-/** What's known of a visit beyond its times: it was last seen still there. Its spread says how sure its times are */
+/** A visit flag: the bus was last seen still at the stop, so when it left is unknown */
 export const INCOMPLETE = 2
 
 /** A bus going through a stop, all times in epoch seconds, as the timetable's are compared in */
@@ -148,17 +151,18 @@ const extractRun = (feed: Feed, trips: ReadonlyMap<string, Trip>, fixes: readonl
       visits.push(seen)
       return
     }
-    // Along the trip from where it was, from the start on joining it where it starts, as a late bus may be due back
-    // there nearer the time, or else wherever it's due nearest the time, unless it'd be far early there
+    // Its position along the trip: the next after where it was, or the start on joining it where it starts, as a late
+    // bus may be due back there nearer the time. Otherwise wherever it's due nearest the time, unless far early there
     const { base, position: previous } = run
-    // Where the trip has the stop along the shape it went through it on, as a loop may pass one stop twice, and
+    // Where the trip has the stop along the shape the bus went through it on, as a loop may pass one stop twice
     const { line } = passage
     const along = line.coordinates === feed.shapes[after.shape] ? positionsOf(feed, after) : undefined
     const apart = (p: number) => {
       const off = along![p] - passage.distance
       return line.isLoop ? Math.abs(((off % line.length) + line.length * 1.5) % line.length - line.length / 2) : Math.abs(off)
     }
-    // there, the same place as the line has it, which merges a stop at both ends of a loop
+    // The trip's positions at this stop near that spot. LOOP_GAP is how near, as the line merges a stop at both ends
+    // of a loop
     const positions = after.stops.flatMap((_, p) => stopId(after, p) === stop && (!along || apart(p) < LOOP_GAP) ? [p] : [])
     const position =
       previous >= 0 || base === undefined || positions[0] === 0

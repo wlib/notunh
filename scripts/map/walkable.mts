@@ -16,8 +16,8 @@ const WALKABLE = new Set(HIGHWAYS)
 
 // Bends straying less than this from a straighter path change nothing anyone walks or sees
 const BEND = 1 // m
-// Parts of the network with fewer paths than this are left out: a courtyard's loop or a drawn but unjoined track,
-// which nothing should snap to, while a village across the river keeps its streets
+// Parts of the network with fewer paths than this are left out, like a courtyard's loop or a drawn but unjoined track
+// that nothing should snap to. A village across the river still keeps its streets
 const MIN_PART = 20 // paths
 
 // Closed to the public unless it lets people walk it anyway
@@ -51,8 +51,8 @@ const fixed = (degrees: number) =>
  */
 export const walkGraph = (elements: OsmElement[], minPart = MIN_PART): Omit<WalkData, "made"> => {
   const nodes = new Map(elements.filter((element): element is OsmNode => element.type === "node").map(node => [node.id, node]))
-  // A way listed twice is walked once, and one with a node missing is walked in the pieces either side of it, as
-  // joining them would invent a path
+  // A way listed twice is walked once. One with a node missing is walked in the pieces either side of it, as joining
+  // them would invent a path
   const ways = [...new Map(elements.flatMap(element => element.type === "way" ? [[element.id, element]] : [])).values()]
     .filter(way => isWalkable(way.tags ?? {}))
     .flatMap(way => pieces(way.nodes, id => nodes.has(id)))
@@ -95,7 +95,8 @@ export const walkGraph = (elements: OsmElement[], minPart = MIN_PART): Omit<Walk
     sizes.set(root(stretch[0]), (sizes.get(root(stretch[0])) ?? 0) + 1)
   const kept = stretches.filter(stretch => sizes.get(root(stretch[0]))! >= minPart)
 
-  // Coordinates are stored as steps from the point before, which are short numbers that compress well
+  // Coordinates are stored as steps from the point before, in millionths of a degree, [lon, lat]: short numbers
+  // that compress well
   const index = new Map<number, number>()
   const vertices: number[] = []
   let previous = [0, 0]

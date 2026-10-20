@@ -11,20 +11,23 @@ export type Track<L extends Line = Line> = {
 }
 
 /**
- * How a kind of thing keeps to its lines, which a bus along its route and a walker along a path don't alike: what
- * the geometry here weighs, with the weights its callers' to say
+ * How a kind of thing keeps to its lines. A bus on its route and a walker on a path differ, so callers pick the
+ * weights and the geometry here applies them. Distances are meters
  */
 export type Tracking = {
-  /** Up to this far from every line, the thing isn't on them */
+  /** Segments further than this from the fix aren't candidates */
   snap:      number,
   /** Meters of distance that heading the opposite way along a segment is worth */
   heading:   number,
-  /** How far along its line it plausibly gets between fixes, back and forward */
+  /** How far back and ahead along its line it plausibly moves between fixes before that costs anything */
   back:      number,
   ahead:     number,
   /** Meters of distance that switching to another of the lines is worth */
   switching: number,
-  /** Further along than its speed could take it, plus this, a fix has found some other stretch of a line, like the other side of the street */
+  /**
+   * Slack on top of how far its speed could take it. A fix further along than that has found some other stretch of
+   * a line, like the other side of the street
+   */
   leeway:    number,
   /** Fixes further apart than this many milliseconds start afresh */
   maxSkip:   number

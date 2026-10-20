@@ -17,8 +17,8 @@ const coordinates = ({ lon, lat }: Point): Coordinates =>
   [round(lon), round(lat)]
 
 /**
- * The middle of an outline by area, taken relative to its first corner so the sums stay precise, else of its extent,
- * as for a relation of many outlines, and of a line or a point, which have no area
+ * The middle of an outline by area, taken relative to its first corner so the sums stay precise. Without an area
+ * (a relation of many outlines, a line, or a point), the middle of its extent
  */
 export const middleOf = ({ geometry, bounds }: Pick<OsmWay, "geometry" | "bounds">): Point => {
   const area = geometry?.length ? areaOf(geometry) : 0

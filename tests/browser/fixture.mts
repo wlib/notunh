@@ -1,9 +1,9 @@
-// A server that serves one release of the built site at a time, as the real origin does across deploys, and can be
+// A server that serves one release of the built site at a time, as the real origin does across deploys. It can be
 // told to publish another, to go offline, as a phone with no signal sees it, or to answer a path with an error. The
-// releases are made from one build: B renames the dining page's entry chunk and bumps the release, as newer code
-// would, C renames the dining index and changes a hall's name in it, as newer data would, D is C with a service
-// worker of other bytes, as a release changing the worker itself would be, and R is A published again after them
-// all, as rolling back to it is (scripts/republish.mts)
+// releases are made from one build. B renames the dining page's entry chunk and bumps the release, as newer code
+// would. C renames the dining index too and changes a hall's name in it, as newer data would. D is C with a service
+// worker of other bytes, as a release changing the worker itself would be. R is A published again after them all, as
+// rolling back to it is (scripts/republish.mts)
 
 import { createServer } from "node:http"
 import { readFileSync, existsSync } from "node:fs"

@@ -1,10 +1,10 @@
 // Downloads OpenFreeMap's Liberty style, with its sprite and the fonts the map's labels need, and makes it ours
-// (src/map/basemap/style.mts) in a folder under public/data/map/ named by a hash of everything in it, so the style, sprite,
-// and fonts the map loads always match, with the folder named in src/map/style.json, which the map's page bundles
-// and loads the style by, and keeps the folder with. Its tiles are the planet build current now, whose URLs never
-// change. The site rebuilds nightly to pick up a new build, and the folder the site serves stays one more build
-// beside the new one, as the tiles' does, for a map tab still on it. With --if-missing, a style already there is
-// kept. The fixtures (tests/fixtures/make.mts) bundle a style the same way, from the Liberty the tests have
+// (src/map/basemap/style.mts). It goes in a folder under public/data/map/ named by a hash of everything in it, so the
+// style, sprite, and fonts the map loads always match. src/map/style.json names the folder; the map's page bundles
+// it, loads the style by it, and keeps the folder offline. The style's tiles are OpenFreeMap's current planet build,
+// whose URLs never change, and the site rebuilds nightly to pick up a new build. The folder the site serves stays one
+// more build beside the new one, as the tiles' does, for a map tab still on it. With --if-missing, a style already
+// there is kept. The fixtures (tests/fixtures/make.mts) bundle a style the same way, from the Liberty the tests have
 
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises"
 import { Readable } from "node:stream"
@@ -29,7 +29,7 @@ export const pathsOf = (fonts: readonly string[]) =>
   ["style.json", ...SPRITES, ...fonts.flatMap(font => GLYPH_RANGES.map(range => `fonts/${encodeURIComponent(font)}/${range}.pbf`))]
 
 /**
- * Liberty made ours in a folder named by what's in it, the style taken as it is before it names the folder, with
+ * Liberty made ours in a folder named by a hash of its contents (the style hashed before it names the folder), with
  * the manifest the page loads it by
  */
 export const bundle = async (liberty: StyleSpecification, tiles: TileJson, files: readonly (readonly [string, Uint8Array])[]): Promise<StyleFolder> => {
@@ -65,8 +65,8 @@ if (import.meta.main && !await isKept(MANIFEST)) {
   )
   const { folder, files, manifest } = await bundle(liberty, tiles, [...sprite, ...glyphs])
 
-  // The folder the site serves stays, with every file of it fetched back, as a build starts from nothing; the
-  // rest of the folders named like this one are earlier runs' (the tiles beside them are another step's)
+  // The folder the site serves stays, every file of it fetched back, as a build starts from nothing. Other folders
+  // named like this one are earlier runs', so they go (the tiles beside them are another step's)
   const serving = await deployed("/map/", "style", StyleManifest)
   const servedFolder = serving?.folders?.[0]
   const servedStyle = servedFolder && servedFolder !== folder ? await served(serving.url, objectOf<StyleSpecification>()) : undefined

@@ -1,11 +1,13 @@
-# Makes the map's OpenStreetMap data each week from Geofabrik's latest extract of New Hampshire (see
-# scripts/map/osm.mts): the walking network, the gazetteer, and our tiles, made with Planetiler. Each generation is
-# published whole as its own immutable release, map-data-<version>, and then the pointer every build reads,
-# latest.json on the map-data release, is moved to it (scripts/map/release.mts), so a build gets all of a
-# generation or none. Then Cloudflare rebuilds the site with it. Run it by hand with `gh workflow run map.yml`.
-# GitHub pauses schedules after 60 days without a commit, so the Worker's nightly run also dispatches this every
-# Monday when it has a token for it (worker/index.mts); a run that finds its generation already published makes
-# nothing, so the two can't publish it twice
+# Makes the map's OpenStreetMap data each week from Geofabrik's latest New Hampshire extract (scripts/map/osm.mts):
+# the walking network, the gazetteer, and our tiles, made with Planetiler. Each generation is published whole as its
+# own immutable release, map-data-<version>. Then the pointer every build reads, latest.json on the map-data release,
+# is moved to it (scripts/map/release.mts), so a build gets all of a generation or none. Run it by hand with
+# `gh workflow run map.yml`.
+#
+# Needs no secrets beyond the job's own token, plus the optional CLOUDFLARE_DEPLOY_HOOK to rebuild the site with the
+# new generation. GitHub pauses schedules after 60 days without a commit, so the Worker's nightly run also dispatches
+# this on Mondays when it has a GITHUB_TOKEN (worker/index.mts). A run that finds its generation already published
+# makes nothing, so the two can't publish it twice
 
 name: Map data
 
@@ -40,7 +42,7 @@ jobs:
           distribution: temurin
           java-version: 25
       - run: npm ci
-      # Planetiler, and the water, lake, and Natural Earth data it downloads beside itself, about 1.5 GB that rarely
+      # Planetiler and the water, lake, and Natural Earth data it downloads beside itself: about 1.5 GB that rarely
       # changes, kept from week to week
       - uses: actions/cache@v4
         with:
@@ -55,14 +57,14 @@ jobs:
             https://download.geofabrik.de/north-america/us/new-hampshire-latest.osm.pbf
       # Stages the archive, manifest, and pointer in release/, unless this generation is the one published already
       - run: node scripts/map/osm.mts extract/new-hampshire.osm.pbf planetiler/planetiler.jar --release release
-      # The places the build matches laundry rooms and dining halls to must still be there, else nothing's published.
-      # The rooms and halls are the fixtures', so this asks nothing of the laundry vendor or Nutrislice
+      # The buildings the build matches laundry rooms and dining halls to must still be there, else nothing's
+      # published. The rooms and halls are the fixtures', so this asks nothing of the laundry vendor or Nutrislice
       - run: |
           cp tests/fixtures/data/src/laundry/rooms.json src/laundry/ && cp tests/fixtures/data/src/dining/menus.json src/dining/
           node scripts/map/places.mts
-      # A generation is immutable once its manifest is up, so one published before, as the pointer moved on past it,
-      # is pointed at again as it is, never replaced. A release a run left without its manifest was never read, and
-      # is filled in again
+      # A generation is immutable once its manifest is up. One published before (the pointer since moved past it) is
+      # pointed at again as it is, never replaced. A release a failed run left without its manifest was never read,
+      # so it's filled in again
       - name: Publish
         id: publish
         run: |
@@ -86,7 +88,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-      # Rebuilds the site with it, if the hook is set
+      # Rebuilds the site with the new generation, if the hook secret is set
       - if: steps.publish.outputs.published == 'true'
         run: |
           [ -z "$DEPLOY_HOOK" ] || curl -fsS --retry 3 -X POST "$DEPLOY_HOOK"

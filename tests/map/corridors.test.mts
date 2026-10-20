@@ -3,7 +3,7 @@ import fc from "fast-check"
 import { laneSlots, lanePieces, measureCorridors, type LaneSlots, type Strand } from "../../src/map/render/corridors.mts"
 import { type Coordinates, ruler, segmentMeters } from "../../src/geo/projection.mts"
 
-// Every route shown
+// Lanes laid with every route shown
 const layLanes = (strands: Strand[], order: string[]) =>
   laneSlots(measureCorridors(strands), new Set(order), order)
 

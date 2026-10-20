@@ -1,6 +1,6 @@
 // Umo's own predictions every 5 minutes, for routes with a bus out, so a learned forecast can be scored against them.
 // The stops come from Umo's route config rather than the bundled feed, which would cost the Worker its CPU to load.
-// The whole round is one poll, recorded with how many live buses it listed, or as failed if any request did
+// The whole round is one poll, recorded with how many live buses it listed, or as failed if any request failed
 
 import { STALE_VEHICLE_SECONDS, fetchPredictions, fetchRouteStops, fetchVehicles } from "../src/transit/observations/umo.mts"
 import { packPoll, packPredictions, type RawPrediction } from "../src/transit/observations/raw.mts"

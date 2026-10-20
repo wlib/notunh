@@ -16,8 +16,8 @@ export type Place = {
 }
 
 /**
- * Searches some places, each name once: the first place by a name among those nearest `near` is the one found by it,
- * so a chain's branch in town is found before its branch in the next
+ * Searches some places, each name once. Of the places sharing a name, the one nearest `near` is kept, so a chain's
+ * branch in town is found rather than its branch in the next
  */
 export const createPlaceSearch = (places: readonly Place[], near: Point) => {
   const byName = new Map<string, Place>()

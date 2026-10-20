@@ -1,8 +1,8 @@
 /** @jsxImportSource bruh/browser */
 
-// A stop's next buses, as forecast: each route's next departures, live where the map is following the bus, and for
-// a route that runs by headway with none followed, how often its buses come and how soon the next likely does, as
-// its timetable says nothing of when they actually will
+// A stop's next buses, as forecast: each route's next departures, live where the map is following the bus. A route
+// that runs by headway with no bus followed shows how often its buses come and how soon the next likely does
+// instead, as its timetable says nothing of when they actually will
 
 import { r, type SourceNode } from "bruh/reactive"
 import { canBoard } from "../../transit/feed.mts"

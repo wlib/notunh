@@ -1,5 +1,5 @@
-// The site as it's serving now, for a build to keep what pages already open still ask for (files.mts keepServed
-// fetches the files themselves back): the Worker and the pages are one origin, notunh.app, or WORKER_ORIGIN, or
+// The site as it's serving now, so a build can keep what pages already open still ask for (files.mts keepServed
+// fetches the files themselves back). The Worker and the pages share one origin: notunh.app, or WORKER_ORIGIN, or
 // with --local, `wrangler dev` on localhost:8787
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
@@ -9,8 +9,8 @@ import { getJson } from "../src/shared/json.mts"
 export const ORIGIN = process.argv.includes("--local") ? "http://localhost:8787" : process.env.WORKER_ORIGIN ?? "https://notunh.app"
 
 /**
- * A JSON file the site serves, as its schema makes it, or undefined when the site or the file can't be read, or it
- * isn't as its schema says, which is worth a warning and no more: the build then keeps nothing extra
+ * A JSON file the site serves, parsed by its schema. Undefined, with a warning, when it can't be read or doesn't
+ * match: the build then just keeps nothing extra
  */
 export const served = async <T,>(path: string, schema: StandardSchemaV1<unknown, T>): Promise<T | undefined> => {
   try {

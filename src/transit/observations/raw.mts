@@ -1,17 +1,18 @@
 // What the Worker keeps of the live API, one row per source per minute it polled, and how anything reads it back.
-// Rows hold tuples rather than objects to keep the Worker's stringify cheap and the gzip small; ids repeat
-// across a minute's fixes and gzip takes care of that without a dictionary. What's kept is a normalization of
-// Umo's answers, not the answers: fields are dropped, times made relative, and predictions cut to the soonest per
-// key, and each row names the version of it it was packed by, so a later reader knows what it's reading. A row also
-// keeps every poll its minute made, failed ones too, so a minute without a fix says whether no bus was out or no
-// answer came
+// Rows hold tuples rather than objects to keep the Worker's stringify cheap and the gzip small. Ids repeat across a
+// minute's fixes, and gzip takes care of that without a dictionary.
+//
+// What's kept is a normalization of Umo's answers, not the answers: fields are dropped, times made relative, and
+// predictions cut to the soonest per key. Each row names the version it was packed by, so a later reader knows what
+// it's reading. A row also keeps every poll its minute made, failed ones too, so a minute without a fix says whether
+// no bus was out or no answer came
 
 import type { StopPredictions, Vehicle } from "./umo.mts"
 
 /**
- * The version of this normalization, named in every row: 2 adds the minute's polls, and each fix the poll that
- * first saw it; 1 is the tuples without them; rows from before they were versioned are bare arrays of 1's, which
- * read as version 0
+ * The version of this normalization, named in every row. 2 adds the minute's polls, and on each fix the poll that
+ * first saw it. 1 is the tuples without them. Rows from before versioning are bare arrays of version 1's tuples,
+ * which read as version 0
  */
 export const RAW_VERSION = 2
 
@@ -176,7 +177,7 @@ export const observe = (rows: readonly ObservedRow[]): Observations => {
 export const encode = async (samples: readonly unknown[], polls: readonly RawPoll[]) =>
   new Uint8Array(await new Response(new Blob([JSON.stringify({ version: RAW_VERSION, samples, polls })]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer())
 
-/** A row, if it was packed by a version this reads, saying which, which fails for any later one rather than misread it */
+/** A row and the version it was packed by. Throws for a version it doesn't know rather than misread it */
 export const decode = async <T,>(body: Uint8Array<ArrayBuffer>): Promise<Row<T>> => {
   const row: unknown = JSON.parse(await new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream("gzip"))).text())
   if (Array.isArray(row))

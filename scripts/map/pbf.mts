@@ -39,8 +39,8 @@ export class TruncatedPbf extends Error {
 }
 
 /**
- * Each blob, still deflated, from a file's framing as its bytes come, which only once they've all come can say
- * whether it was cut short, as one with none at all was
+ * Each blob, still deflated, from a file's framing as its bytes come. Only once they've all come can it say whether
+ * the file was cut short. An empty file counts as cut short
  */
 const blobsOf = async function* (extract: AsyncIterable<Uint8Array>) {
   const frames = createOsmPbfBlobFrameGenerator()
@@ -59,7 +59,7 @@ const blobsOf = async function* (extract: AsyncIterable<Uint8Array>) {
   }
 }
 
-/** zlib, inflated in one go, as a blob is at most a few MB, up to the most it may hold */
+/** A zlib blob inflated in one go, as a blob is at most a few MB, capped at the size it declares */
 const inflate = async (data: Uint8Array, maxOutputLength?: number) =>
   new Uint8Array(inflateSync(data, { maxOutputLength }))
 
@@ -88,8 +88,8 @@ const readBlock = ({ stringtable, primitivegroup, granularity, lat_offset, lon_o
   const strings = stringtable.map(bytes => text.decode(bytes))
   const tagged = (keys: number[], values: number[]): Tags =>
     Object.fromEntries(keys.map((key, i) => [strings[key], strings[values[i]]]))
-  // @osmix/pbf gives the coding in degrees, which can't hold every stored decimal, so it's taken back to the
-  // billionths it's stored in, and each coordinate divided once, to read as exactly the decimal it was stored as
+  // @osmix/pbf gives the coding in degrees, which can't hold every stored decimal exactly. So it's taken back to the
+  // nanodegrees it's stored in, and each coordinate divided once, to read as exactly the decimal it was stored as
   const step = Math.round(1e9 / (granularity ?? 1e7))
   const [latOffset, lonOffset] = [lat_offset, lon_offset].map(offset => Math.round((offset ?? 0) * 1e9))
   const degrees = (offset: number, value: number) => (offset + step * value) / 1e9
@@ -178,10 +178,10 @@ const isWithin = ([west, south, east, north]: Box) => ({ lat, lon }: Point) =>
   lat >= south && lat <= north && lon >= west && lon <= east
 
 /**
- * The elements of an extract with tags wanted that reach into a box, as an Overpass query for them would answer it
- * with `out geom`: each way and relation with its outline and extent, and every node of the ways wanted besides, so
- * their paths can be followed past the box. Read in two passes, relations first, so only the ways that wanted
- * relations are made of are kept besides the wanted ways
+ * The elements of an extract with wanted tags that reach into a box, as an Overpass query with `out geom` would
+ * answer: each way and relation with its outline and extent, plus every node of the wanted ways, so their paths can
+ * be followed past the box. Read in two passes, relations first, so the only unwanted ways kept are the ones wanted
+ * relations are made of
  */
 export const elementsWithin = async (read: () => AsyncIterable<Uint8Array>, box: Box, isWanted: (tags: Tags) => boolean) => {
   const inside = isWithin(box)

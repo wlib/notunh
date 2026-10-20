@@ -208,7 +208,7 @@ test("each file of a newer build is swapped in as it loads, as the files join by
 })
 
 test("a newer build announced while a file first loads is loaded right after it, and one announced from an older release is ignored", async () => {
-  // Astra's sequence: A is loading when B is announced, and A completes
+  // A is still loading when B is announced, and A completes after
   const page = await load({ gtfs: "/assets/gtfs-AAAAAAAA.json" })
   let answerA: (value: string) => void = () => {}
   page.answers.set("/assets/gtfs-AAAAAAAA.json", () => new Promise(resolve => answerA = resolve))
@@ -323,7 +323,8 @@ test("the page asks for its copy to be checked on coming back into view and ever
   })
   port1.close()
 
-  // A newer file still loading is reported too, so the cache keeps it for the page's next try, and the one loaded until then
+  // A newer file still loading is reported too, so the cache keeps it for the page's next try, as well as the one
+  // loaded until then
   const slow = "/assets/tiles-BBBBBBBB.json"
   page.answers.set(slow, () => new Promise(() => {}))
   page.receive(headOf({ ...data, tiles: slow }))

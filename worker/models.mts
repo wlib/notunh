@@ -1,7 +1,8 @@
-// What the nightly build stores whole, each by name and a day: the models it publishes and its checkpoints of
-// learning them (scripts/learn.mts), the latest of each being the last stored, whatever day it runs through, kept a
-// month of writes back to go back to, and the timetable, archived once per version it sees, as of the day it first
-// did, so a day's visits can always be replayed against the timetable then in force
+// What the nightly build stores whole, each by name and day:
+// - the models it publishes, and its checkpoints of learning them (scripts/learn.mts). The latest of each is the
+//   last stored, whatever day it runs through, and the last KEEP writes are kept to roll back to
+// - the timetable (gtfs), archived once per feed version as of the day it was first seen, so a day's visits can
+//   always be replayed against the timetable then in force
 
 import type { DrizzleD1Database } from "drizzle-orm/d1"
 import { and, asc, desc, eq, lt, lte, max, sql } from "drizzle-orm"
@@ -12,16 +13,13 @@ import { models } from "./schema.mts"
 /** What there is: the map's buses, laundry's rooms, and the GTFS feed by version */
 export const MODELS = ["buses", "laundry", "gtfs"]
 
-/** What's stored: those, and the learned ones' checkpoints, which the build learns on from apart from what it publishes */
+/** What's stored: those, plus checkpoints of the learned ones, which the build continues from */
 export const STORED = [...MODELS, ...["buses", "laundry"].map(checkpointOf)]
 
-// Kept of each name, the last stored, one a night, or a feed version
+// Writes kept of each name: a month of nightly models, or the last 30 feed versions
 const KEEP = 30
 
-/**
- * The latest of a name, the last stored, or the latest through a day, as the only row if there is one, with its
- * revision
- */
+/** A name's latest state and its revision: the last stored, or given a day, the one through the latest day up to it */
 export const latestModel = (db: DrizzleD1Database, name: string, through?: Day) =>
   db.select({ state: models.state, revision: models.revision }).from(models)
     .where(and(eq(models.name, name), through === undefined ? undefined : lte(models.through, through)))
@@ -32,11 +30,10 @@ export const throughsOf = (db: DrizzleD1Database, name: string) =>
   db.select({ through: models.through }).from(models).where(eq(models.name, name)).orderBy(asc(models.through))
 
 /**
- * Stores a state through a day as the latest, replacing one through the same day, if the latest stored is still the
- * one the writer read, by its revision, or none: whether it was, which two builds learning at once settle by, as the
- * one that reads the other's work is the one that goes on from it. Every write is a new revision, so two writers
- * can't both succeed, and the latest is never through a later day than it's checked against. Those stored before
- * the last 30 go
+ * Stores a state through a day as the latest, replacing any through the same day, but only if the latest stored is
+ * still the revision the writer read (or there's none, for null). Resolves to whether it stored. This settles two
+ * builds learning at once: the loser rereads the winner's work and goes on from it. Every write gets a new revision,
+ * so two writers can't both succeed. Writes older than the last KEEP are deleted
  */
 export const saveModel = async (db: DrizzleD1Database, name: string, through: Day, state: unknown, expect: string | null) => {
   const { meta } = await db.run(sql`

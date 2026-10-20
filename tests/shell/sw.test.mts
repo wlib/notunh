@@ -72,8 +72,8 @@ test("a page we have comes from the cache at once, however long the network take
   expect(await textOf(response)).toContain("old-AAAAAAAA")
   expect(inits).toEqual([{ cache: "no-cache", signal: expect.any(AbortSignal) }])
 
-  // The network's newer copy is kept once everything it names is, with the one before as the page's previous
-  // generation, and only then sent to the page's windows
+  // The network's newer copy is kept once everything it names is. The copy before becomes the page's previous
+  // generation, and only then is the newer one sent to the page's windows
   const next = page(["/assets/old-AAAAAAAA.js"], { gtfs: "/assets/gtfs-BBBBBBBB.json" }, LATER)
   answer(next.clone())
   await done
@@ -261,8 +261,8 @@ test("installing keeps the home page whole, and activating lets go of every olde
   await sw.activate().done
   expect([...sw.stores.keys()]).toEqual(["app-v2"])
   expect(sw.paths()).toEqual(["/", "/assets/home-AAAAAAAA.js"])
-  // What one of the first worker's pages needs can't be told from it, so it isn't served without its data, but
-  // fetched afresh, and kept whole
+  // What one of the first worker's pages needs can't be told from it. So it isn't served without its data, but
+  // fetched afresh and kept whole
   const { response, done } = sw.navigate("/map/")
   expect(await textOf(response)).toContain("map-BBBBBBBB")
   await done
@@ -382,7 +382,7 @@ test("after a newer page comes in, what's kept is every cached page's current an
 })
 
 test("an open tab's build stays whole while other tabs bring in newer builds of its page and others", async () => {
-  // Astra's sequence: open map A, a newer map B comes, the A tab stays open, and the home page is navigated to unchanged
+  // Map A is open, a newer map B comes in while the A tab stays open, then the home page is navigated to unchanged
   const old = "/assets/map-AAAAAAAA.js"
   const sw = worker(async path =>
     path === "/map/" ? page(["/assets/map-BBBBBBBB.js"], {}, LATER) :
@@ -437,7 +437,7 @@ test("windows get a second to answer, and one that doesn't holds nothing up", as
 const tiles = (version: string) => ({ version, folders: [`/data/map/tiles/${version}/`] })
 
 test("a week's tiles are kept while a page or a window runs them, beside a newer week's, whichever was fetched last", async () => {
-  // Astra's sequence: the newer week's tiles are cached, then an old tab fetches a tile of its own week we didn't have
+  // The newer week's tiles are cached, then an old tab fetches a tile of its own week we didn't have
   const files = { A: "/assets/tiles-AAAAAAAA.json", B: "/assets/tiles-BBBBBBBB.json" }
   const sw = worker(async path =>
     path === "/map/"  ? page(["/assets/map-AAAAAAAA.js"], { tiles: files.B }, LATER) :
@@ -504,7 +504,7 @@ test("the style's folder is kept with the page that names it, so its sprite and 
 })
 
 test("a page whose large file can't be kept, though its small HTML could be, is never kept, and is once there's room", async () => {
-  // Astra's sequence: the quota has room for the page but not for the script it names
+  // The quota has room for the page but not for the script it names
   const big = "/assets/dining/index-BBBBBBBB.js"
   let isRoom = false
   const sw = worker(async path => path === "/dining/" ? page([big], {}, LATER) : file(path), [{ path: "/dining/" }], { isFull: key => key === big && !isRoom })
@@ -521,7 +521,7 @@ test("a page whose large file can't be kept, though its small HTML could be, is 
 })
 
 test("a file answering as something else with a 200, as a sign-in page at a hashed URL, is served but never kept, nor a page naming it, until the origin answers rightly", async () => {
-  // Astra's sequence: HTML at a JSON URL, then the right JSON there again
+  // HTML at a JSON URL, then the right JSON there again
   const url = "/assets/menus-BBBBBBBB.json"
   const portal = () => new Response("<!doctype html><form>Sign in to UNH-Guest</form>", { headers: { "content-type": "text/html" } })
   let isPoisoned = true

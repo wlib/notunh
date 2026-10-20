@@ -44,7 +44,7 @@ const CASING = widthAt(3.5, 7)
 // Each piece of a lane is pushed over on screen by its slot, so lanes stay a line width apart at any zoom
 const laneOffset = byZoom(zoom => ["*", ["get", "slot"], LANE(zoom)])
 
-// Chevrons scaled with lanes, a lane being this many of their pixels across, so they're pushed over by a fixed
+// Chevrons are scaled so a lane is this many of their icon pixels across. Their offset in icon pixels is then a fixed
 // multiple of the slot
 const CHEVRON_LANE = 3
 const CHEVRON_SIZE = (zoom: number) => LANE(zoom) / CHEVRON_LANE
@@ -155,7 +155,7 @@ export const addLayers = (map: MapLibre) => {
     layout: rounded,
     paint: { "line-color": ["get", "color"], "line-width": byZoom(LANE), "line-offset": laneOffset }
   })
-  // A slide's steps are too short for chevrons, except overzoomed, where they'd crowd
+  // Slide steps get no chevrons. They're too short to fit any, except overzoomed, where they'd crowd
   map.addLayer(arrows("routes-arrows", "routes", ["!", ["get", "isSliding"]]))
 
   map.addLayer({

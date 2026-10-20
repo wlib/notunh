@@ -1,7 +1,7 @@
-// Downloads the dining halls' menus from Nutrislice (behind unh.nutrislice.com) for this week and the next two,
-// as far ahead as UNH publishes, and splits them into the files the dining page loads: the index it bundles,
-// and the rest under public/data/dining/. Nutrislice doesn't send CORS headers, so this happens at build time,
-// and the site rebuilds nightly. With --if-missing, menus already there are kept
+// Downloads the dining halls' menus from Nutrislice (behind unh.nutrislice.com) for this week and the next two, as
+// far ahead as UNH publishes. Splits them into the files the dining page loads: the index it bundles, and the rest
+// under public/data/dining/. Nutrislice doesn't send CORS headers, so this happens at build time, and the site
+// rebuilds nightly. With --if-missing, menus already there are kept
 
 import { mkdir, rm, writeFile } from "node:fs/promises"
 import * as v from "valibot"
@@ -23,10 +23,10 @@ const WEEKS = 3
 if (await isKept(INDEX))
   process.exit(0)
 
-// Durham's, as UTC's is already tomorrow by a summer evening
+// Durham's day, as UTC's is already tomorrow by a summer evening
 const today = localDay(Date.now())
 
-// A school, its hours taken as they come, as nutrisliceHours reads them for what they turn out to be
+// A school, its hours fields unchecked here: nutrisliceHours checks each as it reads it
 const School = v.intersect([
   objectOf<NutrisliceSchool>(),
   v.object({ slug: v.string(), name: v.string(), active_menu_types: v.array(v.object({ slug: v.string() })) })
@@ -78,9 +78,9 @@ const data = convert(halls.map(({ id, name }) => ({ id, name })), weeks, Date.no
 if (!data.menus.length)
   throw new Error("Nutrislice has no menus posted")
 
-// The index goes last, so it only ever names files that are there, and the files published before stay as long as
-// a tab still on an index naming them may ask (publish.mts), fetched back from the site since a build starts from
-// nothing, with the record of them beside them for the next build
+// The index goes last, so it only ever names files that are there. Files published before stay as long as a tab
+// still on an index naming them may ask (publish.mts). A build starts from nothing, so they're fetched back from the
+// site, with the record of them written beside them for the next build
 const { index, files } = await publish(data, hours)
 const [serving, published] = await Promise.all([deployed("/dining/", "menus", MenusIndex), served(PUBLISHED, Published)])
 const carrying = carried(serving, published, index, Date.now())

@@ -1,8 +1,8 @@
-// Buses drawn where we expect them to be now: along their course from where the location model has them as of their
-// last fix (movement.mts), its legs at the pace the model expects and this bus has kept, slower pulling out and in
-// as buses are, and waiting at stops as long as they do, or as their trip does for its timetable, eased into each
-// new fix without backing up, and faded the longer it's been since one. The easing is the drawing's alone: what's
-// learned of how the buses run comes from the fixes, never from where one was drawn
+// Buses drawn where we expect them to be now. Each moves along its course (movement.mts) from where the location
+// model had it at its last fix. The course's legs run at the pace the model expects and this bus has kept, slower
+// pulling out and in as buses are, and wait at stops as long as buses do there, or as long as the trip holds for its
+// timetable. Each new fix is eased into without backing up, and a bus fades the longer it's been since one. The easing
+// is the drawing's alone: what's learned of how the buses run comes from the fixes, never from where one was drawn
 
 import { watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, Map as MapLibre } from "maplibre-gl"
@@ -36,7 +36,10 @@ type Fix = {
   correctedAt: number
 }
 
-/** Meters along its line that a fix's bus has likely got to by now, by our clock, which its course is timed from its fix by */
+/**
+ * Meters along its line that a fix's bus has likely got to by now. The course is timed from the fix, by our clock,
+ * and guessed at most MAX_EXTRAPOLATION past it
+ */
 const modeledDistance = ({ followed: { location, course }, isLayover, at }: Fix, now: number) =>
   isLayover || !course
     ? location!.distance
@@ -55,8 +58,8 @@ const drawn = (fix: Fix, now: number) => {
     return { ...ease({ point: [fix.vehicle.lon, fix.vehicle.lat], bearing: fix.vehicle.heading ?? 0 }), distance: 0 }
 
   const modeled = modeledDistance(fix, now)
-  // A bus drawn ahead of its fix waits there until the model catches up, rather than reversing,
-  // and one drawn behind hurries forward along the street
+  // A bus drawn ahead of its fix waits there until the model catches up, rather than reversing. One drawn behind
+  // hurries forward along the street
   const distance =
     fix.lag > 0
       ? Math.max(modeled, modeledDistance(fix, fix.correctedAt) + fix.lag)
@@ -72,7 +75,7 @@ export const animateBuses = (
   followed: Reactive<ReadonlyMap<string, Followed>>,
   /** Ids of buses on a layover */
   layovers: Reactive<ReadonlySet<string>>,
-  /** Buses to draw larger, with the rest faded, or routes whose buses are the ones to show */
+  /** Buses to draw larger with the rest faded, or a route whose buses stay bright with the rest faded */
   focus: Reactive<{ vehicles?: ReadonlySet<string>, route?: string }>
 ) => {
   let fixes = new Map<string, Fix>()

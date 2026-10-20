@@ -54,15 +54,9 @@ test("the buses are replayed as the map got their fixes, each once a poll got it
     expect(asGot(at + LAG / 1000)).toEqual(asTaken(at))
 })
 
-// How far off the model's forecasts were on the recording, in seconds at each lead, which changes to extraction or
-// the model should only bring down, or explain: measuring the ground on the WGS84 ellipsoid rather than three
-// flat-earth guesses moved every stop along its line by a few parts in a thousand; chaining from each bus's latest
-// visit, along its shape's meters and on through its layover, took them from 100, 145, 180, 260 and 410 to 75, 125,
-// 180, 230 and 265; following each bus with the location model, its fixes replayed as they came, and departures
-// read as when a bus leaves the stop rather than its zone, took them to 65, 120, 165, 175 and 260; and fitting what
-// the location model takes as likely to the fixes of Oct 7 to 19 took them to these, on a half hour whose 5 and 10
-// minutes ahead are 50 to 110 departures, where the twelve days held out moved by a second or less
-// (notunh-model-research/2026-10-19_probabilistic/)
+// How far off the model's forecasts were on the recording: mean absolute error in seconds at leads of 1, 3, 5, 10,
+// and 20 minutes. Changes to extraction or the model should only bring these down, or explain why. The 5- and
+// 10-minute leads rest on only 50 to 110 departures in this half hour, so a few seconds either way can be noise
 const MAE = [62, 116, 171, 192, 260]
 
 test("forecasts from the model do no worse on the recording than they did", () => {
@@ -75,4 +69,18 @@ test("forecasts from the model do no worse on the recording than they did", () =
   // And having learned from it, better still
   const learned = score(update(emptyModel(), DAY, visits, scored), feed, visits, fixes)
   expect(learned.model[0][1]).toBeLessThan(scored.model[0][1])
+})
+
+test("a bus Umo predicts at a stop for two loops is matched to its next visit by the sooner prediction", () => {
+  const [visit] = visits.filter(visit => visit.trip !== undefined)
+  // The sample a 5-minute lead reads, on the 5-minute grid the Worker polls predictions on
+  const at = Math.floor((visit.depart - 5 * 60) / 300) * 300 * 1000
+  const prediction = (minutes: number) =>
+    ({ route: visit.route, stop: visit.stop, vehicle: visit.vehicle, trip: null, at: visit.depart * 1000 + minutes * 60_000, isLayover: false })
+  for (const order of [[0, 40], [40, 0]]) {
+    const [matched] = attachPredictions([{ ...visit, umo: undefined }], [{ at, predictions: order.map(prediction) }])
+    const times = matched.umo?.filter(time => time !== null) ?? []
+    expect(times.length).toBeGreaterThan(0)
+    expect(times.every(time => time === visit.depart)).toBe(true)
+  }
 })

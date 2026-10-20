@@ -1,7 +1,7 @@
-// The service worker run against a world of its own: in-memory caches, which read a body whole to keep it, a
-// network that answers as told, can be offline, and gives up on a request when it's aborted, a quota that can be
-// full, for every put or only some, windows open at paths that say what they run when asked, and timers faked, so
-// the worker can be restarted, driven step by step, and left to settle
+// The service worker run against a world of its own. Caches are in memory and read a body whole to keep it. The
+// network answers as told, can be offline, and gives up on a request when it's aborted. The quota can be full, for
+// every put or only some. Windows open at paths say what they run when asked. Timers are faked, so the worker can be
+// restarted, driven step by step, and left to settle
 
 import { vi } from "vitest"
 import type { Generation } from "../../src/shell/manifest.mts"
@@ -191,7 +191,7 @@ const TURNS = 1000
 
 /**
  * A promise once it settles, with the faked clock run forward as long as it takes, as the worker's waits for windows
- * time out; anything the fake timers don't catch gets a turn of the real event loop
+ * time out. Anything the fake timers don't catch gets a turn of the real event loop
  */
 export const settled = async <T,>(promise: Promise<T>): Promise<T> => {
   let isDone = false

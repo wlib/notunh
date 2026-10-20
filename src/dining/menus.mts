@@ -1,5 +1,5 @@
-// Dining hall menus: converted from Nutrislice by scripts/dining/convert.mts, then split by
-// scripts/dining/publish.mts into the files the dining page loads, and how to filter them
+// Dining hall menus' shapes and filters. scripts/dining/convert.mts converts the menus from Nutrislice, then
+// scripts/dining/publish.mts splits them into the files the dining page loads
 
 import * as v from "valibot"
 import type { Ingredient } from "./ingredients.mts"
@@ -121,7 +121,7 @@ export const MenusIndex = v.object({
   days:     objectOf<Record<string, Record<Day, { file: string, meals: string[] }>>>(),
   /** The file with every SearchFood */
   search:   v.string(),
-  /** Every file in use, by path, which the service worker keeps with the index (src/shell/manifest.mts' Retain) */
+  /** Every file in use, by path, which the service worker keeps with the index (Retain in src/shell/manifest.mts) */
   files:    v.array(v.string())
 })
 export type MenusIndex = v.InferOutput<typeof MenusIndex>

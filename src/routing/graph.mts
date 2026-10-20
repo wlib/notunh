@@ -96,10 +96,9 @@ export const componentOf = (graph: Graph, { edge }: Anchor) =>
   graph.component[graph.ends[2 * edge]]
 
 /**
- * Where a place joins the network: the nearest points of up to `count` paths passing within some meters of it,
- * nearest first, as the nearest path isn't always the best way in, and the nearest path of each other part of the
- * network within reach besides, so a place beside a path nothing else reaches is still walked from the part its
- * stops are on
+ * Where a place joins the network: the nearest points of up to `count` paths within `within` meters, nearest first,
+ * as the nearest path isn't always the best way in. The nearest path of each other part of the network within reach
+ * is added besides, so a place beside an isolated path is still walked from the part its stops are on
  */
 export const anchors = (graph: Graph, place: Point, within: number, count = 1): Anchor[] => {
   // The box is measured at the place's latitude and each path by its own ruler, which agree to a part in a hundred

@@ -1,5 +1,6 @@
 // The laundry machines' live status, from LaundryConnect Live (laundryconnectlive.com), the web app for the rooms'
-// Speed Queen machines. It has no CORS, so only the Worker and the build ask it, and only the Worker per room
+// Speed Queen machines. It sends no CORS headers, so only the Worker and the build scripts ask it. Pages go through
+// the Worker, which forwards the asker's own User-Agent (worker/laundry.mts)
 
 import * as v from "valibot"
 import { getJson, usable } from "../shared/json.mts"

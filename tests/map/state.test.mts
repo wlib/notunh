@@ -46,8 +46,8 @@ afterEach(() => {
 })
 
 /**
- * The map's state loaded afresh at a time, with Umo answering with whatever umo is set to, or failing while it's
- * undefined, a phone whose location is shared as told, and the page opened at a query
+ * The map's state loaded afresh at a time, with the page opened at a query. Umo answers with whatever umo.vehicles is
+ * set to, or fails while it's undefined. The phone's location is shared as told, and files answer for their URLs
  */
 const load = async ({ at = NOON, saved = {} as Record<string, unknown>, permission = "granted", isUmoUp = true, search = "", files = {} as Record<string, unknown> } = {}) => {
   const page = fakePage({ at, saved: Object.fromEntries(Object.entries(saved).map(([key, value]) => [key, JSON.stringify(value)])), data: DATA })

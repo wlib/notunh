@@ -1,6 +1,6 @@
-// A bus driving a loop as buses do, for tests: speeding up from each stop it waits at, cruising, braking into the
-// next, going straight through those it doesn't wait at, and reporting fixes at uneven intervals, with when it
-// really got to and left each stop to check what's read of its fixes against
+// A bus driving a loop as buses do, for tests. It speeds up from each stop it waits at, cruises, brakes into the next,
+// and goes straight through those it doesn't wait at. It reports fixes at uneven intervals, and keeps when it really
+// got to and left each stop, to check what's read of its fixes against
 
 import fc from "fast-check"
 import { serviceDayStart, withIndexes, type Feed } from "../../src/transit/feed.mts"
@@ -62,7 +62,7 @@ export type Stay = { stop: number, lap: number, arrive: number, depart: number }
 /**
  * A bus driving two loops from the first stop, waiting at each stop as long as its waits say in turn, laying over
  * between loops, tagged with each loop's trip, reporting at the intervals of `every` in turn, on for a minute after
- * @returns its fixes, shuffled a little as they'd arrive, with some sent twice, and when it got to and left each stop
+ * @returns its fixes, out of order as they may arrive, with some sent twice, and when it got to and left each stop
  */
 export const drive = (feed: Feed, { cruise, waits, layover, every }: { cruise: number, waits: number[], layover: number, every: number[] }) => {
   const line = routeLines(feed).get("R")![0]
@@ -137,6 +137,6 @@ export const drive = (feed: Feed, { cruise, waits, layover, every }: { cruise: n
     const trip = lap === 0 || (lap === 1 && distance - line.length < 1 && stays.find(stay => stay.stop === 0 && stay.lap === 1)!.depart > t) ? "T0" : "T1"
     fixes.push({ vehicle: "V", at: Math.round(t) * 1000, lat, lon, heading: Math.round(bearing), kph: Math.round(speed * 3.6), trip, route: "R", stop: null })
   }
-  // Polled twice across a minute boundary, and one arriving out of order
+  // Some polled twice, as across a minute boundary, and all arriving out of order
   return { fixes: [...fixes, ...fixes.filter((_, i) => i % 7 === 0)].reverse(), stays, line, every }
 }

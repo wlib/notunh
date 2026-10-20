@@ -1,7 +1,7 @@
-// Which bus you're on: one you said, or one your phone has been moving with, suggested for you to confirm.
-// Each time a bus reports, where you were at that same moment says whether you're on it, which is far surer
-// than comparing against where the bus is guessed to be by now. While you're on it and your phone agrees,
-// your phone's fixes, about one a second, stand in for the bus's own every 10 to 30
+// Which bus you're on: one you said, or one your phone has been moving with, suggested for you to confirm. Each time a
+// bus reports, where you were at that same moment says whether you're on it. That's far surer than comparing against
+// where the bus is guessed to be by now. While you're on it and your phone agrees, your phone's fixes, about one a
+// second, stand in for the bus's own, which come every 10 to 30 seconds
 
 import { r, watch } from "bruh/reactive"
 import { type Following, follow } from "../../geo/follow.mts"
@@ -19,7 +19,7 @@ import { HOUR } from "../../shared/time.mts"
 
 // A ride is over this long after the last word of it, though no bus ride takes nearly as long
 const RIDE_MS = 2 * HOUR
-/** The bus you're on, by vehicle id, remembered so a reload, as for newer code, doesn't forget it */
+/** The bus you're on, by vehicle id, remembered so a reload, like one for newer code, doesn't forget it */
 export const riding = remembered<string | undefined>("map-riding",
   stored => {
     const { id, at } = Object(stored) as { id?: unknown, at?: unknown }
@@ -131,7 +131,8 @@ export const decline = (id: string) => {
 
 // Further than this from the bus's route, you've stepped off it, or your GPS has wandered off the street
 const ON_ROUTE = 25 // m
-// How far along its route a bus can get between your fixes, beyond which a fix has found some other stretch of it
+// The fastest a bus moves along its route. A fix further along than that since the last has found some other stretch
+// of it
 const MAX_SPEED = 25 // m/s
 
 /** Where on the route of the bus you're on you are, while you're on it, as a bus can't leave the street */

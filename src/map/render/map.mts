@@ -76,8 +76,8 @@ export const createMap = (
       layers: [...style.layers, ...previous?.layers.filter(layer => "source" in layer && ours.some(([id]) => id === layer.source)) ?? []]
     }, location.origin)
   }
-  // A newer build's style comes in as the differences from the one showing, so nothing flickers. It's loaded with
-  // its manifest, so what's applied is always what's had
+  // A newer build's style comes in as the differences from the one showing, so nothing flickers. It's loaded together
+  // with its manifest, so the map never applies a style it doesn't have
   let styleUrl: string | undefined
   watch([state.style], () => {
     const { url, style } = state.style.value

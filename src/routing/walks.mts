@@ -1,6 +1,6 @@
-// Walking: how far it is and which way, along Durham's streets and paths where the walking network joins both
-// ends, from a building's nearest door where the gazetteer knows its doors, and otherwise an estimate: a straight
-// line a quarter longer, which the map draws as the guess it is
+// Walking: how far it is and which way. Where the walking network joins both ends, a walk goes along Durham's streets
+// and paths, from a building's nearest door where the gazetteer knows its doors. Otherwise it's an estimate: a
+// straight line, allowed more time, which the map draws as the guess it is
 
 import { type Following, type Tracking, follow } from "../geo/follow.mts"
 import type { Line } from "../geo/lines.mts"
@@ -27,7 +27,7 @@ export const walkSeconds = (meters: number) =>
 /** How a walk is known: along the network, or a straight line's estimate where the network doesn't join its ends */
 export type Via = "network" | "estimate"
 
-/** How long to allow for a walk, for a slow day or a longer way round, and more for an estimate, which may be a longer way round indeed */
+/** How long to allow for a walk, for a slow day or a longer way round. An estimate gets more, as its way round is a guess */
 export const walkAllowance = (meters: number, via: Via) =>
   Math.round(walkSeconds(meters) * (1 + (via === "estimate" ? ESTIMATE_WIGGLE : WALK_WIGGLE)))
 

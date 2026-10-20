@@ -1,10 +1,11 @@
-// The service worker against a model of what the world is allowed to know, over generated sequences of what
-// happens to it: releases published, and earlier ones published again as new, as a rollback is, the map's with a style that requires its style.json and keeps its folder, and
-// tiles kept by folder, windows opening pages, asking for their files, and closing, going offline, the quota
-// filling, for every file, only the large ones, or until the worker next lets go of something, for every file or
-// only pages, the origin answering a sign-in page in place of a data file, the network holding a page's files while
-// anything else happens, the worker restarted, killed in the middle of taking a page in, upgraded from the first
-// worker's cache, and windows freezing, as in the back-forward cache, so they can't say what they run
+// The service worker against a model of what the world is allowed to know, over generated sequences of events.
+// Releases are published, and earlier ones published again as new, as a rollback is. The map's data names a style
+// that requires its style.json and keeps its folder, and tiles kept by folder. Windows open pages, ask for their
+// files, close, and freeze, as in the back-forward cache, so they can't say what they run. The network goes offline,
+// holds a page's files while anything else happens, or the origin answers a sign-in page in place of a data file. The
+// quota fills for every file, only the data files, or until the worker next lets go of something, for every file or
+// only pages. The worker is restarted, killed in the middle of taking a page in, and upgraded from the first worker's
+// cache
 
 import { test, expect, vi, beforeEach, afterEach } from "vitest"
 import fc from "fast-check"
@@ -70,8 +71,9 @@ const next = (releases: Release[], shared: boolean, changes: Record<string, "cod
 }
 
 /**
- * How full the origin's quota is: for every put, or only the data files', the large ones, while pages still fit; or
- * until the worker next lets go of something, for every put or only pages', when what it lets go of makes room
+ * How full the origin's quota is. "all" refuses every put, and "data" only the data files', the large ones, while
+ * pages still fit. The "until pruned" kinds refuse every put, or only pages', until the worker next lets go of
+ * something, which makes room
  */
 type Quota = "none" | "all" | "data" | "until pruned" | "pages until pruned"
 
@@ -165,9 +167,9 @@ const createHarness = () => {
 type Harness = ReturnType<typeof createHarness>
 
 /**
- * What a revalidation, by what it saw as it began, makes of the page's copy: nothing, for an older release, as from
- * an edge not yet caught up or a platform rollback, or offline; a newer release of the same build, which only renames it; or
- * a newer build, which it takes in, fetching what's missing of it
+ * What a revalidation makes of the page's copy, by what it saw as it began. Offline, or from a release no newer than
+ * the copy's, as from an edge not yet caught up or after a platform rollback, nothing. A newer release of the same
+ * build only renames the copy. A newer build is taken in, fetching what's missing of it
  */
 const changeOf = (m: Model, h: Harness, page: string, seen: Seen) => {
   const cached = m.stored.get(page)?.[0]
@@ -192,8 +194,8 @@ const taken = (m: Model, h: Harness, page: string, seen: Seen) => {
       m.stored.set(page, [seen.published, ...rest])
     return
   }
-  // A newer build is kept only with every file it needs kept, and whole: not with the quota full for any of them,
-  // nor, for a data file it had to fetch, with the quota full for data or the origin answering a sign-in page for it.
+  // A newer build is kept only whole, with every file it needs kept. So not with the quota full for every put, nor,
+  // when it had to fetch a data file, with the quota full for data or the origin answering a sign-in page for it.
   // A data file it had to fetch and couldn't keep isn't in the cache now either, which is how the model tells. A
   // quota full until the worker lets go of something is no matter, as it lets go of what nothing needs first
   const missing = closureOf(h.releases[seen.published], page).some(path => path.endsWith(".json") && !h.sw.has(path))
@@ -217,11 +219,11 @@ const storedIn = async (h: Harness, page: string) => {
 }
 
 /**
- * What must hold whatever has happened: every copy of a page in the cache is whole, so it opens offline; nothing an
+ * What must hold whatever has happened. Every copy of a page in the cache is whole, so it opens offline. Nothing an
  * open window's build needs that was there has gone, while the window can answer for itself or its page's copies
- * still cover its release, which is the policy, a frozen window older than its page's previous generation being
- * brought up to date when it resumes rather than kept whole; and the cache agrees with the model about which
- * releases each page is kept from
+ * still cover its release. That's the policy: a frozen window older than its page's previous generation is brought
+ * up to date when it resumes rather than kept whole. And the cache agrees with the model about which releases each
+ * page is kept from
  */
 const verify = async (m: Model, h: Harness) => {
   for (const page of PAGES) {
@@ -254,8 +256,8 @@ const isOpen = (m: Model, { window }: { window: string }) => m.windows.has(windo
 const isFree = (m: Model) => !m.holding
 
 /**
- * A revalidation's outcome, modelled now, or once the hold is released if it waits on the network, which it does
- * while the network holds a file it has to fetch, or another revalidation ahead of it in the worker's turn
+ * A revalidation's outcome, modelled now, or once the hold is released if it waits on the network. It waits while the
+ * network holds a file it has to fetch, or behind another revalidation ahead of it in the worker's turn
  */
 const revalidated = async (m: Model, h: Harness, page: string, seen: Seen, { pending, done }: { pending: Promise<unknown>, done: Promise<unknown> }) => {
   const fetches = changeOf(m, h, page, seen) === "build" && closureOf(h.releases[seen.published], page).some(path => !h.sw.has(path))
@@ -331,8 +333,9 @@ const freeze = command<{ window: string, isFrozen: boolean }>(({ window, isFroze
 })
 
 /**
- * A window asks for every file of its build, as its code does lazily, which must come, and stay, however it comes,
- * and a file of each folder its data keeps, which must come, though it may be let go for room
+ * A window asks for every file of its build, as its code does lazily, and a file of each folder its data keeps. Each
+ * comes if it was cached or the network is up. The build's files must then stay, while a folder's may be let go for
+ * room
  */
 const request = command<{ window: string }>(({ window }) => `Request(${window})`, (m, a) => isOpen(m, a) && isFree(m), async (m, h, { window }) => {
   const { page, release } = m.windows.get(window)!

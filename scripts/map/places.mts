@@ -2,7 +2,7 @@
 // laundry vendor puts every room at the same spot, so rooms are matched to their residence halls by name instead,
 // against the campus's buildings in the gazetteer, which scripts/map/osm.mts refreshes. Run after the laundry rooms
 // and dining menus, whose names it reads. With --if-missing, places already there are kept while they were derived
-// from the same gazetteer, rooms, menus, and code, which the file names by a hash
+// from the same gazetteer, rooms, menus, and code, which the file records as a hash
 
 import { readFile, writeFile } from "node:fs/promises"
 import { Readable } from "node:stream"

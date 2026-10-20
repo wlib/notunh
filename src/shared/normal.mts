@@ -22,8 +22,8 @@ export const probit = (p: number): number => {
 }
 
 /**
- * How much longer than some seconds something log-normally long, with a mean log and a spread, lasts on average,
- * once it's lasted them: far into its tail, where the ratio of the two tails loses its precision, as that tends to
+ * The mean remaining duration of something log-normally long (mean log mu, spread sigma) once it has lasted elapsed,
+ * in the same unit. Far into the tail (z > 3) the ratio of the two tails loses precision, so its asymptote is used
  */
 export const meanResidual = (mu: number, sigma: number, elapsed: number) => {
   if (elapsed <= 0)

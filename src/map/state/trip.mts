@@ -95,8 +95,8 @@ export const progress = r<Progress>()
 /** Where you are, as a place to plan from, moving only by enough to matter to a plan, or on leaving the walk */
 const you = r<Place>()
 
-// Each fix follows you along the walk from you, read without depending on it, as you moving plans that walk again.
-// Off it for a few fixes in a row, a new way is planned from where you are, and followed afresh
+// Each fix follows you along the walk from you. The itinerary is read without depending on it, as you moving replans
+// that walk. Off it for a few fixes in a row, a new way is planned from where you are, and followed afresh
 watch([location], () => {
   const fix = location.value
   if (!fix)
@@ -170,8 +170,8 @@ export const directTo = async (place: Place) => {
 }
 
 // A link from the laundry or dining pages, like /map/?to=laundry/stoke-hall-g05, gives directions from where you are
-// to the building, over any trip kept from earlier, and is then forgotten, so a reload keeps the trip as you've
-// changed it since. Links to anywhere unknown are ignored
+// to the building, replacing any trip kept from earlier. The link is then dropped from the URL, so a reload keeps the
+// trip as you've changed it since. Links to anywhere unknown are ignored
 const link = new URLSearchParams(globalThis.location.search).get("to")
 if (link !== null) {
   history.replaceState(history.state, "", globalThis.location.pathname)
@@ -182,9 +182,9 @@ if (link !== null) {
   }
 }
 
-// Start from the current location if the user already allowed it, and otherwise don't keep a trip from or to
-// where you were, as there's no following you from there. Browsers without the permissions API, before iOS 16,
-// keep it until you next locate yourself
+// Start from the current location if the user already allowed it. Otherwise don't keep a trip from or to where you
+// were, as there's no following you from there. Browsers without the permissions API keep it until you next locate
+// yourself
 navigator.permissions?.query({ name: "geolocation" })
   .then(async status => {
     if (status.state !== "granted") {

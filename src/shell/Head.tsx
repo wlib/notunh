@@ -2,14 +2,14 @@
 
 import { SURFACE } from "./theme.mts"
 
-// When this build was made, once for every page of it, which orders releases: a copy of a page from an edge not
-// yet caught up is told from a newer one by it (src/sw/worker.mts)
+// When this build was made, the same for every page of it. It orders releases, so a copy of a page from an edge not
+// yet caught up can be told from a newer one (manifest.mts' isOlder)
 const RELEASE = new Date().toISOString()
 
 /**
- * The <head> every page shares, around its own title, description, entry script, and data files, each by a name
- * and its source, which the build hashes. They're preloaded alongside the code, and the page finds them here by
- * name (manifest.mts), so a newer build's data can be told from its code and swapped in
+ * The <head> every page shares, around its own title, description, entry script, and data files. Data files are
+ * given by name and source path, and the build hashes them. They're preloaded alongside the code, and the page finds
+ * them here by name (manifest.mts), so a newer build's data can be told apart from its code and swapped in
  */
 export const Head = ({ title, description, script, data = {} }: {
   title:       string,

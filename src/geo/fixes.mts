@@ -1,6 +1,6 @@
-// The phone's own position fixes: which to keep, where they put you between fixes, and whether they put you
-// on a bus. iOS has already blended GPS, Wi-Fi, and motion into each fix, so they're used as they come rather
-// than filtered again, which would only lag behind real turns
+// The phone's own position fixes: which to keep, where they put you between fixes, and whether they put you on a
+// bus. iOS has already blended GPS, Wi-Fi, and motion into each fix, so fixes are used as they come. Filtering them
+// again would only lag behind real turns
 
 import { type Coordinates, angleBetween, distance, project } from "./projection.mts"
 
@@ -27,8 +27,8 @@ export const MIN_SPEED = 1 // m/s
 const MAX_RECKON = 3_000 // ms
 
 /**
- * Poor fixes, from the phone losing GPS for a moment, are dropped while a good one is recent, and so are fixes
- * older than the last, as a watch started afresh can hand back a cached one first
+ * Poor fixes, from the phone losing GPS for a moment, are dropped while a good one is recent. Fixes older than the
+ * last are dropped too, as a watch started afresh can hand back a cached one first
  */
 export const isWorthTaking = (last: Fix | undefined, next: Fix) =>
   !last || next.at >= last.at && (next.accuracy <= POOR || last.accuracy > POOR || next.at - last.at > GOOD_FOR)
@@ -56,16 +56,16 @@ export const fixAt = (history: readonly Fix[], at: number): Fix | undefined => {
   return { ...b, lat: a.lat + (b.lat - a.lat) * t, lon: a.lon + (b.lon - a.lon) * t, at }
 }
 
-// At the same moment, closer than this is riding the bus, and further is not, with a margin between for GPS
-// and the bus's report being off by a second or so
+// At the same moment, closer than WITH is riding the bus and further than APART is not. The margin between allows for
+// GPS error and the bus's report being off by a second or so
 const WITH = 60    // m
 const APART = 150  // m
 // Moving buses and riders heading further apart than this are going different ways
 const MAX_TURN = 60 // degrees
 
 /**
- * Whether you were on a bus when it reported, from where you were at that same moment:
- * "with" it, "apart" from it, or undefined when it's too close to tell
+ * Whether you were on a bus when it reported, from where you were at that same moment: "with" it, "apart" from it,
+ * or undefined when it can't tell, between the two distances or close by but heading another way
  */
 export const compare = (bus: { lat: number, lon: number, heading?: number | null, kph?: number | null }, you: Fix) => {
   const meters = distance(bus, you)

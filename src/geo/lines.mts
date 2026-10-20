@@ -65,9 +65,9 @@ const CLOSE = 50 // m
 const FAR = 200  // m
 
 /**
- * Meters along a line of each of some points in order along it: the closest point of the first close approach
- * after the one before, so a loop passing a point twice keeps them in order, and never before the one before,
- * which may be partway along the same segment
+ * Meters along a line of each of some points in order along it. Each is the closest point of the first close
+ * approach after the one before, so a loop passing a point twice keeps them in order. None comes before the one
+ * before it, which may be partway along the same segment
  */
 export const positionsAlong = (line: Line, points: Point[]) => {
   const { coordinates, distances } = line

@@ -1,21 +1,23 @@
-# Archives what the Worker observed, every completed service day's samples of the buses and Umo's predictions with
-# the polls that took them, losslessly, as src/transit/observations/archive.mts says: each day is published as its own immutable
-# release, observations-<day>, holding observations-<day>.ndjson.zst (gzipped .ndjson.gz before 2026-10-20) and its
-# manifest.json, which names the file, and then merged into the catalog every reader and the Worker's nightly prune
-# go by, catalog.json on the observations release, uploaded last, so a day is in the catalog only once its archive is
-# whole. The Worker keeps a day's samples in D1 two weeks once the catalog lists it, and 60 days while it doesn't, so
-# a run that fails is made up by the next, which looks back a week, or by hand within the 60 days:
-# `gh workflow run archive.yml -f from=2026-10-07 -f to=2026-10-13`.
-# It reads the Worker's rows with the repository secret BUILD_TOKEN, the Worker's own (`wrangler secret put
-# BUILD_TOKEN`), and asks nothing of Umo. GitHub pauses schedules after 60 days without a commit, so the Worker's
-# nightly run also dispatches this when it has a token for it (worker/index.mts); a day already published is left as
-# it is, so the two can't publish it twice
+# Archives what the Worker observed on each completed service day: the buses' fixes, Umo's predictions, and the polls
+# that took them, losslessly (format in src/transit/observations/archive.mts). Each day is its own immutable release,
+# observations-<day>, holding observations-<day>.ndjson.zst (.ndjson.gz for days archived before 2026-10-20) and a
+# manifest.json naming the file. Its manifest is then merged into catalog.json on the observations release. The
+# catalog is uploaded last, so a day is listed only once its archive is whole.
+#
+# The Worker keeps a day's samples in D1 for RETAIN_ARCHIVED_DAYS (14) once the catalog lists it, and RETAIN_DAYS
+# (60) while it doesn't. A failed run is made up by the next, which looks back a week, or by hand within
+# the 60 days: `gh workflow run archive.yml -f from=2026-10-07 -f to=2026-10-13`.
+#
+# Needs the repository secret BUILD_TOKEN, the same value as the Worker's (`wrangler secret put BUILD_TOKEN`), to read
+# its rows. Asks nothing of Umo. GitHub pauses schedules after 60 days without a commit, so the Worker's nightly run
+# also dispatches this when it has a GITHUB_TOKEN (worker/index.mts). A day already published is left as it is, so
+# the two can't publish it twice
 
 name: Observations
 
 on:
   schedule:
-    # 9:30 UTC, after the Worker's nightly run, when the service day before has long settled
+    # 9:30 UTC, after the Worker's nightly run at 8:17, when the service day before has long settled
     - cron: "30 9 * * *"
   workflow_dispatch:
     inputs:
@@ -45,8 +47,8 @@ jobs:
           cache: npm
       - run: npm ci
       # A day is immutable once its manifest is up, so one published before is only merged into the catalog again,
-      # never replaced. A release a run left without its manifest was never in the catalog, so the samples are still
-      # in D1, and it's filled in again, the file before the manifest that marks it whole
+      # never replaced. A release a failed run left without its manifest was never in the catalog, so its samples are
+      # still in D1 and it's filled in again: the file first, then the manifest that marks it whole
       - name: Publish each day
         run: |
           mkdir -p archive
@@ -70,8 +72,8 @@ jobs:
           BUILD_TOKEN: ${{ secrets.BUILD_TOKEN }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-      # The catalog is made once with its release and only ever merged into after, so one that can't be read fails
-      # the run rather than be replaced by tonight's days alone
+      # The catalog is made once with its release and only merged into after. One that can't be read fails the run
+      # rather than be replaced by tonight's days alone
       - name: Update the catalog
         run: |
           ls archive/*.json >/dev/null 2>&1 || { echo "Nothing to catalog"; exit 0; }

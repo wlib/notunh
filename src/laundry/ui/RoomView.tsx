@@ -1,8 +1,7 @@
 /** @jsxImportSource bruh/browser */
 
-// One room: its washers and dryers by number, so yours is easy to find, except when none of a kind is free, when
-// they come soonest first with a bar each, so the wall answers whether to walk over now; and when the room is
-// usually busy
+// One room: its washers and dryers by number, so yours is easy to find, and when the room is usually busy. When none
+// of a kind is free, they're shown soonest first with a wait bar each, so the wall answers whether to walk over now
 
 import { r } from "bruh/reactive"
 import { KINDS, assessRoom } from "../infer.mts"

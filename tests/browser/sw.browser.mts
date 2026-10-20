@@ -67,7 +67,7 @@ test("an old tab keeps working while another tab brings in a new release, and th
   const other = await open(context, `${fixture.origin}/dining/`)
   await cachedFrom(other, "/dining/", RELEASE.B)
   await cachedFrom(other, "/dining/?gen=prev", RELEASE.A)
-  // The unchanged navigation that used to prune
+  // Navigations that change nothing, which must not let go of the old tab's files
   await other.goto(`${fixture.origin}/`)
   await other.goto(`${fixture.origin}/`)
   await fixture.setOffline(true)

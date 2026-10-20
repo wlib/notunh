@@ -1,36 +1,35 @@
-// How a bus is expected to move on from where it is, as one course: each leg between stops taking as long as the
-// model expects it to at this time of day, scaled by how much slower or quicker this bus has lately been driving
-// (its pace), its time spent along the leg as buses' is (slower pulling out and in, and wherever the leg holds them
-// up), and each stop as long as buses spend there, or until its scheduled time where it waits for that. The course
-// is read for when the bus leaves each stop ahead, which is the forecast (forecast.mts), and for where it is at
-// any moment, which is where the map draws it (buses.mts), so the two never disagree. Where the bus is comes from
-// the location model (locate.mts), and its pace from the legs that model has seen it drive
+// How a bus is expected to move on from where it is, as one course. Each leg between stops takes as long as the
+// model expects at this time of day, scaled by how much slower or quicker this bus has lately been driving (its
+// pace). Its time along the leg is spent as buses' is: slower pulling out and in, and wherever the leg holds them
+// up. Each stop takes as long as buses spend there, or until its scheduled time where the bus waits for that.
+//
+// The course is read for when the bus leaves each stop ahead, which is the forecast (forecast.mts), and for where it
+// is at any moment, which is where the map draws it (src/map/render/buses.mts), so the two never disagree. Where the
+// bus is comes from the location model (locate.mts), and its pace from the legs that model has seen it drive
 
 import type { Model } from "./model.mts"
 import { legMu, lingerEstimate, profileEstimate, zoneEstimate } from "./estimates.mts"
 import { type Location, stopAhead, stopDistance, stopId } from "../inference/locate.mts"
 import { meanResidual } from "../../shared/normal.mts"
 
-// A bus's pace drifts back to usual over about PACE_MEMORY, and strays from it by about PACE_SIGMA, while a leg
-// strays from what the bus's pace makes it by about LEG_SIGMA, all in log s; fitted on Oct 7 to 19, all three
-// stable from one held-out day to the next. Neither starting the pace afresh after a break or a long layover, nor
-// a slower pace for each bus at each time of day, foretold legs any better
-// (notunh-model-research/2026-10-19_probabilistic/)
+// A bus's pace drifts back to usual over about PACE_MEMORY, and strays from it by about PACE_SIGMA. A leg strays
+// from what the bus's pace makes it by about LEG_SIGMA. Sigmas are in log s. All three were fitted on Oct 7 to 19
+// and stable from one held-out day to the next. Neither resetting the pace after a break or a long layover, nor a
+// pace for each bus at each time of day, foretold legs any better
 export const PACE_MEMORY = 3600 // s
 const PACE_SIGMA = 0.064
 export const LEG_SIGMA = 0.17
-// A bound rather than an estimate: a leg further off than this, 2.7 times as long as expected or more, as 0.65 %
-// are, counts as only this far off. Weighing each leg by how likely it is to have been driven at the bus's pace
-// rather than held up, by the mixture the legs fit, rather than bounding them, gained a second at a minute ahead
-// but lost 25 to 35 s at 20 and 30 minutes on Oct 17, a slow day, whose long legs it took for hold-ups
+// A bound rather than an estimate: a leg further off than this in log s (2.7 times as long as expected or more, as
+// 0.65 % are) counts as only this far off. A mixture weighing each leg as driven or held up instead lost 25 to 35 s
+// at 20 and 30 minutes ahead on a slow day, whose long legs it took for hold-ups
 const MAX_EXCESS = 1
 // Before anything's been learned: how fast buses drive, how long they spend at a stop, and how much longer one
 // already there stays
 export const DEFAULT_RATE = 6 // m/s
 const DEFAULT_DWELL = 10 // s
 const DEFAULT_LINGER = 30 // s
-// A bus seen halted between stops is halted, all told, a median HALT, with a log spread of HALT_SPREAD, as fitted
-// on Oct 7 to 19; and what's left of a stay or a leg is only so sure
+// A bus seen halted between stops is halted, all told, a median HALT with a log spread of HALT_SPREAD, fitted on
+// Oct 7 to 19. CURRENT_SPREAD is how sure what's left of a stay at a stop is, as a share of it
 const HALT = 24.5 // s
 const HALT_SPREAD = 0.76
 const CURRENT_SPREAD = 0.35
@@ -172,10 +171,10 @@ export const course = (model: Model, way: readonly Waypoint[], where: Whereabout
 }
 
 /**
- * The rest of a leg a bus is partway along, which its pace is already in, and held up first if it's stopped: from
- * as far as it's seen to have got, or with nothing seen since it left, as far as the time since says, with some
- * always left. From the speed it's going, where that's known, which says more of the next few seconds than the leg
- * does, settling toward the pace that gets it to the next stop when expected
+ * The rest of a leg a bus is partway along, which its pace is already in, held up first if it's halted. It starts
+ * from as far as it's seen to have got, or with nothing seen since it left, as far as the time since says, with some
+ * always left. Where its speed is known, that says more of the next few seconds than the leg does, settling toward
+ * the pace that gets it to the next stop when expected
  * @returns how far along it is, how long it takes from here, what share of the leg is left, and the knots of its
  * drive from here, as seconds from now and meters along the leg
  */

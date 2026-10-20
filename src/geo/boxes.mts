@@ -1,5 +1,5 @@
-// Boxes and outlines, in one order everywhere: west, south, east, north, as GeoJSON's bounding boxes are. Whatever
-// has them another way, like OpenStreetMap or Photon, is turned into this at the edge
+// Boxes and outlines. Boxes are west, south, east, north everywhere, as GeoJSON's bounding boxes are. Sources that
+// order them another way, like OpenStreetMap or Photon, are converted at the edge
 
 import Flatbush from "flatbush"
 import type { Coordinates, Point } from "./projection.mts"
@@ -7,7 +7,7 @@ import type { Coordinates, Point } from "./projection.mts"
 /** West, south, east, north */
 export type Box = [number, number, number, number]
 
-/** Some boxes indexed for finding those touching another, by their position among them, while there are any */
+/** A spatial index of some boxes, whose searches answer with positions in the array. Undefined when there are none */
 export const indexBoxes = (boxes: readonly Box[]) => {
   if (!boxes.length)
     return
@@ -39,8 +39,8 @@ export const area = ([west, south, east, north]: Box) =>
   (east - west) * (north - south)
 
 /**
- * Whether a point is inside an outline of some rings, as GeoJSON polygons have them, by crossing an odd number of
- * edges on the way out, which puts a courtyard's hole outside
+ * Whether a point is inside an outline of rings, as GeoJSON polygons have them. Inside means crossing an odd number
+ * of edges on the way out (even-odd), so a courtyard's hole counts as outside
  */
 export const outlineHolds = (rings: readonly (readonly Coordinates[])[], { lat, lon }: Point) => {
   let isInside = false

@@ -1,10 +1,8 @@
-// Trip planning with the Connection Scan Algorithm over the day's runs as forecast (forecast.mts): the timetable
-// shifted by what's known of each bus, with the slack each boarding needs
-// https://arxiv.org/abs/1703.05997
+// Trip planning with the Connection Scan Algorithm (https://arxiv.org/abs/1703.05997) over the day's runs as
+// forecast.mts predicts them: the timetable shifted by what's known of each bus, holding at timepoints.
 //
-// Every boarding leaves slack for how unsure the bus's departure is, buses hold where they wait for their scheduled
-// time, and nearer first stops are tried as well as whichever arrives first, so ranking can weigh walking against
-// waiting
+// Every boarding leaves slack for how unsure the bus's departure is. Nearer first stops are tried as well as whichever
+// arrives first, so ranking can weigh walking against waiting
 
 import { type Feed, canAlight, canBoard } from "../transit/feed.mts"
 import { type Via, type Walks, walkAllowance, walkSeconds } from "./walks.mts"
@@ -216,7 +214,7 @@ export const scan = (
       how[stop] = step
       finishFrom(stop)
     }
-    // Getting off is as unsure as when the bus gets there, and without changing buses only leads on to the destination
+    // Getting off is as unsure as when the bus gets there. Without changing buses, it only leads on to the destination
     const readyAt = time + spread(run, connection.position + 1, time, now)
     const isReadier = !direct && readyAt < ready[stop]
     if (isReadier) {
@@ -226,7 +224,7 @@ export const scan = (
     if (!(isSooner || isReadier))
       continue
 
-    // A timed transfer is only counted on with the allowance its way deserves, an estimate's being the larger
+    // A timed transfer counts on the walk's allowance, which is larger for an estimate
     for (const { to: next, meters, via } of transfers[stop]) {
       if (isSooner && time + walkSeconds(meters) < arrival[next]) {
         arrival[next] = time + walkSeconds(meters)

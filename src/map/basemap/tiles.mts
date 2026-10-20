@@ -1,7 +1,8 @@
-// Our own vector tiles, made each week from one OpenStreetMap extract of New Hampshire (scripts/map/tiles.mts) and
-// served from our origin in a folder named for their version (made.mts): the OpenMapTiles base map around Durham, Dover,
-// and Portsmouth, and campus details OpenMapTiles leaves out. The style names them by sets, as tiles://<set>/z/x/y,
-// and the map fetches each from here where the set has it, else from upstream, if the set has one, else nothing
+// Our own vector tiles, made each week from one OpenStreetMap extract of New Hampshire (scripts/map/tiles.mts). They're
+// served from our origin in a folder named for their version (src/shared/made.mts). There are two sets: the
+// OpenMapTiles base map around Durham, Dover, and Portsmouth, and campus details OpenMapTiles leaves out. The style
+// names them by set, as tiles://<set>/z/x/y. The map fetches each tile from here where the set has it, else from
+// upstream if the set has one, else it's empty
 
 import * as v from "valibot"
 import { type Box, isInside } from "../../geo/boxes.mts"

@@ -1,7 +1,6 @@
-// Downloads the Wildcat Transit GTFS feed (the same one Google Maps uses)
-// and converts it into the compact JSON the app bundles.
-// The feed host doesn't send CORS headers, so this has to happen at build time;
-// CI rebuilds nightly to pick up a new feed. With --if-missing, a schedule already there is kept
+// Downloads the Wildcat Transit GTFS feed (the same one Google Maps uses) and converts it into the compact JSON the
+// app bundles. The feed host doesn't send CORS headers, so this has to happen at build time, and the site rebuilds
+// nightly to pick up a new feed. With --if-missing, a schedule already there is kept
 
 import { writeFile } from "node:fs/promises"
 import { unzipSync, strFromU8 } from "fflate"

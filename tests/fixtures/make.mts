@@ -1,9 +1,9 @@
-// Makes the fixtures under data/ from the data a build fetched (`npm run data`, then `npm run fixtures`): small,
-// real-shaped copies of every file upstream would give, laid out as the repository is, which offline builds take in
-// place of fetching (scripts/data.mts) and which the walk and gazetteer fall back on while there's no map data
-// release. The timetable is cut to the campus connectors, the menus to each hall's first two days and their first
-// stations, the models are empty, the style is Liberty as the tests have it with no sprite or fonts, and the walk,
-// gazetteer, and rooms are whole
+// Makes the fixtures under data/ from the data a build fetched (`npm run data`, then `npm run fixtures`). They're
+// small, real-shaped copies of every file upstream would give, laid out as the repository is. Offline builds take them
+// in place of fetching (scripts/data.mts), and the walk and gazetteer fall back on them while there's no map data
+// release. The timetable is cut to the campus connectors, and the menus to each hall's first two days and each meal's
+// first two stations. The models are empty, and the style is Liberty as the tests have it, with no sprite or fonts.
+// The walk, gazetteer, and rooms are whole
 
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { gunzipSync } from "node:zlib"

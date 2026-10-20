@@ -1,8 +1,8 @@
-// What build steps ask of the files they write, the files the site serves fetched back to stay published, and the
-// fixtures that stand in for upstream when there's no network
+// File helpers for build steps: whether to keep a file they write, fetching back what the site serves so it stays
+// published, and the fixtures that stand in for upstream when there's no network
 
 import { access, cp, mkdir, writeFile } from "node:fs/promises"
-// Node's own, which its file functions take, whatever the global one is where this is checked
+// Node's URL, which its fs functions take, rather than whatever global URL the typecheck sees
 import { URL } from "node:url"
 import { ORIGIN } from "./site.mts"
 
@@ -17,9 +17,9 @@ export const isKept = async (output: URL) =>
   process.argv.includes("--if-missing") && await exists(output)
 
 /**
- * Files the site serves now, by URL, fetched back into the public folder, so what's published stays published one
- * more build for the pages still open on it, as a build starts from nothing: those kept, with a warning for each
- * that couldn't be
+ * Files the site serves now, by URL, fetched back into the public folder. A build starts from nothing, so this keeps
+ * what's published for one more build, for the pages still open on it. Gives back those kept, warning for each that
+ * couldn't be
  */
 export const keepServed = async (urls: readonly string[]) =>
   (await Promise.all(urls.map(url =>

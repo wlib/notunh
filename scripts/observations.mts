@@ -1,7 +1,7 @@
-// How the build and scripts read what the Worker observed on a service day: from the day's archive once the catalog
-// lists it (src/transit/observations/archive.mts), checked against the catalog's hash as it's read, or else from the Worker's D1,
-// which keeps a day's samples until it's archived, decoded either way to the same rows (src/transit/observations/raw.mts), so
-// extraction runs on either. Only reads
+// How the build and scripts read what the Worker observed on a service day. Once the catalog lists the day, it's read
+// from the archive (src/transit/observations/archive.mts) and checked against the manifest's hash as it streams.
+// Otherwise it's read from the Worker's D1, which keeps a day's samples until it's archived. Either way it decodes to
+// the same rows (src/transit/observations/raw.mts), so extraction runs on either. Only reads
 
 import { createInterface } from "node:readline"
 import { Readable } from "node:stream"
@@ -28,7 +28,7 @@ export const lastSettled = (now: number): Day => {
 export const byMinute = (a: ObservedRow, b: ObservedRow) =>
   a.at - b.at || a.source.localeCompare(b.source)
 
-/** A row as the Worker stores it, decoded, or else an error saying which it was, or with skip, a warning and nothing */
+/** A row as the Worker stores it, decoded. One that can't be decoded throws, or with skip, warns and gives nothing */
 const decoded = async (source: Source, { at, body }: { at: number, body: string }, skip: boolean): Promise<ObservedRow[]> => {
   try {
     return [{ source, at, ...await decode(fromHex(body)) } as ObservedRow]
@@ -43,15 +43,15 @@ const decoded = async (source: Source, { at, body }: { at: number, body: string 
 }
 
 /**
- * A day's rows of both sources as the Worker stores them, decoded, failing on any this can't read rather than leave
- * it out, or with skip, leaving it out, so one bad row costs its minute rather than the day
+ * A day's rows of both sources as the Worker stores them, decoded. Fails on any row it can't read, or with skip,
+ * leaves it out, so one bad row costs its minute rather than the day
  */
 export const storedRows = async (day: Day, skip = false) =>
   (await Promise.all(SOURCES.map(async source =>
     Promise.all((await readRows<{ at: number, body: string }>(source, day)).map(row => decoded(source, row, skip)))
   ))).flat(2)
 
-/** The rows an archive holds, a line each, as its file's bytes come: zstd's, or gzip's before 2026-10-20 */
+/** The rows an archive holds, a line each, as its file's bytes come: zstd, or gzip for a .gz archived before 2026-10-20 */
 export const unpack = async (file: string, bytes: AsyncIterable<Uint8Array>) => {
   const lines = createInterface({ input: Readable.from(bytes).pipe(file.endsWith(".gz") ? createGunzip() : createZstdDecompress()), crlfDelay: Infinity })
   const rows: ObservedRow[] = []
@@ -61,7 +61,7 @@ export const unpack = async (file: string, bytes: AsyncIterable<Uint8Array>) => 
   return rows
 }
 
-/** An archived day's rows, as long as its file is exactly what its manifest says, which is hashed as it's read */
+/** An archived day's rows, as long as its file is exactly what its manifest says, hashed as it's read */
 export const archivedRows = async (manifest: Manifest, load = fetch) => {
   const url = archiveUrl(manifest)
   const response = await load(url)
@@ -80,7 +80,7 @@ export const archivedRows = async (manifest: Manifest, load = fetch) => {
   return rows
 }
 
-// Read once, when first a day is
+// Fetched once, when the first day is read
 let catalog: Promise<Catalog> | undefined
 
 /** A day's rows, from its archive if it has one, else from the Worker, without any row it can't read */

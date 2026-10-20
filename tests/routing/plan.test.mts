@@ -450,7 +450,7 @@ test("an early bus waits at a timepoint for its scheduled time, and a late one g
   }))
 )
 
-test("with an empty model, how far off a bus may be is as it always was, less the chance it waits for its time", () =>
+test("with an empty model, how far off a bus may be is the uncertainty for its lead alone, less the chance it waits for its time", () =>
   fc.assert(fc.property(feed, fc.integer({ min: -600, max: 4 * 3600 }), fc.boolean(), (feed, lead, isLive) => {
     const runs = buildRuns(feed, TODAY, [])
     for (const run of runs.slice(0, 5)) {

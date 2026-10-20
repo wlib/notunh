@@ -161,12 +161,12 @@ export const start = (scope: Scope) => {
    * holds the queue only until the deadline. A put that lands later only adds an immutable file, which pruning
    * deletes if nothing needs it
    */
-  const store = (request: Request, response: Response) =>
+  const store = (request: Request, response: Response, wanted = () => true) =>
     isKeepable(new URL(request.url).pathname, response)
-      ? serially(() => open().then(cache => Promise.race([
+      ? serially(() => wanted() ? open().then(cache => Promise.race([
         keep(cache, request, response),
         new Promise(resolve => setTimeout(resolve, DEADLINE_MS))
-      ]))).catch(() => {})
+      ])) : Promise.resolve()).catch(() => {})
       : Promise.resolve()
 
   // Hashed files on their way from the network, by URL, until all of each has come, so a page asking for one being
@@ -184,6 +184,9 @@ export const start = (scope: Scope) => {
     return response.then(response => response.clone())
   }
 
+  // A newer network request, especially a reload, supersedes any older answer still waiting to be stored.
+  const writes = new Map<string, object>()
+
   /**
    * A hashed file: the cached copy, unless the request says cache: "reload", as a page's retry of a failed load
    * does. Otherwise the network's, kept behind the answer, falling back to the cached copy offline
@@ -194,10 +197,22 @@ export const start = (scope: Scope) => {
     if (copy && request.cache !== "reload")
       return copy
     // One that asks past the HTTP cache gets a download of its own
-    const response = await (request.cache === "default" ? download(request.url) : scope.fetch(request)).catch(error => copy ?? Promise.reject(error))
-    if (response !== copy)
-      event.waitUntil(store(request, response.clone()))
-    return response
+    const write = {}
+    writes.set(request.url, write)
+    const current = () => writes.get(request.url) === write
+    const finished = () => { if (current()) writes.delete(request.url) }
+    try {
+      const response = await (request.cache === "default" ? download(request.url) : scope.fetch(request)).catch(error => copy ?? Promise.reject(error))
+      if (response !== copy)
+        event.waitUntil(store(request, response.clone(), current).finally(finished))
+      else
+        finished()
+      return response
+    }
+    catch (error) {
+      finished()
+      throw error
+    }
   }
 
   /**

@@ -554,6 +554,99 @@ test("a file asked for past the cache, as a page asks again for one that didn't 
   expect(await textOf(sw.request(url, "cors", "reload").response)).toBe("right")
 })
 
+test("a window and a staging share a download until its body ends, whichever asks first", async () => {
+  await fc.assert(fc.asyncProperty(fc.boolean(), async windowFirst => {
+    const asset = "/assets/map-BBBBBBBB.js"
+    let body!: ReadableStreamDefaultController<Uint8Array>
+    const sw = worker(async path => path === "/map/" ? page([asset], {}, LATER) :
+      new Response(new ReadableStream({ start: controller => body = controller }), { headers: { "content-type": "text/javascript" } }))
+    sw.entries.set("/map/", page(["/assets/map-AAAAAAAA.js"]))
+    const first = windowFirst ? sw.request(asset) : sw.navigate("/map/")
+    await vi.advanceTimersByTimeAsync(0)
+    const second = windowFirst ? sw.navigate("/map/") : sw.request(asset)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sw.fetched.filter(path => path === asset)).toHaveLength(1)
+    body.enqueue(new TextEncoder().encode("whole"))
+    body.close()
+    expect(await textOf((windowFirst ? first : second).response)).toBe("whole")
+    await Promise.all([first.done, second.done])
+    expect(await html(sw.entries.get("/map/")!)).toContain("map-BBBBBBBB")
+    expect(await html(sw.entries.get(asset)!)).toBe("whole")
+  }), { numRuns: 10 })
+})
+
+test("a failed staging leaves its shared download alive for a window still reading it", async () => {
+  const asset = "/assets/map-BBBBBBBB.js"
+  const missing = "/assets/missing-BBBBBBBB.js"
+  let body!: ReadableStreamDefaultController<Uint8Array>
+  let signal!: AbortSignal
+  let fail!: () => void
+  const sw = worker(async (path, init) => {
+    if (path === "/map/")
+      return page([asset, missing], {}, LATER)
+    if (path === missing)
+      return new Promise(resolve => fail = () => resolve(new Response("gone", { status: 404 })))
+    signal = init!.signal!
+    return new Response(new ReadableStream({ start: controller => {
+      body = controller
+      signal.addEventListener("abort", () => controller.error(signal.reason))
+    } }), { headers: { "content-type": "text/javascript" } })
+  })
+  sw.entries.set("/map/", page(["/assets/map-AAAAAAAA.js"]))
+  const navigation = sw.navigate("/map/")
+  await vi.advanceTimersByTimeAsync(0)
+  const consumer = sw.request(asset)
+  const response = await consumer.response
+  fail()
+  await vi.advanceTimersByTimeAsync(0)
+  expect(signal.aborted).toBe(false)
+  body.enqueue(new TextEncoder().encode("still available"))
+  body.close()
+  expect(await response.text()).toBe("still available")
+  await Promise.all([navigation.done, consumer.done])
+  expect(sw.fetched.filter(path => path === asset)).toHaveLength(1)
+  expect(await html(sw.entries.get("/map/")!)).toContain("map-AAAAAAAA")
+})
+
+test("a shared download whose body stalls is evicted at its deadline, so a later request can retry", async () => {
+  const asset = "/assets/map-BBBBBBBB.js"
+  let stalled = true
+  const sw = worker(async (path, init) => stalled ? new Response(new ReadableStream({ start: body => {
+    init!.signal!.addEventListener("abort", () => body.error(init!.signal!.reason))
+  } }), { headers: { "content-type": "text/javascript" } }) : file(path, "recovered"))
+  const first = sw.request(asset)
+  const reading = textOf(first.response)
+  const rejected = expect(reading).rejects.toMatchObject({ name: "TimeoutError" })
+  await vi.advanceTimersByTimeAsync(60_000)
+  await rejected
+  await first.done
+  stalled = false
+  const retry = sw.request(asset)
+  expect(await textOf(retry.response)).toBe("recovered")
+  await retry.done
+  expect(sw.fetched).toEqual([asset, asset])
+})
+
+test("a reload bypasses a shared download and passes reload through to the network", async () => {
+  const asset = "/assets/menus-BBBBBBBB.json"
+  let finish!: () => void
+  const modes: (RequestCache | undefined)[] = []
+  const sw = worker(async (path, init) => {
+    modes.push(init?.cache)
+    return init?.cache === "reload" ? file(path, "fresh") : new Promise(resolve => finish = () => resolve(file(path, "old")))
+  })
+  const original = sw.request(asset)
+  await vi.advanceTimersByTimeAsync(0)
+  const retry = sw.request(asset, "cors", "reload")
+  expect(await textOf(retry.response)).toBe("fresh")
+  await retry.done
+  finish()
+  expect(await textOf(original.response)).toBe("old")
+  await original.done
+  expect(modes).toEqual([undefined, "reload"])
+  expect(await html(sw.entries.get(asset)!)).toBe("fresh")
+})
+
 test("what a data file says it can't work without, as the map's style, is fetched with the page, which isn't kept without it", async () => {
   const styleUrl = "/data/map/BBBBBBBBBBBBBBBB/style.json"
   let isServed = false

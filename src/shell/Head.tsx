@@ -6,6 +6,10 @@ import { SURFACE } from "./theme.mts"
 // yet caught up can be told from a newer one (manifest.mts' isOlder)
 const RELEASE = new Date().toISOString()
 
+// The one origin that sends usage stats (usage.tsx). A copy served anywhere else, like in development, a Preview, or
+// the browser tests' server unless it stands in for this one, sends nothing
+const USAGE_ORIGIN = "https://notunh.app"
+
 /**
  * Fetches the data files the head's links name as it's parsed, alongside the code, keeping each response on its link
  * for the file's first load to take (load.mts). Not preloads: Safari never hands one to fetch(), so a file preloaded
@@ -32,6 +36,7 @@ export const Head = ({ title, description, script, data = {} }: {
     <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="release" content={RELEASE} />
+    <meta name="usage-origin" content={USAGE_ORIGIN} />
 
     <meta name="theme-color" media="(prefers-color-scheme: light)" content={SURFACE.light} />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content={SURFACE.dark} />

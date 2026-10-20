@@ -9,6 +9,7 @@ import { index, days, hall, day, meals, menu, preferredMeal, query, isSearching,
 import { Day } from "../../shell/intl.tsx"
 import { DayName, mealName } from "./common.tsx"
 import { HallHours, OpenDot } from "./Hours.tsx"
+import { capture } from "../../shell/usage.tsx"
 
 const servedMeals = r(() =>
   MEALS.filter(meal => Object.values(index.value.days).some(days => Object.values(days).some(day => day.meals.includes(meal))))
@@ -42,7 +43,12 @@ const SearchInput = () => {
       aria-label="Search for a food or ingredient"
       enterkeyhint="search"
       autocomplete="off"
-      oninput={() => query.value = input.value}
+      oninput={() => {
+        // A search counted as it starts, never what's searched for
+        if (!isSearching.peek() && input.value.trim().length >= 2)
+          capture("dining_searched")
+        query.value = input.value
+      }}
     />
   watch([query], () => {
     if (input.value !== query.value)
@@ -57,7 +63,10 @@ const Days = () =>
       <button
         type="button"
         aria-pressed={r(() => day.value === each ? "true" : "false")}
-        onclick={() => day.value = each}
+        onclick={() => {
+          day.value = each
+          capture("dining_day_switched", { days_ahead: days.peek().indexOf(each) })
+        }}
       >
         <span><DayName of={each} /></span>
         <span class="muted"><Day of={each} month="short" day="numeric" /></span>
@@ -72,7 +81,11 @@ const FilterChips = ({ kind, items }: { kind: keyof Filters, items: string[] }) 
         type="button"
         class="chip"
         aria-pressed={r(() => filters.value[kind].has(item) ? "true" : "false")}
-        onclick={() => toggleFilter(kind, item)}
+        onclick={() => {
+          toggleFilter(kind, item)
+          // Which kind of filter, never which diet or allergen
+          capture("dining_filter_toggled", { kind, on: filters.peek()[kind].has(item) })
+        }}
       >
         {item}
       </button>
@@ -103,7 +116,10 @@ export const Controls = () =>
           label="Dining hall"
           options={index.value.halls.map(({ id, name }) => ({ value: id, label: <><OpenDot id={id} />{name}</> }))}
           selected={() => hall.value}
-          choose={value => hall.value = value}
+          choose={value => {
+            hall.value = value
+            capture("dining_hall_switched")
+          }}
         />
         <HallHours />
         <Days />
@@ -111,7 +127,10 @@ export const Controls = () =>
           label="Meal"
           options={servedMeals.value.map(meal => ({ value: meal, label: mealName(meal) }))}
           selected={() => menu.value?.meal ?? preferredMeal.value}
-          choose={value => preferredMeal.value = value}
+          choose={value => {
+            preferredMeal.value = value
+            capture("dining_meal_switched", { meal: value })
+          }}
           disabled={value => !meals.value.includes(value)}
         />
       </>

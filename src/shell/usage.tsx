@@ -1,21 +1,26 @@
 /** @jsxImportSource bruh/browser */
 
-// Usage stats: which pages and features get used, counted with PostHog, which keeps them for notunh alone, and only
-// once someone has said yes. Until then nothing of PostHog's is loaded. A browser sending Global Privacy Control has
-// said no already, so it's never asked. The choice is remembered here, and changed on the home page.
+// Usage stats, kept with PostHog for notunh alone: page views and errors for everyone, and, for those who say yes,
+// which features get used and which places trips are planned between. events.mts decides what each event sends.
 //
-// What's sent is kept to what says how notunh is used: pageviews, by path alone, since a query or fragment can hold
-// a search or a place, and the events capture() is given. PostHog's lookup of a place from the IP address is off,
-// and nothing identifies anyone: each browser is a random id. Session recording, autocapture, surveys, and the rest
-// stay off, as does loading anything more from PostHog's CDN, so turning one on is a choice made here. Only
-// notunh.app sends, so development, tests, and Previews never do
+// Until someone says yes, PostHog runs cookieless: nothing is stored on the device, and PostHog tells visitors apart
+// only by a hash of the day, IP address, and browser that it never keeps. Saying yes lets it remember this device in
+// localStorage, never a cookie, which nothing on the server reads. Saying no after yes forgets it. A browser sending
+// Global Privacy Control has said no already, so it's never asked. The choice is ours, remembered here before
+// PostHog loads and changed on the home page, and PostHog's own consent follows it.
+//
+// PostHog loads after the page, from the page's own chunk, which its head names so the service worker keeps it
+// offline (vite.config.mts). Only the extensions used are given to it, and nothing more loads from PostHog's CDN, so
+// session recording, surveys, feature flags, heatmaps, and the rest stay off. Events made offline wait in posthog-js'
+// memory and are sent once it's back online, unless the page is closed first. Only the origin the head names sends,
+// so development, Previews, and tests never do (Head.tsx)
 
 import { r, watch } from "bruh/reactive"
-import type { PostHog, Properties } from "posthog-js"
+import type { PostHog, Properties } from "posthog-js/dist/module.slim.js"
 import { remembered } from "./state.mts"
+import { beforeSend } from "./events.mts"
 
-const KEY  = "phc_njs4dSMky9yGPMKUuiUSm63Et8QjT6M2hZspGT6Kofct"
-const HOST = "https://us.i.posthog.com"
+const KEY = "phc_njs4dSMky9yGPMKUuiUSm63Et8QjT6M2hZspGT6Kofct"
 
 export type Choice = "yes" | "no"
 
@@ -25,73 +30,68 @@ export const isPrivate = (navigator as Navigator & { globalPrivacyControl?: bool
 /** What was chosen, or undefined while it hasn't been */
 export const choice = remembered<Choice | undefined>("usage", stored => stored === "yes" || stored === "no" ? stored : undefined)
 
-const isSending = location.hostname === "notunh.app"
+const isYes = () =>
+  !isPrivate && choice.peek() === "yes"
 
-/** A URL without its query or fragment */
-const pathOf = (url: unknown) => {
-  if (typeof url !== "string")
-    return url
-  try {
-    const { origin, pathname } = new URL(url)
-    return origin + pathname
-  }
-  catch {
-    return undefined
-  }
-}
+const isSending = document.querySelector<HTMLMetaElement>("meta[name=usage-origin]")?.content === location.origin
 
 let posthog: Promise<PostHog> | undefined
 
 const start = () =>
-  posthog ??= import("posthog-js").then(({ default: posthog }) => {
+  posthog ??= Promise.all([
+    import("posthog-js/dist/module.slim.js"),
+    import("posthog-js/dist/extension-bundles.js"),
+    // What the error and web vitals extensions would otherwise load from PostHog's CDN
+    import("posthog-js/dist/exception-autocapture.js"),
+    import("posthog-js/dist/web-vitals.js")
+  ]).then(([{ default: posthog }, { AnalyticsExtensions: { autocapture, historyAutocapture, webVitalsAutocapture }, ErrorTrackingExtensions }]) => {
     posthog.init(KEY, {
-      api_host:                            HOST,
+      api_host:                            "https://us.i.posthog.com",
+      ui_host:                             "https://us.posthog.com",
       defaults:                            "2026-08-30",
+      __extensionClasses:                  { autocapture, historyAutocapture, webVitalsAutocapture, ...ErrorTrackingExtensions },
+      cookieless_mode:                     "on_reject",
+      opt_out_capturing_by_default:        true,
       persistence:                         "localStorage",
       person_profiles:                     "identified_only",
-      autocapture:                         false,
-      capture_dead_clicks:                 false,
-      capture_exceptions:                  false,
+      // Clicks are counted by the kind of element alone, never by what it says or links to, like a place or a food
+      mask_all_text:                       true,
+      mask_all_element_attributes:         true,
+      capture_exceptions:                  true,
+      capture_performance:                 { web_vitals: true, web_vitals_attribution: false, network_timing: false },
       capture_heatmaps:                    false,
-      capture_performance:                 false,
+      capture_dead_clicks:                 false,
       disable_session_recording:           true,
       disable_surveys:                     true,
       disable_product_tours:               true,
       disable_conversations:               true,
       disable_web_experiments:             true,
       disable_external_dependency_loading: true,
-      advanced_disable_feature_flags:      true,
-      before_send: event => {
-        if (event?.properties)
-          for (const key of ["$current_url", "$referrer", "$initial_referrer", "$prev_pageview_url"])
-            if (key in event.properties)
-              event.properties[key] = pathOf(event.properties[key])
-        return event
-      }
+      advanced_disable_flags:              true,
+      before_send:                         beforeSend(isYes)
     })
-    // Every event skips PostHog's lookup of a place from the IP address
-    posthog.register({ $geoip_disable: true })
     return posthog
   })
 
-/** Counts an event, if the choice was yes. Its properties must say nothing of where someone is or what they search */
-export const capture = (event: string, properties?: Properties) => {
-  if (posthog)
-    void posthog.then(posthog => posthog.capture(event, properties))
+/** Brings PostHog's consent in line with the choice: opted in for yes, else cookieless with nothing of it kept */
+const follow = (posthog: PostHog) => {
+  const consent = posthog.get_explicit_consent_status()
+  if (isYes())
+    consent !== "granted" && posthog.opt_in_capturing({ captureEventName: false })
+  else if (consent !== "pending") {
+    posthog.opt_out_capturing()
+    posthog.clear_opt_in_out_capturing()
+  }
 }
 
-watch([choice], () => {
-  if (!isSending || isPrivate)
-    return
-  if (choice.value === "yes")
-    void start().then(posthog => posthog.opt_in_capturing())
-  // Saying no after yes stops it, and forgets the random id
-  else if (posthog)
-    void posthog.then(posthog => {
-      posthog.opt_out_capturing()
-      posthog.reset()
-    })
-})
+/** Counts a use of a feature, if the choice was yes. Its properties must say nothing of where someone is or what they search */
+export const capture = (event: string, properties?: Properties) => {
+  if (isSending && isYes())
+    void start().then(posthog => posthog.capture(event, properties))
+}
+
+if (isSending)
+  watch([choice], () => void start().then(follow))
 
 // Asked once, on whichever page someone opens first, without getting in the way of it
 document.body.append(
@@ -100,8 +100,9 @@ document.body.append(
       <aside class="usage-prompt" aria-label="Usage stats">
         <p>
           <strong>Help make notunh better?</strong>
-          Let it count which pages and features you use, so we know what to work on. Never your location, never
-          anything that says who you are, and never sold or used for ads. You can change this on the home page.
+          Say yes and notunh remembers this device to count which features get used, and which buildings and stops
+          trips go between, never tied to you. Either way it counts page views and errors, storing nothing. Never
+          your exact location or what you type, never sold, never ads. Change it anytime on the home page.
         </p>
         <div class="actions">
           <button class="button" type="button" onclick={() => choice.value = "no"}>No thanks</button>

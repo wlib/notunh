@@ -9,6 +9,7 @@ import { ClockRange, Distance, Minutes, Plural } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import { RouteBadge, StopLink, Time, minutes, route } from "./common.tsx"
 import { state } from "../state/map.mts"
+import { capture } from "../../shell/usage.tsx"
 
 /** Minutes between two times as displayed, so durations agree with the clock times beside them */
 const minutesBetween = (start: number, end: number) =>
@@ -104,7 +105,10 @@ const ItineraryCard = ({ itinerary: it }: { itinerary: Itinerary }) => {
         type="button"
         class="itinerary-summary"
         aria-expanded={r(() => isSelected.value ? "true" : "false")}
-        onclick={() => state.selected.value = key}
+        onclick={() => {
+          state.selected.value = key
+          capture("itinerary_chosen", { rides: it.legs.filter(leg => leg.kind === "ride").length })
+        }}
       >
         <span class="itinerary-times">
           <strong><ClockRange from={new Date(it.start * 1000)} to={new Date(it.end * 1000)} /></strong>
@@ -127,7 +131,10 @@ const WalkOption = () =>
       <button
         type="button"
         class={{ "walk-option": true, selected: r(() => state.selected.value === "walk") }}
-        onclick={() => state.selected.value = "walk"}
+        onclick={() => {
+          state.selected.value = "walk"
+          capture("itinerary_chosen", { rides: 0 })
+        }}
       >
         <Icon name="walk" />
         {state.itineraries.value.length ? "Or walk" : "Walk"} <Minutes value={option.minutes} /> · <Distance meters={option.meters} />

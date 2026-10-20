@@ -14,9 +14,9 @@ const test = base.extend<{ fixture: Fixture }>({
   }
 })
 
-/** Every data file the page's head names, by path */
-const dataOf = (page: Page) =>
-  page.evaluate(() => [...document.querySelectorAll<HTMLLinkElement>("link[data-name]")].map(link => link.getAttribute("href")!))
+/** Every file of ours the page's head names, its data and its code, the code it loads later included, by path */
+const namedOf = (page: Page) =>
+  page.evaluate(() => [...document.head.querySelectorAll("link[href^='/assets/'], script[src^='/assets/']")].map(tag => tag.getAttribute("href") ?? tag.getAttribute("src")!))
 
 /** Waits until the worker controls the page and keeps the page itself, so it has staged all the page names */
 const staged = async (page: Page, path: string) => {
@@ -24,7 +24,7 @@ const staged = async (page: Page, path: string) => {
   await expect.poll(() => page.evaluate(async path => !!await (await caches.open("app-v2")).match(path), path), { timeout: 15_000 }).toBe(true)
 }
 
-test("each data file a page names downloads once, on a first visit however slowly it comes, and not again on the next", async ({ playwright, browserName, fixture }) => {
+test("each file a page names downloads once, on a first visit however slowly it comes, and not again on the next", async ({ playwright, browserName, fixture }) => {
   // A context of its own on disk, since WebKit's in memory has no HTTP cache, which the worker's staging reads from.
   // Every other origin, like Umo and the map's tiles, is out of reach
   const context = await playwright[browserName].launchPersistentContext(mkdtempSync(join(tmpdir(), "notunh-profile-")), { proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" } })
@@ -35,15 +35,15 @@ test("each data file a page names downloads once, on a first visit however slowl
       const downloads = (url: string) => fixture.requests.filter(request => request === url).length
       await page.goto(fixture.origin + path)
       await staged(page, path)
-      const data = await dataOf(page)
-      expect(data.length).toBeGreaterThan(0)
-      for (const url of data)
+      const named = await namedOf(page)
+      expect(named.some(url => url.endsWith(".json"))).toBe(true)
+      for (const url of named)
         expect(downloads(url), url).toBe(1)
 
       await page.goto("about:blank")
       await page.goto(fixture.origin + path)
       await page.waitForTimeout(2000)
-      for (const url of data)
+      for (const url of named)
         expect(downloads(url), url).toBe(1)
     }
   }

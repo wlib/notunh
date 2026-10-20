@@ -63,9 +63,10 @@ export default defineConfig({
       configurePreviewServer: server => void server.middlewares.use(toPage)
     },
     {
-      // A page names everything the service worker keeps for it in its head (src/shell/manifest.mts), but a web
-      // worker's script is named only by the code that starts it, so each page's head names the workers of its code
-      name: "name-workers",
+      // A page names everything the service worker keeps for it in its head (src/shell/manifest.mts), but Vite's head
+      // names only the code a page starts with. Code it imports later, like PostHog's, and a web worker's script, which
+      // only the code starting it names, would never be kept, so each page's head names them too, as prefetches
+      name: "name-later-code",
       transformIndexHtml: {
         order: "post",
         handler: (html, { bundle, chunk, path }) => {
@@ -76,15 +77,21 @@ export default defineConfig({
           const missing = [...html.matchAll(/href="([^"]*)" data-name="([^"]*)"/g)].filter(([, href]) => !/^(__VITE_ASSET__|\/assets\/)/.test(href))
           if (missing.length)
             throw new Error(`${path} names data not fetched yet: ${missing.map(([, href, name]) => `${name} (${href})`).join(", ")}`)
-          const chunks = [chunk]
-          for (const { imports } of chunks)
-            for (const name of imports)
-              if (!chunks.some(seen => seen.fileName === name) && bundle[name]?.type === "chunk")
-                chunks.push(bundle[name])
+          /** The chunks reached from the page's own, following its static imports and, if asked, its dynamic ones */
+          const reached = (isLater: boolean) => {
+            const chunks = [chunk]
+            for (const { imports, dynamicImports } of chunks)
+              for (const name of isLater ? [...imports, ...dynamicImports] : imports)
+                if (!chunks.some(seen => seen.fileName === name) && bundle[name]?.type === "chunk")
+                  chunks.push(bundle[name])
+            return chunks
+          }
+          const initial = new Set(reached(false))
+          const chunks = reached(true)
           // A worker's script is emitted as an asset named after its module, which is in the chunk that starts it
           const stems = chunks.flatMap(({ modules }) => Object.keys(modules).flatMap(id => id.match(/\/([^/?]+)\.[cm]?[jt]s\?(?:shared)?worker/)?.[1] ?? []))
-          return Object.values(bundle)
-            .filter(output => output.type === "asset" && stems.some(stem => output.fileName.match(`/${stem}-[\\w-]+\\.js$`)))
+          const workers = Object.values(bundle).filter(output => output.type === "asset" && stems.some(stem => output.fileName.match(`/${stem}-[\\w-]+\\.js$`)))
+          return [...chunks.filter(later => !initial.has(later)), ...workers]
             .map(({ fileName }) => ({ tag: "link", attrs: { rel: "prefetch", href: `/${fileName}` }, injectTo: "head" }))
         }
       }

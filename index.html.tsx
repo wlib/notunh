@@ -57,17 +57,26 @@ export default () =>
           <section>
             <h2>Usage stats</h2>
             <p>
-              If you allow it, notunh counts which pages and features get used, so it's clear what to work on next. The
-              counts are kept with <a href="https://posthog.com">PostHog</a>, for notunh and nothing else. They never
-              include your location, what you search for, or anything that says who you are, and they're never sold or
-              used for ads.
+              notunh counts page views and errors with <a href="https://posthog.com">PostHog</a>, for notunh and nothing
+              else, so it's clear what to fix and what to work on next. Nothing is stored on your device for that, and
+              nothing in it says who you are.
+            </p>
+            <p>
+              If you allow it, notunh also remembers this device between visits and counts which features get used, and
+              which buildings and bus stops people plan trips between. Each trip is counted on its own, by the stop or
+              building nearest each end and the hour, never tied to you or anything else you do.
+            </p>
+            <p>
+              Never your exact location, what you type or search for, or anything that says who you are. Never sold,
+              never used for ads.
             </p>
             <label class="choice">
               <input type="checkbox" data-usage />
               Share usage stats
             </label>
             <p class="muted" data-usage-private hidden>
-              Your browser asks sites not to share what you do there (Global Privacy Control), so notunh doesn't.
+              Your browser asks sites not to share what you do there (Global Privacy Control), so notunh counts only page
+              views and errors.
             </p>
           </section>
 

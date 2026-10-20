@@ -57,11 +57,14 @@ export const fetchPointer = async (kind: Kind, load = fetch) => {
 
 /**
  * Stages the files of a folder to publish as a generation of a kind: its archive, its manifest, and the pointer to
- * upload last, in another folder, unless the pointer already names this very version
- * @returns whether it staged
+ * upload last, in another folder. If already current, only the pointer is staged so publication can retry its hook
+ * @returns whether a new generation was staged
  */
 export const stage = async (kind: Kind, manifest: Manifest, folder: string, to: string, load = fetch) => {
   if ((await fetchPointer(kind, load))?.version === manifest.version) {
+    await rm(to, { recursive: true, force: true })
+    await mkdir(to, { recursive: true })
+    await writeFile(join(to, "latest.json"), JSON.stringify({ version: manifest.version }))
     console.log(`${kind}-${manifest.version} is the generation published already`)
     return false
   }

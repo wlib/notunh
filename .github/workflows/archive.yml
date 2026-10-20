@@ -52,43 +52,10 @@ jobs:
       # never replaced. A release a failed run left without its manifest was never in the catalog, so its samples are
       # still in D1 and it's filled in again: the file first, then the manifest that marks it whole
       - name: Publish each day
-        run: |
-          mkdir -p archive
-          for DAY in $(node scripts/archive.mts days $FROM $TO); do
-            if gh release download "observations-$DAY" -p manifest.json -O "archive/$DAY.json" 2>/dev/null; then
-              echo "observations-$DAY is published already"
-              continue
-            fi
-            node scripts/archive.mts pack "$DAY" "archive/$DAY"
-            [ -f "archive/$DAY/manifest.json" ] || continue
-            gh release view "observations-$DAY" >/dev/null 2>&1 ||
-              gh release create "observations-$DAY" --latest=false --title "Observations $DAY" \
-                --notes "What the Worker observed on the service day $DAY: every stored minute of the buses' fixes and Umo's predictions, with the polls that took them, decoded, one row a line (src/transit/observations/raw.mts), and a manifest of its hash and counts"
-            gh release upload "observations-$DAY" "archive/$DAY/observations-$DAY.ndjson.zst" --clobber
-            gh release upload "observations-$DAY" "archive/$DAY/manifest.json" --clobber
-            cp "archive/$DAY/manifest.json" "archive/$DAY.json"
-          done
+        run: node scripts/archive-publish.mts
         env:
           FROM: ${{ inputs.from }}
           TO: ${{ inputs.to }}
           BUILD_TOKEN: ${{ secrets.BUILD_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-      # The catalog is made once with its release and only merged into after. One that can't be read fails the run
-      # rather than be replaced by tonight's days alone
-      - name: Update the catalog
-        run: |
-          ls archive/*.json >/dev/null 2>&1 || { echo "Nothing to catalog"; exit 0; }
-          if gh release view observations >/dev/null 2>&1; then
-            gh release download observations -p catalog.json -O catalog.json
-          else
-            echo '{"days":[]}' > catalog.json
-          fi
-          node scripts/archive.mts catalog catalog.json archive/*.json > archive/catalog.json
-          gh release view observations >/dev/null 2>&1 ||
-            gh release create observations archive/catalog.json --latest=false --title "Observations" \
-              --notes "catalog.json lists every service day archived, each published whole as its own observations-<day> release by the Observations workflow, with its manifest"
-          gh release upload observations archive/catalog.json --clobber
-        env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

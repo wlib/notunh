@@ -16,17 +16,33 @@ const STAGES = {
   learn:   ["map/model", "laundry/model"]
 }
 
-const args = process.argv.slice(2)
-const flags = args.filter(arg => arg.startsWith("--"))
-const isWhole = !args.some(arg => arg in STAGES)
-
-for (const stage of Object.keys(STAGES) as (keyof typeof STAGES)[])
-  if (isWhole || args.includes(stage)) {
-    if (stage === "acquire")
-      await rm(STAGED, { recursive: true, force: true })
-    for (const name of STAGES[stage])
-      await run(process.execPath, [new URL(`${name}.mts`, import.meta.url).pathname, ...flags])
+export const runStage = async (names: readonly string[], flags: string[], execute = run) => {
+  let failed = false
+  for (const name of names) {
+    try { await execute(process.execPath, [new URL(`${name}.mts`, import.meta.url).pathname, ...flags]) }
+    catch (error) { failed = true; console.error(error) }
   }
+  return failed
+}
 
-if (isWhole)
-  await run("npm", ["run", "build"], { env: { ...process.env, NOTUNH_INPUTS: "./inputs" } })
+if (import.meta.main) {
+  const args = process.argv.slice(2)
+  const flags = args.filter(arg => arg.startsWith("--"))
+  const isWhole = !args.some(arg => arg in STAGES)
+
+  for (const stage of Object.keys(STAGES) as (keyof typeof STAGES)[])
+    if (isWhole || args.includes(stage)) {
+      if (stage === "acquire")
+        await rm(STAGED, { recursive: true, force: true })
+      if (stage === "learn") {
+        if (await runStage(STAGES.learn, flags)) process.exitCode = 1
+      }
+      else
+        for (const name of STAGES[stage])
+          await run(process.execPath, [new URL(`${name}.mts`, import.meta.url).pathname, ...flags])
+    }
+
+  if (isWhole)
+    await run("npm", ["run", "build"], { env: { ...process.env, NOTUNH_INPUTS: "./inputs" } })
+
+}

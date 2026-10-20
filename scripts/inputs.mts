@@ -11,6 +11,7 @@
 //                                        records what's installed, and versions it names aren't fetched again
 //   node scripts/inputs.mts stage <to>   stages inputs/ in a folder to publish as a generation (inputs.yml)
 
+import { INPUT_SOURCES, validateInputs } from "./bundle.mts"
 import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, relative } from "node:path"
@@ -83,14 +84,22 @@ const installMapData = async (version: string) => {
  * nothing's kept
  */
 const install = async ({ inputs, "map-data": mapData }: Installed) => {
-  await rm(new URL("data/", PUBLIC), { recursive: true, force: true })
+  const clear = async () => {
+    await rm(new URL("data/", PUBLIC), { recursive: true, force: true })
+    for (const path of INPUT_SOURCES) await rm(inRepo(path), { force: true })
+  }
   const folder = folderOf(inputs)
-  if (folder)
+  if (folder) {
+    await validateInputs(folder, !isOffline)
+    await clear()
     await cp(folder, inRepo("."), { recursive: true })
+  }
   else {
     const fetched = await mkdtemp(join(tmpdir(), "notunh-inputs-"))
     try {
       const { files } = await fetchGeneration("inputs", inputs, fetched)
+      await validateInputs(fetched, true)
+      await clear()
       for (const path of Object.keys(files))
         await cp(join(fetched, path), inRepo(path))
     }
@@ -119,8 +128,10 @@ export const stageInputs = async (folder: string, to: string, load = fetch) => {
 
 if (import.meta.main) {
   const [command, to] = process.argv.slice(2)
-  if (command === "stage")
+  if (command === "stage") {
+    await validateInputs(fileURLToPath(STAGED), true)
     await stageInputs(fileURLToPath(STAGED), to)
+  }
   else {
     const wanted = await pinned()
     const recorded = await readFile(RECORD, "utf8").then(JSON.parse, () => undefined)

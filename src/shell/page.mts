@@ -12,6 +12,9 @@ for (const link of document.querySelectorAll<HTMLAnchorElement>("a[data-email-ba
 // The home page's setting for usage stats, which a browser with Global Privacy Control has made already
 const usage = document.querySelector<HTMLInputElement>("input[data-usage]")
 if (usage) {
+  // Opened when linked to, as the prompt's "Details" is
+  if (location.hash === "#usage")
+    document.querySelector<HTMLDetailsElement>("details#usage")!.open = true
   usage.disabled = isPrivate
   document.querySelector<HTMLElement>("[data-usage-private]")!.hidden = !isPrivate
   watch([choice], () => {

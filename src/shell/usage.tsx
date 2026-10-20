@@ -99,10 +99,8 @@ document.body.append(
     {r(() => !choice.value && !isPrivate &&
       <aside class="usage-prompt" aria-label="Usage stats">
         <p>
-          <strong>Help make notunh better?</strong>
-          Say yes and notunh remembers this device to count which features get used, and which buildings and stops
-          trips go between, never tied to you. Either way it counts page views and errors, storing nothing. Never
-          your exact location or what you type, never sold, never ads. Change it anytime on the home page.
+          <strong>Help improve notunh?</strong>
+          Share which features you use, never who you are. <a href="/#usage">Details</a>
         </p>
         <div class="actions">
           <button class="button" type="button" onclick={() => choice.value = "no"}>No thanks</button>

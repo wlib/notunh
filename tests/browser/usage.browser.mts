@@ -65,7 +65,7 @@ test("a first visit is asked once, the answer is the home page's setting, and no
   await page.getByRole("button", { name: "Sure" }).click()
   await expect(page.locator(".usage-prompt")).toHaveCount(0)
 
-  await page.goto(`${fixture.origin}/`)
+  await page.goto(`${fixture.origin}/#usage`)
   await expect(page.locator(".usage-prompt")).toHaveCount(0)
   await expect(page.getByLabel("Share usage stats")).toBeChecked()
   await page.getByLabel("Share usage stats").uncheck()
@@ -78,7 +78,7 @@ test("a first visit is asked once, the answer is the home page's setting, and no
 
 test("a browser with Global Privacy Control isn't asked, and its setting says why", async ({ page, fixture }) => {
   await page.addInitScript(() => Object.defineProperty(navigator, "globalPrivacyControl", { value: true }))
-  await page.goto(`${fixture.origin}/`)
+  await page.goto(`${fixture.origin}/#usage`)
   await expect(page.locator(".usage-prompt")).toHaveCount(0)
   await expect(page.getByLabel("Share usage stats")).toBeDisabled()
   await expect(page.getByText("Global Privacy Control")).toBeVisible()
@@ -102,7 +102,7 @@ test("on notunh.app, page views are counted keeping nothing until a yes, which r
   expect(remembered.cookies).toEqual([])
   expect(remembered.storage.length).toBeGreaterThan(0)
 
-  await page.goto(`${usageOrigin.origin}/`)
+  await page.goto(`${usageOrigin.origin}/#usage`)
   await page.getByLabel("Share usage stats").uncheck()
   await expect.poll(async () => (await kept(context, page)).storage).toEqual([])
   expect(await kept(context, page)).toEqual({ cookies: [], storage: [] })

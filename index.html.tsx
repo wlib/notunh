@@ -54,6 +54,27 @@ export default () =>
             </p>
           </section>
 
+          <details id="usage">
+            <summary>Usage stats</summary>
+            <p>notunh records basic info like page views and errors for everyone.</p>
+            <p>If you opt in, notunh also collects stats without identifying you, like:</p>
+            <ul>
+              <li>which features people use and how</li>
+              <li>which bus stops and buildings are popular</li>
+            </ul>
+            <p>
+              It never collects your exact location or what you type. Stats are kept in{" "}
+              <a href="https://posthog.com">PostHog</a> and aren't shared with anyone else or used for ads.
+            </p>
+            <label class="choice">
+              <input type="checkbox" data-usage />
+              Share usage stats
+            </label>
+            <p class="muted" data-usage-private hidden>
+              Your browser has Global Privacy Control on, so only page views and errors are counted.
+            </p>
+          </details>
+
           <details>
             <summary>Data sources &amp; credits</summary>
             <dl class="credits">

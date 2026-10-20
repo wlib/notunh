@@ -9,6 +9,7 @@ import { Minutes, ago } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import { RouteBadge, StopLink, Time, route } from "./common.tsx"
 import { state } from "../state/map.mts"
+import { capture } from "../../shell/usage.tsx"
 
 // A stop the bus left this recently still shows, as it may just be pulling out
 const JUST_LEFT = 30 // s
@@ -35,7 +36,7 @@ export const BusView = ({ id }: { id: string }) => {
                 {vehicle.value ? "This bus is on a route the timetable doesn't have." : "This bus stopped reporting."}
               </p>
               {isRiding.value
-                ? <button type="button" class="button" onclick={() => state.ride(undefined)}>I got off</button>
+                ? <button type="button" class="button" onclick={() => { state.ride(undefined); capture("bus_left") }}>I got off</button>
                 : <Close />}
             </header>
           )
@@ -63,8 +64,8 @@ export const BusView = ({ id }: { id: string }) => {
             </p>
             <div class="bus-actions">
               {r(() => isRiding.value
-                ? <button type="button" class="button" onclick={() => state.ride(undefined)}>I got off</button>
-                : <button type="button" class="button" onclick={() => { state.ride(id); state.selectedBus.value = undefined }}>I'm on this bus</button>
+                ? <button type="button" class="button" onclick={() => { state.ride(undefined); capture("bus_left") }}>I got off</button>
+                : <button type="button" class="button" onclick={() => { state.ride(id); state.selectedBus.value = undefined; capture("bus_boarded", { suggested: false }) }}>I'm on this bus</button>
               )}
               <button
                 type="button"
@@ -138,7 +139,7 @@ export const RideSuggestion = () =>
       <div class="ride-suggestion" role="status">
         <RouteBadge route={busRoute} />
         <span>On the {busRoute.long}?</span>
-        <button type="button" class="button" onclick={() => state.ride(id)}>Yes</button>
+        <button type="button" class="button" onclick={() => { state.ride(id); capture("bus_boarded", { suggested: true }) }}>Yes</button>
         <button type="button" class="button" onclick={() => state.decline(id)}>No</button>
       </div>
     )

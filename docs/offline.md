@@ -7,7 +7,7 @@ Every page opens from the cache at once, code and data both, and the service wor
 `src/shell/manifest.mts` reads a page's `<head>` into a `Build`, which both the page and the worker go by:
 
 - `<meta name="release">`: when it was built. `<meta name="published">`: when it was published again, as a rollback is (`scripts/republish.mts`). Releases are ordered by the later of the two.
-- Its code: scripts, stylesheets, icons, the web manifest, and maplibre's worker. `vite.config.mts` names maplibre's worker in the head, since only the code that starts it knows its URL.
+- Its code: scripts, stylesheets, icons, the web manifest, and the code it loads later, maplibre's worker and PostHog's chunk. `vite.config.mts` names that later code in the head as prefetches, following each page's dynamic imports as well as its static ones, since otherwise only the code loading it knows its URL.
 - A link per bundled JSON file, by name (`data-name`): the map's timetable, model, walk network, gazetteer, tiles, style, and places; the dining index; the laundry rooms' usual weeks. Vite hashes them like code, so the HTML says exactly which code and which data a page is. A script right after them fetches each as the head is parsed, and the file's first load takes that response (`src/shell/load.mts`). They aren't preloads, since Safari never hands a preload to `fetch()` and so downloaded each file twice.
 
 Every npm package builds into its own chunk, so a change to the app leaves maplibre cached.
@@ -69,6 +69,8 @@ Every cache write and every prune takes its turn on one queue, so nothing is kep
 The cache name (`app-v2`) changes when what it keeps changes meaning, and activation deletes older caches. Pages from the `app-v1` worker named only their code and loaded data by URL, so what they need can't be told: they're fetched fresh like an unvisited page. If an open tab's hashed file is gone (404, or offline with no copy), the worker navigates that tab afresh once, since old code can't recover by itself; a page that answers the census retries its own files instead.
 
 The HTTP cache sits behind the worker. Pages are fetched with `cache: "no-cache"`, so HTML is always the edge's; hashed assets are immutable by name, and say so (`public/_headers`), so a second request for one never goes back to the origin. Each file still downloads once on a first visit only because nothing asks for it twice at once, which Safari would download twice: the worker shares a download already on its way between the page and its staging, and the page that was served before the worker controlled it asks for its own staging only once its data has loaded. Live data (`/api/*`, Umo, other origins) bypasses the worker entirely.
+
+Usage stats (`src/shell/usage.tsx`) go straight to PostHog too. Events made offline wait in posthog-js' memory until it's back online, so those of a page closed offline are lost.
 
 ## Old tabs and the origin
 

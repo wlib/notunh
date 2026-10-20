@@ -36,6 +36,7 @@
     "flatbush": "^4.6.2",
     "hono": "^4.13.13",
     "maplibre-gl": "^6.11.2",
+    "posthog-js": "^1.438.12",
     "valibot": "^1.5.0"
   },
   "devDependencies": {
@@ -75,6 +76,7 @@
     "esbuild@0.18.20": true,
     "sharp@0.34.5": true,
     "sharp@0.35.4": true,
-    "workerd@1.20261001.1": true
+    "workerd@1.20261001.1": true,
+    "core-js": false
   }
 }

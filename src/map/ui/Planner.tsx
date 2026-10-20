@@ -8,6 +8,7 @@ import type { Place } from "../../places/search.mts"
 import * as photon from "../../places/photon.mts"
 import { Icon } from "../../shell/ui.tsx"
 import { state } from "../state/map.mts"
+import { capture } from "../../shell/usage.tsx"
 
 type Field = "from" | "to"
 
@@ -60,6 +61,7 @@ const choose = async (option: Place | undefined) => {
     return
   state[field].value = place
   state.selectedStop.value = undefined
+  capture("place_chosen", { field, you: option === undefined })
   const focused = document.activeElement as HTMLElement | null
   focused?.blur()
 }

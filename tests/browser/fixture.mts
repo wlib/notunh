@@ -38,6 +38,8 @@ const TYPES: Record<string, string> = {
   ".pbf":  "application/x-protobuf"
 }
 
+const USAGE_ORIGIN = /(<meta name="usage-origin" content=")[^"]*"/
+
 /** What Cloudflare answers any static asset with, short of a page's own headers and the build's _headers */
 const CACHE_CONTROL = "public, max-age=0, must-revalidate"
 
@@ -100,12 +102,14 @@ const deriveReleases = (dist: string): Record<ReleaseName, Release> => {
   }
 }
 
-export const startFixture = async (dist: string) => {
+/** Serves the build, standing in for notunh.app if asked, as the origin usage stats are sent from (src/shell/Head.tsx) */
+export const startFixture = async (dist: string, { isUsageOrigin = false } = {}) => {
   const releases = deriveReleases(dist)
   const headersOf = headerRules(dist)
   let published: ReleaseName = "A"
   let isOffline = false
   let dataDelay = 0
+  let origin = ""
   const statuses = new Map<string, number>()
   /** Every path asked for, in order */
   const requests: string[] = []
@@ -139,14 +143,15 @@ export const startFixture = async (dist: string) => {
     const file = pageFileOf(pathname)
     const headers = { "content-type": TYPES[extname(file ?? pathname)] ?? "application/octet-stream", "cache-control": file || pathname === "/sw.js" ? "no-cache" : CACHE_CONTROL, ...file ? {} : headersOf(pathname) }
     const path = join(dist, file ?? pathname)
-    const body = file && release.pages.get(file) || release.files.get(pathname) || (existsSync(path) && path.startsWith(dist) ? readFileSync(path) : undefined)
+    const found = file && release.pages.get(file) || release.files.get(pathname) || (existsSync(path) && path.startsWith(dist) ? readFileSync(path) : undefined)
+    const body = file && found && isUsageOrigin ? found.toString().replace(USAGE_ORIGIN, `$1${origin}"`) : found
     if (body === undefined)
       return response.writeHead(404).end("Not found")
     setTimeout(() => response.writeHead(200, headers).end(body), pathname.endsWith(".json") ? dataDelay : 0)
   })
   await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve))
   const { port } = server.address() as AddressInfo
-  const origin = `http://127.0.0.1:${port}`
+  origin = `http://127.0.0.1:${port}`
   const tell = (path: string) => fetch(origin + path, { method: "POST" }).then(() => {})
   return {
     origin,

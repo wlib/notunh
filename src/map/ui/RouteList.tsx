@@ -7,6 +7,7 @@ import { Count, Plural } from "../../shell/intl.tsx"
 import { toggled } from "../../shell/state.mts"
 import { RouteBadge, route } from "./common.tsx"
 import { state } from "../state/map.mts"
+import { capture } from "../../shell/usage.tsx"
 
 export const RouteList = () =>
   <section class="routes">
@@ -22,7 +23,10 @@ export const RouteList = () =>
               type="checkbox"
               aria-label={`Show ${long}`}
               checked={r(() => state.shownRoutes.value.has(id))}
-              onchange={() => state.chosenRoutes.value = toggled(state.shownRoutes.peek(), id)}
+              onchange={() => {
+                state.chosenRoutes.value = toggled(state.shownRoutes.peek(), id)
+                capture("route_toggled", { route: id, shown: state.shownRoutes.peek().has(id) })
+              }}
             />
             <button
               type="button"
@@ -32,6 +36,8 @@ export const RouteList = () =>
                 // Picking out a hidden route shows it too
                 if (state.pickedRoute.peek() && !state.shownRoutes.peek().has(id))
                   state.chosenRoutes.value = new Set([...state.shownRoutes.peek(), id])
+                if (state.pickedRoute.peek())
+                  capture("route_picked", { route: id })
               }}
             >
               <RouteBadge route={route(id)} />

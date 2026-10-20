@@ -10,6 +10,7 @@ import { today } from "../../shell/lifecycle.mts"
 import { Count, Plural } from "../../shell/intl.tsx"
 import { FoodItem } from "./Food.tsx"
 import { DayName, mealName } from "./common.tsx"
+import { capture } from "../../shell/usage.tsx"
 
 const MAX_RESULTS = 60
 /** Meals listed under a search result */
@@ -102,6 +103,7 @@ export const SearchView = () =>
                       // Go to the menu rather than opening the food
                       event.preventDefault()
                       goToFood(food.file, serving)
+                      capture("dining_result_opened")
                     }}
                   >
                     <DayName of={serving.day} /> · {hallName(serving.hall).split(" ")[0]} · {mealName(serving.meal)}

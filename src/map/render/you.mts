@@ -8,6 +8,7 @@ import { MIN_SPEED, reckon, type Fix } from "../../geo/fixes.mts"
 import type { MapState } from "../state/map.mts"
 import type { Coordinates } from "../../geo/projection.mts"
 import { coveredPadding, metersPerPixel } from "./camera.mts"
+import { capture } from "../../shell/usage.tsx"
 
 const BLEND_MS    = 1000   // to ease from where the dot was drawn to where a new fix puts it
 const FRAME_MS    = 50     // ~20 fps, unless the map is following, which moves with every frame
@@ -191,6 +192,7 @@ export const showYou = (
   button.addEventListener("click", async () => {
     if (isFollowing)
       return setFollowing(false)
+    capture("locate_used")
     locationProblem.value = undefined
     isWaiting = true
     hasFailed = false

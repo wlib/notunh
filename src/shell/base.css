@@ -77,6 +77,42 @@ input[type="checkbox"] {
   border-color: var(--muted);
 }
 
+/* The one action a choice leans toward */
+.button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* The question of usage stats, at the foot of whichever page asks it, over everything but out of its way */
+.usage-prompt-slot {
+  display: contents;
+}
+
+.usage-prompt {
+  position: fixed;
+  inset: auto 0.75rem max(0.75rem, env(safe-area-inset-bottom)) auto;
+  z-index: 10;
+  display: grid;
+  gap: 0.75rem;
+  width: min(24rem, calc(100% - 1.5rem));
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow);
+}
+
+.usage-prompt p {
+  margin: 0;
+}
+
+.usage-prompt .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 h1,
 h2 {
   margin: 0;

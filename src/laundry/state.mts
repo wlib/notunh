@@ -10,6 +10,7 @@ import { type Live, live, poll } from "../shell/poll.mts"
 import { latest } from "../shell/build.mts"
 import { now } from "../shell/lifecycle.mts"
 import { distinct, remembered, toggled } from "../shell/state.mts"
+import { capture } from "../shell/usage.tsx"
 
 // Each room answers from a 30 s cache, so polling the open one faster would only show the same answer, and every
 // room's counts from a 5 minute one
@@ -31,6 +32,7 @@ export const favorites = remembered("laundry-favorites", stored => new Set(Array
 
 export const toggleFavorite = (id: string) => {
   favorites.value = toggled(favorites.value, id)
+  capture("laundry_favorite_toggled", { on: favorites.value.has(id) })
 }
 
 //#region The open room, at its own path, so a favorite can be bookmarked or opened from the home screen
@@ -44,6 +46,9 @@ export const isUnknownRoom = r(() => openRoom.value === undefined && pathname.va
 
 export const open = (id: string | undefined) => {
   history.pushState(null, "", pathOf(id))
+  // Never which room, as it says where someone lives
+  if (id)
+    capture("laundry_room_opened", { favorite: favorites.value.has(id) })
   pathname.value = pathOf(id)
   // Each view starts at its top, as a new page would
   scrollTo(0, 0)

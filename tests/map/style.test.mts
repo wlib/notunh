@@ -178,17 +178,18 @@ test("campus details are drawn from our tiles, each from the zoom there's room f
 
 test("the style is loaded with its manifest, so one that can't be had fails the load, to be tried again past the caches, rather than wanted by the map and never come", async () => {
   const manifest = { url: `${FOLDER}style.json`, required: [`${FOLDER}style.json`], folders: [FOLDER] }
-  const answers = new Map<string, unknown>([["/assets/style-AAAAAAAA.json", manifest]])
+  const answers = new Map<string, unknown>()
   const asked: [string, RequestCache | undefined][] = []
   vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
     asked.push([url, init.cache])
     return answers.has(url) ? Response.json(answers.get(url)) : new Response("Not found", { status: 404 })
   })
   try {
-    await expect(loadStyle("/assets/style-AAAAAAAA.json", { cache: "default" })).rejects.toThrow(`404 from ${manifest.url}`)
+    await expect(loadStyle(Response.json(manifest), { cache: "default" })).rejects.toThrow(`404 from ${manifest.url}`)
     answers.set(manifest.url, style)
-    expect(await loadStyle("/assets/style-AAAAAAAA.json", { cache: "reload" })).toEqual({ ...manifest, style })
-    expect(asked.slice(-2)).toEqual([["/assets/style-AAAAAAAA.json", "reload"], [manifest.url, "reload"]])
+    // The style is asked for as the manifest was, past the caches on a retry
+    expect(await loadStyle(Response.json(manifest), { cache: "reload" })).toEqual({ ...manifest, style })
+    expect(asked).toEqual([[manifest.url, "default"], [manifest.url, "reload"]])
   }
   finally {
     vi.unstubAllGlobals()

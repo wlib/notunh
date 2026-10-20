@@ -9,7 +9,7 @@ export const RELEASE = "2026-10-18T08:00:00.000Z"
 /** A page's head, as the build writes it, with its release, its code, and the data files it names */
 export const headOf = (data: Record<string, string>, code = ["/assets/index-AAAAAAAA.js"], release = RELEASE) =>
   `<head><meta name="release" content="${release}">${code.map(src => `<script type="module" crossorigin src="${src}"></script>`).join("")}` +
-  `${Object.entries(data).map(([name, href]) => `<link rel="preload" as="fetch" crossorigin="anonymous" href="${href}" data-name="${name}">`).join("")}</head>`
+  `${Object.entries(data).map(([name, href]) => `<link rel="data" href="${href}" data-name="${name}">`).join("")}</head>`
 
 /** Stubs a page's globals as loaded at a time, before its modules are imported, which this makes import afresh */
 export const fakePage = ({ at, visibilityState = "visible", saved = {}, data = {}, code }: {
@@ -23,7 +23,8 @@ export const fakePage = ({ at, visibilityState = "visible", saved = {}, data = {
 }) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] })
   vi.setSystemTime(at)
-  const page = Object.assign(new EventTarget(), { visibilityState, head: { outerHTML: headOf(data, code) } })
+  // Its head names its data but hasn't started fetching any (load.mts), so every load fetches
+  const page = Object.assign(new EventTarget(), { visibilityState, head: { outerHTML: headOf(data, code) }, querySelector: () => null })
   const window = new EventTarget()
   const reload = vi.fn()
   const storage = new Map(Object.entries(saved))

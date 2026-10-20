@@ -4,19 +4,37 @@
 // every cache (cache: "reload", which the service worker honors, keeping the fresh copy over the one it had), so a
 // malformed copy a cache kept is replaced rather than read again. Failures are retried after 5 s, 15 s, 1 min, then
 // every 5 min, and at once when the page comes back into view, until the file loads or isn't wanted any more
+//
+// The head fetches its data files itself as the page is parsed, alongside the code (Head.tsx), and a file's first
+// load takes that response
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
-import { getJson } from "../shared/json.mts"
+import { readJson } from "../shared/json.mts"
 
-/** How a file is loaded from its URL, given an init with a deadline signal, and cache: "reload" on a retry */
-export type Loader<T> = (url: string, init: RequestInit) => Promise<T>
+/** How a file is read from its response, given the init it was fetched with, for any file it names in turn */
+export type Loader<T> = (response: Response, init: RequestInit) => Promise<T>
 
 const RETRY_MS = [5_000, 15_000, 60_000, 5 * 60_000]
 const LOAD_TIMEOUT_MS = 60_000
 
 /** A loader of JSON that must fit a schema */
 export const jsonOf = <T,>(schema: StandardSchemaV1<unknown, T>): Loader<T> =>
-  (url, init) => getJson(url, { ...init, schema })
+  response => readJson(response, schema)
+
+/** The response the head started fetching for a file, if it did and no load has taken it yet */
+const started = (url: string) => {
+  const link = document.querySelector<HTMLLinkElement & { response?: Promise<Response> }>(`link[data-name][href="${url}"]`)
+  const response = link?.response
+  delete link?.response
+  return response
+}
+
+/** A promise, or its signal's reason if that aborts first, as the head's fetches can't be aborted */
+const until = <T,>(promise: Promise<T>, signal: AbortSignal) =>
+  new Promise<T>((resolve, reject) => {
+    signal.addEventListener("abort", () => reject(signal.reason), { once: true })
+    promise.then(resolve, reject)
+  })
 
 // Retries waiting out their backoff, each woken when the page comes back into view
 const waiting = new Set<() => void>()
@@ -51,7 +69,8 @@ export const loadImmutable = async <T,>(url: string, load: Loader<T>, { signal, 
     signal?.addEventListener("abort", abort)
     const deadline = setTimeout(() => controller.abort(new DOMException("The load took too long", "TimeoutError")), LOAD_TIMEOUT_MS)
     try {
-      const value = await load(url, { signal: controller.signal, cache: attempt ? "reload" : "default" })
+      const init: RequestInit = { signal: controller.signal, cache: attempt ? "reload" : "default" }
+      const value = await until(((!attempt && started(url)) || fetch(url, init)).then(response => load(response, init)), controller.signal)
       // A loader may finish what it had despite the abort
       signal?.throwIfAborted()
       return value

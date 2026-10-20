@@ -1,7 +1,7 @@
 // The static schedule, converted from GTFS by scripts/map/convert.mts
 
 import * as v from "valibot"
-import { arrayOf, getJson, objectOf } from "../shared/json.mts"
+import { arrayOf, objectOf, readJson } from "../shared/json.mts"
 import { Day, HOUR, addDays, localDay, offsetAt, weekday } from "../shared/time.mts"
 
 export type Route = {
@@ -77,8 +77,8 @@ export const withIndexes = (data: FeedData): Feed => ({
   routesById: new Map(data.routes.map(route => [route.id, route]))
 })
 
-export const loadFeed = (url: string, init?: RequestInit) =>
-  getJson(url, { ...init, schema: FeedData }).then(withIndexes)
+export const loadFeed = (response: Response) =>
+  readJson(response, FeedData).then(withIndexes)
 
 /** Seconds into the service day a trip gets to a stop, which is when it leaves unless it waits there */
 export const arrivalTime = (trip: Trip, position: number) =>

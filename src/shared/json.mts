@@ -24,14 +24,17 @@ export const checked = async <T,>(schema: StandardSchemaV1<unknown, T>, value: u
   return result.value
 }
 
-/** What a URL answers with as JSON, as its schema makes it if it has one, or an error saying what it answered instead */
-export const getJson = async <T = unknown,>(url: string | URL, { schema, ...init }: RequestInit & { schema?: StandardSchemaV1<unknown, T> } = {}): Promise<T> => {
-  const response = await fetch(url, init)
+/** A response's JSON, as its schema makes it if it has one, or an error saying what it answered instead */
+export const readJson = async <T = unknown,>(response: Response, schema?: StandardSchemaV1<unknown, T>, from: string | URL = response.url): Promise<T> => {
   if (!response.ok)
-    throw new Error(`${response.status} from ${url}`)
+    throw new Error(`${response.status} from ${from}`)
   const body: unknown = await response.json()
-  return schema ? checked(schema, body, url) : body as T
+  return schema ? checked(schema, body, from) : body as T
 }
+
+/** What a URL answers with as JSON, as its schema makes it if it has one, or an error saying what it answered instead */
+export const getJson = async <T = unknown,>(url: string | URL, { schema, ...init }: RequestInit & { schema?: StandardSchemaV1<unknown, T> } = {}): Promise<T> =>
+  readJson(await fetch(url, init), schema, url)
 
 /** A value as gzipped JSON, as the Worker keeps what it stores */
 export const gzipJson = async (value: unknown) =>

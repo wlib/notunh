@@ -1,0 +1,70 @@
+// Pages as they first load in real browsers: what they download, and what they show from it
+
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { test as base, expect, type Page } from "@playwright/test"
+import { type Fixture, startFixture } from "./fixture.mts"
+
+const test = base.extend<{ fixture: Fixture }>({
+  fixture: async ({}, use) => {
+    const fixture = await startFixture(process.env.NOTUNH_DIST!)
+    await use(fixture)
+    await fixture.close()
+  }
+})
+
+/** Every data file the page's head names, by path */
+const dataOf = (page: Page) =>
+  page.evaluate(() => [...document.querySelectorAll<HTMLLinkElement>("link[data-name]")].map(link => link.getAttribute("href")!))
+
+/** Waits until the worker controls the page and keeps the page itself, so it has staged all the page names */
+const staged = async (page: Page, path: string) => {
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
+  await expect.poll(() => page.evaluate(async path => !!await (await caches.open("app-v2")).match(path), path), { timeout: 15_000 }).toBe(true)
+}
+
+test("each data file a page names downloads once, on a first visit however slowly it comes, and not again on the next", async ({ playwright, browserName, fixture }) => {
+  // A context of its own on disk, since WebKit's in memory has no HTTP cache, which the worker's staging reads from.
+  // Every other origin, like Umo and the map's tiles, is out of reach
+  const context = await playwright[browserName].launchPersistentContext(mkdtempSync(join(tmpdir(), "notunh-profile-")), { proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" } })
+  try {
+    const page = context.pages()[0] ?? await context.newPage()
+    await fixture.setDelay(1000)
+    for (const path of ["/dining/", "/map/"]) {
+      const downloads = (url: string) => fixture.requests.filter(request => request === url).length
+      await page.goto(fixture.origin + path)
+      await staged(page, path)
+      const data = await dataOf(page)
+      expect(data.length).toBeGreaterThan(0)
+      for (const url of data)
+        expect(downloads(url), url).toBe(1)
+
+      await page.goto("about:blank")
+      await page.goto(fixture.origin + path)
+      await page.waitForTimeout(2000)
+      for (const url of data)
+        expect(downloads(url), url).toBe(1)
+    }
+  }
+  finally {
+    await context.close()
+  }
+})
+
+// The dining fixtures' menus are for October 7 and 8, 2026, when every hall but Philbrook on weekends is open
+const WITH_MENUS = new Date("2026-10-07T16:00:00Z")
+const PAST_MENUS = new Date("2026-10-20T16:00:00Z")
+
+test("dining first opens on a day without a menu saying so, not loading forever", async ({ page, fixture }) => {
+  await page.clock.setFixedTime(PAST_MENUS)
+  await page.goto(`${fixture.origin}/dining/`)
+  await expect(page.locator("main.dining")).toContainText("hasn't posted a menu for that day yet")
+})
+
+test("dining first opens on a day with a menu showing it", async ({ page, fixture }) => {
+  await page.clock.setFixedTime(WITH_MENUS)
+  await page.goto(`${fixture.origin}/dining/`)
+  await expect(page.locator(".stations .station").first()).toBeVisible()
+  expect(fixture.requests.filter(path => path.startsWith("/data/dining/"))).toHaveLength(1)
+})

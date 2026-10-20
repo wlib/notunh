@@ -4,6 +4,7 @@ import { buildOf, isRetained, retainOf } from "../../src/shell/manifest.mts"
 import { Model, emptyModel } from "../../src/transit/models/model.mts"
 import { RELEASE, fakePage, headOf, leavePage } from "./page.mts"
 import { republished } from "../../scripts/republish.mts"
+import { FETCH_DATA } from "../../src/shell/Head.tsx"
 
 afterEach(leavePage)
 
@@ -25,7 +26,8 @@ const load = async (data: Record<string, string>, code?: string[]) => {
     const answer = answers.get(url)
     if (!answer)
       throw new TypeError("Load failed")
-    return Response.json(await answer())
+    // As fetch answers, saying where from
+    return Object.defineProperty(Response.json(await answer()), "url", { value: url })
   })
   vi.spyOn(console, "error").mockImplementation(() => {})
   return { answers, fetches, ...await import("../../src/shell/build.mts") }
@@ -42,7 +44,7 @@ test("a page's build is read from our own code in its head, whatever else the ho
   const data = { gtfs: "/assets/gtfs-AAAAAAAA.json" }
   const served =
     `<!doctype html><html lang="en-US"><head><meta charset="UTF-8"><meta name="release" content="${RELEASE}"><link rel="manifest" href="/manifest.webmanifest">` +
-    `<link rel="preload" as="fetch" crossorigin="anonymous" href="/assets/gtfs-AAAAAAAA.json" data-name="gtfs">` +
+    `<link rel="data" href="/assets/gtfs-AAAAAAAA.json" data-name="gtfs"><script>${FETCH_DATA}</script>` +
     `<script type="module" crossorigin src="/assets/map/index-AAAAAAAA.js"></script>` +
     `<link rel="modulepreload" crossorigin href="/assets/bruh-AAAAAAAA.js"><link rel="stylesheet" crossorigin href="/assets/index-AAAAAAAA.css">` +
     `<link rel="prefetch" href="/assets/maplibre-gl-worker-AAAAAAAA.js">` +
@@ -50,7 +52,7 @@ test("a page's build is read from our own code in its head, whatever else the ho
     `<body><div id="app"></div><script defer src="https://static.cloudflareinsights.com/beacon.min.js"></script></body></html>`
   const head =
     `<head><meta charset="UTF-8"><meta name="release" content="${RELEASE}"><link rel="manifest" href="/manifest.webmanifest">` +
-    `<link rel="preload" as="fetch" crossorigin="anonymous" href="/assets/gtfs-AAAAAAAA.json" data-name="gtfs">` +
+    `<link rel="data" href="/assets/gtfs-AAAAAAAA.json" data-name="gtfs"><script>${FETCH_DATA}</script>` +
     `<script type="module" crossorigin="" src="/assets/map/index-AAAAAAAA.js"></script>` +
     `<link rel="modulepreload" crossorigin="" href="/assets/bruh-AAAAAAAA.js"><link rel="stylesheet" crossorigin="" href="/assets/index-AAAAAAAA.css">` +
     `<link rel="prefetch" href="/assets/maplibre-gl-worker-AAAAAAAA.js"></head>`

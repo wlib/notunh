@@ -7,9 +7,17 @@ import { SURFACE } from "./theme.mts"
 const RELEASE = new Date().toISOString()
 
 /**
+ * Fetches the data files the head's links name as it's parsed, alongside the code, keeping each response on its link
+ * for the file's first load to take (load.mts). Not preloads: Safari never hands one to fetch(), so a file preloaded
+ * downloaded twice
+ */
+export const FETCH_DATA = `for (const link of document.querySelectorAll("link[data-name]")) (link.response = fetch(link.href)).catch(() => {})`
+
+/**
  * The <head> every page shares, around its own title, description, entry script, and data files. Data files are
- * given by name and source path, and the build hashes them. They're preloaded alongside the code, and the page finds
- * them here by name (manifest.mts), so a newer build's data can be told apart from its code and swapped in
+ * given by name and source path, and the build hashes them. They're fetched alongside the code, and the page finds
+ * them here by name (manifest.mts), so a newer build's data can be told apart from its code and swapped in. Their
+ * links are of a rel no browser acts on, so only FETCH_DATA fetches them
  */
 export const Head = ({ title, description, script, data = {} }: {
   title:       string,
@@ -37,6 +45,7 @@ export const Head = ({ title, description, script, data = {} }: {
 
     <script type="module" src={script} />
     {Object.entries(data).map(([name, source]) =>
-      <link rel="preload" as="fetch" crossorigin="anonymous" href={source} data-name={name} />
+      <link rel="data" href={source} data-name={name} />
     )}
+    <script>{FETCH_DATA}</script>
   </head>

@@ -75,12 +75,22 @@ export const meals = r(() => index.value.days[hall.value]?.[day.value]?.meals ??
 /** The file with the hall's meals that day, if it has a menu, changing only for another menu, not a newer index */
 const dayFile = distinct(() => index.value.days[hall.value]?.[day.value]?.file)
 
-/** The hall's meals that day, undefined while they load, and empty when there's no menu */
-export const dayMeals = r<Meal[]>()
+/** The meals of the day file last loaded */
+const loaded = r<{ file: string, meals: Meal[] }>()
+
+/**
+ * The hall's meals that day, undefined while they load, and empty when there's no menu. It's derived rather than set
+ * by the watch below, so it's right from the start: bruh 2.0.0-beta.5 renders a reactive child under a watch with
+ * skipFirst, whose first run, a microtask late, skips whatever changed that tick, so a menu known to be missing as the
+ * page started would show as loading forever
+ */
+export const dayMeals = r(() => {
+  const file = dayFile.value
+  return !file ? [] : loaded.value?.file === file ? loaded.value.meals : undefined
+})
 export const hasFailed = r(false)
 watch([dayFile], () => {
   const file = dayFile.value
-  dayMeals.value = file ? undefined : []
   hasFailed.value = false
   if (!file)
     return
@@ -89,7 +99,7 @@ watch([dayFile], () => {
   loadImmutable(fileUrl(file), MEALS, { signal: loading.signal, onError: () => hasFailed.value = true })
     .then(meals => {
       hasFailed.value = false
-      dayMeals.value = meals
+      loaded.value = { file, meals }
     }, () => {})
   return () => loading.abort()
 })

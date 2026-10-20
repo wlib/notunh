@@ -19,7 +19,7 @@
 
 import { r, type DerivativeNode, type SourceNode } from "bruh/reactive"
 import type { StandardSchemaV1 } from "@standard-schema/spec"
-import { getJson } from "../shared/json.mts"
+import { readJson } from "../shared/json.mts"
 import { type Generation, buildOf, isOlder, isSameCode, mergedRetain, retainOf } from "./manifest.mts"
 import { type Loader, jsonOf, loadImmutable } from "./load.mts"
 
@@ -43,6 +43,8 @@ type Slot = {
   swapped:  () => void
 }
 const slots = new Map<string, Slot>()
+/** Each slot's first load, which pages wait for */
+const firstLoads: Promise<void>[] = []
 
 /**
  * Wants a URL for a slot, loading it (load.mts) and swapping it in once loaded, in place of whatever else the slot was
@@ -111,8 +113,9 @@ const revalidate = () => {
     navigator.serviceWorker?.controller?.postMessage({ revalidate: location.pathname })
 }
 setInterval(revalidate, REVALIDATE_MS)
-// A first visit's page was served before the worker controlled it, so revalidate as soon as the worker takes over
-navigator.serviceWorker?.addEventListener("controllerchange", revalidate)
+// A first visit's page was served before the worker controlled it, so revalidate once the worker takes over and the
+// page has its data. The worker then finds each file in the HTTP cache, where alongside the page it downloaded it again
+navigator.serviceWorker?.addEventListener("controllerchange", () => void Promise.all(firstLoads).then(revalidate))
 document.addEventListener("visibilitychange", revalidate)
 
 /**
@@ -122,12 +125,12 @@ document.addEventListener("visibilitychange", revalidate)
  * they start with that if the first try fails, and the file is swapped in once it loads. A newer build announced
  * meanwhile is loaded instead
  */
-export const latest = async <T,>(name: string, by: StandardSchemaV1<unknown, T> | Loader<T> = getJson, fallback?: () => T): Promise<DerivativeNode<T>> => {
+export const latest = async <T,>(name: string, by: StandardSchemaV1<unknown, T> | Loader<T> = response => readJson<T>(response), fallback?: () => T): Promise<DerivativeNode<T>> => {
   const url = announced.data[name]
   if (url === undefined)
     throw new Error(`The page names no data ${name}`)
   const value = r<unknown>(undefined)
-  await new Promise<void>(resolve => {
+  const loaded = new Promise<void>(resolve => {
     const slot: Slot = { value, load: typeof by === "function" ? by : jsonOf(by), swapped: resolve }
     slots.set(name, slot)
     want(slot, url, error => {
@@ -138,5 +141,7 @@ export const latest = async <T,>(name: string, by: StandardSchemaV1<unknown, T> 
       }
     })
   })
+  firstLoads.push(loaded)
+  await loaded
   return value as DerivativeNode<T>
 }

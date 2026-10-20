@@ -169,6 +169,21 @@ export const start = (scope: Scope) => {
       ]))).catch(() => {})
       : Promise.resolve()
 
+  // Hashed files on their way from the network, by URL, until all of each has come, so a page asking for one being
+  // staged, or the other way around, shares the one download. After that the HTTP cache has it (public/_headers), but
+  // Safari's doesn't join requests still on their way, so each downloaded it again
+  const downloading = new Map<string, Promise<Response>>()
+
+  /** A hashed file from the network, a copy of the download already on its way, if any, by the deadline */
+  const download = (url: string) => {
+    let response = downloading.get(url)
+    if (!response) {
+      downloading.set(url, response = scope.fetch(url, { signal: deadline().signal }))
+      response.then(response => response.clone().arrayBuffer()).catch(() => {}).finally(() => downloading.delete(url))
+    }
+    return response.then(response => response.clone())
+  }
+
   /**
    * A hashed file: the cached copy, unless the request says cache: "reload", as a page's retry of a failed load
    * does. Otherwise the network's, kept behind the answer, falling back to the cached copy offline
@@ -178,7 +193,8 @@ export const start = (scope: Scope) => {
     const copy = await open().then(cache => cache.match(request, ANY)).catch(() => undefined)
     if (copy && request.cache !== "reload")
       return copy
-    const response = await scope.fetch(request).catch(error => copy ?? Promise.reject(error))
+    // One that asks past the HTTP cache gets a download of its own
+    const response = await (request.cache === "default" ? download(request.url) : scope.fetch(request)).catch(error => copy ?? Promise.reject(error))
     if (response !== copy)
       event.waitUntil(store(request, response.clone()))
     return response
@@ -201,7 +217,10 @@ export const start = (scope: Scope) => {
   const ensure = async (cache: CacheLike, asset: string, signal: AbortSignal) => {
     if (await cache.match(asset, ANY))
       return
-    const response = await scope.fetch(asset, { signal })
+    const response = await Promise.race([download(new URL(asset, scope.location.origin).href), new Promise<never>((_, reject) => {
+      signal.throwIfAborted()
+      signal.addEventListener("abort", () => reject(signal.reason), { once: true })
+    })])
     if (!isKeepable(asset, response))
       throw new Error(`${response.status} ${response.headers.get("content-type")} from ${asset}`)
     if (!await keep(cache, asset, response))

@@ -52,5 +52,23 @@
   // Secrets, set once with `wrangler secret put` (locally, in .dev.vars):
   // - BUILD_TOKEN: what the workflows read and write rows and models with
   // - GITHUB_TOKEN: for the nightly run to start the Observations and Inputs workflows, and Map data on Mondays
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // Previews (`npx wrangler preview`) get none of the above: no route, no crons, and their own database, which every
+  // branch's Preview shares, migrated before a Preview is made. They have no secrets, so nothing reaches production
+  "previews": {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "notunh-preview",
+        "database_id": "b774a3e5-ff9c-4ce1-b1d0-4c977481681d",
+        "migrations_dir": "worker/migrations"
+      }
+    ],
+    "vars": {
+      "RETAIN_DAYS": 60,
+      "RETAIN_ARCHIVED_DAYS": 14,
+      "RETAIN_VISIT_DAYS": 180,
+      "RETAIN_STATISTICS_DAYS": 400
+    }
+  }
 }

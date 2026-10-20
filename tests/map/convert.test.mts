@@ -1,8 +1,9 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { ColorSpace, contrastWCAG21, parse, sRGB } from "colorjs.io/fn"
-import { interpolateTimes, parseTable, readableText, smoothShape } from "../../scripts/map/convert.mts"
-import { alongSegment, type Coordinates } from "../../src/map/geometry.mts"
+import { type Row, convert, interpolateTimes, parseTable, readableText, smoothShape } from "../../scripts/map/convert.mts"
+import { alongSegment } from "../../src/geo/lines.mts"
+import { type Coordinates, ruler } from "../../src/geo/projection.mts"
 
 ColorSpace.register(sRGB)
 
@@ -65,8 +66,10 @@ test("readableText keeps a readable GTFS color, otherwise picks whichever of bla
   }))
 )
 
-/** Meters east and north of one point from another, flat-earth around Durham */
-const offset = ([lon, lat]: Coordinates, [x, y]: Coordinates) => [(x - lon) * 81_150, (y - lat) * 110_540]
+const { kx: EAST, ky: NORTH } = ruler(43.135)
+
+/** Meters east and north of one point from another, flat around Durham */
+const offset = ([lon, lat]: Coordinates, [x, y]: Coordinates) => [(x - lon) * EAST, (y - lat) * NORTH]
 
 const metersApart = (a: Coordinates, b: Coordinates) => Math.hypot(...offset(a, b))
 
@@ -84,7 +87,7 @@ const offLine = (point: Coordinates, line: Coordinates[]) => {
 
 /** A point some meters from another along a heading in radians */
 const stepFrom = ([lon, lat]: Coordinates, radians: number, meters: number): Coordinates =>
-  [lon + Math.sin(radians) * meters / 81_150, lat + Math.cos(radians) * meters / 110_540]
+  [lon + Math.sin(radians) * meters / EAST, lat + Math.cos(radians) * meters / NORTH]
 
 // A street wandering about Durham: steps of 5 to 60 m, in any direction, with GPS wobble
 const shapes = fc
@@ -125,3 +128,39 @@ test("smoothShape keeps straight streets straight, rounding off only their corne
     }
   ))
 )
+
+/** A GTFS feed of one trip along three stops, with whatever each stop time says besides its times */
+const tables = (stopTimes: Row[]) => {
+  const rows: Record<string, Row[]> = {
+    "feed_info.txt":      [{ feed_version: "v", feed_start_date: "20260901", feed_end_date: "20261231" }],
+    "routes.txt":         [{ route_id: "R", route_short_name: "R", route_long_name: "Route", route_color: "", route_text_color: "" }],
+    "calendar.txt":       [{ service_id: "S", monday: "1", tuesday: "1", wednesday: "1", thursday: "1", friday: "1", saturday: "0", sunday: "0", start_date: "20260901", end_date: "20261231" }],
+    "calendar_dates.txt": [],
+    "stops.txt":          ["a", "b", "c"].map((id, i) => ({ stop_id: id, stop_name: `Stop ${id}`, stop_lat: `${43.13 + i / 100}`, stop_lon: "-70.93" })),
+    "trips.txt":          [{ trip_id: "T", route_id: "R", service_id: "S", trip_headsign: "Town", shape_id: "" }],
+    "stop_times.txt":     stopTimes.map((stopTime, i) => ({ trip_id: "T", stop_id: ["a", "b", "c"][i], stop_sequence: `${i}`, ...stopTime })),
+    "shapes.txt":         []
+  }
+  return convert(name => rows[name])
+}
+
+test("each stop time's own pickup and drop-off rules, and arrival before departure, come through to the trip", () => {
+  const [trip] = tables([
+    { arrival_time: "08:00:00", departure_time: "08:00:00", drop_off_type: "1" },
+    { arrival_time: "08:10:00", departure_time: "08:12:00", pickup_type: "1", drop_off_type: "1" },
+    { arrival_time: "08:20:00", departure_time: "08:20:00", pickup_type: "1" }
+  ]).trips
+  expect(trip.times).toEqual([8 * 3600, 8 * 3600 + 720, 8 * 3600 + 1200])
+  expect(trip.arrivals).toEqual([8 * 3600, 8 * 3600 + 600, 8 * 3600 + 1200])
+  // Nobody gets on at the last stop or off at the first anyway
+  expect(trip.noPickup).toEqual([1])
+  expect(trip.noDropOff).toEqual([1])
+  const [plain] = tables([
+    { arrival_time: "08:00:00", departure_time: "08:00:00" },
+    { arrival_time: "08:10:00", departure_time: "08:10:00" },
+    { arrival_time: "08:20:00", departure_time: "08:20:00" }
+  ]).trips
+  expect(plain).not.toHaveProperty("arrivals")
+  expect(plain).not.toHaveProperty("noPickup")
+  expect(plain).not.toHaveProperty("noDropOff")
+})

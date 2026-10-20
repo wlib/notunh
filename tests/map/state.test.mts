@@ -1,11 +1,14 @@
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
-import { distance, type FeedData } from "../../src/map/feed.mts"
-import type { Vehicle } from "../../src/map/umo.mts"
-import type { Place } from "../../src/map/plan.mts"
-import { BUILDINGS } from "../../src/map/places.mts"
+import { type FeedData, serviceDayStart } from "../../src/transit/feed.mts"
+import { distance } from "../../src/geo/projection.mts"
+import type { Vehicle } from "../../src/transit/observations/umo.mts"
+import { itineraryKey } from "../../src/routing/plan.mts"
+import type { Place } from "../../src/places/search.mts"
+import type { Building } from "../../src/places/buildings.mts"
+import places from "../../src/map/places.json"
 import { localDay } from "../../src/shared/time.mts"
-import { fakePage, leavePage } from "../shell/page.mts"
+import { fakePage, headOf, leavePage } from "../shell/page.mts"
 
 // Each run loads the app's state afresh, which is slower than the pure properties
 fc.configureGlobal({ numRuns: 40 })
@@ -15,6 +18,7 @@ const TICK = 15_000
 // Midday in Durham, with hours to go before the day changes
 const NOON = Date.UTC(2026, 9, 7, 16)
 const CENTER = { lat: 43.135, lon: -70.93 }
+const MADE = { extract: "2026-10-13", generator: "0000000000000000" }
 
 const FEED: FeedData = {
   version:  "test",
@@ -27,22 +31,30 @@ const FEED: FeedData = {
   shapes:   {}
 }
 
+// As the map's page names them in development
+const DATA = Object.fromEntries(["gtfs", "model", "walk", "gazetteer", "tiles", "style", "places"].map(name => [name, `/src/map/${name}.json`]))
+const BUILDINGS = places.buildings as Building[]
+
 const bus = (id: string, secsSinceReport = 0): Vehicle => ({
-  id, ...CENTER, heading: 0, kph: 0, secsSinceReport, predictable: true, gpsTime: NOON - secsSinceReport * 1000,
-  route: { id: "R", name: "R" }, dir: null
+  id, ...CENTER, heading: 0, kph: 0, secsSinceReport, gpsTime: NOON - secsSinceReport * 1000,
+  route: { id: "R" }, dir: null
 })
 
+// What stops the state the test made
+let stop = () => {}
+
 afterEach(() => {
+  stop()
   leavePage()
   vi.restoreAllMocks()
 })
 
 /**
- * The map's state loaded afresh at a time, with Umo answering with whatever umo is set to, or failing while it's
- * undefined, a phone whose location is shared as told, and the page opened at a query
+ * The map's state loaded afresh at a time, with the page opened at a query. Umo answers with whatever umo.vehicles is
+ * set to, or fails while it's undefined. The phone's location is shared as told, and files answer for their URLs
  */
-const load = async ({ at = NOON, saved = {} as Record<string, unknown>, permission = "granted", isUmoUp = true, search = "" } = {}) => {
-  const page = fakePage({ at, saved: Object.fromEntries(Object.entries(saved).map(([key, value]) => [key, JSON.stringify(value)])) })
+const load = async ({ at = NOON, saved = {} as Record<string, unknown>, permission = "granted", isUmoUp = true, search = "", files = {} as Record<string, unknown> } = {}) => {
+  const page = fakePage({ at, saved: Object.fromEntries(Object.entries(saved).map(([key, value]) => [key, JSON.stringify(value)])), data: DATA })
   const replaceState = vi.fn()
   vi.stubGlobal("location", { reload: page.reload, pathname: "/map/", search })
   vi.stubGlobal("history", { state: null, replaceState })
@@ -55,18 +67,34 @@ const load = async ({ at = NOON, saved = {} as Record<string, unknown>, permissi
     permissions: { query: async () => ({ state: permission }) }
   })
   vi.stubGlobal("fetch", async (url: string) => {
+    if (url in files)
+      return Response.json(files[url])
+    // No walking network, so walks are straight lines, as off it
+    if (url.includes("walk.json"))
+      return Response.json({ made: MADE, vertices: [], edges: [] })
+    if (url.includes("gazetteer.json"))
+      return Response.json({ made: MADE, places: [] })
+    if (url.includes("tiles.json"))
+      return Response.json({ version: "2026-10-17", folders: ["/data/map/tiles/2026-10-17/"] })
+    if (url.includes("style.json"))
+      return Response.json({ url: "/data/map/AAAAAAAAAAAAAAAA/style.json", folders: ["/data/map/AAAAAAAAAAAAAAAA/"] })
+    if (url.includes("places.json"))
+      return Response.json(places)
     if (!url.endsWith("/vehicles"))
       return Response.json(FEED)
     if (!umo.vehicles)
       throw new TypeError("Load failed")
     return Response.json(await umo.vehicles())
   })
-  const state = await import("../../src/map/state.mts")
-  const { ride } = await import("../../src/map/riding.mts")
+  const { loadMapData } = await import("../../src/map/state/data.mts")
+  const { createMapState } = await import("../../src/map/state/map.mts")
+  const state = createMapState(await loadMapData())
+  stop = state.stop
+  const { receive } = await import("../../src/shell/build.mts")
   await vi.advanceTimersByTimeAsync(0)
   return {
     ...state,
-    ride,
+    receive,
     umo,
     replaceState,
     storage: page.storage,
@@ -106,6 +134,20 @@ test("buses drop off as they age, though Umo can't be reached to say so", async 
       expect(state.ageOf(reports[0] ?? bus("x"), Date.now())).toBe((reports[0]?.secsSinceReport ?? 0) + (Date.now() - updated) / 1000)
     }
   ))
+})
+
+test("stopping the map's state ends its polling and its watching where you are", async () => {
+  const state = await load()
+  let asked = 0
+  state.umo.vehicles = async () => (asked++, [bus("a")])
+  await vi.advanceTimersByTimeAsync(10_000)
+  expect(asked).toBeGreaterThan(0)
+  const cleared = vi.spyOn(navigator.geolocation, "clearWatch")
+  state.stop()
+  const before = asked
+  await vi.advanceTimersByTimeAsync(60_000)
+  expect(asked).toBe(before)
+  expect(cleared).toHaveBeenCalled()
 })
 
 test("the list of buses is the same list while the same buses are in it", async () => {
@@ -159,18 +201,22 @@ test("live updates are down when Umo has never answered", async () => {
   expect(state.isLiveDown.peek()).toBe(true)
 })
 
-test("a ride ends when its bus stops reporting, or Umo stops listing it", async () => {
+test("a ride ends when its bus stops reporting, or Umo stops listing it, and holds off newer code meanwhile", async () => {
   const state = await load()
+  const { isBusy } = await import("../../src/shell/lifecycle.mts")
   state.umo.vehicles = async () => [bus("a", 100), bus("b")]
   await vi.advanceTimersByTimeAsync(5_000)
+  expect(isBusy.peek()).toBe(false)
   state.ride("a")
   await vi.advanceTimersByTimeAsync(0)
   expect(state.riding.peek()).toBe("a")
+  expect(isBusy.peek()).toBe(true)
   state.umo.vehicles = undefined
   await vi.advanceTimersByTimeAsync(60_000)
   expect(state.riding.peek()).toBe("a")
   await vi.advanceTimersByTimeAsync(30_000)
   expect(state.riding.peek()).toBeUndefined()
+  expect(isBusy.peek()).toBe(false)
 
   state.umo.vehicles = async () => [bus("b")]
   await vi.advanceTimersByTimeAsync(5_000)
@@ -210,6 +256,32 @@ test("a ride outlasts the phone sleeping, until Umo has a chance to answer", asy
   answer([bus("a")])
   await vi.advanceTimersByTimeAsync(0)
   expect(state.riding.peek()).toBe("a")
+})
+
+test("a ride outlasts a reload, as for newer code, while its bus is still out, and no longer than a ride can", async () => {
+  const state = await load()
+  state.umo.vehicles = async () => [bus("a")]
+  await vi.advanceTimersByTimeAsync(5_000)
+  state.ride("a")
+  await vi.advanceTimersByTimeAsync(0)
+  const saved = { "map-riding": JSON.parse(state.storage.get("map-riding")!) }
+
+  // Until Umo answers, the bus is taken to be out still
+  const reloaded = await load({ at: NOON + 60_000, saved, isUmoUp: false })
+  expect(reloaded.riding.peek()).toBe("a")
+  await vi.advanceTimersByTimeAsync(5_000)
+  expect(reloaded.riding.peek()).toBe("a")
+  reloaded.umo.vehicles = async () => [bus("a")]
+  await vi.advanceTimersByTimeAsync(5_000)
+  expect(reloaded.riding.peek()).toBe("a")
+
+  const later = await load({ at: NOON + 60_000, saved, isUmoUp: false })
+  later.umo.vehicles = async () => [bus("b")]
+  await vi.advanceTimersByTimeAsync(5_000)
+  expect(later.riding.peek()).toBeUndefined()
+
+  const muchLater = await load({ at: NOON + 3 * 3_600_000, saved })
+  expect(muchLater.riding.peek()).toBeUndefined()
 })
 
 const steps = fc.array(
@@ -328,4 +400,130 @@ test("a link asks for your location where it isn't yet shared, and plans from th
   expect(state.to.peek()).toMatchObject({ name: "Holloway Commons" })
   await state.moveTo(CENTER)
   expect(state.from.peek()).toEqual({ ...CENTER, name: "Your location", isYou: true })
+})
+
+/** A spot some meters east and north of the center */
+const metersFrom = (east: number, north: number) =>
+  ({ lat: CENTER.lat + north / 111_100, lon: CENTER.lon + east / 81_360 })
+
+test("walking from your location, stepping well off the way for a few fixes plans again from there, once", async () => {
+  await fc.assert(fc.asyncProperty(fc.integer({ min: 3, max: 8 }), async away => {
+    const there = { ...metersFrom(400, 0), name: "Dimond Library" }
+    const saved = { "map-trip": { day: localDay(NOON), from: { ...CENTER, name: "Your location", isYou: true }, to: there, selected: "walk" } }
+    const state = await load({ saved })
+    const fixAt = async (spot: { lat: number, lon: number }) => {
+      await state.moveTo(spot)
+      await vi.advanceTimersByTimeAsync(1000)
+    }
+
+    // Along the way, which is followed, though not far enough to plan it again
+    for (let meters = 0; meters <= 20; meters += 2)
+      await fixAt(metersFrom(meters, 0))
+    expect(state.from.peek()).toMatchObject(CENTER)
+    expect(state.progress.peek()).toMatchObject({ missed: 0 })
+    expect(state.progress.peek()!.distance).toBeGreaterThan(15)
+    expect(state.legPaths.peek()[0]).toMatchObject({ via: "estimate" })
+    expect(state.legPaths.peek()[0].coordinates[0][0]).toBeCloseTo(metersFrom(state.progress.peek()!.distance, 0).lon, 6)
+
+    // Off it by 40 m, under the 50 m that plans again on its own, until it's clear you've left it
+    const off = metersFrom(20, 40)
+    const starts = new Set<Place | undefined>()
+    for (let i = 0; i < away; i++) {
+      await fixAt(off)
+      starts.add(state.from.peek())
+    }
+    expect(starts.size).toBe(2)
+    expect(state.from.peek()).toEqual({ ...off, name: "Your location", isYou: true })
+
+    // The new way is followed from its start, short of where it's planned again for having moved on
+    for (let step = 1; step <= 10; step++) {
+      await fixAt({ lat: off.lat + (there.lat - off.lat) * step / 100, lon: off.lon + (there.lon - off.lon) * step / 100 })
+      expect(state.progress.peek()).toMatchObject({ missed: 0 })
+    }
+    expect(state.from.peek()).toEqual({ ...off, name: "Your location", isYou: true })
+  }), { numRuns: 6 })
+})
+
+const stopNamed = (id: string, i: number) => ({ id, name: `Stop ${id}`, lat: CENTER.lat + i * 1e-3, lon: CENTER.lon })
+
+test("a newer build's timetable swaps in live, keeping the trip, the itinerary chosen, and the stop selected", async () => {
+  await fc.assert(fc.asyncProperty(
+    fc.uniqueArray(fc.stringMatching(/^[0-9]{1,3}$/), { minLength: 1, maxLength: 8 }),
+    fc.func(fc.integer()),
+    fc.nat(),
+    fc.boolean(),
+    async (ids, order, pick, isKept) => {
+      const next = { ...FEED, version: "next", stops: [...ids].sort((a, b) => order(a) - order(b)).map(stopNamed) }
+      const feed = { ...FEED, stops: ids.map(stopNamed) }
+      const chosen = pick % ids.length
+      if (!isKept)
+        next.stops = next.stops.filter(stop => stop.id !== ids[chosen])
+      const state = await load({ files: { "/src/map/gtfs.json": feed, "/assets/gtfs-BBBBBBBB.json": next } })
+      const there = { ...CENTER, name: "Dimond Library" }
+      state.from.value = { ...CENTER, name: "Stop" }
+      state.to.value = there
+      state.selected.value = "walk"
+      state.selectedStop.value = chosen
+      await vi.advanceTimersByTimeAsync(0)
+      const trip = state.storage.get("map-trip")
+
+      state.receive(headOf({ ...DATA, gtfs: "/assets/gtfs-BBBBBBBB.json" }))
+      await vi.advanceTimersByTimeAsync(0)
+      expect(state.feed.peek().version).toBe("next")
+      expect(state.selectedStop.peek()).toBe(isKept ? next.stops.findIndex(stop => stop.id === ids[chosen]) : undefined)
+      expect(state.selectedStopId.peek()).toBe(isKept ? ids[chosen] : undefined)
+      expect(state.from.peek()).toEqual({ ...CENTER, name: "Stop" })
+      expect(state.to.peek()).toBe(there)
+      expect(state.selected.peek()).toBe("walk")
+      expect(state.itinerary.peek()?.legs[0]).toMatchObject({ kind: "walk", to: there })
+      expect(state.storage.get("map-trip")).toBe(trip)
+    }
+  ))
+})
+
+// A trip along three stops a couple of kilometers apart, each stop placed by its id so renumbering moves none
+const stopById = (id: string) => ({ id, name: `Stop ${id}`, lat: CENTER.lat + Number(id) * 0.02, lon: CENTER.lon })
+const tripFeed = (ids: string[]): FeedData => ({
+  ...FEED,
+  stops:    ids.map(stopById),
+  services: { daily: { days: 127, start: "2000-01-01", end: "2099-12-31", added: [], removed: [] } },
+  trips: [{
+    id: "T", route: "R", service: "daily", headsign: "Town", shape: "", timepoints: [],
+    stops: ["0", "1", "2"].map(id => ids.indexOf(id)),
+    // Leaving a quarter of an hour after noon
+    times: [0, 600, 1200].map(seconds => (NOON - serviceDayStart(localDay(NOON))) / 1000 + 900 + seconds)
+  }]
+})
+
+test("a newer timetable with its stops numbered otherwise keeps the itinerary chosen, by the same stops", async () => {
+  const state = await load({ files: { "/src/map/gtfs.json": tripFeed(["0", "1", "2"]), "/assets/gtfs-BBBBBBBB.json": { ...tripFeed(["2", "0", "1"]), version: "next" } } })
+  state.from.value = { ...stopById("0"), lat: stopById("0").lat + 0.0005, name: "Home" }
+  state.to.value = { ...stopById("2"), lat: stopById("2").lat + 0.0005, name: "Work" }
+  await vi.advanceTimersByTimeAsync(0)
+  const before = state.itinerary.peek()!
+  const ride = before.legs.find(leg => leg.kind === "ride")!
+  expect(ride).toMatchObject({ fromPosition: 0, toPosition: 2 })
+  state.selected.value = itineraryKey(before)
+  await vi.advanceTimersByTimeAsync(0)
+
+  state.receive(headOf({ ...DATA, gtfs: "/assets/gtfs-BBBBBBBB.json" }))
+  await vi.advanceTimersByTimeAsync(0)
+  const feed = state.feed.peek()
+  expect(feed.version).toBe("next")
+  const after = state.itinerary.peek()!
+  const rideAfter = after.legs.find(leg => leg.kind === "ride")!
+  // The same itinerary, now over the new timetable's own trip, whose stops are found by the new numbering
+  expect(itineraryKey(after)).toBe(itineraryKey(before))
+  expect(after).not.toBe(before)
+  expect(feed.trips).toContain(rideAfter.run.trip)
+  expect([rideAfter.fromPosition, rideAfter.toPosition].map(position => feed.stops[rideAfter.run.trip.stops[position]].id)).toEqual(["0", "2"])
+})
+
+test("newer code leaves the data as it is, for the reload that brings both in", async () => {
+  const state = await load({ files: { "/assets/gtfs-BBBBBBBB.json": { ...FEED, version: "next" } } })
+  const { isNewBuild } = await import("../../src/shell/build.mts")
+  state.receive(headOf({ ...DATA, gtfs: "/assets/gtfs-BBBBBBBB.json" }, ["/assets/index-BBBBBBBB.js"]))
+  await vi.advanceTimersByTimeAsync(0)
+  expect(state.feed.peek().version).toBe("test")
+  expect(isNewBuild.peek()).toBe(true)
 })

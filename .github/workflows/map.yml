@@ -1,0 +1,72 @@
+# Makes the map's OpenStreetMap data each week from Geofabrik's latest New Hampshire extract (scripts/map/osm.mts):
+# the walking network, the gazetteer, and our tiles, made with Planetiler. Each generation is published whole as its
+# own immutable release, map-data-<version>. Then the pointer every build reads, latest.json on the map-data release,
+# is moved to it (scripts/release.mts), so a build gets all of a generation or none. Run it by hand with
+# `gh workflow run map.yml`.
+#
+# Needs no secrets beyond the job's own token, plus the optional CLOUDFLARE_DEPLOY_HOOK to rebuild the site with the
+# new generation. GitHub pauses schedules after 60 days without a commit, so the Worker's nightly run also dispatches
+# this on Mondays when it has a GITHUB_TOKEN (worker/index.mts). A run that finds its generation already published
+# makes nothing, so the two can't publish it twice
+
+name: Map data
+
+on:
+  schedule:
+    # Mondays at 6:23 UTC, after Geofabrik's nightly extracts
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: map-data
+
+jobs:
+  map:
+    # Only main's generation is the one builds take
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      # Part of every generation's version, so a new Planetiler is a new generation
+      PLANETILER: 0.10.2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+      - run: npm ci
+      # Planetiler and the water, lake, and Natural Earth data it downloads beside itself: about 1.5 GB that rarely
+      # changes, kept from week to week
+      - uses: actions/cache@v4
+        with:
+          path: planetiler
+          key: planetiler-${{ env.PLANETILER }}
+      - name: Download Planetiler and the extract
+        run: |
+          mkdir -p planetiler extract
+          [ -f planetiler/planetiler.jar ] || curl -fsSL --retry 3 -o planetiler/planetiler.jar \
+            "https://github.com/onthegomap/planetiler/releases/download/v$PLANETILER/planetiler.jar"
+          curl -fsSL --retry 3 -o extract/new-hampshire.osm.pbf \
+            https://download.geofabrik.de/north-america/us/new-hampshire-latest.osm.pbf
+      # Stages the archive, manifest, and pointer in release/, unless this generation is the one published already
+      - run: node scripts/map/osm.mts extract/new-hampshire.osm.pbf planetiler/planetiler.jar --release release
+      # The buildings the build matches laundry rooms and dining halls to must still be there, else nothing's
+      # published. The rooms and halls are the fixtures', so this asks nothing of the laundry vendor or Nutrislice
+      - run: |
+          cp tests/fixtures/data/src/laundry/rooms.json src/laundry/ && cp tests/fixtures/data/src/dining/menus.json src/dining/
+          node scripts/map/places.mts
+      - uses: ./.github/actions/publish
+        with:
+          kind: map-data
+          folder: release
+          notes: The map's OpenStreetMap data made from Geofabrik's New Hampshire extract by the Map data workflow, whole in one archive with a manifest of its hashes
+          deploy-hook: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}

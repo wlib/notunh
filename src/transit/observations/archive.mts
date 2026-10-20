@@ -1,0 +1,52 @@
+// The lossless archive of what the Worker observed (raw.mts), written by scripts/archive.mts from
+// .github/workflows/archive.yml. Each completed service day's stored rows of both sources, decoded, become one
+// zstd-compressed ndjson file on its own immutable GitHub release, observations-<day>, with a manifest. catalog.json,
+// on the one mutable release, observations, lists every day archived and is uploaded last. The Worker deletes a day's
+// samples after RETAIN_ARCHIVED_DAYS only once the catalog lists it
+
+import * as v from "valibot"
+import { getJson } from "../../shared/json.mts"
+import { Day } from "../../shared/time.mts"
+
+const RELEASES = "https://github.com/wlib/notunh/releases/download/"
+export const CATALOG = `${RELEASES}observations/catalog.json`
+
+/** The name of a day's archive */
+export const fileOf = (day: Day) =>
+  `observations-${day}.ndjson.zst`
+
+/** Where a day's archive is, as its manifest names it */
+export const archiveUrl = ({ day, file }: Pick<Manifest, "day" | "file">) =>
+  `${RELEASES}observations-${day}/${file}`
+
+/** What a source's rows of a day hold, and when it was looking */
+export const Counts = v.object({
+  rows:     v.number(),
+  samples:  v.number(),
+  /** The raw versions its rows were packed by */
+  versions: v.array(v.number()),
+  /** Its polls recorded, and of them those that failed */
+  polls:    v.number(),
+  failed:   v.number()
+})
+export type Counts = v.InferOutput<typeof Counts>
+
+/** An archived day, as its manifest.json says: the file's name, SHA-256, and size, and each source's counts */
+export const Manifest = v.object({
+  day:     Day,
+  file:    v.string(),
+  sha256:  v.string(),
+  bytes:   v.number(),
+  sources: v.object({ buses: Counts, predictions: Counts })
+})
+export type Manifest = v.InferOutput<typeof Manifest>
+
+/** Every day archived, in order */
+export const Catalog = v.object({ days: v.array(Manifest) })
+export type Catalog = v.InferOutput<typeof Catalog>
+
+/** The catalog, or an empty one while there's none, which only a 404 means */
+export const fetchCatalog = (init?: RequestInit): Promise<Catalog> =>
+  getJson(CATALOG, { ...init, schema: Catalog }).catch(error =>
+    error instanceof Error && error.message.startsWith("404 ") ? { days: [] } : Promise.reject(error)
+  )

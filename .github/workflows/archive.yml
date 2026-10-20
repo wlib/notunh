@@ -1,0 +1,61 @@
+# Archives what the Worker observed on each completed service day: the buses' fixes, Umo's predictions, and the polls
+# that took them, losslessly (format in src/transit/observations/archive.mts). Each day is its own immutable release,
+# observations-<day>, holding observations-<day>.ndjson.zst and a manifest.json naming the file. Its manifest is then
+# merged into catalog.json on the observations release. The catalog is uploaded last, so a day is listed only once its
+# archive is whole.
+#
+# The Worker keeps a day's samples in D1 for RETAIN_ARCHIVED_DAYS (14) once the catalog lists it, and until then
+# however long that takes. Each run archives every settled day D1 still has that the catalog doesn't, the oldest
+# first, so a failed run, or weeks of them, is made up by the next. One can also be run by hand for a range:
+# `gh workflow run archive.yml -f from=2026-10-07 -f to=2026-10-13`.
+#
+# Needs the repository secret BUILD_TOKEN, the same value as the Worker's (`wrangler secret put BUILD_TOKEN`), to read
+# its rows. Asks nothing of Umo. GitHub pauses schedules after 60 days without a commit, so the Worker's nightly run
+# also dispatches this when it has a GITHUB_TOKEN (worker/index.mts). A day already published is left as it is, so
+# the two can't publish it twice
+
+name: Observations
+
+on:
+  schedule:
+    # 9:30 UTC, after the Worker's nightly run at 8:17, when the service day before has long settled
+    - cron: "30 9 * * *"
+  workflow_dispatch:
+    inputs:
+      from:
+        description: The first service day to archive (YYYY-MM-DD), else every one not archived
+        required: false
+      to:
+        description: The last service day to archive, else only the first
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: observations
+
+jobs:
+  archive:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # A day is immutable once its manifest is up, so one published before is only merged into the catalog again,
+      # never replaced. A release a failed run left without its manifest was never in the catalog, so its samples are
+      # still in D1 and it's filled in again: the file first, then the manifest that marks it whole
+      - name: Publish each day
+        run: node scripts/archive-publish.mts
+        env:
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+          BUILD_TOKEN: ${{ secrets.BUILD_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}

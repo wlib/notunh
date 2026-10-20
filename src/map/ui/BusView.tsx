@@ -4,12 +4,11 @@
 // seem to be on
 
 import { r } from "bruh/reactive"
-import { runOf, timeAt } from "../plan.mts"
-import { feed, now, runs, vehicles, ageOf, itinerary, selectedBus, riding, suggested, shownRoutes, chosenRoutes } from "../state.mts"
-import { decline, ride } from "../riding.mts"
+import { runOf } from "../../transit/models/forecast.mts"
 import { Minutes, ago } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import { RouteBadge, StopLink, Time, route } from "./common.tsx"
+import { state } from "../state/map.mts"
 
 // A stop the bus left this recently still shows, as it may just be pulling out
 const JUST_LEFT = 30 // s
@@ -21,14 +20,14 @@ const second = r(Date.now())
 setInterval(() => second.value = Date.now(), 1000)
 
 export const BusView = ({ id }: { id: string }) => {
-  const vehicle = r(() => vehicles.value.find(vehicle => vehicle.id === id))
-  const isRiding = r(() => riding.value === id)
-  const run = r(() => runOf(runs.value, vehicle.value ?? { id }, now.value))
+  const vehicle = r(() => state.vehicles.value.find(vehicle => vehicle.id === id))
+  const isRiding = r(() => state.riding.value === id)
+  const run = r(() => runOf(state.runs.value, vehicle.value ?? { id }, state.now.value))
 
   return (
     <section class="bus-view">
       {r(() => {
-        const busRoute = vehicle.value?.route && feed.routesById.get(vehicle.value.route.id)
+        const busRoute = vehicle.value?.route && state.feed.value.routesById.get(vehicle.value.route.id)
         if (!busRoute)
           return (
             <header>
@@ -36,11 +35,11 @@ export const BusView = ({ id }: { id: string }) => {
                 {vehicle.value ? "This bus is on a route the timetable doesn't have." : "This bus stopped reporting."}
               </p>
               {isRiding.value
-                ? <button type="button" class="button" onclick={() => ride(undefined)}>I got off</button>
+                ? <button type="button" class="button" onclick={() => state.ride(undefined)}>I got off</button>
                 : <Close />}
             </header>
           )
-        const isOnlyRoute = r(() => shownRoutes.value.size === 1 && shownRoutes.value.has(busRoute.id))
+        const isOnlyRoute = r(() => state.shownRoutes.value.size === 1 && state.shownRoutes.value.has(busRoute.id))
         return (
           <>
             <header>
@@ -59,18 +58,18 @@ export const BusView = ({ id }: { id: string }) => {
               {r(() =>
                 isRiding.value
                   ? "You're on this bus"
-                  : `Last seen ${ago(vehicle.value ? ageOf(vehicle.value, second.value) : 0)}`
+                  : `Last seen ${ago(vehicle.value ? state.ageOf(vehicle.value, second.value) : 0)}`
               )}
             </p>
             <div class="bus-actions">
               {r(() => isRiding.value
-                ? <button type="button" class="button" onclick={() => ride(undefined)}>I got off</button>
-                : <button type="button" class="button" onclick={() => { ride(id); selectedBus.value = undefined }}>I'm on this bus</button>
+                ? <button type="button" class="button" onclick={() => state.ride(undefined)}>I got off</button>
+                : <button type="button" class="button" onclick={() => { state.ride(id); state.selectedBus.value = undefined }}>I'm on this bus</button>
               )}
               <button
                 type="button"
                 class="button"
-                onclick={() => chosenRoutes.value = isOnlyRoute.peek() ? undefined : new Set([busRoute.id])}
+                onclick={() => state.chosenRoutes.value = isOnlyRoute.peek() ? undefined : new Set([busRoute.id])}
               >
                 {r(() => isOnlyRoute.value ? "Show all routes" : "Show only this route")}
               </button>
@@ -84,13 +83,13 @@ export const BusView = ({ id }: { id: string }) => {
           return <p class="muted">Umo isn't saying which stops this bus has next.</p>
 
         // The stop an itinerary gets off this bus at, and where it gets on if you're not on yet
-        const leg = itinerary.value?.legs.find(leg =>
+        const leg = state.itinerary.value?.legs.find(leg =>
           leg.kind === "ride" && leg.run.trip.id === current.trip.id && leg.run.base === current.base
         )
         const [getOn, getOff] = leg?.kind === "ride" ? [leg.fromPosition, leg.toPosition] : []
         const positions = current.trip.stops
           .map((_, position) => position)
-          .filter(position => timeAt(current, position) >= now.value - JUST_LEFT)
+          .filter(position => current.departures[position] >= state.now.value - JUST_LEFT)
         const isNext = getOff !== undefined && positions[0] === getOff && isRiding.value
 
         return (
@@ -98,13 +97,13 @@ export const BusView = ({ id }: { id: string }) => {
             {isNext && <p class="notice cue" role="status">Your stop is next</p>}
             <ol class="bus-stops">
               {positions.map(position => {
-                const time = timeAt(current, position)
+                const time = current.departures[position]
                 const isYours = position === getOff
                 return (
                   <li class={{ yours: isYours, past: getOff !== undefined && position > getOff }}>
                     <span class="bus-stop-time">
-                      {time - now.value < SOON
-                        ? time <= now.value ? "Now" : <Minutes value={Math.max(1, Math.round((time - now.value) / 60))} />
+                      {time - state.now.value < SOON
+                        ? time <= state.now.value ? "Now" : <Minutes value={Math.max(1, Math.round((time - state.now.value) / 60))} />
                         : <Time seconds={time} />}
                     </span>
                     <StopLink stop={current.trip.stops[position]} />
@@ -123,24 +122,24 @@ export const BusView = ({ id }: { id: string }) => {
 }
 
 const Close = () =>
-  <button type="button" class="close" aria-label="Close" onclick={() => selectedBus.value = undefined}>
+  <button type="button" class="close" aria-label="Close" onclick={() => state.selectedBus.value = undefined}>
     <Icon name="close" />
   </button>
 
 /** Asks about a bus you seem to be on */
 export const RideSuggestion = () =>
   r(() => {
-    const id = suggested.value
-    const routeId = id && vehicles.value.find(vehicle => vehicle.id === id)?.route?.id
-    if (!id || !routeId || !feed.routesById.has(routeId))
+    const id = state.suggested.value
+    const routeId = id && state.vehicles.value.find(vehicle => vehicle.id === id)?.route?.id
+    if (!id || !routeId || !state.feed.value.routesById.has(routeId))
       return
     const busRoute = route(routeId)
     return (
       <div class="ride-suggestion" role="status">
         <RouteBadge route={busRoute} />
         <span>On the {busRoute.long}?</span>
-        <button type="button" class="button" onclick={() => ride(id)}>Yes</button>
-        <button type="button" class="button" onclick={() => decline(id)}>No</button>
+        <button type="button" class="button" onclick={() => state.ride(id)}>Yes</button>
+        <button type="button" class="button" onclick={() => state.decline(id)}>No</button>
       </div>
     )
   })

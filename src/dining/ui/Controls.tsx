@@ -10,8 +10,8 @@ import { Day } from "../../shell/intl.tsx"
 import { DayName, mealName } from "./common.tsx"
 import { HallHours, OpenDot } from "./Hours.tsx"
 
-const servedMeals = MEALS.filter(meal =>
-  Object.values(index.days).some(days => Object.values(days).some(day => day.meals.includes(meal)))
+const servedMeals = r(() =>
+  MEALS.filter(meal => Object.values(index.value.days).some(days => Object.values(days).some(day => day.meals.includes(meal))))
 )
 
 const Segmented = <T extends string,>({ label, options, selected, choose, disabled }: {
@@ -53,7 +53,7 @@ const SearchInput = () => {
 
 const Days = () =>
   <div class="days" role="group" aria-label="Day">
-    {days.map(each =>
+    {r(() => days.value.map(each =>
       <button
         type="button"
         aria-pressed={r(() => day.value === each ? "true" : "false")}
@@ -62,7 +62,7 @@ const Days = () =>
         <span><DayName of={each} /></span>
         <span class="muted"><Day of={each} month="short" day="numeric" /></span>
       </button>
-    )}
+    ))}
   </div>
 
 const FilterChips = ({ kind, items }: { kind: keyof Filters, items: string[] }) =>
@@ -87,9 +87,9 @@ const FiltersPanel = () => {
         Diets and allergens{r(() => count.value ? ` · ${count.value} on` : "")}
       </summary>
       <p class="eyebrow">Only show</p>
-      <FilterChips kind="diets" items={index.diets} />
+      {r(() => <FilterChips kind="diets" items={index.value.diets} />)}
       <p class="eyebrow">Hide anything with</p>
-      <FilterChips kind="avoid" items={index.contains} />
+      {r(() => <FilterChips kind="avoid" items={index.value.contains} />)}
     </details>
   )
 }
@@ -101,7 +101,7 @@ export const Controls = () =>
       <>
         <Segmented
           label="Dining hall"
-          options={index.halls.map(({ id, name }) => ({ value: id, label: <><OpenDot id={id} />{name}</> }))}
+          options={index.value.halls.map(({ id, name }) => ({ value: id, label: <><OpenDot id={id} />{name}</> }))}
           selected={() => hall.value}
           choose={value => hall.value = value}
         />
@@ -109,7 +109,7 @@ export const Controls = () =>
         <Days />
         <Segmented
           label="Meal"
-          options={servedMeals.map(meal => ({ value: meal, label: mealName(meal) }))}
+          options={servedMeals.value.map(meal => ({ value: meal, label: mealName(meal) }))}
           selected={() => menu.value?.meal ?? preferredMeal.value}
           choose={value => preferredMeal.value = value}
           disabled={value => !meals.value.includes(value)}

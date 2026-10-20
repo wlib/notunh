@@ -3,11 +3,12 @@
 // The ways to get there by bus, and walking the whole way
 
 import { r } from "bruh/reactive"
-import { type Itinerary, type Leg, type RideLeg, itineraryKey, slack } from "../plan.mts"
-import { now, selected, itineraries, itinerary, walk } from "../state.mts"
+import { lateness, slack } from "../../transit/models/forecast.mts"
+import { type Itinerary, type Leg, type RideLeg, itineraryKey } from "../../routing/plan.mts"
 import { ClockRange, Distance, Minutes, Plural } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import { RouteBadge, StopLink, Time, minutes, route } from "./common.tsx"
+import { state } from "../state/map.mts"
 
 /** Minutes between two times as displayed, so durations agree with the clock times beside them */
 const minutesBetween = (start: number, end: number) =>
@@ -32,17 +33,17 @@ const Delay = ({ seconds }: { seconds: number }) => {
 }
 
 /**
- * How sure a boarding is: a bus waiting for its scheduled time, when to be at the stop for the first one, or how
- * long there is to change buses
+ * What to know about a boarding: that the bus waits there a minute or more, as for its scheduled time, when to be at
+ * the stop for the first ride, or how long there is to change buses
  */
 const Boarding = ({ itinerary, leg }: { itinerary: Itinerary, leg: RideLeg }) => {
   const { run, fromPosition, start } = leg
-  if (run.holds[fromPosition] >= 60)
+  if (run.departures[fromPosition] - run.arrivals[fromPosition] >= 60)
     return <>Waits here until <Time seconds={start} /></>
   const previous = itinerary.legs.slice(0, itinerary.legs.indexOf(leg)).findLast(leg => leg.kind === "ride")
   return previous
     ? <><Minutes value={minutes(start - previous.end)} /> to change</>
-    : <>Be there by <Time seconds={start - slack(run, fromPosition, start, now.peek())} /></>
+    : <>Be there by <Time seconds={start - slack(run, fromPosition, start, state.now.peek())} /></>
 }
 
 const Steps = ({ itinerary }: { itinerary: Itinerary }) =>
@@ -70,7 +71,7 @@ const Steps = ({ itinerary }: { itinerary: Itinerary }) =>
             <div class="muted">
               Toward {run.trip.headsign} · <Plural value={stops} one="1 stop" other={`${stops} stops`} /> ·{" "}
               {run.isLive
-                ? <span class="live">Live, <Delay seconds={run.delays[fromPosition]} /></span>
+                ? <span class="live">Live, <Delay seconds={lateness(run, fromPosition)} /></span>
                 : "Scheduled"}
               {" · "}<Boarding itinerary={itinerary} leg={leg} />
             </div>
@@ -85,7 +86,7 @@ const Steps = ({ itinerary }: { itinerary: Itinerary }) =>
 
 const Leave = ({ start }: { start: number }) =>
   r(() => {
-    const wait = start - now.value
+    const wait = start - state.now.value
     return (
       wait < 60   ? "Leave now" :
       wait < 3600 ? <>Leave in <Minutes value={minutes(wait)} /></> :
@@ -94,14 +95,16 @@ const Leave = ({ start }: { start: number }) =>
   })
 
 const ItineraryCard = ({ itinerary: it }: { itinerary: Itinerary }) => {
-  const isSelected = r(() => itinerary.value === it)
+  // By key rather than by object, as a replan's fresher copy of the chosen itinerary is still the chosen one
+  const key = itineraryKey(it)
+  const isSelected = r(() => state.itinerary.value !== undefined && itineraryKey(state.itinerary.value) === key)
   return (
     <li class={{ itinerary: true, selected: isSelected }}>
       <button
         type="button"
         class="itinerary-summary"
         aria-expanded={r(() => isSelected.value ? "true" : "false")}
-        onclick={() => selected.value = itineraryKey(it)}
+        onclick={() => state.selected.value = key}
       >
         <span class="itinerary-times">
           <strong><ClockRange from={new Date(it.start * 1000)} to={new Date(it.end * 1000)} /></strong>
@@ -119,24 +122,24 @@ const ItineraryCard = ({ itinerary: it }: { itinerary: Itinerary }) => {
 
 const WalkOption = () =>
   r(() => {
-    const option = walk.value
+    const option = state.walk.value
     return option &&
       <button
         type="button"
-        class={{ "walk-option": true, selected: r(() => selected.value === "walk") }}
-        onclick={() => selected.value = "walk"}
+        class={{ "walk-option": true, selected: r(() => state.selected.value === "walk") }}
+        onclick={() => state.selected.value = "walk"}
       >
         <Icon name="walk" />
-        {itineraries.value.length ? "Or walk" : "Walk"} <Minutes value={option.minutes} /> · <Distance meters={option.meters} />
+        {state.itineraries.value.length ? "Or walk" : "Walk"} <Minutes value={option.minutes} /> · <Distance meters={option.meters} />
       </button>
   })
 
 export const Itineraries = () =>
   <section class="itineraries" aria-live="polite">
     {r(() =>
-      itineraries.value.length
+      state.itineraries.value.length
         ? <ul>
-            {itineraries.value.map(it => <ItineraryCard itinerary={it} />)}
+            {state.itineraries.value.map(it => <ItineraryCard itinerary={it} />)}
           </ul>
         : <p class="muted">No good bus options in the next few hours.</p>
     )}

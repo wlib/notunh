@@ -1,12 +1,16 @@
 // Durham's clock and calendar, which every bus schedule, menu, and laundry room runs on. Instants are epoch
-// milliseconds as Date.now() gives them, except where times are compared with the timetable, which counts seconds
+// milliseconds as Date.now() gives them, except where times are compared with the timetable, which counts schedule
+// seconds
+
+import * as v from "valibot"
 
 export const TIME_ZONE = "America/New_York"
 export const HOUR      = 3_600_000
 export const DAY       = 86_400_000
 
 /** A calendar day in Durham as YYYY-MM-DD, which sorts and compares as text */
-export type Day = string
+export const Day = v.pipe(v.string(), v.isoDate())
+export type Day = v.InferOutput<typeof Day>
 
 const dayFormat    = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE })
 const hourFormat   = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hour: "numeric", hourCycle: "h23" })
@@ -33,9 +37,9 @@ export const offsetAt = (ms: number) => {
 }
 
 /**
- * Epoch milliseconds of midnight in Durham starting a day, which is 23 to 25 hours before the next one's. The
- * offset is the one at that midnight, found from the one at UTC's, which differs only where clocks change between
- * the two, as Durham's never do (they change at 2 AM)
+ * Epoch milliseconds of midnight in Durham starting a day, which is 23 to 25 hours before the next one's. The offset
+ * is the one in force at that midnight, found by guessing from the offset at UTC's midnight and correcting once.
+ * Durham's clocks change at 2 AM, never between the two instants, so one correction is exact
  */
 export const dayStart = (day: Day) => {
   const utc = Date.parse(`${day}T00:00:00Z`)

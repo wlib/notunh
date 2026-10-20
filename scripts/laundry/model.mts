@@ -1,25 +1,21 @@
-// Learns when each laundry room usually has a machine free in the build: folds each whole day since the last model
-// from the collector's transitions and runs, and writes src/laundry/usual.json for the page to load as a hashed
-// asset. Everything goes through the Worker with BUILD_TOKEN and never fails the build (see scripts/learn.mts);
-// --local uses `wrangler dev`
+// Learns when each laundry room usually has a machine free, through scripts/learn.mts. Folds in each whole day since
+// the last model from the collector's transitions and polls, and writes src/laundry/usual.json among the inputs for
+// the page to load as a hashed asset, for every machine in the collector's inventory, without which nothing's written.
+// --store learns and stores, and --local uses `wrangler dev`
 
 import { addDays, localDay } from "../../src/shared/time.mts"
 import type { Known, Poll, Transition } from "../../src/laundry/infer.mts"
 import { bundle, emptyLearned, update } from "../../src/laundry/model.mts"
 import { learn } from "../learn.mts"
+import { STAGED } from "../files.mts"
 import { health, readRows } from "../worker.mts"
 
-const OUTPUT = new URL("../../src/laundry/usual.json", import.meta.url)
+const machines = process.env.BUILD_TOKEN ? await readRows<Known>("machines") : []
+if (process.env.BUILD_TOKEN && !machines.length)
+  throw new Error("No machine inventory to learn or bundle laundry's model for")
 
-let machines: Known[] = []
-
-const learned = await learn("laundry", OUTPUT, {
+const learned = await learn("laundry", new URL("src/laundry/usual.json", STAGED), {
   empty: emptyLearned,
-  prepare: async () => {
-    machines = await readRows<Known>("machines")
-    if (!machines.length)
-      throw new Error("No machine inventory; keeping the previous laundry model")
-  },
   first: async () => {
     const { transitions: { since } } = await health()
     return since === null ? undefined : localDay(since)
@@ -32,5 +28,4 @@ const learned = await learn("laundry", OUTPUT, {
   },
   bundle: learned => bundle(learned, machines)
 })
-if (learned)
-  console.log(`Laundry: ${Object.keys(learned.stats).length} rooms`)
+console.log(`Laundry: ${Object.keys(learned.stats).length} rooms`)

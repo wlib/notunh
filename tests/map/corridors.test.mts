@@ -1,25 +1,27 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { laneSlots, lanePieces, measureCorridors, type LaneSlots, type Strand } from "../../src/map/corridors.mts"
-import { segmentMeters, type Coordinates } from "../../src/map/geometry.mts"
+import { laneSlots, lanePieces, measureCorridors, type LaneSlots, type Strand } from "../../src/map/render/corridors.mts"
+import { type Coordinates, ruler, segmentMeters } from "../../src/geo/projection.mts"
 
-// Every route shown
+// Lanes laid with every route shown
 const layLanes = (strands: Strand[], order: string[]) =>
   laneSlots(measureCorridors(strands), new Set(order), order)
 
 const CENTER = { lat: 43.135, lon: -70.93 }
+const { kx: EAST, ky: NORTH } = ruler(CENTER.lat)
 
 // A street heading some way out of town, 600 m long
 const street = (bearing: number): Coordinates[] =>
   Array.from({ length: 31 }, (_, i) => {
     const radians = bearing * Math.PI / 180
-    return [CENTER.lon + Math.sin(radians) * i * 20 / 81_150, CENTER.lat + Math.cos(radians) * i * 20 / 110_540]
+    return [CENTER.lon + Math.sin(radians) * i * 20 / EAST, CENTER.lat + Math.cos(radians) * i * 20 / NORTH]
   })
 
 const slots = (lanes: LaneSlots[], route: string) =>
   new Set(lanes.filter(lane => lane.route === route).flatMap(lane => lane.slots))
 
-const bearings = fc.integer({ min: 0, max: 359 })
+// Any way but exactly along the fold lanes are ordered across, where a street could fall either side of it
+const bearings = fc.integer({ min: 0, max: 359 }).filter(bearing => bearing % 180 !== 152)
 
 test("a route alone on its street stays on it", () =>
   fc.assert(fc.property(bearings, bearing => {

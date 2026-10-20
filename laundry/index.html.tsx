@@ -9,6 +9,7 @@ export default () =>
         title="Laundry · notunh"
         description="Which washers and dryers are free in every UNH laundry room, and when each room is usually busy"
         script="/src/laundry/index.tsx"
+        data={{ usual: "/src/laundry/usual.json" }}
       />
       <body>
         <div id="app" />

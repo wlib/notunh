@@ -88,7 +88,7 @@ export const FoodItem = ({ food, match, children }: { food: FoodSummary, match?:
   // Details are only loaded once opened, since most never are
   const body = <div class="food-details" /> as HTMLElement
   const show = (child: BruhChild) => body.replaceChildren(...bruhChildrenToNodes([child]))
-  /** Loading or loaded, so opening it again does nothing; a failed load clears it to try again */
+  /** Loading or loaded, so opening it again does nothing */
   let isStarted = false
   const details: HTMLDetailsElement =
     <details
@@ -98,12 +98,8 @@ export const FoodItem = ({ food, match, children }: { food: FoodSummary, match?:
           return
         isStarted = true
         show(<p class="muted">Loading…</p>)
-        loadFood(food.file)
+        loadFood(food.file, () => show(<p class="muted">Couldn't load this food's details yet. Trying again…</p>))
           .then(full => show(<FoodDetails food={full} found={found} />))
-          .catch(() => {
-            isStarted = false
-            show(<p class="muted">Couldn't load this food's details. Close it and open it again to retry.</p>)
-          })
       }}
     >
       <summary>

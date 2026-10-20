@@ -1,7 +1,7 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { getTableColumns } from "drizzle-orm"
-import { chunks, inserts } from "../../worker/rows.mts"
+import { inserts } from "../../worker/rows.mts"
 import { latest, transitions } from "../../worker/schema.mts"
 import { d1 } from "./d1.mts"
 
@@ -31,7 +31,6 @@ test("rows insert as few statements as D1's bound parameters allow, each within 
     const db = d1()
     for (const rows of [first, second]) {
       const statements = inserts(db, latest, rows, [latest.machine])
-      expect(statements).toHaveLength(chunks(latest, rows).length)
       expect(statements).toHaveLength(Math.ceil(rows.length / 8))
       if (rows.length)
         await db.batch(statements)
@@ -42,10 +41,11 @@ test("rows insert as few statements as D1's bound parameters allow, each within 
   }))
 )
 
-test("a table without a key takes every row, and one over the parameters splits", () => {
+test("a table without a key takes every row, and one over the parameters splits", async () => {
   const db = d1()
   const rows = Array.from({ length: 29 }, (_, i) => ({ machine: `m${i}`, room: "r", at: i, status: "free" as const, raw: "AVAILABLE", remaining: 0 }))
   const statements = inserts(db, transitions, rows)
   expect(statements).toHaveLength(3)
-  expect(chunks(transitions, rows).map(chunk => chunk.length)).toEqual([14, 14, 1])
+  await db.batch(statements)
+  expect(db.sqlite.prepare("select count(*) as n from transitions").get()).toEqual({ n: 29 })
 })

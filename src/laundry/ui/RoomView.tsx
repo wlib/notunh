@@ -1,13 +1,12 @@
 /** @jsxImportSource bruh/browser */
 
-// One room: its washers and dryers by number, so yours is easy to find, except when none of a kind is free, when
-// they come soonest first with a bar each, so the wall answers whether to walk over now; and when the room is
-// usually busy
+// One room: its washers and dryers by number, so yours is easy to find, and when the room is usually busy. When none
+// of a kind is free, they're shown soonest first with a wait bar each, so the wall answers whether to walk over now
 
 import { r } from "bruh/reactive"
 import { KINDS, assessRoom } from "../infer.mts"
 import { pathOf, roomName } from "../rooms.mts"
-import { isOpenFailed, open, rooms, summaries } from "../state.mts"
+import { open, rooms, summaries } from "../state.mts"
 import { slug } from "../../shared/slug.mts"
 import { now } from "../../shell/lifecycle.mts"
 import { ClockTime } from "../../shell/intl.tsx"
@@ -18,7 +17,7 @@ import { Free, Star, Usually } from "./common.tsx"
 
 const Machines = ({ id }: { id: string }) =>
   r(() => {
-    const room = rooms.value[id]
+    const { value: room, isFailing } = rooms.value[id] ?? { isFailing: false }
     // Until the live word comes, the counts as the collector last saw them, which the list already had
     if (!room) {
       const summary = summaries.value[id]
@@ -28,7 +27,7 @@ const Machines = ({ id }: { id: string }) =>
             <section class="kind"><h2><Free kind={kind} counts={summary[kind]} now={now.value} /></h2></section>
           )}
           <p class="empty muted">
-            {isOpenFailed.value ? "Couldn't reach this room's machines. Check your connection, and we'll keep trying." : "Checking the machines…"}
+            {isFailing ? "Couldn't reach this room's machines. Check your connection, and we'll keep trying." : "Checking the machines…"}
           </p>
         </>
       )
@@ -62,7 +61,7 @@ const Machines = ({ id }: { id: string }) =>
           )
         })}
         <footer class="muted">
-          {room.isStale
+          {room.isStale || isFailing
             ? <>Unable to refresh machine status. Showing the last update from {at}.</>
             : <>Machine status updated at {at}. Times marked ~ are estimates.</>
           }

@@ -9,8 +9,8 @@ import "bruh/components/intl/list"
 import type { BruhChild } from "bruh/browser"
 import { TIME_ZONE, type Day as CalendarDay } from "../shared/time.mts"
 
-// The reader's own English first, like en-GB for its 24-hour clock, as a plural or unit in another language would
-// read wrong among English words: "1 stop" for 8 under Russian's rules, or "15 мин"
+// The reader's own English first, like en-GB for its 24-hour clock, but always English. A plural or unit in another
+// language would read wrong among English words: "1 stop" for 8 under Russian's rules, or "15 мин"
 const ENGLISH = [...navigator.languages.filter(language => /^en\b/.test(language)), "en"]
 const locales = ENGLISH.join(" ")
 
@@ -49,9 +49,9 @@ export const Distance = ({ meters }: { meters: number }) =>
 export const Count = ({ value }: { value: number }) =>
   <bruh-number locales={locales} number={`${value}`} />
 
-// bruh 2.0.0-beta.5's watch(…, { skipFirst: true }) runs its first time a microtask late and skips that run,
-// so a change made in the same tick it starts in, like these elements' own setup, is lost.
-// Giving them their values a microtask later gets through; drop this once bruh's watch is fixed
+// bruh 2.0.0-beta.5's watch(…, { skipFirst: true }) runs its first time a microtask late and skips that run, so a
+// change made in the same tick it starts in, like these elements' own setup, is lost. Setting their values a
+// microtask later gets through; drop this once bruh's watch is fixed
 const later = <E extends Element,>(element: E, f: (element: E) => void) => {
   queueMicrotask(() => f(element))
   return element

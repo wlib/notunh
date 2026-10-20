@@ -1,7 +1,8 @@
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
+import * as v from "valibot"
 import type { Machine, RoomLive, Status, Summaries } from "../../src/laundry/infer.mts"
-import { parseMachines } from "../../src/laundry/upstream.mts"
+import { machinesIn } from "../../src/laundry/upstream.mts"
 import { ROOMS } from "../../src/laundry/rooms.mts"
 import { diff, collector } from "../../worker/laundry.mts"
 import { app } from "../../worker/api.mts"
@@ -46,7 +47,7 @@ test("recording a poll's transitions brings the latest statuses up to it, dated 
 )
 
 test("replaying Stoke G05's four snapshots records just dryer 10 finishing and washer 3 being emptied", () => {
-  const snapshots = [at163002, at163012, at163257, at163302].map(body => parseMachines(STOKE, body))
+  const snapshots = [at163002, at163012, at163257, at163302].map(body => v.parse(machinesIn(STOKE), body))
   const times = ["16:30:02", "16:30:12", "16:32:57", "16:33:02"].map(time => Date.parse(`2026-10-07T${time}Z`))
   let latest = statuses(snapshots[0])
   const recorded = snapshots.slice(1).flatMap((machines, i) => {
@@ -56,7 +57,8 @@ test("replaying Stoke G05's four snapshots records just dryer 10 finishing and w
   })
   const number = (id: string) => snapshots[0].find(m => m.id === id)!.number
   expect(recorded.map(({ machine, status }) => [number(machine), status])).toEqual([["3", "free"], ["10", "done"]])
-  // Dryer 10 reported finishing at 16:30:23, after the poll before, but washer 3's stamp predates it, so it's put halfway
+  // Dryer 10 reported finishing at 16:30:23, after the poll before. Washer 3's stamp predates that poll, so its change
+  // is put halfway between the two
   expect(recorded.map(({ at }) => new Date(at).toISOString())).toEqual(["2026-10-07T16:31:34.500Z", "2026-10-07T16:30:23.270Z"])
 })
 

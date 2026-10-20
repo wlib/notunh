@@ -18,7 +18,7 @@ const App = () =>
     <Controls />
     {r(() => isSearching.value ? <SearchView /> : <MenuView />)}
     <footer class="muted">
-      Menus come from UNH Dining and were last updated <DayTime at={new Date(index.fetched)} />.
+      Menus come from UNH Dining and were last updated {r(() => <DayTime at={new Date(index.value.fetched)} />)}.
       The diet and allergen tags are theirs, so if you have a serious allergy, check with the dining staff too.
     </footer>
   </main>

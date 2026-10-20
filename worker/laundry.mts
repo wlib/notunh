@@ -1,9 +1,10 @@
-// Every laundry machine's status changes, polled every 5 minutes while Durham's awake and every 15 overnight, for
-// the nightly build to learn when each room is usually busy. Each round of polls is spread over its 5 minutes, a quarter
-// of the rooms a minute, since a run gets only 10 ms of CPU. Status changes stay sparse, with one current snapshot
-// per room per poll, and these polls send no User-Agent or other header of ours. And the page's rooms: each one live
-// from the vendor cached for 30 seconds per edge, with the collector's records filling in
-// when the vendor can't answer, and every room's counts at once from those records alone
+// The collector: every laundry machine's status changes, polled every 5 minutes while Durham's awake and every 15
+// overnight, for the nightly build to learn when each room is usually busy. Each round is spread over its 5 minutes,
+// a quarter of the rooms a minute, since a run gets only 10 ms of CPU. Only status changes are recorded, plus one
+// current snapshot per room per poll. These polls send no User-Agent or other header of ours.
+//
+// And the page's rooms: each one live from the vendor, cached 30 seconds per edge, with the collector's records
+// filling in when the vendor can't answer; and every room's counts at once, from those records alone
 
 import { drizzle } from "drizzle-orm/d1"
 import { eq } from "drizzle-orm"
@@ -17,7 +18,7 @@ import type { Env, Job } from "./collect.mts"
 
 /** The trigger in wrangler.jsonc: every minute but every fifth, which has the buses and predictions to itself */
 const CRON = "1-4,6-9,11-14,16-19,21-24,26-29,31-34,36-39,41-44,46-49,51-54,56-59 * * * *"
-// Minutes a round takes, from every fifth, each later one of which polls the rooms whose place in the list is its own
+// A round is the 5 minutes from each fifth minute. Its 4 later minutes each poll the rooms whose index mod 4 is theirs
 const ROUND  = 5
 const SHARDS = ROUND - 1
 
@@ -26,8 +27,8 @@ const AT_ONCE = 6
 // A room taking longer has stalled, and shouldn't hold up the rest
 const ROOM_TIMEOUT_MS = 8000
 
-// D1 allows 100 bound parameters a statement and, on the free plan, 50 queries a run, so changes past this, 12 inserts
-// of transitions and 21 of latest, wait for the next round, which sees them as new again. A quarter of the rooms
+// D1 allows 100 bound parameters a statement and, on the free plan, 50 queries a run. So changes past this (12 inserts
+// into transitions and 21 into latest) wait for the next round, which sees them as new again. A quarter of the rooms
 // stays well under it, even on a first sighting of every machine
 const MAX_CHANGES = 168
 
@@ -37,8 +38,8 @@ const SUMMARY_SECONDS = 300
 
 /**
  * The transitions to record: every machine whose status differs from what we last stored, or that we've never seen.
- * A change happened since the last poll; a stamp from since then says when, and an older one, from before the
- * vendor's own cache caught up, says nothing, so it's put halfway
+ * A change happened since the last poll. A report stamp from since then says when. An older one, from before the
+ * vendor's own cache caught up, says nothing, so the change is put halfway between the polls
  */
 export const diff = (stored: ReadonlyMap<string, Status>, seen: readonly Machine[], at: number, previousAt = at): Transition[] =>
   seen
@@ -60,8 +61,8 @@ const shard = (at: number) => {
 }
 
 /**
- * Records what a minute saw of its rooms. A round has one polls row, at its start, failing the rooms none of its
- * minutes fetched, so a minute that never ran leaves its rooms failed as a run that never ran did
+ * Records what a minute saw of its rooms. A round has one polls row, keyed by its start, listing as failed the rooms
+ * none of its minutes fetched. So a minute that never ran leaves its rooms failed, as a whole round that never ran does
  */
 const record = async (env: Env, at: number, round: number, rooms: readonly Room[], seen: readonly Machine[], fetched: ReadonlySet<string>) => {
   const db = env.DB
@@ -127,8 +128,8 @@ export const collector: Job = {
 }
 
 /**
- * Answers from the edge's cache while fresh, and otherwise makes the answer and keeps it there that long, but not in
- * browsers. Cached by the path and only that, so a made-up query can't skip the cache and reach the vendor
+ * Answers from the edge's cache while fresh, else makes the answer and caches it there that long, though not in
+ * browsers. Keyed by path alone, so a made-up query can't skip the cache and reach the vendor
  */
 const cached = async (request: Request, seconds: number, make: () => Promise<Response>) => {
   const { origin, pathname } = new URL(request.url)

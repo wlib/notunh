@@ -1,0 +1,83 @@
+# What OpenMapTiles leaves out that a campus map wants, as Planetiler's custom profile for the campus tile set
+# (src/map/basemap/tiles.mts), drawn by the campus layers in src/map/basemap/style.mts. Each layer starts at the zoom
+# it's first drawn at, or at the set's deepest zoom if it's drawn deeper still, where the map overzooms it.
+# Changing this file makes a new map data generation (scripts/map/generator.mts)
+
+schema_name: notunh campus
+schema_description: Building names, parking lots, doors, benches, phones, fences, and trees
+attribution: <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>
+args:
+  extract:
+    description: The OpenStreetMap extract to read
+    default: new-hampshire.osm.pbf
+sources:
+  osm:
+    type: osm
+    local_path: '${ args.extract }'
+layers:
+  # A point on each named building to label it by, as OpenMapTiles only names buildings that are something else too
+  - id: building
+    features:
+      - source: osm
+        geometry: polygon_point_on_surface
+        min_zoom: 16
+        include_when:
+          __all__:
+            - building: __any__
+            - name: __any__
+        exclude_when:
+          building: "no"
+        attributes:
+          - key: name
+  - id: parking
+    features:
+      - source: osm
+        geometry: polygon
+        min_zoom: 14
+        include_when:
+          amenity: parking
+        exclude_when:
+          parking: [underground, rooftop]
+        attributes:
+          - key: access
+  - id: entrance
+    features:
+      - source: osm
+        geometry: point
+        min_zoom: 16
+        include_when:
+          entrance: __any__
+        exclude_when:
+          entrance: "no"
+        attributes:
+          - key: kind
+            tag_value: entrance
+  # Benches, emergency phones, and drinking water, by kind
+  - id: amenity
+    features:
+      - source: osm
+        geometry: point
+        min_zoom: 16
+        include_when:
+          amenity: [bench, drinking_water]
+          emergency: phone
+        attributes:
+          - key: kind
+            type: match_value
+  - id: barrier
+    features:
+      - source: osm
+        geometry: line
+        min_zoom: 15
+        include_when:
+          barrier: [fence, wall, retaining_wall, hedge, guard_rail]
+        attributes:
+          - key: kind
+            tag_value: barrier
+  - id: tree
+    features:
+      - source: osm
+        geometry: point
+        min_zoom: 16
+        include_when:
+          natural: tree

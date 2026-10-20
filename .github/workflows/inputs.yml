@@ -1,0 +1,64 @@
+# Makes the inputs every build of the site installs (scripts/inputs.mts) and rebuilds the site with them: the
+# timetable, style, menus, and laundry rooms acquired from upstream, and the bus and laundry models learned through
+# the Worker (scripts/data.mts). They're published whole as the immutable release inputs-<version>, and then the
+# pointer every build reads, latest.json on the inputs release, is moved to it, so a build gets all of them or none.
+# A night whose acquisition fails publishes nothing, and builds keep the inputs before.
+#
+# Started each night by the Worker (worker/index.mts), which is the site's nightly clock, and by hand with
+# `gh workflow run inputs.yml`, or `-f rebuild=true` to learn the models afresh from the first day observed. Only
+# main's runs learn, since what they store in D1 is what production uses: a run stores only once the code passes its
+# tests, and runs never overlap. Needs the repository secrets BUILD_TOKEN, the same value as the Worker's, and
+# CLOUDFLARE_DEPLOY_HOOK
+
+name: Inputs
+
+on:
+  workflow_dispatch:
+    inputs:
+      rebuild:
+        description: Learn the models afresh from the first day observed
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inputs
+
+jobs:
+  inputs:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node scripts/data.mts acquire
+      # Nothing is written to the Worker until the code that writes it passes its checks, on the fixtures
+      - run: NOTUNH_OFFLINE=1 node scripts/inputs.mts && npm run typecheck && npm test
+      # A model that didn't learn every day fails the job, but only once what was learned is published
+      - id: learn
+        run: node scripts/data.mts learn --store ${{ inputs.rebuild && '--rebuild' || '' }}
+        continue-on-error: true
+        env:
+          BUILD_TOKEN: ${{ secrets.BUILD_TOKEN }}
+      # Only inputs the site builds and passes its tests with are published, as Workers Builds will build it
+      - run: npm run build
+        env:
+          NOTUNH_INPUTS: ./inputs
+      - run: node scripts/inputs.mts stage release
+      - uses: ./.github/actions/publish
+        with:
+          kind: inputs
+          folder: release
+          notes: The timetable, style, menus, laundry rooms, and models a build of the site installs, made by the Inputs workflow, whole in one archive with a manifest of its hashes
+          deploy-hook: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}
+      - if: steps.learn.outcome == 'failure'
+        run: echo "::error::Learning stopped short; its log says where" && exit 1

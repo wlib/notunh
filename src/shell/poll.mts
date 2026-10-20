@@ -1,21 +1,31 @@
-// Asking a server for something over and over while the page is in view
+// Polling a live source while the page is in view. What it last answered is kept apart from whether asking is
+// failing: an answer stays good evidence while later asks fail, and is only as fresh as when it was received. Each
+// page judges that freshness by its own source's clock and tolerances
 
-import { watch } from "bruh/reactive"
+import { r, watch } from "bruh/reactive"
 import { isVisible } from "./lifecycle.mts"
 
 // A request taking longer has stalled, and would hold up the next ones
 const REQUEST_TIMEOUT_MS = 15_000
 
+/** What a live source last answered, and when it was received, if ever, and whether the last ask of it failed */
+export type Live<T> = { value?: T, received?: number, isFailing: boolean }
+
+/** A live source's state before it's been asked */
+export const live = <T,>() =>
+  r<Live<T>>({ isFailing: false })
+
 const timedOut = () =>
   new DOMException("The request took too long", "TimeoutError")
 
 /**
- * Runs f now and every interval while the page is visible, one run at a time, until stopped. A run still going
- * when the page is hidden is cancelled, as phones suspend it with the page and it would hold up the next one for
- * as long, and coming back runs again right away. Stopping cancels a run still going, so it can't overwrite
- * anything newer
+ * Runs f now and every interval while the page is visible, one run at a time, until stopped. Each answer is reported
+ * as it comes; a failure is reported as failing, keeping the last answer. A run still going when the page is hidden
+ * is cancelled, since phones suspend it with the page and it would hold up the next one as long. Coming back into
+ * view runs again at once. Stopping cancels a run still going, so it can't overwrite anything newer
  */
-export const poll = (f: (signal: AbortSignal) => Promise<unknown>, interval: number, onError: (error: unknown) => void = console.error) => {
+export const poll = <T,>(f: (signal: AbortSignal) => Promise<T>, interval: number, report: (live: Live<T>) => void) => {
+  let state: Live<T> = { isFailing: false }
   let current: AbortController | undefined
   const run = () => {
     if (current || !isVisible.peek())
@@ -24,10 +34,12 @@ export const poll = (f: (signal: AbortSignal) => Promise<unknown>, interval: num
     const controller = current = new AbortController()
     const timeout = setTimeout(() => controller.abort(timedOut()), REQUEST_TIMEOUT_MS)
     f(controller.signal)
-      .catch(error => {
+      .then(value => report(state = { value, received: Date.now(), isFailing: false }), error => {
         // A run cancelled since has nothing to say
-        if (current === controller)
-          onError(error)
+        if (current === controller) {
+          console.error(error)
+          report(state = { ...state, isFailing: true })
+        }
       })
       .finally(() => {
         clearTimeout(timeout)
@@ -41,7 +53,7 @@ export const poll = (f: (signal: AbortSignal) => Promise<unknown>, interval: num
   }
 
   const timer = setInterval(run, interval)
-  // Its first run finds the one started below still going, as it comes before any request can finish
+  // Its first run is a no-op: it finds the run started below still going, as no request can finish before it
   const unwatch = watch([isVisible], () => isVisible.value ? run() : cancel())
   run()
   return () => {

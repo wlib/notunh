@@ -1,26 +1,55 @@
-// Splits converted menus into the files the dining page loads: an index, a file of each hall's meals each day,
-// a file per food, and one of every food for searching. Every file but the index is named by a hash of what's in
-// it, so a food served all week is one file, and anything unchanged from last night stays cached
+// Splits converted menus into the files the dining page loads: an index, a file of each hall's meals each day, a
+// file per food, and one of every food for searching. Every file but the index is named by a hash of its contents,
+// so a food served all week is one file, and anything unchanged from last night stays cached
 
-import { createHash } from "node:crypto"
-import { DIETS, type FoodSummary, type Meal, type MenusData, type MenusIndex, type SearchFood, type Serving } from "../../src/dining/menus.mts"
+import * as v from "valibot"
+import { DIETS, type FoodSummary, type Meal, type MenusData, type MenusIndex, type SearchFood, type Serving, fileUrl } from "../../src/dining/menus.mts"
+import { HOUR } from "../../src/shared/time.mts"
+import { contentHash } from "../../src/shared/hash.mts"
 
-export const publish = (data: MenusData, hours: MenusIndex["hours"] = {}) => {
+// How long a file stays published past the last index that named it, for a tab still on that index
+const CARRY_MS = 48 * HOUR
+
+/**
+ * The origin's record of the files published under /data/dining/ beyond the index's own: each URL with when it
+ * stops being published (epoch ms). Kept beside them as published.json and read back by the next build
+ */
+export const Published = v.record(v.string(), v.number())
+export type Published = v.InferOutput<typeof Published>
+
+/**
+ * What tonight's build publishes beyond its index's files. Every file named by the index the site serves now stays
+ * one more build whatever its age, as the previous generation does everywhere. Every file published before stays
+ * until its time is up, 48 hours past the fetch of the last index that named it
+ */
+export const carried = (serving: Pick<MenusIndex, "fetched" | "files"> | undefined, published: Published | undefined, tonight: Pick<MenusIndex, "files">, now: number): Published => {
+  const until: Published = {}
+  for (const [url, time] of Object.entries(published ?? {}))
+    if (time >= now)
+      until[url] = time
+  for (const url of serving?.files ?? [])
+    until[url] = Math.max(until[url] ?? 0, serving!.fetched + CARRY_MS, now)
+  for (const url of tonight.files)
+    delete until[url]
+  return until
+}
+
+export const publish = async (data: MenusData, hours: MenusIndex["hours"] = {}) => {
   const files = new Map<string, string>()
-  const add = (value: unknown) => {
+  const add = async (value: unknown) => {
     const json = JSON.stringify(value)
-    const name = createHash("sha256").update(json).digest("base64url").slice(0, 16)
+    const name = (await contentHash(json, "base64url")).slice(0, 16)
     files.set(name, json)
     return name
   }
 
-  const summaries = data.foods.map((food): FoodSummary => ({
+  const summaries = await Promise.all(data.foods.map(async (food): Promise<FoodSummary> => ({
     name: food.name,
     diets: food.diets,
     contains: food.contains,
     ...food.nutrition.calories === undefined ? {} : { calories: food.nutrition.calories },
-    file: add(food)
-  }))
+    file: await add(food)
+  })))
 
   // Menus are in order by day, hall, and meal, so each day's meals and each food's servings come out in order
   const days: MenusIndex["days"] = {}
@@ -32,14 +61,14 @@ export const publish = (data: MenusData, hours: MenusIndex["hours"] = {}) => {
       stations: stations.map(station => ({ name: station.name, foods: station.foods.map(food => summaries[food]) }))
     }))
     days[hall] ??= {}
-    days[hall][day] = { file: add(meals), meals: meals.map(({ meal }) => meal) }
+    days[hall][day] = { file: await add(meals), meals: meals.map(({ meal }) => meal) }
     for (const { meal, stations } of menus)
       for (const station of stations)
         for (const food of station.foods)
           servings[food].set(`${key} ${meal}`, { hall, day, meal })
   }
 
-  const search = add(
+  const search = await add(
     data.foods.flatMap((food, i): SearchFood[] =>
       servings[i].size
         ? [{ ...summaries[i], ...food.ingredients ? { ingredients: food.ingredients } : {}, servings: [...servings[i].values()] }]
@@ -60,7 +89,7 @@ export const publish = (data: MenusData, hours: MenusIndex["hours"] = {}) => {
     contains: [...counts].sort((a, b) => b[1] - a[1]).map(([item]) => item),
     days,
     search,
-    files: [...files.keys()]
+    files: [...files.keys()].map(fileUrl)
   }
   return { index, files }
 }

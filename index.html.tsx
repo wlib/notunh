@@ -61,8 +61,8 @@ export default () =>
               <dd><a href="https://umoiq.com">Umo IQ</a>, which tracks Wildcat Transit's buses</dd>
               <dt>Bus schedules</dt>
               <dd><a href="https://www.unh.edu/transportation">Wildcat Transit</a></dd>
-              <dt>Walking directions</dt>
-              <dd><a href="https://project-osrm.org">OSRM</a>, hosted by <a href="https://fossgis.de">FOSSGIS</a></dd>
+              <dt>Walking directions and places</dt>
+              <dd>The streets, paths, and buildings of <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a></dd>
               <dt>Place search</dt>
               <dd><a href="https://photon.komoot.io">Photon</a>, by Komoot</dd>
               <dt>Map</dt>

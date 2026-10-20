@@ -3,26 +3,29 @@
   "name": "notunh",
   "main": "worker/index.mts",
   "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": true,
   "routes": [{ "pattern": "notunh.app", "custom_domain": true }],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    // Only the API and the laundry rooms' own addresses reach the Worker, so every other page and asset, the
-    // laundry page itself included, stays free and unlimited
+    // Only the API and the laundry rooms' own addresses invoke the Worker. Every other page and asset, the laundry
+    // page itself included, is served as a static asset, which is free and unlimited
     "run_worker_first": ["/api/*", "/laundry/*", "!/laundry/"]
   },
   "triggers": {
-    // Five per account on the free plan, and each invocation gets its own 10 ms of CPU.
-    // worker/ matches these strings exactly, so change them there too
+    // The free plan allows five cron triggers per account, and each invocation gets its own 10 ms of CPU, so the
+    // work is split across triggers and minutes. worker/ matches these strings exactly, so change them there too
     "crons": [
-      // Buses, polled six times
+      // Buses, polled six times a minute, 10 s apart
       "* * * * *",
       // Umo's predictions
       "*/5 * * * *",
-      // Laundry machines, a quarter of the rooms each minute but every fifth, so each is polled every 5 minutes, and
-      // only every third round overnight
+      // Laundry machines: a quarter of the rooms in each minute but every fifth, so each room is polled every 5
+      // minutes, and every 15 from 1 to 6 AM
       "1-4,6-9,11-14,16-19,21-24,26-29,31-34,36-39,41-44,46-49,51-54,56-59 * * * *",
-      // Prune, then rebuild the site with a fresh timetable and menus (4:17 AM in Durham, EDT)
+      // Nightly: prune, then start the workflows that archive the samples and make the inputs, which rebuild the site
+      // with a fresh timetable, menus, and models (4:17 AM in Durham under EDT, 3:17 under EST)
       "17 8 * * *"
     ]
   },
@@ -35,12 +38,39 @@
     }
   ],
   "vars": {
-    // Raw samples and laundry transitions are only kept long enough to extract them again, and the visits extracted
-    // from samples a year
+    // Days the nightly prune keeps (worker/rows.mts, docs/storage.md):
+    // - RETAIN_DAYS: laundry's transitions and polls
+    // - RETAIN_ARCHIVED_DAYS: samples once the observations archive has their day, since learning reads older days
+    //   from it. A day the archive doesn't have yet is never pruned
+    // - RETAIN_VISIT_DAYS: the visits derived from each day, which a refit with the same extractor reuses. With the
+    //   models' 4-week half-life, a day 180 days back weighs 1 % of today's
+    // - RETAIN_STATISTICS_DAYS: each day's statistics and evaluation, about 25 KB gzipped, so a week can be compared
+    //   with the same week a year before
     "RETAIN_DAYS": 60,
-    "RETAIN_VISIT_DAYS": 365
+    "RETAIN_ARCHIVED_DAYS": 14,
+    "RETAIN_VISIT_DAYS": 180,
+    "RETAIN_STATISTICS_DAYS": 400
   },
-  // Secrets, set once with `wrangler secret put`: DEPLOY_HOOK, and BUILD_TOKEN, which the build reads and writes
-  // rows and models with (locally, in .dev.vars)
-  "observability": { "enabled": true }
+  // Secrets, set once with `wrangler secret put` (locally, in .dev.vars):
+  // - BUILD_TOKEN: what the workflows read and write rows and models with
+  // - GITHUB_TOKEN: for the nightly run to start the Observations and Inputs workflows, and Map data on Mondays
+  "observability": { "enabled": true },
+  // Previews (`npx wrangler preview`) get none of the above: no route, no crons, and their own database, which every
+  // branch's Preview shares, migrated before a Preview is made. They have no secrets, so nothing reaches production
+  "previews": {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "notunh-preview",
+        "database_id": "b774a3e5-ff9c-4ce1-b1d0-4c977481681d",
+        "migrations_dir": "worker/migrations"
+      }
+    ],
+    "vars": {
+      "RETAIN_DAYS": 60,
+      "RETAIN_ARCHIVED_DAYS": 14,
+      "RETAIN_VISIT_DAYS": 180,
+      "RETAIN_STATISTICS_DAYS": 400
+    }
+  }
 }

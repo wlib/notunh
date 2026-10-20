@@ -1,13 +1,16 @@
-// Dining hall menus: converted from Nutrislice by scripts/dining/convert.mts, then split by
-// scripts/dining/publish.mts into the files the dining page loads, and how to filter them
+// Dining hall menus' shapes and filters. scripts/dining/convert.mts converts the menus from Nutrislice, then
+// scripts/dining/publish.mts splits them into the files the dining page loads
 
+import * as v from "valibot"
 import type { Ingredient } from "./ingredients.mts"
 import type { Day } from "../shared/time.mts"
+import { objectOf } from "../shared/json.mts"
 
-export type Hall = {
-  id:   string,
-  name: string
-}
+const Hall = v.object({
+  id:   v.string(),
+  name: v.string()
+})
+export type Hall = v.InferOutput<typeof Hall>
 
 /** When a hall opens and closes, as minutes after midnight, with closing after midnight past 1440 */
 export type Span = [open: number, close: number]
@@ -103,24 +106,25 @@ export type SearchFood = FoodSummary & Pick<Food, "ingredients"> & {
   servings: Serving[]
 }
 
-/** What the dining page loads first, naming the files with everything else */
-export type MenusIndex = {
+/** What the dining page loads first, naming the files with everything else, its hours and days taken on trust */
+export const MenusIndex = v.object({
   /** Epoch milliseconds the menus were fetched */
-  fetched: number,
-  halls: Hall[],
+  fetched:  v.number(),
+  halls:    v.array(Hall),
   /** By hall, where its hours are known */
-  hours: Record<string, Hours>,
+  hours:    objectOf<Record<string, Hours>>(),
   /** Diets some food suits */
-  diets: string[],
+  diets:    v.array(v.string()),
   /** Everything some food contains, most common first */
-  contains: string[],
+  contains: v.array(v.string()),
   /** By hall, then day: the file with that day's Meals, and which meals they are */
-  days: Record<string, Record<Day, { file: string, meals: string[] }>>,
+  days:     objectOf<Record<string, Record<Day, { file: string, meals: string[] }>>>(),
   /** The file with every SearchFood */
-  search: string,
-  /** Every file in use, so caches can drop the rest */
-  files: string[]
-}
+  search:   v.string(),
+  /** Every file in use, by path, which the service worker keeps with the index (Retain in src/shell/manifest.mts) */
+  files:    v.array(v.string())
+})
+export type MenusIndex = v.InferOutput<typeof MenusIndex>
 
 export const DATA_PATH = "/data/dining/"
 

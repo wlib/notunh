@@ -1,7 +1,8 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
+import * as v from "valibot"
 import type { Known, Poll, Status, Transition } from "../../src/laundry/infer.mts"
-import { SLOTS, accumulate, bundle, coverage, emptyLearned, emptyStats, occupancy, pollMinutes, quantize, unpack, update, type Learned, type Stats } from "../../src/laundry/model.mts"
+import { SLOTS, Usual, accumulate, bundle, coverage, emptyLearned, emptyStats, occupancy, pollMinutes, quantize, unpack, update, type Learned, type Stats } from "../../src/laundry/model.mts"
 import { HOUR, addDays, dayStart, type Day } from "../../src/shared/time.mts"
 
 const MACHINES = ["a", "b", "c", "d"]
@@ -101,13 +102,15 @@ test("a day adds just what was watched, which stays within the room and an hour'
   }))
 )
 
-test("quantizing keeps order, clamps, and reads back within a step", () =>
-  fc.assert(fc.property(fc.array(fc.double({ min: 0, max: 30, noNaN: true }), { minLength: SLOTS, maxLength: SLOTS }), means => {
-    const hours = 3
+test("quantizing keeps order, clamps, and reads back within a step, each hour leaning on the room's average as far as it's been watched less", () =>
+  fc.assert(fc.property(fc.array(fc.double({ min: 0, max: 30, noNaN: true }), { minLength: SLOTS, maxLength: SLOTS }), fc.integer({ min: 1, max: 60 }), (means, hours) => {
     const stats: Stats = { free: means.map(x => x * hours * 3600), any: means.map(x => Math.min(1, x / 30) * hours * 3600), weight: Array(SLOTS).fill(hours * 3600) }
-    const read = unpack(quantize(stats, 4)).map(week => week!.free)
+    const read = unpack(quantize(stats, 4))!.hours.map(hour => hour.free)
+    const clamped = means.map(mean => Math.min(mean, 255 / 16))
+    const average = clamped.reduce((sum, x) => sum + x, 0) / SLOTS
+    const own = hours / (hours + 6)
     for (let h = 0; h < SLOTS; h++)
-      expect(read[h]).toBeCloseTo(Math.min(means[h], 255 / 16), 1)
+      expect(read[h]).toBeCloseTo(own * clamped[h] + (1 - own) * average, 1)
     const byMean = means.map((mean, h) => [mean, read[h]]).sort(([a], [b]) => a - b).map(([, free]) => free)
     expect(byMean).toEqual(byMean.toSorted((a, b) => a - b))
   }))
@@ -136,12 +139,21 @@ test("a room watched for weeks with one washer free and one busy says so, and sa
   expect(usual.through).toBe("2026-09-30")
   expect(Object.keys(usual.rooms.r)).toEqual(["washer"])
   expect(usual.rooms.r.washer!.total).toBe(2)
-  for (const hour of unpack(usual.rooms.r.washer!))
+  for (const hour of unpack(usual.rooms.r.washer!)!.hours)
     expect(hour).toEqual({ free: 1, any: 1 })
   // What's carried between nights survives being stored as JSON, and a day fed twice changes nothing
   expect(JSON.parse(JSON.stringify(learned))).toEqual(learned)
   expect(update(learned, machines, "2026-09-30", transitions, polls)).toBe(learned)
 })
+
+test("what the build bundles for the page, as JSON keeps it, always fits the schema the page loads it by", () =>
+  fc.assert(fc.property(transitions, fc.subarray(MACHINES, { minLength: 1 }), (transitions, dryers) => {
+    const machines = MACHINES.map((machine): Known => ({ machine, room: "r", kind: dryers.includes(machine) ? "dryer" : "washer" }))
+    const polls = Array.from({ length: 24 * 12 }, (_, i): Poll => ({ at: DAY_FROM + i * 5 * 60_000, failed: [] }))
+    const usual = bundle(update(emptyLearned(), machines, "2026-10-07", transitions, polls), machines)
+    expect(v.is(Usual, JSON.parse(JSON.stringify(usual)))).toBe(true)
+  }))
+)
 
 test("a day with next to no business, like the first of a break, teaches nothing about that hour of the week", () => {
   const machines: Known[] = [{ machine: "a", room: "r", kind: "washer" }]
@@ -156,7 +168,25 @@ test("a day with next to no business, like the first of a break, teaches nothing
       for (let poll = at; poll < at + HOUR; poll += 5 * 60_000)
         polls.push({ at: poll, failed: [] })
     }
-  const free = (through: Day) =>
-    unpack(bundle(learnDays(machines, transitions, polls, "2026-09-01", through), machines).rooms.r.washer!).map(hour => hour?.free)
-  expect(free("2026-09-15")).toEqual(free("2026-09-14"))
+  // Each hour's mean as it was, only decayed a day
+  const free = (through: Day) => {
+    const { free, weight } = learnDays(machines, transitions, polls, "2026-09-01", through).stats.r.washer!
+    return free.map((sum, h) => sum / weight[h])
+  }
+  const before = free("2026-09-14")
+  free("2026-09-15").forEach((mean, h) => expect(mean).toBeCloseTo(before[h], 3))
 })
+
+test("a room never watched says nothing, and one watched at all says something of every hour", () =>
+  fc.assert(fc.property(fc.array(fc.nat(SLOTS - 1), { maxLength: 5 }), watched => {
+    const stats = emptyStats()
+    for (const h of watched) {
+      stats.weight[h] = 3600
+      stats.free[h] = 3600
+      stats.any[h] = 3600
+    }
+    const week = unpack(quantize(stats, 2))
+    expect(week === undefined).toBe(!watched.length)
+    week?.hours.forEach(hour => expect(hour).toEqual({ free: 1, any: 1 }))
+  }))
+)

@@ -16,7 +16,7 @@ const MAX_RESULTS = 60
 const MAX_SERVINGS = 6
 
 const Failed = () =>
-  <p class="empty muted">Couldn't load the menus. Check your connection and reload the page.</p>
+  <p class="empty muted">Couldn't load the menus yet. Trying again…</p>
 
 export const MenuView = () =>
   r(() => {
@@ -26,7 +26,7 @@ export const MenuView = () =>
       return <p class="empty muted">Loading the menu…</p>
 
     const current = menu.value
-    const hours = index.hours[hall.value]
+    const hours = index.value.hours[hall.value]
     if (!current)
       return (
         <p class="empty muted">

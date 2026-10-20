@@ -1,16 +1,15 @@
 /** @jsxImportSource bruh/browser */
 
-// Where from and where to, searched by stop name and with Photon as you type
+// Where from and where to, searched as you type among the places the map knows, and with Photon for addresses and
+// anywhere else
 
-import { r, watch, type SourceNode } from "bruh/reactive"
-import type { Place } from "../plan.mts"
-import { searchPlaces } from "../osm.mts"
-import { feed, from, to, selectedStop, isLocating, useCurrentLocation } from "../state.mts"
-import { locationProblem } from "../location.mts"
+import { r, watch } from "bruh/reactive"
+import type { Place } from "../../places/search.mts"
+import * as photon from "../../places/photon.mts"
 import { Icon } from "../../shell/ui.tsx"
+import { state } from "../state/map.mts"
 
 type Field = "from" | "to"
-const places: Record<Field, SourceNode<Place | undefined>> = { from, to }
 
 /** The field being typed in, whose suggestions take the place of the rest of the panel */
 export const editing = r<Field>()
@@ -21,24 +20,26 @@ const active = r(0)
 
 const options = r(() => [undefined, ...suggestions.value])
 
-watch([query], () => {
+// Fewer places than this found here, Photon is asked too
+const FEW = 3
+
+/** Suggestions for what's typed: the places the map knows, and Photon's, once it's had a moment to type more */
+const suggest = () => {
   const text = query.value.trim()
-  const lower = text.toLowerCase()
-  const stops = text
-    ? feed.stops
-      .filter(stop => stop.pickup !== false && stop.name.toLowerCase().includes(lower))
-      .slice(0, 4)
-      .map(({ lat, lon, name }) => ({ lat, lon, name }))
-    : []
-  suggestions.value = stops
+  const local = state.searchPlaces.value(text)
+  suggestions.value = local
   active.value = text ? 1 : 0
-  if (text.length < 3)
+  // Only Photon knows addresses
+  const isAddress = /\d/.test(text)
+  if (text.length < 3 || local.length >= FEW && !isAddress)
     return
 
+  const names = new Set(local.map(place => place.name))
   const controller = new AbortController()
   const timer = setTimeout(() =>
-    searchPlaces(text, controller.signal)
-      .then(found => suggestions.value = [...stops, ...found])
+    photon.search(text, controller.signal)
+      // Photon names the town after the place, as "Stoke Hall, Durham"
+      .then(found => suggestions.value = [...local, ...found.filter(place => !names.has(place.name.split(", ")[0]))])
       .catch(() => {}),
     300
   )
@@ -46,19 +47,19 @@ watch([query], () => {
     clearTimeout(timer)
     controller.abort()
   }
-})
+}
 
 /** undefined means the current location */
 const choose = async (option: Place | undefined) => {
   const field = editing.peek()
   if (!field)
     return
-  locationProblem.value = undefined
-  const place = option ?? await useCurrentLocation()
+  state.locationProblem.value = undefined
+  const place = option ?? await state.useCurrentLocation()
   if (!place)
     return
-  places[field].value = place
-  selectedStop.value = undefined
+  state[field].value = place
+  state.selectedStop.value = undefined
   const focused = document.activeElement as HTMLElement | null
   focused?.blur()
 }
@@ -66,7 +67,7 @@ const choose = async (option: Place | undefined) => {
 const optionId = (i: number) => `place-option-${i}`
 
 const PlaceInput = ({ field, label, placeholder }: { field: Field, label: string, placeholder: string }) => {
-  const place = places[field]
+  const place = state[field]
   const isEditing = r(() => editing.value === field)
 
   const input: HTMLInputElement =
@@ -153,13 +154,15 @@ export const Suggestions = () =>
 
 const LocationNotice = () =>
   r(() =>
-    isLocating.value      ? <p class="notice muted" role="status">Finding your location…</p> :
-    locationProblem.value ? <p class="notice" role="status">{locationProblem.value}</p> :
-                            undefined
+    state.isLocating.value      ? <p class="notice muted" role="status">Finding your location…</p> :
+    state.locationProblem.value ? <p class="notice" role="status">{state.locationProblem.value}</p> :
+                                  undefined
   )
 
-export const Planner = () =>
-  <>
+export const Planner = () => {
+  // As long as the planner's shown, which is as long as the page
+  watch([query], suggest)
+  return <>
     <form class="planner" onsubmit={event => event.preventDefault()}>
       <div class="planner-fields">
         <PlaceInput field="from" label="From" placeholder="Search or tap the map" />
@@ -169,10 +172,11 @@ export const Planner = () =>
         type="button"
         class="swap"
         aria-label="Swap start and destination"
-        onclick={() => [from.value, to.value] = [to.value, from.value]}
+        onclick={() => [state.from.value, state.to.value] = [state.to.value, state.from.value]}
       >
         <Icon name="swap" />
       </button>
     </form>
     <LocationNotice />
   </>
+}

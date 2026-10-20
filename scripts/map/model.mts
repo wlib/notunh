@@ -1,54 +1,65 @@
-// Learns the bus model in the build, as scripts/learn.mts does, and writes src/map/model.json for the map to
-// bundle. Each whole service day is folded in from the visits its samples show while the Worker keeps them, which
-// are stored, as they outlast the samples, or else from the visits stored then, with how forecasts did that day
-// scored. With --rebuild (or MODEL_REBUILD=1), the model is learned afresh from every visit still stored, extracted
-// again where the samples are still kept; --local uses `wrangler dev`
+// Learns the bus model through scripts/learn.mts, and writes src/map/model.json among the inputs for the map to bundle.
+// Each whole service day is folded in from what's derived from its observations, read from the day's archive or the
+// Worker while it keeps them (scripts/observations.mts), against the timetable in effect then (replay.mts), of those
+// acquired. The timetable among the inputs is acquired first. What's derived is published to the Worker, each by
+// exactly what it was derived from, and reused for that alone (worker/derived.mts):
+// - visits: what the extractor reads of the observations, with the timetable
+// - statistics: what the visits show (fit.mts summarize), which the model folds
+// - evaluation: how the model as it stood before the day forecast it, scored by replaying the day (replay.mts score),
+//   which calibrates its bands while the predictor stays the same
+// With --store it learns and stores, and with --rebuild, afresh from the first day observed. --local uses
+// `wrangler dev`
 
-import { readFile } from "node:fs/promises"
-import { serviceDayStart, withIndexes } from "../../src/map/feed.mts"
-import type { Visit } from "../../src/map/events.mts"
-import { emptyModel, update } from "../../src/map/model.mts"
-import { type Day, addDays, localDay } from "../../src/shared/time.mts"
-import { isRebuild, learn } from "../learn.mts"
-import { health, readRows, writeRows } from "../worker.mts"
-import { FEED, describe, extractDay, score } from "./replay.mts"
+import { fetchCatalog } from "../../src/transit/observations/archive.mts"
+import { EXTRACTOR, type Visit } from "../../src/transit/inference/events.mts"
+import { emptyModel, type Evaluation } from "../../src/transit/models/model.mts"
+import { fold, summarize } from "../../src/transit/models/fit.mts"
+import { contentHash } from "../../src/shared/hash.mts"
+import { localDay } from "../../src/shared/time.mts"
+import { lastSettled, observationsOf } from "../observations.mts"
+import { learn } from "../learn.mts"
+import { STAGED } from "../files.mts"
+import { derived, health } from "../worker.mts"
+import { PREDICTOR, acquireFeed, describe, feedFor, listeningOf, score, visitsOf } from "./replay.mts"
 
-const OUTPUT = new URL("../../src/map/model.json", import.meta.url)
-// Samples still arrive this long after a service day ends
-const SETTLE_MS = 15 * 60_000
-
-const feed = withIndexes(JSON.parse(await readFile(FEED, "utf8")))
-const today = localDay(Date.now())
-
-// The first days the Worker has samples and visits for, asked once there's a day to learn
-let firsts: Promise<{ sampled?: Day, stored?: Day }> | undefined
-const firstDays = () =>
-  firsts ??= health().then(({ buses, visits }) => ({
-    sampled: buses.since === null ? undefined : localDay(buses.since),
-    stored:  visits.since === null ? undefined : localDay(visits.since * 1000)
-  }))
-
-const model = await learn("buses", OUTPUT, {
-  empty: emptyModel,
+const model = await learn("buses", new URL("src/map/model.json", STAGED), {
+  empty:   emptyModel,
+  prepare: async () => {
+    if (await acquireFeed())
+      console.log("buses: acquired the timetable")
+  },
+  // The first day archived or with samples in the Worker
   first: async () => {
-    const { sampled, stored } = await firstDays()
-    return [sampled, isRebuild ? stored : undefined].filter(day => day !== undefined).sort()[0]
+    const [{ buses }, { days }] = await Promise.all([health(), fetchCatalog()])
+    return [days[0]?.day, buses.since === null ? undefined : localDay(buses.since)].filter(day => day !== undefined).sort()[0]
   },
-  last:  addDays(today, serviceDayStart(today) + SETTLE_MS <= Date.now() ? -1 : -2),
-  fold:  async (model, day, stored) => {
-    const { sampled } = await firstDays()
-    const isSampled = sampled !== undefined && day >= sampled
-    const visits = isSampled ? await extractDay(feed, day) : await readRows<Visit>("visits", day)
-    // Days the stored model covers were stored then, and a rebuild leaves them be, as storing them all again would
-    // take far more than D1's writes for a day
-    if (isSampled && day > (stored?.through ?? ""))
-      await writeRows("visits", visits, day)
-    console.log(`buses: ${day}, ${visits.length} visits`)
-    return update(model, day, visits, score(model, feed, visits))
-  },
-  // Of the build's 20 minutes, what fitting can take
-  budgetMs: 8 * 60_000
+  last:  lastSettled(Date.now()),
+  fold:  async (model, day) => {
+    const timetable = await feedFor(day)
+    // A day no timetable acquired says it ran by can't be replayed, so it's folded in as though nothing was seen
+    if (!timetable) {
+      console.warn(`buses: ${day}, no timetable acquired is in effect then, so it's left out`)
+      return fold(model, day, summarize([]))
+    }
+    const { id: feed, isLater } = timetable
+    if (isLater)
+      console.warn(`buses: ${day}, against a timetable acquired after it`)
+    const observed = await observationsOf(day)
+    const isListening = listeningOf(observed)
+    const inputs = { observations: observed.id, feed, extractor: EXTRACTOR }
+    let visits: Visit[] | undefined
+    const visited = async () =>
+      visits ??= await derived("visits", day, inputs, async () => visitsOf(timetable.feed, observed))
+    const statistics = await derived("statistics", day, { ...inputs, version: model.version }, async () =>
+      summarize(await visited(), isListening)
+    )
+    const predictor = { ...inputs, predictor: PREDICTOR, model: await contentHash(JSON.stringify(model)) }
+    const evaluation = await derived("evaluation", day, predictor, async (): Promise<Evaluation> =>
+      ({ predictor: PREDICTOR, scores: score(model, timetable.feed, await visited(), observed.fixes, isListening) })
+    )
+    console.log(`buses: ${day}, ${observed.fixes.length} fixes`)
+    return fold(model, day, statistics, evaluation)
+  }
 })
 
-if (model)
-  console.log(describe(model.scores))
+console.log(describe(model.scores))

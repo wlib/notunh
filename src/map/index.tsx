@@ -5,13 +5,8 @@ import "./index.css"
 
 import { r, watch } from "bruh/reactive"
 import { Popup } from "maplibre-gl"
-import { createMap } from "./map.mts"
-import {
-  feed, model, layovers, from, to, selected, itinerary, selectedStop, selectedBus,
-  riding, suggested, viewedBus, highlightedRoute, focusedBuses, shownRoutes, directTo
-} from "./state.mts"
-import { locationProblem } from "./location.mts"
-import { fusedVehicles } from "./riding.mts"
+import { createMap } from "./render/map.mts"
+import { startMap } from "./state/map.mts"
 import { AppTitle, Icon } from "../shell/ui.tsx"
 import { Planner, Suggestions, editing } from "./ui/Planner.tsx"
 import { Itineraries } from "./ui/Itineraries.tsx"
@@ -20,6 +15,9 @@ import { RouteList, Status } from "./ui/RouteList.tsx"
 import { PlaceCard } from "./ui/cards.tsx"
 import { BusView, RideSuggestion } from "./ui/BusView.tsx"
 import { makeSheet, raise } from "./ui/sheet.mts"
+
+const state = await startMap()
+const { from, to, selected, selectedStop, selectedBus, viewedBus, suggested, locationProblem, directTo } = state
 
 const clearTrip = () => {
   from.value = undefined
@@ -84,8 +82,7 @@ const openCard = (lngLat: [number, number], content: Node) => {
 const { map } = createMap(
   mapElement,
   panel,
-  feed,
-  { model, vehicles: fusedVehicles, layovers, shownRoutes, highlightedRoute, from, to, selectedStop, itinerary, focusedBuses, riding },
+  state,
   tap => {
     if (card) {
       card.remove()

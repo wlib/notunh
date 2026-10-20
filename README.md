@@ -1,99 +1,127 @@
 # notunh
 
-The better UNH app, at [notunh.app](https://notunh.app): a PWA built with Vite and [bruh](https://github.com/Technical-Source/bruh), served as static assets from Cloudflare Workers.
+The better UNH app, at [notunh.app](https://notunh.app). A PWA built with Vite and [bruh](https://github.com/Technical-Source/bruh), served as static assets by a Cloudflare Worker, on the free plan.
 
-Each section is its own page and bundle, sharing a shell (`src/shell/`: the `<head>`, theme, icons, Intl formatting, the one clock and visibility every page follows, remembered state, polling, and the service worker):
+| Page | Entry | What it does |
+|---|---|---|
+| `/` | `index.html.tsx` | What's here and where the data comes from |
+| `/map/` | `map/index.html.tsx`, `src/map/` | Live Wildcat Transit buses on MapLibre, bus + walking directions |
+| `/dining/` | `dining/index.html.tsx`, `src/dining/` | Dining hall menus, search by food or ingredient, diet and allergen filters |
+| `/laundry/` | `laundry/index.html.tsx`, `src/laundry/` | Free washers and dryers per room, and when each room is usually busy; each room has its own address, like `/laundry/adams-tower/` |
 
-- `/` (`index.html.tsx`): what's here, who made it, and where the data comes from
-- `/map/` (`map/index.html.tsx`, `src/map/`): live Wildcat Transit buses and routes on MapLibre GL with the OpenFreeMap Liberty style, and bus + walking directions
-- `/dining/` (`dining/index.html.tsx`, `src/dining/`): dining hall menus, with search by food or ingredient and diet and allergen filters
-- `/laundry/` (`laundry/index.html.tsx`, `src/laundry/`): which washers and dryers are free in every laundry room, and when each room is usually busy, with each room at its own address, like `/laundry/adams-tower/`
+Every `*.html.tsx` is a page (vite-plugin-bruh). The browser floor is Safari/iOS 16.4 (`browserslist` in `package.json`, checked by `tests/shell/compat.test.mts`).
 
-Within a section, `state.mts` holds the reactive state and live data, `ui/` the components, and the rest the logic, with the pure parts property tested. Each npm package builds into its own chunk, so a change to the app leaves maplibre cached.
+Pages are **offline first**: everything opens from the service worker's cache, the network is checked behind it, new data is swapped in live without a reload, and new code reloads quietly while the page is out of view (never mid-bus-ride). See [docs/offline.md](docs/offline.md).
 
-`src/shared/` is what the pages, the Worker, and the build all use, with neither the DOM nor Node: Durham's clock and calendar (`time.mts`), the fold every learned model shares (`learn.mts`), `getJson`, and the slugs links name places by. Time comes in two units, and only two:
+## Layout
 
-- **Epoch milliseconds**, as `Date.now()` gives them, for every instant that crosses a boundary: Worker rows, API JSON, page state, and everything in laundry.
-- **Schedule seconds** where times are compared with the GTFS timetable, which counts seconds from a service day's start: the planner, the bus model, and the visits it learns from, in the D1 `visits` table too.
-
-A calendar day is a `Day`, `YYYY-MM-DD` in Durham, which sorts and compares as text, and weekdays count from Monday.
-
-## Map
-
-### Data
-
-- **Live**: the Umo IQ rider API (`api.prd-1.iq.live.umoiq.com/v2.0/riders/agencies/unh`), the backend of `rider.umoiq.com` and the Umo apps. No key, open CORS, so browsers poll it directly: vehicles every 5 s, and predictions every 30 s for routes with a bus out.
-- **Schedule**: Wildcat Transit's GTFS feed on National RTAP (the one Google Maps uses). The host has no CORS, so `npm run data` converts it into `src/map/gtfs.json` at build time, and CI rebuilds nightly. Umo's trip and stop ids match the GTFS ones, so predictions shift the timetable per trip.
-- **Walking paths**: FOSSGIS's public OSRM foot router. **Place search**: Photon.
-- **Laundry and dining buildings**: OpenStreetMap coordinates saved in `scripts/map/buildings.json`, used by `scripts/map/places.mts` to generate `src/map/places.json`. Refresh the coordinates explicitly with `npm run places:refresh`; ordinary builds do not call Overpass. The laundry vendor puts every room at the same spot, so rooms are matched to their residence halls by name, with a small alias table where OSM names a building otherwise; a room or hall left unmatched fails the build. The map shows them quietly and plans to one when it's tapped, and `/map/?to=laundry/<room>` or `?to=dining/<hall>`, as the laundry and dining pages link, plans there from your location.
-
-Buses are drawn where they likely are now, not just where they last reported: each one drives along its route and waits at each stop as long as the model expects at this time of day, scaled by how slow or quick buses on that line have been in the last half hour, nudged toward what the last bus took on that very stretch, and held at stops where its trip waits for the timetable.
-
-Trip planning is a Connection Scan over the timetable plus live delays, with a reverse scan so each option leaves as late as possible. Within the stretch Umo is predicting a route, trips it doesn't mention are dropped (the campus connectors run by headway, not to the timetable).
-
-### The model
-
-Each build fits `src/map/model.json` (`scripts/map/model.mts`), bundled like the timetable. For every completed service day since the last model, it extracts each bus's visits to stops from the Worker's samples (`src/map/events.mts`, with the same snapping and zone crossing the map uses), stores them back in D1 as `visits`, which outlast the samples, and folds them into decayed statistics with a 4-week half-life (`src/map/model.mts`, on the fold in `src/shared/learn.mts`): drive times between stops by weekday or weekend and time of day, time at each stop, whether early buses wait at a stop for their scheduled time, layovers between trips, and how far off the timetable each route runs. Every estimate leans on a broader one while it has little data (a stretch at any time, then the route's pace), and an empty model has none, so the map falls back on its old constants. Each day is also scored (`scripts/map/replay.mts`): at 1, 3, 5, 10, and 20 minutes before each departure, how far off the timetable, the model from where the bus was, and Umo's own prediction were, which calibrates how much slack the planner leaves. The planner learns holds, layovers, and slack from it; Umo's predictions still set the delays.
-
-Everything goes through the Worker's token-gated `/api/rows/:name` and `/api/models/:name` (see Deploying), so the build needs only `BUILD_TOKEN`, never D1 credentials. Without it, or the Worker, the last model stays (or an empty one), so the model never fails the build. `npm run model -- --rebuild` refits from every stored visit, extracting again where samples are still kept.
-
-## Dining
-
-Menus come from Nutrislice (`unh.api.nutrislice.com`, behind `unh.nutrislice.com`): a week per hall and meal, with stations, ingredients, diet and allergen tags, and nutrition, published about two weeks ahead. It has no CORS, so `npm run data` fetches today through the end of what's posted, and splits it so the page only loads what it shows:
-
-- `src/dining/menus.json`, the index the page bundles: halls, which meals each hall serves each day, and the name of every other file
-- under `public/data/dining/`, each named by a hash of what's in it:
-  - a file per hall per day, with each food's name, tags, and calories (about 2 KB gzipped)
-  - a file per food, with its ingredients and nutrition, loaded when it's opened; a food served all week is one file, and stays cached across nightly rebuilds
-  - every upcoming food with its ingredients and servings, loaded on the first search
-
-The page tells the service worker which files the index still names, and it drops the rest from its cache. Search, filters, and everything else run in the browser.
-
-## Laundry
-
-The rooms' Speed Queen machines report to LaundryConnect (`laundryconnectlive.com`), which has no CORS, so the page asks the Worker. The room list reads `/api/laundry/rooms`, every room's free washers and dryers as the collector last saw them, made from D1 alone and shared at the edge for 5 minutes, so the list never reaches the vendor. An open room reads `/api/laundry/rooms/:id`, which fetches it live with the asker's own User-Agent and shares the answer for 30 s, falling back to the collector's last record (marked stale) when the vendor can't answer. `npm run data` lists the rooms into `src/laundry/rooms.json`, each with the slug of its address.
-
-Each room has its own address, `/laundry/<room>/`: the Worker answers it with the laundry page (any other `/laundry/…` is a 404), the page moves between rooms with `history.pushState`, the service worker keeps the one laundry page for every room offline, and `vite.config.mts` does the same in development.
-
-`src/laundry/infer.mts` decides what to claim about each machine: a running machine's countdown is its own while it keeps reporting, a quiet one past its end is probably done, and a finished one sits done until its door opens.
-
-The Worker's laundry cron polls every room every 5 minutes (15 overnight), a quarter of the rooms each minute between the fifths, and writes status changes to D1 (`transitions`, `latest`, `polls`) plus one current snapshot per room (`room_snapshots`), keeping heartbeats and timers fresh without repeating every machine row, all in epoch milliseconds. Each build (`scripts/laundry/model.mts`) folds every whole day since the last into what it has learned (`src/laundry/model.mts`, on the same fold as the bus model), reading the day's rows from `/api/rows/:name` and storing the result with `/api/models/laundry`, and writes `src/laundry/usual.json`: for every room, kind, and hour of the week, the time-weighted free count and chance of any free, decayed with a 4-week half-life, leaving out stretches nobody watched and days a room was nearly idle, like breaks. Without `BUILD_TOKEN` or the Worker it keeps what it has, so it never fails the build.
-
-## Commands
-
-```sh
-npm run dev        # http://localhost:5173, fetching data first if it's missing
-npm run data       # refresh the bus schedule and menus from upstream
-npm run icons      # regenerate app PNG icons from public/icon.svg
-npm test           # property tests (vitest + fast-check)
-npm run typecheck
-npm run worker     # the Worker on http://localhost:8787 with a local D1, crons fired by
-                   # curl "localhost:8787/cdn-cgi/handler/scheduled?cron=*+*+*+*+*"
-npm run model -- --local  # fit the bus model from it, with BUILD_TOKEN set here and in .dev.vars
-npm run db:generate       # a migration in worker/migrations for changes to worker/schema.mts
-npm run db:migrate # apply production D1 migrations
-npm run deploy     # migrations, then deploy the existing build
-npm run deploy:fresh # fresh data, build, then deploy with migrations
+```
+src/shared/       Pure helpers for pages, Worker, and scripts: Durham time, the learned-model fold, hashing, JSON, slugs
+src/geo/          Geometry: projections, lines measured in meters, boxes, map matching
+src/places/       Gazetteer, place search, Photon, laundry and dining buildings
+src/transit/      The GTFS timetable (feed.mts) and route shapes
+  observations/   What was observed: the Worker's stored rows, the archive, Umo's API as a live source
+  inference/      What's inferred from fixes: GPS likelihoods, matching to shapes, passages between fixes, the
+                  location model that joins them, and the nightly visit extraction
+  models/         The learned model, its fit, bus movement, tracking, and the forecast
+src/routing/      Walking network, walks, and the trip planner
+src/shell/        Shared page shell: <head>, theme, Intl, clock and visibility, polling, release manifests, data loading
+src/sw/           The service worker, built to /sw.js
+src/map/          The map page: state/ (made by createMapState, nothing started on import), render/ (MapLibre), ui/,
+                  basemap/ (style and tiles)
+src/dining/, src/laundry/   Those pages: state.mts, ui/, and their logic
+worker/           The Cloudflare Worker (Hono, Drizzle on D1): API, crons, laundry proxy
+scripts/          The pipeline: acquiring and installing inputs, model training and replay, archiving, map data
+tests/            Vitest + fast-check, mirroring src/; tests/browser/ runs the service worker in Playwright
 ```
 
-## Deploying
+**Dependency rule.** Domain layers import only the layers beneath them:
 
-Cloudflare Workers Builds builds and deploys the `notunh` Worker from this repo's `main` (Cloudflare dashboard, Worker → Settings → Build), on every push:
+```
+shared ← geo ← places
+shared ← geo ← transit ──────┐
+shared ← transit/observations ┴─ ← transit/inference ← transit/models ← routing (also on places)
+```
 
-- Build command: `npm run build`, which in a fresh clone downloads the day's data, then typechecks and tests before building
-- Deploy command: `npm run deploy`. Its `predeploy` script applies D1 migrations first; a migration failure stops deployment. Keep migration and deployment steps in `package.json`, so future changes don't require editing the dashboard command.
+Observations as stored never depend on what's inferred from them. No domain imports bruh, MapLibre, or a page's state/render/UI, and neither do `worker/` or `scripts/`, so training and replay run on the domains alone. `tests/layers.test.mts` checks every import.
 
-If upstream is down the build fails and the last deploy stays up. Cloudflare preview builds remain enabled. **Check** (GitHub Actions) also typechecks, tests, and builds each pull request without secrets.
+**Conventions.**
+- Every boundary (upstream APIs, data files, the Worker's request bodies) is checked with a [Valibot](https://valibot.dev) schema, which is also where its type comes from. Upstream answers keep the items that fit, so a change upstream shows less rather than garbage.
+- Positions are `[lon, lat]` or `{ lat, lon }`, boxes are `[west, south, east, north]`, distances are meters on cheap-ruler's projection (`src/geo/projection.mts`, the only place one is made).
+- Instants are **epoch milliseconds** wherever they cross a boundary (Worker rows, API JSON, page state, all of laundry). Times compared with the timetable are **schedule seconds** from the service day's start (the planner, the bus model, the visits derived from observations). The location model works in epoch seconds internally.
+- A calendar day is a `Day`, `YYYY-MM-DD` in Durham, which sorts as text; weekdays count from Monday.
+- Bytes flow as async iterables of `Uint8Array`; gzip wherever a page or the Worker reads it, zstd only for the observations archive, which only scripts read.
 
-The Worker (`worker/`) is a small [Hono](https://hono.dev) app that only answers `/api/*` and the laundry rooms' addresses (`run_worker_first` in `wrangler.jsonc`); every other page and asset is served without it. Its cron triggers keep raw samples of the live API in the D1 database `notunh`, one gzipped row per source per minute (`src/map/raw.mts`): the buses' fixes polled six times a minute, and Umo's predictions every 5 minutes; and the laundry collector's changes. Its tables are in `worker/schema.mts` (Drizzle), with migrations generated from it. Nightly at 4:17 AM (3:17 in winter, as cron runs in UTC) it prunes samples, laundry transitions, and polls past `RETAIN_DAYS` (60) and extracted visits past `RETAIN_VISIT_DAYS` (365), and POSTs the Deploy Hook (Worker secret `DEPLOY_HOOK`), so Cloudflare rebuilds with fresh menus, timetable, and models.
+## Running
 
-The API, in `worker/api.mts`:
+```sh
+npm run dev           # http://localhost:5173, after installing the inputs and map data the releases point at
+npm test              # vitest + fast-check
+npm run test:browser  # the service worker in Chromium and WebKit (once: npx playwright install chromium webkit)
+npm run typecheck
+npm run worker        # the Worker on http://localhost:8787 with a local D1; fire a cron with
+                      # curl "localhost:8787/cdn-cgi/handler/scheduled?cron=*+*+*+*+*"
+npm run fresh         # the whole pipeline locally: acquire from upstream, learn, and build from those inputs
+                      # (`node scripts/data.mts acquire` or `learn` for one stage; `-- --store` to store what's learned)
+npm run fixtures      # remake tests/fixtures/data from the data installed
+npm run icons         # regenerate PNG icons from public/icon.svg
+npm run model -- --local --store   # fit the bus model against `npm run worker` (BUILD_TOKEN here and in .dev.vars)
+npm run storage       # D1's size in bytes and rows per table (needs BUILD_TOKEN)
+npm run db:generate   # a migration in worker/migrations/ for changes to worker/schema.mts
+```
 
-- `GET /api/health`, public: when each table's rows start and when the last was stored, in its own unit, and the day each model runs through
-- `GET /api/rows/:name?day=YYYY-MM-DD&after=…` and `POST /api/rows/:name` (`{ rows, clear? }`): a page of rows from one table in the registry (`worker/rows.mts`: `buses`, `predictions`, `visits`, `transitions`, `polls`, `machines`), by Durham day or service day where the table has one, and writing the tables the build writes
-- `GET /api/models/:name` and `POST /api/models/:name`: the latest stored state of `buses` or `laundry`, and a new one
-- `GET /api/laundry/rooms` and `GET /api/laundry/rooms/:id`, public, as in Laundry
+Environment:
+- `NOTUNH_OFFLINE=1` asks nothing upstream or of GitHub: the fixtures in `tests/fixtures/data/` are installed as the inputs and map data. Pull requests build this way.
+- `NOTUNH_INPUTS` and `NOTUNH_MAP_DATA` pin what a build or `npm run dev` installs: a generation's version, or for the inputs a folder laid out as the repository, given by a path starting with `.` or `/`, like `./inputs`, where `npm run fresh` makes them. Without them, it's what the releases' pointers name.
+- `BUILD_TOKEN` is the Worker's bearer token for its rows, models, timetables, and storage routes, which learning and archiving use instead of D1 credentials. `--store` asks learning to store what it learns in D1, which production then uses; without it, learning only reads. `--rebuild` learns afresh from the first day observed.
 
-The rows and models routes take `Authorization: Bearer $BUILD_TOKEN`, a Worker secret also set as a build variable, and answer 401 without it. Build steps reach them through `scripts/worker.mts`, which can also be run to look: `BUILD_TOKEN=… node scripts/worker.mts health`, or `rows <name> [day]`, with `--local` for `npm run worker`.
+## Building and deploying
 
-**Refresh** (GitHub Actions) POSTs the same hook on demand, with `gh workflow run refresh.yml` (repository secret `CLOUDFLARE_DEPLOY_HOOK`).
+Building only installs what it's pinned to and builds; collecting, archiving, acquiring, and learning are steps of their own that publish what a build takes ([docs/storage.md](docs/storage.md#the-pipeline)). Cloudflare Workers Builds builds `main` on every push and whenever a workflow publishes new inputs or map data (it POSTs the Deploy Hook). The build command is `npm run build`, the deploy command `npm run deploy`. Keep both steps in `package.json` so the dashboard never needs editing.
+
+1. `prebuild` installs the inputs and map data generations the releases' pointers name (`scripts/inputs.mts`), keeps what the site serves now beside them for open pages, matches the places, and runs the typecheck and tests. It needs no secrets and writes nothing but its own folder, so any branch's build is safe.
+2. `vite build`.
+3. `predeploy` applies D1 migrations (`npm run db:migrate`); a failed migration stops the deploy.
+4. `wrangler deploy` ships the Worker and site together.
+
+Each night the Worker's 4:17 AM cron starts the Inputs workflow, which acquires the timetable, style, menus, and laundry rooms, runs the tests, learns the models through the Worker, builds the site with all of that to check it, publishes it as `inputs-<version>`, and POSTs the Deploy Hook. If upstream is down, nothing is published and the site keeps the inputs before. Both learners are attempted when either stalls; compatible previous or empty outputs can still be published, and the workflow reports the stall afterward. A hard failure that leaves a required model or asset missing prevents publication. Installation validates the complete input bundle before clearing the prior generated sources, so fixtures cannot fill gaps in production inputs. Rerunning publication retries the Deploy Hook even if its pointer already advanced. `/inputs.json` on the site says which inputs and map data it was built from.
+
+**Rolling back.** Clients never step back to a release older than the one they have, so `wrangler rollback` only reaches new visitors. To go back for everyone, publish the old release again: rebuild its commit with the `NOTUNH_INPUTS` and `NOTUNH_MAP_DATA` its `/inputs.json` names, or stamp a folder an old build wrote with `node scripts/republish.mts <folder>` and deploy it with `wrangler deploy --assets <folder>` (after `npm run db:migrate`; Worker versions don't roll D1 back).
+
+**Deploying from a Worker that predates the Inputs workflow.** Production's D1 then has migrations 0000 and 0001, and nothing is released as `inputs` or `map-data`.
+
+1. Secrets: the Worker needs `GITHUB_TOKEN` (`wrangler secret put GITHUB_TOKEN`, a fine-grained token for this repository with Actions read and write), and the repository `BUILD_TOKEN` and `CLOUDFLARE_DEPLOY_HOOK`. Check with `npx wrangler secret list` and `gh secret list`.
+2. Merge to `main`. Workers Builds' build of it fails at install, as nothing is released yet, so nothing is migrated or deployed and the site stays as it is.
+3. `gh workflow run map.yml`, and wait for it (`gh run watch`); the build its Deploy Hook starts fails the same way. Then `gh workflow run inputs.yml`. It learns against the Worker still deployed, which refuses learning's writes, so nothing is stored in D1 and the inputs carry an empty bus model (the stored one is of an older version) and the stored laundry model. It publishes `inputs-<version>` and POSTs the Deploy Hook.
+4. That build applies `0002_models_derived_feeds` (columns with defaults the Worker before keeps working with, and new tables), then deploys. Check `npx wrangler d1 migrations list notunh --remote` shows nothing left, and `curl https://notunh.app/inputs.json`.
+5. `gh workflow run inputs.yml` again, or wait for the night: it acquires the timetable into D1, derives each day, refits the bus model from the first day observed, stores both models, and deploys them.
+6. Once that's done and no rollback to the Worker before is wanted, `git mv worker/migrations/after-deploy/0003_drop_visits.sql worker/migrations/` and push; the next deploy drops the old `visits` table. Not before: the Worker before deletes from it in its nightly prune's batch, which would fail every night without it.
+7. Optionally, delete what nothing reads any more: the Worker secret `DEPLOY_HOOK` (`wrangler secret delete DEPLOY_HOOK`) and the Workers Builds variable `BUILD_TOKEN`.
+
+### Workflows and secrets
+
+| Workflow | When | Does | Needs |
+|---|---|---|---|
+| Check (`check.yml`) | Pull requests | Offline build with fixtures, unit and browser tests | Nothing (read-only token, no secrets) |
+| Inputs (`inputs.yml`) | Worker dispatch nightly, or by hand (`-f rebuild=true` to learn afresh) | Acquires the timetable, style, menus, and rooms, learns the models, publishes them as release `inputs-<version>`, then rebuilds the site | `BUILD_TOKEN`, `CLOUDFLARE_DEPLOY_HOOK` |
+| Observations (`archive.yml`) | Nightly 9:30 UTC, Worker dispatch, or `-f from= -f to=` | Archives each settled service day's samples as release `observations-<day>` and updates `catalog.json` | `BUILD_TOKEN` |
+| Map data (`map.yml`) | Mondays, Worker dispatch, or by hand | Builds walk network, gazetteer, and tiles from OSM as release `map-data-<version>`, then rebuilds the site | `CLOUDFLARE_DEPLOY_HOOK` (optional) |
+
+Worker secrets (`wrangler secret put`): `BUILD_TOKEN` (also a repository secret; locally in `.dev.vars`) and `GITHUB_TOKEN`, which can start this repository's workflows. The Worker's nightly run starts Observations and Inputs every night, and Map data on Mondays. Inputs has no schedule of its own, since GitHub pauses schedules after 60 days without a commit, so without `GITHUB_TOKEN` the site keeps the inputs it has.
+
+## Data sources
+
+- **Buses**: the Umo IQ rider API (no key, open CORS), polled by browsers directly and archived by the Worker's crons.
+- **Timetable**: Wildcat Transit's GTFS feed on National RTAP, converted nightly as an input (no CORS). Umo's trip and stop ids match it.
+- **OpenStreetMap**: Geofabrik's New Hampshire extract, made weekly into the walking network, gazetteer, and tiles.
+- **Base map**: OpenFreeMap's Liberty style, restyled and partly self-hosted, acquired nightly as an input.
+- **Menus**: Nutrislice, acquired nightly as an input and split into content-addressed files under `public/data/dining/`.
+- **Laundry**: LaundryConnect (Speed Queen), through the Worker. The proxy forwards the asker's own User-Agent; the cron sends none and polls each room every 5 minutes (15 overnight). Nothing else asks the vendor.
+
+## Further notes
+
+- [docs/offline.md](docs/offline.md): the service worker, release manifests, live data swaps, retention, and iOS quirks
+- [docs/transit.md](docs/transit.md): the location model, bus movement, the forecaster, the learned model, and trip planning
+- [docs/map.md](docs/map.md): map data generation, tiles, the base map, walking, and place search
+- [docs/worker.md](docs/worker.md): the Worker's API, crons, and the laundry collector and model
+- [docs/storage.md](docs/storage.md): every artifact and table, its version, where it lives, and how long it's kept

@@ -1,43 +1,38 @@
 // What's being looked at and searched for: reactive values only, no DOM
 
 import { r, watch } from "bruh/reactive"
-import indexUrl from "./menus.json?url"
-import { fileUrl, type Filters, type Food, type Meal, type MenusIndex, type SearchFood, type Serving } from "./menus.mts"
+import { MenusIndex, fileUrl, type Filters, type Food, type Meal, type SearchFood, type Serving } from "./menus.mts"
 import { createSearch } from "./search.mts"
 import { status } from "./hours.mts"
-import { getJson } from "../shared/json.mts"
+import { arrayOf, objectOf } from "../shared/json.mts"
+import { latest } from "../shell/build.mts"
+import { jsonOf, loadImmutable } from "../shell/load.mts"
 import { localDay, localHour, localMinutes } from "../shared/time.mts"
 import { now as clock, today } from "../shell/lifecycle.mts"
 import { distinct, remembered, toggled } from "../shell/state.mts"
 
-export const index = await getJson<MenusIndex>(indexUrl)
+/** The menus' index, swapped for a newer build's as it comes */
+export const index = await latest("menus", MenusIndex)
 
-// Cached files the menus no longer use can go
-navigator.serviceWorker?.controller?.postMessage({ keep: index.files.map(fileUrl) })
+// The index's files, each content-named, so immutable (load.mts)
+const MEALS = jsonOf(arrayOf<Meal>())
+const FOOD = jsonOf(objectOf<Food>())
+const FOODS = jsonOf(arrayOf<SearchFood>())
 
-/** Each file's contents, loaded once */
-const loaded = new Map<string, Promise<unknown>>()
-const load = <T,>(file: string) => {
-  if (!loaded.has(file))
-    loaded.set(file, getJson<T>(fileUrl(file)).catch(error => {
-      loaded.delete(file)
-      throw error
-    }))
-  return loaded.get(file) as Promise<T>
-}
+/** A food's ingredients, nutrition, and the rest, by its file, saying each time it fails before it loads */
+export const loadFood = (file: string, onError: (error: unknown) => void) =>
+  loadImmutable(fileUrl(file), FOOD, { onError })
 
-/** A food's ingredients, nutrition, and the rest, by its file */
-export const loadFood = (file: string) =>
-  load<Food>(file)
-
-/** Every day with a menu, from the day the page loaded on */
-export const days = [...new Set(Object.values(index.days).flatMap(Object.keys))].filter(day => day >= today.peek()).sort()
+/** Every day with a menu from today on, recomputed when the index changes */
+export const days = r(() =>
+  [...new Set(Object.values(index.value.days).flatMap(Object.keys))].filter(day => day >= today.peek()).sort()
+)
 
 //#region Remembered between visits
 
 // Most people eat at one hall
 export const hall = remembered("dining-hall", stored =>
-  index.halls.find(({ id }) => id === stored)?.id ?? index.halls[0]?.id ?? ""
+  index.peek().halls.find(({ id }) => id === stored)?.id ?? index.peek().halls[0]?.id ?? ""
 )
 
 /** A remembered list, keeping only items that still exist */
@@ -46,8 +41,8 @@ const rememberedSet = (key: string, known: readonly string[]) =>
 
 // Dietary needs don't change from visit to visit
 const chosen = {
-  diets: rememberedSet("dining-diets", index.diets),
-  avoid: rememberedSet("dining-avoid", index.contains)
+  diets: rememberedSet("dining-diets", index.peek().diets),
+  avoid: rememberedSet("dining-avoid", index.peek().contains)
 }
 export const filters = r((): Filters => ({ diets: chosen.diets.value, avoid: chosen.avoid.value }))
 
@@ -57,7 +52,12 @@ export const toggleFilter = (kind: keyof Filters, item: string) => {
 
 //#endregion
 
-export const day = r(days[0] ?? today.peek())
+export const day = r(days.peek()[0] ?? today.peek())
+// A day a newer index no longer has gives way to its first
+watch([days], () => {
+  if (!days.value.includes(day.peek()))
+    day.value = days.value[0] ?? today.peek()
+})
 
 const hour = localHour(clock.peek())
 
@@ -70,31 +70,38 @@ export const preferredMeal = r(
 )
 
 /** The meals the hall serves that day */
-export const meals = r(() => index.days[hall.value]?.[day.value]?.meals ?? [])
+export const meals = r(() => index.value.days[hall.value]?.[day.value]?.meals ?? [])
 
-/** The hall's meals that day, undefined while they load, and empty when there's no menu */
-export const dayMeals = r<Meal[]>()
+/** The file with the hall's meals that day, if it has a menu, changing only for another menu, not a newer index */
+const dayFile = distinct(() => index.value.days[hall.value]?.[day.value]?.file)
+
+/** The meals of the day file last loaded */
+const loaded = r<{ file: string, meals: Meal[] }>()
+
+/**
+ * The hall's meals that day, undefined while they load, and empty when there's no menu. It's derived rather than set
+ * by the watch below, so it's right from the start: bruh 2.0.0-beta.5 renders a reactive child under a watch with
+ * skipFirst, whose first run, a microtask late, skips whatever changed that tick, so a menu known to be missing as the
+ * page started would show as loading forever
+ */
+export const dayMeals = r(() => {
+  const file = dayFile.value
+  return !file ? [] : loaded.value?.file === file ? loaded.value.meals : undefined
+})
 export const hasFailed = r(false)
-watch([hall, day], () => {
-  const listed = index.days[hall.value]?.[day.value]
-  dayMeals.value = listed ? undefined : []
+watch([dayFile], () => {
+  const file = dayFile.value
   hasFailed.value = false
-  if (!listed)
+  if (!file)
     return
 
-  let isCurrent = true
-  load<Meal[]>(listed.file)
+  const loading = new AbortController()
+  loadImmutable(fileUrl(file), MEALS, { signal: loading.signal, onError: () => hasFailed.value = true })
     .then(meals => {
-      if (isCurrent)
-        dayMeals.value = meals
-    })
-    .catch(() => {
-      if (isCurrent)
-        hasFailed.value = true
-    })
-  return () => {
-    isCurrent = false
-  }
+      hasFailed.value = false
+      loaded.value = { file, meals }
+    }, () => {})
+  return () => loading.abort()
 })
 
 /** The meal to show, with brunch standing in for breakfast or lunch */
@@ -110,17 +117,20 @@ export const menu = r((): Meal | undefined => {
 export const query = r("")
 export const isSearching = r(() => query.value.trim().length >= 2)
 
-/** Every upcoming food and a search over them, loaded once someone first searches */
-export const searchable = r<{ foods: SearchFood[], search: ReturnType<typeof createSearch> }>()
-watch([isSearching], () => {
-  if (isSearching.value && !searchable.value)
-    load<SearchFood[]>(index.search)
-      .then(foods => {
-        searchable.value ??= { foods, search: createSearch(foods) }
-      })
-      .catch(() => {
-        hasFailed.value = true
-      })
+/** Every upcoming food and a search over them, loaded once someone first searches, and again for a newer index's */
+export const searchable = r<{ file: string, foods: SearchFood[], search: ReturnType<typeof createSearch> }>()
+const searchFile = distinct(() => isSearching.value ? index.value.search : searchable.peek()?.file)
+watch([searchFile], () => {
+  const file = searchFile.value
+  if (file === undefined || searchable.peek()?.file === file)
+    return
+  const loading = new AbortController()
+  loadImmutable(fileUrl(file), FOODS, { signal: loading.signal, onError: () => hasFailed.value = true })
+    .then(foods => {
+      hasFailed.value = false
+      searchable.value = { file, foods, search: createSearch(foods) }
+    }, () => {})
+  return () => loading.abort()
 })
 
 /** A food, by its file, to open and scroll to once its menu shows, from following a search result there */
@@ -143,8 +153,8 @@ export const now = distinct(
 
 /** Whether each hall is open now, by hall, for halls with hours */
 export const hallStatus = r(() =>
-  Object.fromEntries(Object.entries(index.hours).map(([id, hours]) => [id, status(hours, now.value)]))
+  Object.fromEntries(Object.entries(index.value.hours).map(([id, hours]) => [id, status(hours, now.value)]))
 )
 
 export const hallName = (id: string) =>
-  index.halls.find(hall => hall.id === id)?.name ?? id
+  index.value.halls.find(hall => hall.id === id)?.name ?? id

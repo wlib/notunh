@@ -1,0 +1,7 @@
+# Files named by their content or their data version never change, so browsers keep them without asking again, as
+# the service worker does (isHashed in src/sw/retention.mts). The assets' default, max-age=0 and must-revalidate, has
+# every request after a file's first, like the worker's own as it stages a page, ask the origin again
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/data/*
+  Cache-Control: public, max-age=31536000, immutable

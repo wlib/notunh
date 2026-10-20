@@ -1,76 +1,80 @@
-// A build step that learns a model through the Worker and writes it for a page to bundle. It never fails the
-// build, since menus and the timetable still need deploying: without BUILD_TOKEN or the Worker, the file written
-// last stays, or an empty one. Each whole day since the last one learned is folded in, within a budget of the
-// build's 20 minutes, and the next build carries on from wherever this one stopped. With --if-missing, a file
-// already there is kept; with --rebuild (or MODEL_REBUILD=1), learning starts over from the first day there is
+// Learns a model through the Worker and writes it among the inputs a build pins (scripts/inputs.mts), as the Inputs
+// workflow does each night. What D1 stores is where learning carries on from, and what's written is what it stores
+// once learning's done, so the inputs carry exactly the model the Worker has, or an empty one while it has another
+// version's:
+// - with --store, every whole day since the stored model is folded in (from the first day there is, with --rebuild)
+//   and stored, compare-and-swap on the revision read. A day that can't be read stops learning there, keeping the
+//   days before it, and the next run carries on. A model through fewer days than the one stored, as a rebuild cut
+//   short is, isn't stored. Only the Inputs workflow on main stores, since what's stored is what production uses
+// - without it, nothing is written to the Worker, and the model stored is written as it is
+// - without BUILD_TOKEN, an empty model is written, so the inputs can be made with no Worker to reach
+// Learning runs main's code against the Worker main deployed. A Worker that doesn't take a request, as the one before
+// a change to the API does, refuses it (worker/api.mts checks every request), and what it stores stays as it was
 
-import { writeFile } from "node:fs/promises"
+import type { URL } from "node:url"
 import type { Learned } from "../src/shared/learn.mts"
 import { addDays, type Day } from "../src/shared/time.mts"
-import { exists, isKept } from "./files.mts"
+import { writeInput } from "./files.mts"
 import { readModel, writeModel } from "./worker.mts"
-
-export const isRebuild = process.argv.includes("--rebuild") || Boolean(process.env.MODEL_REBUILD)
 
 const message = (error: unknown) =>
   error instanceof Error ? error.message : `${error}`
 
+/** Learns the model stored under a name as asked, and writes what the page loads to output, giving back the model */
 /**
- * Learns the model stored under a name on through the last whole day, stores it if that's further than before (or
- * at all, on a rebuild), and writes what the page loads to output. Gives back the model, or undefined if the file
- * was kept or the model couldn't be reached
+ * Says learning didn't get as far as it should. The build still goes ahead with what was learned, but the job fails
+ * once the rest is published, so a day that never folds is seen rather than freezing the model quietly
  */
+const stalled = (reason: string) => {
+  console.warn(reason)
+  process.exitCode = 1
+}
+
 export const learn = async <M extends Learned, B = M>(name: string, output: URL, {
-  empty, first, last, fold, prepare, bundle = model => model as unknown as B, budgetMs = 3 * 60_000
+  empty, first, last, fold, prepare, bundle = model => model as unknown as B,
+  store = process.argv.includes("--store"), rebuild = process.argv.includes("--rebuild")
 }: {
-  empty:     () => M,
-  /** Required inputs fetched within the same failure boundary as the model */
-  prepare?:  () => Promise<void>,
+  empty:    () => M,
+  /** What learning needs first, like the timetable it replays new days against acquired */
+  prepare?: () => Promise<unknown>,
   /** The first day there's anything to learn from, when nothing's been learned yet */
-  first:     () => Promise<Day | undefined>,
+  first:    () => Promise<Day | undefined>,
   /** The last whole day there is */
-  last:      Day,
-  /** The model with a day folded in, given what was stored before the build for what it may skip */
-  fold:      (model: M, day: Day, stored: M | null) => Promise<M>,
+  last:     Day,
+  /** The model with a day folded in */
+  fold:     (model: M, day: Day) => Promise<M>,
   /** What the page loads, when that isn't the model itself */
-  bundle?:   (model: M) => B,
-  budgetMs?: number
-}): Promise<M | undefined> => {
-  if (await isKept(output))
-    return
-  const file = output.pathname.split("/").at(-1)
-  try {
-    if (!process.env.BUILD_TOKEN)
-      throw new Error("no BUILD_TOKEN to reach the Worker with")
-    const started = Date.now()
-    const found = await readModel<M>(name)
-    // A model of an older shape is learned again from the start
-    const stored = found?.version === empty().version ? found : null
-    await prepare?.()
-    let model = isRebuild ? empty() : stored ?? empty()
-    for (let day = model.through === null ? await first() : addDays(model.through, 1); day !== undefined && day <= last; day = addDays(day, 1)) {
-      if (Date.now() - started > budgetMs) {
-        console.warn(`${name}: ran out of time at ${day}; the next build carries on`)
-        break
-      }
-      // A day that can't be read stops learning there, keeping the days before it, and the next build tries again
+  bundle?:  (model: M) => B,
+  store?:   boolean,
+  rebuild?: boolean
+}): Promise<M> => {
+  const ofThisShape = (state: M | null) => state?.version === empty().version ? state : null
+  let model = empty()
+  if (!process.env.BUILD_TOKEN) {
+    if (store)
+      throw new Error(`${name}: no BUILD_TOKEN to store with`)
+    console.warn(`${name}: no BUILD_TOKEN to reach the Worker with, so the model is empty`)
+  }
+  else {
+    const { state, revision } = await readModel<M>(name)
+    model = ofThisShape(state) ?? model
+    if (store) {
+      let learned = rebuild ? empty() : model
+      let day: Day | undefined
       try {
-        model = await fold(model, day, stored)
+        await prepare?.()
+        for (day = learned.through === null ? await first() : addDays(learned.through, 1); day !== undefined && day <= last; day = addDays(day, 1))
+          learned = await fold(learned, day)
       }
       catch (error) {
-        console.warn(`${name}: stopped at ${day}: ${message(error)}`)
-        break
+        stalled(`${name}: stopped${day ? ` at ${day}` : ""}, which the next run carries on from: ${message(error)}`)
       }
+      if (learned !== model && learned.through !== null && learned.through >= (model.through ?? ""))
+        await writeModel(name, learned, revision).catch(error => stalled(`${name}: not stored: ${message(error)}`))
+      model = ofThisShape((await readModel<M>(name)).state) ?? empty()
     }
-    if (model.through !== null && (isRebuild || model.through > (stored?.through ?? "")))
-      await writeModel(name, model)
-    await writeFile(output, JSON.stringify(bundle(model)))
-    console.log(`${name}: learned through ${model.through ?? "nothing yet"}`)
-    return model
   }
-  catch (error) {
-    console.warn(`${file} not updated: ${message(error)}`)
-    if (!await exists(output))
-      await writeFile(output, JSON.stringify(bundle(empty())))
-  }
+  await writeInput(output, JSON.stringify(bundle(model)))
+  console.log(`${name}: through ${model.through ?? "nothing yet"}`)
+  return model
 }

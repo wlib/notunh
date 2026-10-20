@@ -1,30 +1,34 @@
 // Converts Nutrislice weekly menus into the compact JSON the dining page bundles: each food once,
 // and each hall's meals as stations of indices into those foods
 
+import * as v from "valibot"
 import { DIETS, MEALS, NUTRIENTS, type Food, type Menu, type MenusData, type Nutrition } from "../../src/dining/menus.mts"
 import { parseIngredients } from "../../src/dining/ingredients.mts"
 
-/** The parts of Nutrislice's responses used here */
-export type NutrisliceFood = {
-  id: number,
-  name: string,
-  description?: string | null,
-  ingredients?: string | null,
-  icons?: { food_icons?: { name: string }[] } | null,
-  serving_size_info?: { serving_size_amount?: string | null, serving_size_unit?: string | null } | null,
-  rounded_nutrition_info?: Record<string, number | null> | null
-}
+// The parts of Nutrislice's responses used here
 
-export type NutrisliceWeek = {
-  days: {
-    date: string,
-    menu_items: {
-      is_station_header: boolean,
-      text: string,
-      food: NutrisliceFood | null
-    }[]
-  }[]
-}
+const NutrisliceFood = v.object({
+  id:                     v.number(),
+  name:                   v.string(),
+  description:            v.nullish(v.string()),
+  ingredients:            v.nullish(v.string()),
+  icons:                  v.nullish(v.object({ food_icons: v.optional(v.array(v.object({ name: v.string() }))) })),
+  serving_size_info:      v.nullish(v.object({ serving_size_amount: v.nullish(v.string()), serving_size_unit: v.nullish(v.string()) })),
+  rounded_nutrition_info: v.nullish(v.record(v.string(), v.nullable(v.number())))
+})
+export type NutrisliceFood = v.InferOutput<typeof NutrisliceFood>
+
+export const NutrisliceWeek = v.object({
+  days: v.array(v.object({
+    date:       v.string(),
+    menu_items: v.array(v.object({
+      is_station_header: v.boolean(),
+      text:              v.string(),
+      food:              v.nullable(NutrisliceFood)
+    }))
+  }))
+})
+export type NutrisliceWeek = v.InferOutput<typeof NutrisliceWeek>
 
 const clean = (text: string | null | undefined) =>
   text?.replace(/\s+/g, " ").trim() || undefined

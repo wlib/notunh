@@ -1,6 +1,6 @@
 // Required generated sources, shared by fixture and production installation.
-import { readFile, stat } from "node:fs/promises"
-import { join } from "node:path"
+import { cp, mkdir, readFile, rm, stat } from "node:fs/promises"
+import { dirname, join } from "node:path"
 
 export const INPUT_SOURCES = ["src/map/gtfs.json", "src/map/model.json", "src/map/style.json", "src/dining/menus.json", "src/laundry/rooms.json", "src/laundry/usual.json"]
 
@@ -23,4 +23,18 @@ export const validateInputs = async (folder: string, production = false) => {
   const dining = await json("src/dining/menus.json")
   for (const file of dining.files)
     await requirePublic(file)
+}
+
+
+/** Validate before removing old sources, then install only the generation's files with their parent directories. */
+export const installInputBundle = async (folder: string, to: string, production: boolean, paths?: readonly string[]) => {
+  await validateInputs(folder, production)
+  await rm(join(to, "public/data"), { recursive: true, force: true })
+  for (const path of INPUT_SOURCES) await rm(join(to, path), { force: true })
+  if (paths)
+    for (const path of paths) {
+      await mkdir(dirname(join(to, path)), { recursive: true })
+      await cp(join(folder, path), join(to, path))
+    }
+  else await cp(folder, to, { recursive: true })
 }

@@ -1,11 +1,12 @@
 import { test, expect } from "vitest"
-import { mkdtemp, writeFile, rm, cp } from "node:fs/promises"
+import { mkdtemp, readFile, writeFile, rm, cp } from "node:fs/promises"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { publishArchives } from "../scripts/archive-publish.mts"
 import { runStage } from "../scripts/data.mts"
 import { publish } from "../scripts/publish.mts"
-import { validateInputs } from "../scripts/bundle.mts"
+import { stage, hashesUnder, fetchGeneration, stagePointer } from "../scripts/release.mts"
+import { installInputBundle, validateInputs } from "../scripts/bundle.mts"
 
 test("a stalled learner still runs the next learner and reports failure", async () => {
   const called: string[] = []
@@ -67,6 +68,38 @@ test("a bootstrap stall still produces both fallback models as a complete bundle
     await validateInputs(folder, true)
     await rm(join(folder, "src/map/gtfs.zip"))
     await expect(validateInputs(folder, true)).rejects.toThrow("gtfs.zip")
+  }
+  finally { await rm(folder, { recursive: true, force: true }) }
+})
+
+
+test("a downloaded production generation installs nested assets into a clean checkout", async () => {
+  const folder = await mkdtemp(join(tmpdir(), "install-test-"))
+  try {
+    const source = join(folder, "source")
+    const staged = join(folder, "staged")
+    const fetched = join(folder, "fetched")
+    const target = join(folder, "checkout")
+    await cp("tests/fixtures/data", source, { recursive: true })
+    await writeFile(join(source, "src/map/gtfs.zip"), "original archive")
+    await stage("inputs", { version: "test", files: await hashesUnder(source) }, source, staged, async () => new Response(null, { status: 404 }))
+    const archive = await readFile(join(staged, "inputs.tar.gz"))
+    const manifest = await fetchGeneration("inputs", "test", fetched, async () => new Response(archive))
+    await installInputBundle(fetched, target, true, Object.keys(manifest.files))
+    await validateInputs(target, true)
+    const dining = JSON.parse(await readFile(join(target, "src/dining/menus.json"), "utf8"))
+    expect(await readFile(join(target, "public", dining.files[0]), "utf8")).toBe(await readFile(join(source, "public", dining.files[0]), "utf8"))
+  }
+  finally { await rm(folder, { recursive: true, force: true }) }
+})
+
+test("an already published map generation stages its pointer and retries its hook", async () => {
+  const folder = await mkdtemp(join(tmpdir(), "map-retry-test-"))
+  try {
+    await stagePointer("map-version", folder)
+    let called = false
+    await publish("map-data", folder, "notes", "https://hook", () => "", () => ({ assets: [{ name: "manifest.json" }] }), async () => { called = true; return new Response() })
+    expect(called).toBe(true)
   }
   finally { await rm(folder, { recursive: true, force: true }) }
 })

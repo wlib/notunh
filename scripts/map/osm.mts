@@ -22,7 +22,7 @@ import { PLACE_KEYS } from "../../src/places/gazetteer.mts"
 import { type Made, versionOf } from "../../src/shared/made.mts"
 import { TILES, makeTiles } from "./tiles.mts"
 import { generator } from "./generator.mts"
-import { fetchPointer, hashesUnder, stage } from "../release.mts"
+import { fetchPointer, hashesUnder, stage, stagePointer } from "../release.mts"
 
 const WALK      = new URL("../../src/map/walk.json", import.meta.url)
 const GAZETTEER = new URL("../../src/map/gazetteer.json", import.meta.url)
@@ -72,8 +72,10 @@ const release = args.includes("--release") ? args[args.indexOf("--release") + 1]
 const [extract, jar] = args.filter((arg, i) => !arg.startsWith("--") && args[i - 1] !== "--release")
 const made = await fromExtract(extract)
 const version = versionOf(made)
-if ((await fetchPointer("map-data").catch(() => null))?.version === version)
+if ((await fetchPointer("map-data"))?.version === version) {
+  if (release) await stagePointer(version, resolve(release))
   console.log(`${version} is the generation already published, so there's nothing more to make`)
+}
 else {
   if (jar)
     await makeTiles(resolve(extract), resolve(jar), version)

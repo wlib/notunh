@@ -55,6 +55,13 @@ export const fetchPointer = async (kind: Kind, load = fetch) => {
   return checked(Pointer, await response.json(), url)
 }
 
+/** Stage only the pointer when an immutable generation already exists, so its hook can be retried. */
+export const stagePointer = async (version: string, to: string) => {
+  await rm(to, { recursive: true, force: true })
+  await mkdir(to, { recursive: true })
+  await writeFile(join(to, "latest.json"), JSON.stringify({ version }))
+}
+
 /**
  * Stages the files of a folder to publish as a generation of a kind: its archive, its manifest, and the pointer to
  * upload last, in another folder. If already current, only the pointer is staged so publication can retry its hook
@@ -62,9 +69,7 @@ export const fetchPointer = async (kind: Kind, load = fetch) => {
  */
 export const stage = async (kind: Kind, manifest: Manifest, folder: string, to: string, load = fetch) => {
   if ((await fetchPointer(kind, load))?.version === manifest.version) {
-    await rm(to, { recursive: true, force: true })
-    await mkdir(to, { recursive: true })
-    await writeFile(join(to, "latest.json"), JSON.stringify({ version: manifest.version }))
+    await stagePointer(manifest.version, to)
     console.log(`${kind}-${manifest.version} is the generation published already`)
     return false
   }

@@ -5,3 +5,6 @@
   Cache-Control: public, max-age=31536000, immutable
 /data/*
   Cache-Control: public, max-age=31536000, immutable
+# The social images keep their names as they're redrawn, so link previews ask again after a day
+/social/*
+  Cache-Control: public, max-age=86400

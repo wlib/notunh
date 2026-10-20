@@ -124,6 +124,12 @@ body {
   opacity: 0;
 }
 
+/* The page's own panel, until the app's replaces it (map/index.html.tsx), as tall as the app's opens with a full list,
+   so the header stays put */
+.panel:has(> .shell) {
+  min-block-size: min(45cqb, 40rem);
+}
+
 /* A handle to drag or tap the sheet down and back up by, sticking to the top as the panel scrolls */
 .grabber {
   position: sticky;
@@ -172,6 +178,10 @@ body {
 
   .panel.lowered {
     overflow-y: auto;
+  }
+
+  .panel:has(> .shell) {
+    min-block-size: auto;
   }
 
   .panel > :not(.grabber) {

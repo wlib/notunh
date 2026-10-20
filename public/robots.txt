@@ -1,0 +1,5 @@
+# Everything's open to crawl but the Worker's live API. Cloudflare puts its managed content signals before this
+User-agent: *
+Disallow: /api/
+
+Sitemap: https://notunh.app/sitemap.xml

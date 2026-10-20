@@ -5,13 +5,21 @@
   "engines": {
     "node": ">=24"
   },
+  "imports": {
+    "#jsx/*": {
+      "browser": "bruh/browser/*",
+      "default": "bruh/server/*"
+    }
+  },
   "scripts": {
     "icons": "node scripts/icons.mts",
+    "social": "node scripts/inputs.mts && node scripts/social.mts",
     "fixtures": "node tests/fixtures/make.mts",
     "predev": "node scripts/inputs.mts",
     "dev": "vite",
     "prebuild": "node scripts/inputs.mts && npm run typecheck && npm test",
     "build": "vite build",
+    "postbuild": "node scripts/search.mts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p worker",
     "test": "vitest run --silent=passed-only",
@@ -24,6 +32,7 @@
     "storage": "node scripts/worker.mts storage",
     "predeploy": "npm run db:migrate",
     "deploy": "wrangler deploy",
+    "postdeploy": "node scripts/indexnow.mts",
     "fresh": "node scripts/data.mts"
   },
   "dependencies": {
@@ -54,6 +63,7 @@
     "fast-check": "^4.10.2",
     "fflate": "^0.8.3",
     "lightningcss": "^1.33.0",
+    "schema-dts": "^2.1.0",
     "sharp": "^0.34.5",
     "typescript": "^7.0.2",
     "vite": "^7.3.6",

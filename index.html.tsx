@@ -9,11 +9,7 @@ const EMAIL_BACKWARD = "ude.hnu@egdirhtE.leinaD"
 export default () =>
   new MetaDocument(
     <html lang="en-US">
-      <Head
-        title="notunh"
-        description="An unofficial guide to UNH buses, dining, and laundry."
-        script="/src/shell/page.mts"
-      />
+      <Head path="/" script="/src/shell/page.mts" />
       <body>
         <main class="page">
           <header class="intro">

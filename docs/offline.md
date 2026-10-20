@@ -10,6 +10,8 @@ Every page opens from the cache at once, code and data both, and the service wor
 - Its code: scripts, stylesheets, icons, the web manifest, and the code it loads later, maplibre's worker and PostHog's chunk. `vite.config.mts` names that later code in the head as prefetches, following each page's dynamic imports as well as its static ones, since otherwise only the code loading it knows its URL.
 - A link per bundled JSON file, by name (`data-name`): the map's timetable, model, walk network, gazetteer, tiles, style, and places; the dining index; the laundry rooms' usual weeks. Vite hashes them like code, so the HTML says exactly which code and which data a page is. A script right after them fetches each as the head is parsed, and the file's first load takes that response (`src/shell/load.mts`). They aren't preloads, since Safari never hands a preload to `fetch()` and so downloaded each file twice.
 
+What it names for search engines and link previews, the canonical URL and the social images (`og:image`), is absolute, which a build's code never is, so the worker neither stages nor keeps it.
+
 Every npm package builds into its own chunk, so a change to the app leaves maplibre cached.
 
 ## Loading data: one slot per file

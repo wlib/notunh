@@ -1,13 +1,14 @@
 /** @jsxImportSource bruh/server */
 import { MetaDocument } from "bruh/server"
 import { Head } from "../src/shell/Head.tsx"
+import { AppTitle } from "../src/shell/ui.tsx"
+import { PAGES } from "../src/shell/pages.mts"
 
 export default () =>
   new MetaDocument(
     <html lang="en-US">
       <Head
-        title="Map · notunh"
-        description="Live UNH Wildcat Transit buses, and directions by bus or on foot"
+        path="/map/"
         script="/src/map/index.tsx"
         data={{
           gtfs:      "/src/map/gtfs.json",
@@ -20,7 +21,17 @@ export default () =>
         }}
       />
       <body>
-        <div id="app" />
+        {/* What the app replaces once it's loaded, laid out as it is: the map, and the panel's header */}
+        <div id="app">
+          <div class="map" />
+          <aside class="panel">
+            <div class="grabber" />
+            <header class="panel-header">
+              <AppTitle page="Map" />
+            </header>
+            <p class="shell muted">{PAGES["/map/"].description}</p>
+          </aside>
+        </div>
       </body>
     </html>
   ).toStringPromise()

@@ -1,12 +1,12 @@
-// What a build adds beside its pages for search engines and link previews (npm's postbuild): each page's social
-// image (social.mts), IndexNow's key file, and the sitemap. A page's lastmod is when what it serves last changed:
-// this build's release if the page differs from the one the site serves now by more than its release, else the
-// lastmod the site's sitemap gives it. So a nightly build changes the dining page's for its new menus, and leaves the
-// home page's alone. Offline, as pull requests are built, nothing is compared and every page is this build's
+// What a build adds beside its pages for search engines (npm's postbuild): IndexNow's key file and the sitemap. The
+// social images are made by hand (social.mts) and kept in public/social/. A page's lastmod is when what it serves last
+// changed: this build's release if the page differs from the one the site serves now by more than its release, else
+// the lastmod the site's sitemap gives it. So a nightly build changes the dining page's for its new menus, and leaves
+// the home page's alone. Offline, as pull requests are built, nothing is compared and every page is this build's
 
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { buildOf } from "../src/shell/manifest.mts"
-import { INDEXNOW_KEY, PATHS, SITE, imageOf } from "../src/shell/pages.mts"
+import { INDEXNOW_KEY, PATHS, SITE } from "../src/shell/pages.mts"
 import { isOffline } from "./files.mts"
 import { ORIGIN } from "./site.mts"
 
@@ -57,11 +57,8 @@ const write = async (path: string, data: string | Uint8Array) => {
 }
 
 if (import.meta.main) {
-  // Only now, as the images need sharp and fonts that the rest doesn't
-  const { cardOf } = await import("./social.mts")
   const servedLastmods = lastmodsOf(await served("/sitemap.xml") ?? "")
   const entries = await Promise.all(PATHS.map(async path => {
-    await write(imageOf(path), await cardOf(path))
     const loc = SITE + path
     const built = await readFile(new URL(`.${path}index.html`, DIST), "utf8")
     return { loc, lastmod: lastmodOf(built, await served(path), servedLastmods.get(loc)) }

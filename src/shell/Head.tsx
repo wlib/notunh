@@ -35,10 +35,10 @@ export const Head = ({ path, script, data = {} }: {
   script: string,
   data?:  Record<string, string>
 }) => {
-  const { title, description, heading } = PAGES[path]
+  const { title, description, label, shows } = PAGES[path]
   const url = SITE + path
   const image = SITE + imageOf(path)
-  const alt = `${NAME}: ${heading}`
+  const alt = `${NAME}: ${label}. ${shows}`
   return <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />

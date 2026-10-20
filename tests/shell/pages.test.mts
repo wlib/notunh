@@ -1,5 +1,7 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
+import sharp from "sharp"
+import { readFile } from "node:fs/promises"
 import { buildOf } from "../../src/shell/manifest.mts"
 import { IMAGE, PAGES, PATHS, SITE, imageOf, scriptJson, type Path } from "../../src/shell/pages.mts"
 
@@ -36,6 +38,15 @@ test("each page's title names the app, and its description fits a search result"
   for (const { title, description } of Object.values(PAGES)) {
     expect(title).toContain("notunh")
     expect(description.length, description).toBeLessThanOrEqual(155)
+  }
+})
+
+test("each page's social image is there, as big as its head says, and small enough for a preview to fetch", async () => {
+  for (const path of PATHS) {
+    const image = await readFile(new URL(`../../public${imageOf(path)}`, import.meta.url))
+    const { width, height, format } = await sharp(image).metadata()
+    expect({ width, height, format }, path).toEqual({ ...IMAGE, format: "png" })
+    expect(image.length, path).toBeLessThan(300_000)
   }
 })
 

@@ -7,23 +7,18 @@ import sharp from "sharp"
 const master = (await readFile(new URL("../public/icon.svg", import.meta.url), "utf8"))
   .replace(/<style>[\s\S]*?<\/style>/, "")
   .replace('fill="currentColor"', 'fill="#073482"')
+for (const size of [180, 192, 512]) {
+  const png = await sharp(Buffer.from(master)).resize(size, size).flatten({ background: "white" }).png().toBuffer()
+  await writeFile(new URL(`../public/icon-${size}.png`, import.meta.url), png)
+}
 
-/** The icon's blue symbol, drawn in a 512 by 512 box, to place in other SVG, as the social images do */
-export const symbol = master.replace(/<svg[^>]*>|<\/svg>/g, "")
-
-if (import.meta.main) {
-  for (const size of [180, 192, 512]) {
-    const png = await sharp(Buffer.from(master)).resize(size, size).flatten({ background: "white" }).png().toBuffer()
-    await writeFile(new URL(`../public/icon-${size}.png`, import.meta.url), png)
-  }
-
-  // At 74% the symbol fits inside the maskable safe zone, a circle 80% across
-  const maskable = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+// At 74% the symbol fits inside the maskable safe zone, a circle 80% across
+const symbol = master.replace(/<svg[^>]*>|<\/svg>/g, "")
+const maskable = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="white"/>
   <g transform="translate(66.56 66.56) scale(.74)">${symbol}</g>
 </svg>`
-  await writeFile(
-    new URL("../public/icon-512-maskable.png", import.meta.url),
-    await sharp(Buffer.from(maskable)).png().toBuffer()
-  )
-}
+await writeFile(
+  new URL("../public/icon-512-maskable.png", import.meta.url),
+  await sharp(Buffer.from(maskable)).png().toBuffer()
+)

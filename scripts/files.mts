@@ -2,7 +2,8 @@
 // fixtures that stand in for upstream when there's no network, and running other commands
 
 import { type SpawnOptions, spawn } from "node:child_process"
-import { access, mkdir, writeFile } from "node:fs/promises"
+import { createWriteStream } from "node:fs"
+import { access, mkdir, rename, writeFile } from "node:fs/promises"
 import { Readable } from "node:stream"
 import { pipeline } from "node:stream/promises"
 // Node's URL, which its fs functions take, rather than whatever global URL the typecheck sees
@@ -55,11 +56,33 @@ export const isOffline = Boolean(process.env.NOTUNH_OFFLINE)
 /** Small, real-shaped copies of every data file, laid out as the repository is, made by tests/fixtures/make.mts */
 export const FIXTURES = new URL("tests/fixtures/data/", REPO)
 
-/** Runs a command to its end, showing its output, with a response's body piped in if given; fails if it does */
-export const run = (command: string, args: string[], { input, ...options }: SpawnOptions & { input?: Response } = {}) =>
-  new Promise<void>((done, reject) => {
-    const child = spawn(command, args, { stdio: [input ? "pipe" : "ignore", "inherit", "inherit"], ...options })
-    child.on("error", reject).on("exit", code => code === 0 ? done() : reject(new Error(`${[command, ...args].join(" ")} exited with ${code}`)))
+/**
+ * Runs a command to its end, with a response's body piped in if given; fails if it does. Its output is shown, or with
+ * capture, given back
+ */
+export const run = (command: string, args: string[], { input, capture, ...options }: SpawnOptions & { input?: Response, capture?: boolean } = {}) =>
+  new Promise<string>((done, reject) => {
+    const child = spawn(command, args, { stdio: [input ? "pipe" : "ignore", capture ? "pipe" : "inherit", "inherit"], ...options })
+    let output = ""
+    child.stdout?.setEncoding("utf8").on("data", chunk => output += chunk)
+    child.on("error", reject).on("exit", code => code === 0 ? done(output) : reject(new Error(`${[command, ...args].join(" ")} exited with ${code}`)))
     if (input)
       pipeline(Readable.fromWeb(input.body as any), child.stdin!).catch(reject)
   })
+
+/** A URL's body into a file, tried three times, so the file is whole or not there */
+export const download = async (url: string, file: string) => {
+  for (let attempt = 1; ; attempt++)
+    try {
+      const response = await fetch(url)
+      if (!response.ok || !response.body)
+        throw new Error(`${response.status} from ${url}`)
+      await pipeline(Readable.fromWeb(response.body as any), createWriteStream(`${file}.part`))
+      return await rename(`${file}.part`, file)
+    }
+    catch (error) {
+      if (attempt === 3)
+        throw error
+      console.warn(`Downloading ${url} again: ${error instanceof Error ? error.message : error}`)
+    }
+}

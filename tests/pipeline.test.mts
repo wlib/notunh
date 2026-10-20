@@ -1,4 +1,5 @@
-import { test, expect } from "vitest"
+import { test, expect, vi } from "vitest"
+import fc from "fast-check"
 import { mkdtemp, readFile, writeFile, rm, cp } from "node:fs/promises"
 import { join, relative } from "node:path"
 import { tmpdir } from "node:os"
@@ -7,6 +8,8 @@ import { runStage } from "../scripts/data.mts"
 import { publish } from "../scripts/publish.mts"
 import { stage, hashesUnder, fetchGeneration, stagePointer } from "../scripts/release.mts"
 import { installInputBundle, validateInputs } from "../scripts/bundle.mts"
+import { download, exists } from "../scripts/files.mts"
+import { pathToFileURL } from "node:url"
 
 test("a stalled learner still runs the next learner and reports failure", async () => {
   const called: string[] = []
@@ -103,4 +106,30 @@ test("an already published map generation stages its pointer and retries its hoo
     expect(called).toBe(true)
   }
   finally { await rm(folder, { recursive: true, force: true }) }
+})
+
+test("a download is the whole body after fewer than three failures, and after three, nothing", async () => {
+  const folder = await mkdtemp(join(tmpdir(), "download-test-"))
+  vi.spyOn(console, "warn").mockImplementation(() => {})
+  try {
+    await fc.assert(fc.asyncProperty(fc.array(fc.boolean(), { minLength: 1, maxLength: 3 }), fc.uint8Array(), async (fails, body) => {
+      const file = join(folder, "file")
+      await rm(file, { force: true })
+      let call = 0
+      vi.stubGlobal("fetch", async () => call < fails.length && fails[call++] ? new Response("Busy", { status: 503 }) : new Response(body))
+      const failsEvery = fails.length === 3 && fails.every(Boolean)
+      if (failsEvery)
+        await expect(download("https://example.com/file", file)).rejects.toThrow("503")
+      else {
+        await download("https://example.com/file", file)
+        expect(new Uint8Array(await readFile(file))).toEqual(body)
+      }
+      expect(await exists(pathToFileURL(file))).toBe(!failsEvery)
+    }), { numRuns: 30 })
+  }
+  finally {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+    await rm(folder, { recursive: true, force: true })
+  }
 })

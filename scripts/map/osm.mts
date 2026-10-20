@@ -4,16 +4,18 @@
 // week the Map data workflow makes them from Geofabrik's latest extract and publishes them as a generation of the
 // map-data release (scripts/release.mts):
 //
-//   node scripts/map/osm.mts <extract.osm.pbf> <planetiler.jar> [--release <folder>]
+//   node scripts/map/osm.mts [<extract.osm.pbf> [<planetiler.jar>]] [--release <folder>]
 //
+// Without an extract, it downloads Geofabrik's latest into extract/. Without Planetiler, it uses the one in
+// planetiler/, downloading the version PLANETILER names if there isn't one, or with neither, makes no tiles.
 // Given a folder, it stages the generation there to publish, unless the pointer already names this very one. A build
 // installs the generation it pins (scripts/inputs.mts)
 
 import { createReadStream } from "node:fs"
-import { cp, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { elementsWithin } from "./pbf.mts"
 import type { Box } from "../../src/geo/boxes.mts"
 import { HIGHWAYS, walkGraph } from "./walkable.mts"
@@ -23,6 +25,7 @@ import { type Made, versionOf } from "../../src/shared/made.mts"
 import { TILES, makeTiles } from "./tiles.mts"
 import { generator } from "./generator.mts"
 import { fetchPointer, hashesUnder, stage, stagePointer } from "../release.mts"
+import { download, exists } from "../files.mts"
 
 const WALK      = new URL("../../src/map/walk.json", import.meta.url)
 const GAZETTEER = new URL("../../src/map/gazetteer.json", import.meta.url)
@@ -69,7 +72,17 @@ const stageMade = async (made: Made, folder: string) => {
 
 const args = process.argv.slice(2)
 const release = args.includes("--release") ? args[args.indexOf("--release") + 1] : undefined
-const [extract, jar] = args.filter((arg, i) => !arg.startsWith("--") && args[i - 1] !== "--release")
+const [given, givenJar] = args.filter((arg, i) => !arg.startsWith("--") && args[i - 1] !== "--release")
+const extract = given ?? "extract/new-hampshire.osm.pbf"
+if (!given) {
+  await mkdir("extract", { recursive: true })
+  await download("https://download.geofabrik.de/north-america/us/new-hampshire-latest.osm.pbf", extract)
+}
+const jar = givenJar ?? (process.env.PLANETILER ? "planetiler/planetiler.jar" : undefined)
+if (jar && !givenJar && !await exists(pathToFileURL(resolve(jar)))) {
+  await mkdir("planetiler", { recursive: true })
+  await download(`https://github.com/onthegomap/planetiler/releases/download/v${process.env.PLANETILER}/planetiler.jar`, jar)
+}
 const made = await fromExtract(extract)
 const version = versionOf(made)
 if ((await fetchPointer("map-data"))?.version === version) {

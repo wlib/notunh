@@ -7,8 +7,8 @@
 # Started each night by the Worker (worker/index.mts), which is the site's nightly clock, and by hand with
 # `gh workflow run inputs.yml`, or `-f rebuild=true` to learn the models afresh from the first day observed. Only
 # main's runs learn, since what they store in D1 is what production uses: a run stores only once the code passes its
-# tests, and runs never overlap. Needs the repository secrets BUILD_TOKEN, the same value as the Worker's, and
-# CLOUDFLARE_DEPLOY_HOOK
+# tests, and runs never overlap. Needs the production environment's secrets BUILD_TOKEN, the same value as the
+# Worker's, and CLOUDFLARE_DEPLOY_HOOK
 
 name: Inputs
 
@@ -30,6 +30,10 @@ jobs:
   inputs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Its secrets are the production environment's, which only main can use (scripts/secrets.mts sets them)
+    environment:
+      name: production
+      url: https://notunh.app
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v7

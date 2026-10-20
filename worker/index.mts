@@ -31,12 +31,12 @@ const post = async (url: string, init: RequestInit, what: string) => {
     throw new Error(`${what} ${response.status}`)
 }
 
-/** The days the observations archive has, or none when its catalog can't be read, so no samples go early */
+/** The days the observations archive has, or none when its catalog can't be read, so no samples go */
 const archivedDays = () =>
   fetchCatalog({ headers: HEADERS, signal: AbortSignal.timeout(CATALOG_MS) }).then(
     ({ days }) => days.map(({ day }) => day),
     error => {
-      console.warn(`Couldn't read ${CATALOG}, so samples are kept their full RETAIN_DAYS`, error)
+      console.warn(`Couldn't read ${CATALOG}, so no samples are dropped tonight`, error)
       return []
     }
   )

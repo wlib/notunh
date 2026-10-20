@@ -9,23 +9,23 @@ import { inserts } from "./rows.mts"
 export const HEADERS = { "user-agent": "notunh/1 (+https://notunh.app)" }
 
 export type Env = {
-  DB:                   D1Database,
+  DB:                     D1Database,
   /** The built site, for the pages the Worker answers for itself */
-  ASSETS:               Fetcher,
-  /** How many days of samples and laundry transitions the nightly run keeps */
-  RETAIN_DAYS:          number,
-  /** How many days of samples it keeps of days the observations archive has (src/transit/observations/archive.mts) */
-  RETAIN_ARCHIVED_DAYS: number,
-  /** How many days of the visits extracted from samples it keeps */
-  RETAIN_VISIT_DAYS:    number,
-  /** How many days of the location model's daily summaries it keeps */
-  RETAIN_SUMMARY_DAYS:  number,
+  ASSETS:                 Fetcher,
+  /** How many days of laundry's transitions and polls the nightly run keeps */
+  RETAIN_DAYS:            number,
+  /** How many days of samples it keeps once the observations archive has their day (src/transit/observations/archive.mts) */
+  RETAIN_ARCHIVED_DAYS:   number,
+  /** How many days of the visits extracted from the observations it keeps */
+  RETAIN_VISIT_DAYS:      number,
+  /** How many days of daily statistics and evaluations it keeps */
+  RETAIN_STATISTICS_DAYS: number,
   /** Workers Builds' deploy hook, a secret */
-  DEPLOY_HOOK?:         string,
+  DEPLOY_HOOK?:           string,
   /** Lets the build read and write rows and models through /api/, so it needs no D1 credentials, a secret */
-  BUILD_TOKEN?:         string,
+  BUILD_TOKEN?:           string,
   /** A GitHub token with the actions scope, a secret, for the nightly run to start the Observations and Map data workflows */
-  GITHUB_TOKEN?:        string
+  GITHUB_TOKEN?:          string
 }
 
 /** What a cron trigger runs, given the epoch milliseconds its minute started at and a signal for the minute running out */

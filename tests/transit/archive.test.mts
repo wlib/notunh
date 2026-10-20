@@ -87,18 +87,16 @@ test("merging manifests into the catalog keeps one per day, the latest merged, i
   }))
 )
 
-test("the days to archive are those asked for that have settled, by default the last week settled", () =>
-  fc.assert(fc.property(fc.integer({ min: Date.parse("2026-01-01"), max: Date.parse("2027-12-31") }), fc.integer({ min: -20, max: 5 }), fc.nat(10), (now, start, length) => {
+test("the days to archive are those asked for that have settled and aren't archived, the oldest first, however far back", () =>
+  fc.assert(fc.property(fc.integer({ min: Date.parse("2026-01-01"), max: Date.parse("2027-12-31") }), fc.integer({ min: -400, max: 5 }), fc.nat(400), fc.uniqueArray(fc.integer({ min: -400, max: 5 })), (now, start, length, gone) => {
     const last = lastSettled(now)
     expect(serviceDayStart(addDays(last, 1)) + 15 * 60_000).toBeLessThanOrEqual(now)
     expect(serviceDayStart(addDays(last, 2)) + 15 * 60_000).toBeGreaterThan(now)
-    const byDefault = daysToArchive(now)
-    expect(byDefault).toHaveLength(7)
-    expect(byDefault.at(-1)).toBe(last)
+    const archived = gone.map(offset => addDays(last, offset))
     const [from, to] = [addDays(last, start), addDays(last, start + length)]
-    const days = daysToArchive(now, from, to)
-    expect(days).toEqual(Array.from({ length: Math.max(0, daysBetween(from, to < last ? to : last) + 1) }, (_, i) => addDays(from, i)))
-    expect(daysToArchive(now, from)).toEqual(from <= last ? [from] : [])
+    const asked = Array.from({ length: Math.max(0, daysBetween(from, to < last ? to : last) + 1) }, (_, i) => addDays(from, i))
+    expect(daysToArchive(now, archived, from, to)).toEqual(asked.filter(day => !archived.includes(day)))
+    expect(daysToArchive(now, [], from)).toEqual(from <= last ? [from] : [])
   }))
 )
 

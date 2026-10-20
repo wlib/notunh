@@ -93,7 +93,7 @@ test("a newer copy of the same code loads its newer data, and one of newer code 
   }))
 )
 
-test("data is loaded again when a newer build names newer, swapped in once loaded, and kept if it can't load, which is tried again, and at once when named again", async () => {
+test("data is loaded again when a newer build names newer, swapped in once loaded, and kept if it can't load, which is tried again until it loads", async () => {
   const page = await load({ gtfs: "/assets/gtfs-AAAAAAAA.json" })
   page.answers.set("/assets/gtfs-AAAAAAAA.json", async () => "A")
   const gtfs = await page.latest<string>("gtfs")
@@ -126,16 +126,16 @@ test("data is loaded again when a newer build names newer, swapped in once loade
     await vi.advanceTimersByTimeAsync(5 * 60_000)
     expect(tries()).toBe(5 + i)
   }
-  // The same build named again, as by another navigation, is a fresh chance right away
+  // The same build named again, as by another navigation, leaves the retries be
   page.receive(headOf({ gtfs: "/assets/gtfs-CCCCCCCC.json" }))
   await vi.advanceTimersByTimeAsync(0)
-  expect(tries()).toBe(8)
+  expect(tries()).toBe(7)
   page.answers.set("/assets/gtfs-CCCCCCCC.json", async () => "C")
-  await vi.advanceTimersByTimeAsync(5_000)
+  await vi.advanceTimersByTimeAsync(5 * 60_000)
   expect(gtfs.peek()).toBe("C")
-  expect(tries()).toBe(9)
+  expect(tries()).toBe(8)
   await vi.advanceTimersByTimeAsync(60 * 60_000)
-  expect(tries()).toBe(9)
+  expect(tries()).toBe(8)
 })
 
 test("a file that failed is tried again at once on coming back into view, whatever the wait since", async () => {
@@ -167,7 +167,7 @@ test("of builds coming faster than their data loads, only the newest's is swappe
       page.receive(headOf({ gtfs: `/assets/gtfs-${hash}.json` }))
       await vi.advanceTimersByTimeAsync(0)
     }
-    // Each load answers in some order, though those named while an earlier one loaded wait for it
+    // Each load answers in some order, those named before the newest having been given up on
     for (const hash of hashes.slice(1).sort((a, b) => order(a) - order(b))) {
       pending.get(hash)?.()
       await vi.advanceTimersByTimeAsync(0)
@@ -207,7 +207,7 @@ test("each file of a newer build is swapped in as it loads, as the files join by
   }))
 })
 
-test("a newer build announced while a file first loads is loaded right after it, and one announced from an older release is ignored", async () => {
+test("a newer build announced while a file first loads is loaded instead, and one announced from an older release is ignored", async () => {
   // A is still loading when B is announced, and A completes after
   const page = await load({ gtfs: "/assets/gtfs-AAAAAAAA.json" })
   let answerA: (value: string) => void = () => {}
@@ -261,9 +261,12 @@ test("a load that hangs is given up on after a minute, so it holds up nothing af
   expect(inits.map(init => init.cache)).toEqual(["default", "default", "reload"])
 })
 
-test("a page starts with a fallback when its data can't load the first time, if it has one, and loads the data behind it", async () => {
+test("a page starts with a fallback when its data can't load the first time, if it has one, and loads the data behind it, and without one, waits for it", async () => {
   const page = await load({ model: "/assets/model-AAAAAAAA.json", gtfs: "/assets/gtfs-AAAAAAAA.json" })
-  await expect(page.latest("gtfs")).rejects.toThrow("Load failed")
+  const gtfs = page.latest<string>("gtfs")
+  page.answers.set("/assets/gtfs-AAAAAAAA.json", async () => "timetable")
+  await vi.advanceTimersByTimeAsync(5_000)
+  expect((await gtfs).peek()).toBe("timetable")
   const model = await page.latest<string>("model", undefined, () => "empty")
   expect(model.peek()).toBe("empty")
   page.answers.set("/assets/model-AAAAAAAA.json", async () => "learned")

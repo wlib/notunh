@@ -4,8 +4,9 @@ import { r, watch } from "bruh/reactive"
 import { MenusIndex, fileUrl, type Filters, type Food, type Meal, type SearchFood, type Serving } from "./menus.mts"
 import { createSearch } from "./search.mts"
 import { status } from "./hours.mts"
-import { getJson } from "../shared/json.mts"
+import { arrayOf, objectOf } from "../shared/json.mts"
 import { latest } from "../shell/build.mts"
+import { jsonOf, loadImmutable } from "../shell/load.mts"
 import { localDay, localHour, localMinutes } from "../shared/time.mts"
 import { now as clock, today } from "../shell/lifecycle.mts"
 import { distinct, remembered, toggled } from "../shell/state.mts"
@@ -13,20 +14,14 @@ import { distinct, remembered, toggled } from "../shell/state.mts"
 /** The menus' index, swapped for a newer build's as it comes */
 export const index = await latest("menus", MenusIndex)
 
-/** Each file's contents, loaded once */
-const loaded = new Map<string, Promise<unknown>>()
-const load = <T,>(file: string) => {
-  if (!loaded.has(file))
-    loaded.set(file, getJson<T>(fileUrl(file)).catch(error => {
-      loaded.delete(file)
-      throw error
-    }))
-  return loaded.get(file) as Promise<T>
-}
+// The index's files, each content-named, so immutable (load.mts)
+const MEALS = jsonOf(arrayOf<Meal>())
+const FOOD = jsonOf(objectOf<Food>())
+const FOODS = jsonOf(arrayOf<SearchFood>())
 
-/** A food's ingredients, nutrition, and the rest, by its file */
-export const loadFood = (file: string) =>
-  load<Food>(file)
+/** A food's ingredients, nutrition, and the rest, by its file, saying each time it fails before it loads */
+export const loadFood = (file: string, onError: (error: unknown) => void) =>
+  loadImmutable(fileUrl(file), FOOD, { onError })
 
 /** Every day with a menu from today on, recomputed when the index changes */
 export const days = r(() =>
@@ -90,19 +85,13 @@ watch([dayFile], () => {
   if (!file)
     return
 
-  let isCurrent = true
-  load<Meal[]>(file)
+  const loading = new AbortController()
+  loadImmutable(fileUrl(file), MEALS, { signal: loading.signal, onError: () => hasFailed.value = true })
     .then(meals => {
-      if (isCurrent)
-        dayMeals.value = meals
-    })
-    .catch(() => {
-      if (isCurrent)
-        hasFailed.value = true
-    })
-  return () => {
-    isCurrent = false
-  }
+      hasFailed.value = false
+      dayMeals.value = meals
+    }, () => {})
+  return () => loading.abort()
 })
 
 /** The meal to show, with brunch standing in for breakfast or lunch */
@@ -120,17 +109,18 @@ export const isSearching = r(() => query.value.trim().length >= 2)
 
 /** Every upcoming food and a search over them, loaded once someone first searches, and again for a newer index's */
 export const searchable = r<{ file: string, foods: SearchFood[], search: ReturnType<typeof createSearch> }>()
-watch([isSearching, index], () => {
-  const file = index.value.search
-  if (isSearching.value && searchable.value?.file !== file)
-    load<SearchFood[]>(file)
-      .then(foods => {
-        if (searchable.peek()?.file !== file && index.peek().search === file)
-          searchable.value = { file, foods, search: createSearch(foods) }
-      })
-      .catch(() => {
-        hasFailed.value = true
-      })
+const searchFile = distinct(() => isSearching.value ? index.value.search : searchable.peek()?.file)
+watch([searchFile], () => {
+  const file = searchFile.value
+  if (file === undefined || searchable.peek()?.file === file)
+    return
+  const loading = new AbortController()
+  loadImmutable(fileUrl(file), FOODS, { signal: loading.signal, onError: () => hasFailed.value = true })
+    .then(foods => {
+      hasFailed.value = false
+      searchable.value = { file, foods, search: createSearch(foods) }
+    }, () => {})
+  return () => loading.abort()
 })
 
 /** A food, by its file, to open and scroll to once its menu shows, from following a search result there */

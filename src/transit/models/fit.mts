@@ -1,12 +1,14 @@
-// The model fitted in the nightly build a service day at a time. A day's visits make a summary of sums (summarize),
-// and the model is those summaries folded together, each decayed by half every HALF_LIFE days, so a new semester
-// takes over within a month. Changing the half-life only takes folding the same summaries again.
+// The model fitted in the nightly build a service day at a time. A day's visits make statistics, sums over the day
+// (summarize), and the model is those folded together, each decayed by half every HALF_LIFE days, so a new semester
+// takes over within a month. Changing the half-life only takes folding the same statistics again. Beside them, each
+// day's evaluation of how the model forecast it is folded into its scores the same way, but only alongside others of
+// the same predictor: another's start the scores afresh, so the bands are calibrated by one predictor alone.
 //
 // Weighing visits by how sure their times are measured no better than weighing them all the same. A visit last seen
 // still at its stop, or first seen already there, teaches only the leg driven to or from it, as its stay was cut
 // short. Counting when one first seen there left changed nothing held out
 
-import { type Cell, type Model, type Tally, ANY_LAYOVER, ANY_LEG, ANY_STOP, CONTEXTS, LINGERED, contextAt, dayTypeAt, emptyModel, emptyScores, hourAt, zoneKey } from "./model.mts"
+import { type Cell, type Evaluation, type Model, type Statistics, type Tally, ANY_LAYOVER, ANY_LEG, ANY_STOP, CONTEXTS, LINGERED, contextAt, dayTypeAt, emptyModel, emptyScores, hourAt, zoneKey } from "./model.mts"
 import { type Visit, INCOMPLETE, JOINED } from "../inference/events.mts"
 import { alwaysListening } from "../observations/raw.mts"
 import { foldDay } from "../../shared/learn.mts"
@@ -83,12 +85,11 @@ const EARLY = 60 // s
 const GRACE = 30 // s
 
 /**
- * What a service day's visits show, and how forecasts did that day, as sums over the day, undecayed, which fold
- * into a model as they are. A headway is only counted where the Worker was listening throughout, as it may have
- * missed a bus between otherwise
+ * What a service day's visits show. A headway is only counted where the Worker was listening throughout, as it may
+ * have missed a bus between otherwise
  */
-export const summarize = (visits: readonly Visit[], scores = emptyScores(), isListening = alwaysListening): Model => {
-  const next = emptyModel()
+export const summarize = (visits: readonly Visit[], isListening = alwaysListening): Statistics => {
+  const { version: _, through: __, scores: ___, ...next } = emptyModel()
   const linger = (key: string, seconds: number) => {
     const sums = next.lingers[key] ??= Array(2 * LINGERED.length).fill(0)
     LINGERED.forEach((elapsed, i) => {
@@ -160,7 +161,6 @@ export const summarize = (visits: readonly Visit[], scores = emptyScores(), isLi
     })
   }
 
-  next.scores = structuredClone(scores)
   return next
 }
 
@@ -175,18 +175,19 @@ const merged = <T,>(a: T, b: T): T =>
   )) as T :
   a
 
-/** A model with a day's summary added, its version and the day it runs through its own */
-const plus = (model: Model, summary: Model): Model => {
-  const { version, through, ...sums } = model
-  const { version: _, through: __, ...more } = summary
-  return { version, through, ...merged(sums, more) }
-}
+/**
+ * The model with a day folded in: its statistics, and its evaluation, if it was evaluated, with the scores of
+ * another predictor dropped first
+ */
+export const fold = (model: Model, day: Day, statistics: Statistics, evaluation?: Evaluation) =>
+  foldDay(model, day, scale, ({ version, through, predictor, scores, ...sums }) => ({
+    version, through, ...merged(sums, statistics),
+    ...evaluation
+      ? { predictor: evaluation.predictor, scores: merged(predictor === evaluation.predictor ? scores : emptyScores(), evaluation.scores) }
+      : { predictor, scores }
+  }))
 
-/** The model with a day's summary folded in */
-export const fold = (model: Model, day: Day, summary: Model) =>
-  foldDay(model, day, scale, before => plus(before, summary))
-
-/** The model with a service day's visits folded in, and how forecasts did that day added to its scores */
-export const update = (model: Model, day: Day, visits: readonly Visit[], scores = emptyScores()) =>
-  fold(model, day, summarize(visits, scores))
+/** The model with a service day's visits folded in, and its evaluation if there is one */
+export const update = (model: Model, day: Day, visits: readonly Visit[], evaluation?: Evaluation) =>
+  fold(model, day, summarize(visits), evaluation)
 

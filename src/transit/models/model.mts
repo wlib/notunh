@@ -4,8 +4,10 @@
 // - how long buses spend at each stop and lay over at the start of a trip, and how much longer one already there stays
 // - whether buses wait at a stop for its scheduled time
 // - how far off the timetable each route runs, and how often its buses come
-// - how forecasts from it have done
-// Keys are stop and route ids, which last across timetables, never trip ids, which don't
+// - how forecasts from it have done, as the evaluations of one predictor scored them, which calibrates their bands
+// Keys are stop and route ids, which last across timetables, never trip ids, which don't. A stop or route that keeps
+// its id through a change of path or timetable keeps what was learned of it, which decays away as the new pattern
+// is learned
 
 import * as v from "valibot"
 import { objectOf } from "../../shared/json.mts"
@@ -57,10 +59,20 @@ export const Model = v.object({
   offsets:  objectOf<Record<string, (Cell | null)[]>>(),
   /** s between one bus leaving a stop and the next of its route's leaving it, by route, by day type and hour */
   headways: objectOf<Record<string, (Cell | null)[]>>(),
+  /** The predictor whose evaluations the scores are of, which a model from before predictors were named leaves out */
+  predictor: v.optional(v.string()),
   scores:   objectOf<Scores>()
 })
 export type Model = v.InferOutput<typeof Model>
 
+/** What a service day's visits show, as sums over the day (fit.mts summarize), undecayed, which fold in as they are */
+export type Statistics = Omit<Model, "version" | "through" | "predictor" | "scores">
+
+/**
+ * How a predictor did on a day: forecasting and replay as they were (scripts/map/replay.mts PREDICTOR), with the
+ * model as it stood before the day
+ */
+export type Evaluation = { predictor: string, scores: Scores }
 /** s something takes on average, and its variance */
 export type Estimate = { mean: number, variance: number }
 

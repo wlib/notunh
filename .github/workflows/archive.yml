@@ -4,9 +4,10 @@
 # manifest.json naming the file. Its manifest is then merged into catalog.json on the observations release. The
 # catalog is uploaded last, so a day is listed only once its archive is whole.
 #
-# The Worker keeps a day's samples in D1 for RETAIN_ARCHIVED_DAYS (14) once the catalog lists it, and RETAIN_DAYS
-# (60) while it doesn't. A failed run is made up by the next, which looks back a week, or by hand within
-# the 60 days: `gh workflow run archive.yml -f from=2026-10-07 -f to=2026-10-13`.
+# The Worker keeps a day's samples in D1 for RETAIN_ARCHIVED_DAYS (14) once the catalog lists it, and until then
+# however long that takes. Each run archives every settled day D1 still has that the catalog doesn't, the oldest
+# first, so a failed run, or weeks of them, is made up by the next. One can also be run by hand for a range:
+# `gh workflow run archive.yml -f from=2026-10-07 -f to=2026-10-13`.
 #
 # Needs the repository secret BUILD_TOKEN, the same value as the Worker's (`wrangler secret put BUILD_TOKEN`), to read
 # its rows. Asks nothing of Umo. GitHub pauses schedules after 60 days without a commit, so the Worker's nightly run
@@ -22,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       from:
-        description: The first service day to archive (YYYY-MM-DD), else the last week's
+        description: The first service day to archive (YYYY-MM-DD), else every one not archived
         required: false
       to:
         description: The last service day to archive, else only the first

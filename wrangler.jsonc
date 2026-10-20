@@ -37,16 +37,17 @@
   ],
   "vars": {
     // Days the nightly prune keeps (worker/rows.mts, docs/storage.md):
-    // - RETAIN_DAYS: samples the observations archive doesn't have yet, and laundry transitions and polls
-    // - RETAIN_ARCHIVED_DAYS: samples once the archive has their day, since builds and refits read older days from it
-    // - RETAIN_VISIT_DAYS: visits, the one table that would outgrow D1's free 500 MB within a year. With the models'
-    //   4-week half-life, a day 180 days back weighs 1 % of today's
-    // - RETAIN_SUMMARY_DAYS: daily location model summaries, about 90 KB each, so a week can be compared with the
-    //   same week a year before
+    // - RETAIN_DAYS: laundry's transitions and polls
+    // - RETAIN_ARCHIVED_DAYS: samples once the observations archive has their day, since builds and refits read older
+    //   days from it. A day the archive doesn't have yet is never pruned
+    // - RETAIN_VISIT_DAYS: the visits derived from each day, which a refit with the same extractor reuses. With the
+    //   models' 4-week half-life, a day 180 days back weighs 1 % of today's
+    // - RETAIN_STATISTICS_DAYS: each day's statistics and evaluation, about 25 KB gzipped, so a week can be compared
+    //   with the same week a year before
     "RETAIN_DAYS": 60,
     "RETAIN_ARCHIVED_DAYS": 14,
     "RETAIN_VISIT_DAYS": 180,
-    "RETAIN_SUMMARY_DAYS": 400
+    "RETAIN_STATISTICS_DAYS": 400
   },
   // Secrets, set once with `wrangler secret put` (locally, in .dev.vars):
   // - DEPLOY_HOOK: the Workers Builds hook the nightly run calls to rebuild the site

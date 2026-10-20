@@ -194,3 +194,34 @@ test("a newer page that names a file the network can't serve is never kept, so t
   await again.goto(`${fixture.origin}/dining/`)
   await expect(again.locator("main.dining")).toBeVisible()
 })
+
+test("a tab on the release production served before, under that release's own worker, upgrades to this one: it's opened afresh once its files are gone, and a page opens whole offline once visited again", async ({ context, fixture }) => {
+  await fixture.publish("H")
+  const old = await open(context, `${fixture.origin}/dining/`)
+  // That worker kept a page once it served it
+  await old.reload()
+  await expect(old.locator("main")).toBeVisible()
+  await expect.poll(() => old.evaluate(() => caches.open("app-v1").then(cache => cache.match("/dining/")).then(Boolean))).toBe(true)
+  const assets = await named(old)
+
+  await fixture.publish("A")
+  await old.evaluate(() => navigator.serviceWorker.getRegistration().then(registration => registration!.update()))
+  await expect.poll(() => old.evaluate(() => caches.keys()), { timeout: 15_000 }).toEqual([CACHE])
+  // The old worker's pages can't say what they need, so none is kept: offline, the page opens as one never visited
+  await expect(old.locator("main")).toBeVisible()
+  await fixture.setOffline(true)
+  const unvisited = await context.newPage()
+  await unvisited.goto(`${fixture.origin}/dining/`)
+  await expect(unvisited.locator("main.page")).toBeVisible()
+  await fixture.setOffline(false)
+  // The old tab runs on until it asks for a file the origin no longer has, as its code can't say what it needs, and
+  // then the worker opens its page afresh, into this release, which it keeps whole
+  await old.evaluate(url => fetch(url, { cache: "no-store" }).then(() => {}, () => {}), assets.find(url => url.includes("/dining/"))!).catch(() => {})
+  await expect.poll(() => old.evaluate(() => document.querySelector('meta[name="release"]')?.getAttribute("content")).catch(() => undefined)).toBe(RELEASE.A)
+  await cachedFrom(old, "/dining/", RELEASE.A)
+  await fixture.setOffline(true)
+  await old.reload()
+  await expect(old.locator("main.dining")).toBeVisible()
+  for (const url of await named(old))
+    expect(await isFetchable(old, url), url).toBe(true)
+})

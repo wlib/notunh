@@ -15,7 +15,7 @@ The free plan allows five cron triggers per account and 10 ms of CPU per invocat
 
 Bus samples are stored as one gzipped row per source per minute polled, even when nothing was seen (`src/transit/observations/raw.mts`). Each row names the normalization version it was packed by and records every poll it made, failed ones included, so a minute without a fix tells "no bus out" from "no answer". Requests to Umo and GitHub identify as `notunh/1 (+https://notunh.app)`.
 
-Retention, in `wrangler.jsonc` `vars` and explained in [storage.md](storage.md): `RETAIN_ARCHIVED_DAYS` (14), `RETAIN_DAYS` (60), `RETAIN_VISIT_DAYS` (180), `RETAIN_SUMMARY_DAYS` (400).
+Retention, in `wrangler.jsonc` `vars` and explained in [storage.md](storage.md): `RETAIN_ARCHIVED_DAYS` (14, and samples of a day not yet archived are never pruned), `RETAIN_DAYS` (60, laundry), `RETAIN_VISIT_DAYS` (180), `RETAIN_STATISTICS_DAYS` (400).
 
 ## API
 
@@ -23,19 +23,21 @@ Retention, in `wrangler.jsonc` `vars` and explained in [storage.md](storage.md):
 
 | Route | Auth | |
 |---|---|---|
-| `GET /api/health` | public | When each table's rows start and the last was stored (in its own unit), and the day each model runs through. Cheap: two index lookups per table |
-| `GET /api/rows/:name?day=YYYY-MM-DD&after=…` | token | A page of rows from one table in the registry (`worker/rows.mts`: `buses`, `predictions`, `visits`, `summaries`, `transitions`, `polls`, `machines`), by Durham day or service day |
-| `POST /api/rows/:name` `{ rows, clear? }` | token | Writes the tables the build writes; `clear` replaces a whole day, transactionally |
-| `GET /api/models/:name[?through=Day]` | token | The latest stored `buses`, `laundry`, their checkpoints `buses.training` and `laundry.training`, or the `gtfs` feed by version; with its revision and every day stored through |
+| `GET /api/health` | public | The API's version (`API` in `worker/schema.mts`), when each table's rows start and the last was stored (in its own unit), and the day each model runs through. Cheap: two index lookups per table |
+| `GET /api/rows/:name?day=YYYY-MM-DD&after=…` | token | A page of rows from one table in the registry (`worker/rows.mts`: `buses`, `predictions`, `transitions`, `polls`, `machines`), by Durham day or service day |
+| `GET /api/models/:name` | token | The latest stored `buses`, `laundry`, or their checkpoints `buses.training` and `laundry.training`, with its revision |
 | `POST /api/models/:name` `{ expect, state }` | token | Stores a new state only if the latest's revision is still `expect` (`null` for none), else 409 |
+| `GET /api/feeds`, `GET /api/feeds/:id` | token | Every timetable acquired, the earliest first, without contents; one's converted JSON by its SHA-256 |
+| `POST /api/feeds` (form: `id`, `source`, `version`, `start`, `end`, `feed`, `original`) | token | Acquires a timetable as of now unless it's the one acquired last; says whether it did |
+| `GET /api/derived/:name?day=…` | token | The manifest of what's derived from a day by `visits`, `statistics`, or `evaluation`: `{ identity, generation, parts }`, or `null` |
+| `PUT /api/chunks/:generation/:part`, `GET` the same | token | A part of a generation, as its bytes |
+| `POST /api/derived/:name` `{ day, identity, generation, parts }` | token | Commits a generation as the day's once every part is stored, deleting the one it replaces, else 409 |
 | `GET /api/storage` | token | D1's size in bytes and rows per table. Counts every row, so on demand only |
 | `GET /api/laundry/rooms`, `GET /api/laundry/rooms/:id` | public | See Laundry below |
 
-Token routes take `Authorization: Bearer $BUILD_TOKEN` and answer 401 without it. Request bodies are validated by `@hono/standard-validator` against `drizzle-valibot`'s schemas of the tables (`worker/schema.mts`). Build steps use `scripts/worker.mts`, which also works by hand: `BUILD_TOKEN=… node scripts/worker.mts health`, `storage`, or `rows <name> [day]`, with `--local` for `npm run worker`.
+Every route under `/api/` but health and laundry's takes `Authorization: Bearer $BUILD_TOKEN` and answers 401 without it. Requests are validated by `@hono/standard-validator` against Valibot schemas. Build steps use `scripts/worker.mts`, which also works by hand: `BUILD_TOKEN=… node scripts/worker.mts health`, `storage`, or `rows <name> [day]`, with `--local` for `npm run worker`.
 
-Each feed version is archived as of the day it was first seen; a second version first seen the same day is archived as of the next day, so neither replaces the other.
-
-Schema changes: edit `worker/schema.mts`, run `npm run db:generate`, and commit the migration in `worker/migrations/`. Deploys apply migrations first (`predeploy`). Since the build learns against the *previous* Worker, a migration and the API using it must tolerate a build that runs before them.
+Schema changes: edit `worker/schema.mts`, run `npm run db:generate`, and commit the migration in `worker/migrations/`. Deploys apply migrations first (`predeploy`). Since the build learns against the *previous* Worker, bump `API` with any change to the routes the build uses: a build only reads from a Worker of another version, and the next build, against the new Worker, learns.
 
 ## Laundry
 

@@ -4,11 +4,18 @@
 // BUILD_TOKEN=… node scripts/worker.mts health | storage | rows <name> [day] [--local]
 
 import type { Day } from "../src/shared/time.mts"
+import { gunzipJson, gzipJson } from "../src/shared/json.mts"
+import { fromHex } from "../src/transit/observations/raw.mts"
 import { ORIGIN } from "./site.mts"
 
-/** When each table's rows start and end, in its own unit, and the last day each model has learned through */
+/**
+ * The version of the API the Worker serves, which a Worker from before versions doesn't say, when each table's rows
+ * start and end, in its own unit, and the last day each model has learned through
+ */
 export type Health = {
-  [name in "buses" | "predictions" | "visits" | "transitions" | "polls" | "summaries"]: { since: number | null, last: number | null }
+  api?:   number
+} & {
+  [name in "buses" | "predictions" | "transitions" | "polls"]: { since: number | null, last: number | null }
 } & {
   models: Record<string, Day | null>
 }
@@ -18,8 +25,8 @@ export type Storage = { bytes: number, rows: Record<string, number> }
 
 // A request taking longer has stalled
 const TIMEOUT_MS = 30_000
-// Rows a POST carries, within what the Worker takes in one
-const ROWS_PER_REQUEST = 200
+// Bytes in a part of a generation, half the 2 MB D1 keeps a row to
+const PART = 1 << 20
 
 /** What the Worker answered a request with, when that wasn't success */
 export class ApiError extends Error {
@@ -30,12 +37,16 @@ export class ApiError extends Error {
   }
 }
 
-/** A /api/ route's JSON, or with a body, what it says to a POST of it, which is nothing for most */
+/**
+ * A /api/ route's JSON, or nothing for most writes. A body given is sent: bytes PUT, a form POSTed, and anything else
+ * POSTed as JSON
+ */
 export const request = async <T,>(path: string, body?: unknown): Promise<T> => {
+  const isJson = body !== undefined && !(body instanceof Uint8Array || body instanceof FormData)
   const response = await fetch(ORIGIN + path, {
-    method:  body === undefined ? "GET" : "POST",
-    headers: { authorization: `Bearer ${process.env.BUILD_TOKEN}`, "content-type": "application/json" },
-    body:    body === undefined ? undefined : JSON.stringify(body),
+    method:  body === undefined ? "GET" : body instanceof Uint8Array ? "PUT" : "POST",
+    headers: { authorization: `Bearer ${process.env.BUILD_TOKEN}`, ...isJson && { "content-type": "application/json" } },
+    body:    isJson ? JSON.stringify(body) : body as BodyInit | undefined,
     signal:  AbortSignal.timeout(TIMEOUT_MS)
   })
   if (!response.ok)
@@ -56,24 +67,27 @@ export const readRows = async <T,>(name: string, day?: Day): Promise<T[]> => {
 }
 
 /**
- * Stores rows a request at a time, clearing a day's rows first if asked, so a day can be stored again in place, even
- * with nothing
+ * What's derived from a day by a name (worker/derived.mts): as published, if it was derived from exactly this, else
+ * made now and published, its generation's parts first and then the manifest committing them
  */
-export const writeRows = async (name: string, rows: readonly unknown[], clear?: Day) => {
-  for (let i = 0; i < rows.length || i === 0 && clear !== undefined; i += ROWS_PER_REQUEST)
-    await request(`/api/rows/${name}`, { rows: rows.slice(i, i + ROWS_PER_REQUEST), ...i === 0 && clear && { clear } })
+export const derived = async <T,>(name: string, day: Day, from: object, make: () => Promise<T>): Promise<T> => {
+  const identity = JSON.stringify(from)
+  const found = await request<{ identity: string, parts: string[] } | null>(`/api/derived/${name}?day=${day}`)
+  if (found?.identity === identity)
+    return await gunzipJson(...found.parts.map(fromHex)) as T
+  const value = await make()
+  const body = await gzipJson(value)
+  const generation = crypto.randomUUID()
+  const parts = Math.max(1, Math.ceil(body.length / PART))
+  for (let part = 0; part < parts; part++)
+    await request(`/api/chunks/${generation}/${part}`, body.subarray(part * PART, (part + 1) * PART))
+  await request(`/api/derived/${name}`, { day, identity, generation, parts })
+  return value
 }
 
-/**
- * The latest state stored under a name, or the latest through a day, null if there's none. With its revision
- * (undefined from a Worker without model revisions) and every day it's stored through
- */
-export const readModel = async <M,>(name: string, through?: Day) => {
-  const { state, revision, throughs = [] } = await request<{ state: M | null, revision?: string | null, throughs?: Day[] }>(
-    `/api/models/${name}${through ? `?through=${through}` : ""}`
-  )
-  return { state, revision, throughs }
-}
+/** The latest state stored under a name, null if there's none, with its revision, null too if there's none */
+export const readModel = <M,>(name: string) =>
+  request<{ state: M | null, revision: string | null }>(`/api/models/${name}`)
 
 /** Stores a state, if the latest stored is still the revision read, or null for none, else fails with a 409 */
 export const writeModel = (name: string, state: unknown, expect: string | null) =>

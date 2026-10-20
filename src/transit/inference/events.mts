@@ -2,9 +2,8 @@
 // over between trips, as the location model (locate.mts) has it along its route, each time a distribution. Trips
 // come from Umo's tag on each fix, which is the timetable's trip id.
 //
-// The Worker keeps these visits long after the fixes are pruned. But the fixes themselves are the record, archived
-// whole every night, and visits are only one reading of them. Each visit names the extractor that read it, so
-// another extractor can read the fixes again
+// The fixes themselves are the record, archived whole every night, and visits are only one reading of them, which
+// the build keeps by the EXTRACTOR that read them (scripts/map/model.mts), so another extractor reads the fixes again
 
 import { tripBase, type Feed, type Trip } from "../feed.mts"
 import { LOOP_GAP, positionsOf, routeLines } from "../shapes.mts"
@@ -14,9 +13,9 @@ import { type Passage, drove } from "./passages.mts"
 import type { BusFix } from "../observations/raw.mts"
 
 /**
- * The version of how visits are read from fixes, stored on each visit. 1 is zone crossings, which stored visits from
- * before 2026-10-20 carry. 2 is the location model, 3 the location model with what's uncertain fitted as
- * likelihoods, and 4 adds passages of buses already at a stop when first seen, and leaves out what wasn't listened to
+ * The version of how visits are read from fixes. 1 was zone crossings, 2 the location model, 3 the location model
+ * with what's uncertain fitted as likelihoods, and 4 adds passages of buses already at a stop when first seen, and
+ * leaves out what wasn't listened to
  */
 export const EXTRACTOR = 4
 
@@ -66,9 +65,7 @@ export type Visit = {
   /** At the first stop of a trip, when it got in at the end of the one before */
   gotIn?:  number,
   /** Umo's predicted departure, as sampled at each of the model's LEADS before it left */
-  umo?:    (number | null)[],
-  /** Which extractor read it, EXTRACTOR, or 1 where none is named */
-  extractor?: number
+  umo?:    (number | null)[]
 }
 
 /** The index of the first of a bus's sorted fixes after an epoch millisecond, or their count */
@@ -149,8 +146,7 @@ const extractRun = (feed: Feed, trips: ReadonlyMap<string, Trip>, fixes: readonl
         left:   before.depart.median,
         ...passage.profile && { profile: passage.profile }
       },
-      ...gotIn !== undefined && { gotIn },
-      extractor: EXTRACTOR
+      ...gotIn !== undefined && { gotIn }
     }
     if (after && after !== run?.trip)
       run = { trip: after, base: tripBase(feed, after, depart), position: -1 }

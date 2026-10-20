@@ -6,7 +6,7 @@ import { extract, type Visit } from "../../src/transit/inference/events.mts"
 import { unpackFixes, unpackPredictions, type RawFix, type RawPrediction } from "../../src/transit/observations/raw.mts"
 import { LEADS, emptyModel } from "../../src/transit/models/model.mts"
 import { update } from "../../src/transit/models/fit.mts"
-import { attachPredictions, replayed, score } from "../../scripts/map/replay.mts"
+import { PREDICTOR, attachPredictions, replayed, score } from "../../scripts/map/replay.mts"
 
 // Half an hour of the Worker's samples, recorded on a Wednesday afternoon with seven buses out, and the timetable
 // then, cut down to their routes
@@ -69,7 +69,7 @@ test("forecasts from the model do no worse on the recording than they did", () =
     expect(error / n).toBeLessThanOrEqual(MAE[i])
   })
   // And having learned from it, better still
-  const learned = score(update(emptyModel(), DAY, visits, scored), feed, visits, fixes)
+  const learned = score(update(emptyModel(), DAY, visits, { predictor: PREDICTOR, scores: scored }), feed, visits, fixes)
   expect(learned.model[0][1]).toBeLessThan(scored.model[0][1])
 })
 

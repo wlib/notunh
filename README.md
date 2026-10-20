@@ -48,7 +48,7 @@ Observations as stored never depend on what's inferred from them. No domain impo
 **Conventions.**
 - Every boundary (upstream APIs, data files, the Worker's request bodies) is checked with a [Valibot](https://valibot.dev) schema, which is also where its type comes from. Upstream answers keep the items that fit, so a change upstream shows less rather than garbage.
 - Positions are `[lon, lat]` or `{ lat, lon }`, boxes are `[west, south, east, north]`, distances are meters on cheap-ruler's projection (`src/geo/projection.mts`, the only place one is made).
-- Instants are **epoch milliseconds** wherever they cross a boundary (Worker rows, API JSON, page state, all of laundry). Times compared with the timetable are **schedule seconds** from the service day's start (the planner, the bus model, D1 `visits`). The location model works in epoch seconds internally.
+- Instants are **epoch milliseconds** wherever they cross a boundary (Worker rows, API JSON, page state, all of laundry). Times compared with the timetable are **schedule seconds** from the service day's start (the planner, the bus model, the visits derived from observations). The location model works in epoch seconds internally.
 - A calendar day is a `Day`, `YYYY-MM-DD` in Durham, which sorts as text; weekdays count from Monday.
 - Bytes flow as async iterables of `Uint8Array`; gzip wherever a page or the Worker reads it, zstd only for the observations archive, which only scripts read.
 

@@ -32,7 +32,6 @@
     "bruh": "^2.0.0-beta.5",
     "cheap-ruler": "^4.1.1",
     "drizzle-orm": "^0.45.3",
-    "drizzle-valibot": "^0.4.2",
     "flatbush": "^4.6.2",
     "hono": "^4.13.13",
     "maplibre-gl": "^6.11.2",

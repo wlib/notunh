@@ -3,15 +3,23 @@
 // releases are made from one build. B renames the dining page's entry chunk and bumps the release, as newer code
 // would. C renames the dining index too and changes a hall's name in it, as newer data would. D is C with a service
 // worker of other bytes, as a release changing the worker itself would be. R is A published again after them all, as
-// rolling back to it is (scripts/republish.mts)
+// rolling back to it is (scripts/republish.mts).
+//
+// H is the release production served before pages named their data, with its own worker (app-v1): the home and
+// dining pages and what they name of commit 061f33e's build, as `git worktree add` of that commit, `npm ci`, and
+// `vite build` made it with tests/fixtures/data/ as its data, kept in release-061f33e/. Its dining files are the
+// fixtures'
 
 import { createServer } from "node:http"
-import { readFileSync, existsSync } from "node:fs"
+import { readFileSync, existsSync, globSync } from "node:fs"
 import { join, extname } from "node:path"
 import type { AddressInfo } from "node:net"
 import { republished } from "../../scripts/republish.mts"
 
-export const RELEASES = ["A", "B", "C", "D", "R"] as const
+export const RELEASES = ["A", "B", "C", "D", "R", "H"] as const
+
+const HISTORICAL = new URL("release-061f33e/", import.meta.url).pathname
+const DINING_FIXTURES = new URL("../fixtures/data/public/", import.meta.url).pathname
 
 /** How release C renames the first dining hall, so a page showing it has shown C's data */
 export const HALL_SUFFIX = " (C)"
@@ -39,6 +47,13 @@ type Release = { pages: Map<string, string>, files: Map<string, Buffer> }
 const releaseAt = (name: ReleaseName) =>
   `2026-10-${18 + RELEASES.indexOf(name)}T08:00:00.000Z`
 
+/** Every file under a folder, by its path from the origin */
+const filesUnder = (folder: string, pattern = "**/*") =>
+  new Map(globSync(pattern, { cwd: folder, withFileTypes: true }).filter(entry => entry.isFile()).map(entry => {
+    const path = join(entry.parentPath, entry.name)
+    return [`/${path.slice(folder.length)}`, readFileSync(path)]
+  }))
+
 /** The releases, made from the build: a page's HTML and the files only that release has, over the build's own */
 const deriveReleases = (dist: string): Record<ReleaseName, Release> => {
   const html = readFileSync(join(dist, "dining/index.html"), "utf8")
@@ -58,7 +73,11 @@ const deriveReleases = (dist: string): Record<ReleaseName, Release> => {
     B: { pages: new Map([["/dining/index.html", withRelease(html.replace(entry, entryB), "B")]]), files: new Map([[entryB, readFileSync(join(dist, entry))]]) },
     C: { pages: new Map([["/dining/index.html", pageC]]), files: new Map(filesC) },
     D: { pages: new Map([["/dining/index.html", withRelease(pageC, "D")]]), files: new Map([...filesC, ["/sw.js", Buffer.concat([Buffer.from("// Release D\n"), readFileSync(join(dist, "sw.js"))])]]) },
-    R: { pages: new Map([["/dining/index.html", republished(withRelease(html, "A"), new Date(releaseAt("R")))]]), files: new Map() }
+    R: { pages: new Map([["/dining/index.html", republished(withRelease(html, "A"), new Date(releaseAt("R")))]]), files: new Map() },
+    H: {
+      pages: new Map(["/index.html", "/dining/index.html"].map(page => [page, readFileSync(join(HISTORICAL, page), "utf8")])),
+      files: new Map([...filesUnder(HISTORICAL), ...filesUnder(DINING_FIXTURES, "data/dining/*")])
+    }
   }
 }
 

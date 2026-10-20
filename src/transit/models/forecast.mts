@@ -22,6 +22,12 @@ import { type Pace, type Trajectory, type Waypoint, type Whereabouts, course } f
 import { type Day, addDays } from "../../shared/time.mts"
 import { groupBy } from "../../shared/group.mts"
 
+/**
+ * The version of forecasting, bumped with any change to what it forecasts from a model and what's seen, so the bands
+ * are calibrated afresh by evaluations of what it forecasts now (fit.mts)
+ */
+export const FORECAST = 1
+
 // How far off a predicted departure may be, growing with how far ahead it is, until the model knows better. Live
 // predictions were seen off by up to a minute or two, and Umo's guesses for a connector's next loop by far more
 const UNCERTAINTY_NOW = 60           // s, even for a bus due now

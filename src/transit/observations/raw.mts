@@ -8,6 +8,7 @@
 // no bus was out or no answer came
 
 import type { StopPredictions, Vehicle } from "./umo.mts"
+import { gunzipJson, gzipJson } from "../../shared/json.mts"
 
 /**
  * The version of this normalization, named in every row. 3 times each poll by when its answer came, or it failed. 2
@@ -196,12 +197,12 @@ export const listening = ({ polls, unrecorded }: Coverage, gap: number) => {
 }
 
 /** A row's body: gzipped JSON of the version, the samples, and the polls */
-export const encode = async (samples: readonly unknown[], polls: readonly RawPoll[]) =>
-  new Uint8Array(await new Response(new Blob([JSON.stringify({ version: RAW_VERSION, samples, polls })]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer())
+export const encode = (samples: readonly unknown[], polls: readonly RawPoll[]) =>
+  gzipJson({ version: RAW_VERSION, samples, polls })
 
 /** A row and the version it was packed by. Throws for a version it doesn't know rather than misread it */
 export const decode = async <T,>(body: Uint8Array<ArrayBuffer>): Promise<Row<T>> => {
-  const row: unknown = JSON.parse(await new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream("gzip"))).text())
+  const row = await gunzipJson(body)
   if (Array.isArray(row))
     return { version: 0, samples: row, polls: null }
   const { version, samples, polls } = Object(row) as { version?: unknown, samples?: unknown, polls?: unknown }

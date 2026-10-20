@@ -154,9 +154,9 @@ test("no bus seen while the Worker wasn't listening isn't a gap between buses", 
   // Deaf from 5 to 15 minutes past noon, so a bus may have come between the first two
   const isListening = (from: number, to: number) => to <= (NOON + 300) * 1000 || from >= (NOON + 900) * 1000
   expect(summarize(visits).headways.R.flatMap(cell => cell ?? [])).toEqual([2, 1200, 720_000])
-  expect(summarize(visits, emptyScores(), isListening).headways.R).toBeUndefined()
+  expect(summarize(visits, isListening).headways.R).toBeUndefined()
   const heard = (from: number, to: number) => to <= (NOON + 300) * 1000 || from >= (NOON + 500) * 1000
-  expect(summarize(visits, emptyScores(), heard).headways.R.flatMap(cell => cell ?? [])).toEqual([1, 600, 360_000])
+  expect(summarize(visits, heard).headways.R.flatMap(cell => cell ?? [])).toEqual([1, 600, 360_000])
 })
 
 test("each lead is scored at its own, and the band is as wide as the forecasts turned out to be, or a normal one's before there are enough", () => {
@@ -168,11 +168,32 @@ test("each lead is scored at its own, and the band is as wide as the forecasts t
     const scores = emptyScores()
     for (const ratio of ratios)
       scored(scores, "model", 300, ratio * 20, 20)
-    const model = update(emptyModel(), DAY, [], scores)
+    const model = update(emptyModel(), DAY, [], { predictor: "P", scores })
     const inside = ratios.filter(ratio => ratio <= bandScale(model, 300, p)).length / ratios.length
     // Within a bin's share of the share asked for
     expect(Math.abs(inside - p)).toBeLessThanOrEqual(0.25 / octaves + 0.01)
   }))
+})
+
+test("the bands are calibrated by one predictor's evaluations alone, which leave the statistics as they are", () => {
+  const scores = (off: number) => {
+    const scores = emptyScores()
+    scored(scores, "model", 300, off, 20)
+    return scores
+  }
+  const visits = [drive(100, NOON, "R", "V")]
+  const first = update(emptyModel(), DAY, visits, { predictor: "P", scores: scores(10) })
+  const same = update(first, addDays(DAY, 1), visits, { predictor: "P", scores: scores(30) })
+  const other = update(first, addDays(DAY, 1), visits, { predictor: "Q", scores: scores(30) })
+  const unevaluated = update(first, addDays(DAY, 1), visits)
+  const leadOf = (model: Model) => model.scores.model[leadIndex(300)]
+  expect(leadOf(same)[0]).toBeGreaterThan(1)
+  expect([other.predictor, leadOf(other)]).toEqual(["Q", [1, 30]])
+  expect(unevaluated.predictor).toBe("P")
+  expect(leadOf(unevaluated)[0]).toBeLessThan(1)
+  const { predictor: _, scores: __, ...statistics } = same
+  const { predictor: ___, scores: ____, ...unscored } = unevaluated
+  expect(statistics).toEqual(unscored)
 })
 
 test("a model the build folds, as it's stored, always fits the schema the page loads it by, and one of another shape doesn't", () =>

@@ -1,13 +1,13 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { EXTRACTOR, INCOMPLETE, JOINED, extract } from "../../src/transit/inference/events.mts"
+import { INCOMPLETE, JOINED, extract } from "../../src/transit/inference/events.mts"
 import { BASE, drive, feedOf, scenario } from "./driving.mts"
 
 /** The longest interval between the bus's fixes */
 const longest = (every: number[]) =>
   Math.max(...every) + 1
 
-test("a bus's fixes show each stop it went through, in order, timed to within its reports, and read by this extractor", () =>
+test("a bus's fixes show each stop it went through, in order, timed to within its reports", () =>
   fc.assert(fc.property(scenario, plan => {
     const feed = feedOf(plan.vertices)
     const { fixes, stays } = drive(feed, plan)
@@ -17,7 +17,6 @@ test("a bus's fixes show each stop it went through, in order, timed to within it
     visits.slice(1).forEach((visit, i) => expect(visit.arrive).toBeGreaterThanOrEqual(visits[i].depart - 1))
     for (const visit of visits) {
       expect(visit.depart).toBeGreaterThanOrEqual(visit.arrive)
-      expect(visit.extractor).toBe(EXTRACTOR)
       // Each one is a stop the bus really went through, then, or was at when first seen
       const isJoined = ((visit.flags ?? 0) & JOINED) !== 0
       const stay = stays.find(stay => `s${stay.stop}` === visit.stop && (isJoined ? stay.arrive <= visit.arrive && visit.arrive <= stay.depart + bound : Math.abs(stay.arrive - visit.arrive) <= bound))

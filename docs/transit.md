@@ -5,7 +5,7 @@ How the map knows where each bus is, when it'll leave each stop, and how to get 
 ## Inputs
 
 - **Live**: the Umo IQ rider API (`api.prd-1.iq.live.umoiq.com/v2.0/riders/agencies/unh`), the backend of `rider.umoiq.com`. No key and open CORS, so browsers poll it directly: vehicles every 5 s, predictions every 30 s for routes with a bus out. The API 403s once a URL passes about 1 KB, so stop lists are chunked. `src/transit/observations/umo.mts` turns Umo's answers into a live source's observations; nothing past it reads Umo's shape.
-- **Timetable**: Wildcat Transit's GTFS feed on National RTAP (the one Google Maps uses). It has no CORS, so the build converts it into `src/map/gtfs.json`. Umo's trip and stop ids match the GTFS ones. The first build to see a new feed version archives it in the Worker (`/api/models/gtfs`), so any day's visits are replayed against the timetable in force that day.
+- **Timetable**: Wildcat Transit's GTFS feed on National RTAP (the one Google Maps uses). It has no CORS, so the build converts it into `src/map/gtfs.json`. Umo's trip and stop ids match the GTFS ones. A learning build acquires its feed in the Worker (`/api/feeds`): the converted JSON by its SHA-256, with the original zip, at the Worker's time, unless it's the one last acquired. A day is replayed against the timetable in effect then (`inEffect` in `scripts/map/replay.mts`): of those whose own start and end don't leave the day out, the last acquired by the day's end. Before anything was acquired, it's the first whose own dates name the day, logged as acquired later; with none, the day is folded in as unobserved, and logged. No effective date is ever made up.
 - **History**: the Worker's crons store every minute of fixes and predictions in D1, and the Observations workflow archives each day losslessly (see [storage.md](storage.md)). These raw samples are the source of truth; visits and models are readings of them.
 
 ## Where each bus is: the location model
@@ -54,11 +54,13 @@ Held out a day at a time on Oct 7 to 19, this took the median error of a followe
 
 ## The learned model
 
-Each build fits `src/map/model.json` (`scripts/map/model.mts`). For each completed service day since the last:
+Each build fits `src/map/model.json` (`scripts/map/model.mts`). For each completed service day since the last, three things are derived and published to the Worker (`worker/derived.mts`), each with exactly what it was derived from, and reused only for exactly that:
 
-1. **Extract** each bus's visits to stops from the Worker's samples (`src/transit/inference/events.mts`, through the location model). Each visit names the extractor version that read it (`EXTRACTOR`). Visits are stored back in D1.
-2. **Summarize** the day (`summarize` in `src/transit/models/fit.mts`) and store the summary.
-3. **Fold** the summary into decayed statistics with a 4-week half-life (`src/shared/learn.mts`), so a new semester takes over within a month. A refit, or a different half-life, folds stored summaries again rather than re-extracting.
+1. **Visits**: each bus's visits to stops, extracted from the day's observations (`src/transit/inference/events.mts`, through the location model), from the observations' id (the SHA-256 of their rows), the timetable's, and `EXTRACTOR`.
+2. **Statistics**: what the visits show (`summarize` in `src/transit/models/fit.mts`), from the same, and the model's shape `version`.
+3. **Evaluation**: how the model as it stood before the day forecast it (Scoring below), from the same, the `PREDICTOR` (forecasting's `FORECAST`, replay's own version, and the half-life), and the hash of that model.
+
+Statistics fold into decayed sums with a 4-week half-life (`src/shared/learn.mts`), so a new semester takes over within a month. Evaluations fold into the scores beside them only while the predictor stays the same: one of another predictor starts the scores afresh, so the bands are only ever calibrated by what forecasting does now.
 
 The model keeps, keyed by stop and route ids (which last across timetables, unlike trip ids):
 - each leg's time between consecutive stops, by route, weekday/weekend, and two-hour slot, whether driven or lost to GPS on the way (so a request stop passed costs nothing, and a highway stretch is still learned);
@@ -71,11 +73,11 @@ Every estimate leans on a broader one while it has little data (`src/transit/mod
 
 What's learned from is bounded where the data has a clear gap between two kinds of thing, documented in `fit.mts` (a bus not driving a leg for over 10 min was doing something else; over 15 min at a stop is out of service). Weighing visits by how sure their times are made no difference worth keeping.
 
-**Scoring.** Each day is also replayed (`scripts/map/replay.mts`): at 1, 3, 5, 10, 20, 30, and 60 minutes before each departure, the forecast the map would have made from the fixes it would have seen, in the order the Worker's polls got them (timed when each was answered, from raw version 3), against Umo's prediction and the timetable. A moment the Worker wasn't listening for the minute before isn't scored, as the map could have seen more then. How many of its own standard deviations the model turned out off sizes the slack the planner leaves.
+**Scoring.** Each day is also replayed (`scripts/map/replay.mts`): at 1, 3, 5, 10, 20, 30, and 60 minutes before each departure, the forecast the map would have made from the fixes it would have seen, in the order the Worker's polls got them (timed when each was answered, from raw version 3), against Umo's prediction and the timetable. A moment the Worker wasn't listening for the minute before isn't scored, as the map could have seen more then. How many of its own standard deviations the model turned out off sizes the slack the planner leaves. Bump `FORECAST` (`src/transit/models/forecast.mts`) with any change to forecasting, and `REPLAY` (`replay.mts`) with any to scoring.
 
-**Versions.** The model's shape has a `version` (3). A stored model of another version is refit from the first day the Worker still has data for.
+**Versions.** The model's shape has a `version` (3). A stored model of another version is refit from the first day observed, archived or in the Worker.
 
-**Training vs published.** `scripts/learn.mts` stores what's being learned (`buses.training`, `laundry.training`) apart from what's published. Each learning build continues from the checkpoint, within the build's time budget, and publishes only once the checkpoint has caught up with the published model. So a multi-build refit never replaces a model with one through fewer days. Writes are compare-and-swap on the latest row's revision; two builds learning at once converge rather than overwrite. `npm run model -- --store --rebuild` refits from every stored visit.
+**Training vs published.** `scripts/learn.mts` stores what's being learned (`buses.training`, `laundry.training`) apart from what's published. Each learning build continues from the checkpoint, within the build's time budget, and publishes only once the checkpoint has caught up with the published model. So a multi-build refit never replaces a model with one through fewer days. Writes are compare-and-swap on the latest row's revision; two builds learning at once converge rather than overwrite. `npm run model -- --store --rebuild` refits from the first day observed, reusing whatever was derived from the same inputs.
 
 ## Trip planning
 

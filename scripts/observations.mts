@@ -1,7 +1,8 @@
 // How the build and scripts read what the Worker observed on a service day. Once the catalog lists the day, it's read
 // from the archive (src/transit/observations/archive.mts) and checked against the manifest's hash as it streams.
 // Otherwise it's read from the Worker's D1, which keeps a day's samples until it's archived. Either way it decodes to
-// the same rows (src/transit/observations/raw.mts), so extraction runs on either. Only reads
+// the same rows (src/transit/observations/raw.mts), so extraction runs on either, and they have the same id. Only
+// reads
 
 import { createInterface } from "node:readline"
 import { Readable } from "node:stream"
@@ -27,6 +28,10 @@ export const lastSettled = (now: number): Day => {
 /** Rows in the order of their minutes, buses before predictions, as an archive keeps them */
 export const byMinute = (a: ObservedRow, b: ObservedRow) =>
   a.at - b.at || a.source.localeCompare(b.source)
+
+/** Rows as an archive's lines, in the order of their minutes */
+export const linesOf = (rows: readonly ObservedRow[]) =>
+  rows.toSorted(byMinute).map(row => `${JSON.stringify(row)}\n`)
 
 /** A row as the Worker stores it, decoded. One that can't be decoded throws, or with skip, warns and gives nothing */
 const decoded = async (source: Source, { at, body }: { at: number, body: string }, skip: boolean): Promise<ObservedRow[]> => {
@@ -89,6 +94,11 @@ export const rowsOf = async (day: Day) => {
   return manifest ? archivedRows(manifest) : storedRows(day, true)
 }
 
-/** Everything observed on a service day, and when each source was looking */
-export const observationsOf = async (day: Day) =>
-  observe(await rowsOf(day))
+/**
+ * Everything observed on a service day, when each source was looking, and its id: the SHA-256 of its rows as an
+ * archive's lines, the same whether read from the archive or the Worker
+ */
+export const observationsOf = async (day: Day) => {
+  const rows = await rowsOf(day)
+  return { ...observe(rows), id: await contentHash(linesOf(rows).join("")) }
+}

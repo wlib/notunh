@@ -1,72 +1,81 @@
 // How well departures could have been foreseen on a day. For every visit on a known trip, at each of the model's
 // lead times before it left, three forecasts are scored: the timetable alone, the model from where the bus was, and
 // Umo's own prediction sampled then. Where the bus was is what the map would have made of its fixes then, replayed
-// through the same location model and pace in the order they arrived. With only stored visits to go on, it's the
-// stop the bus was last at. Run directly on a day of samples to see how each did:
+// through the same location model and pace in the order they arrived. Each day is replayed against the timetable in
+// effect then, of those the build has acquired. Run directly on a day of samples to see how each did:
 // BUILD_TOKEN=… node scripts/map/replay.mts 2026-10-07 [--local]
 
 import { readFile } from "node:fs/promises"
 import { URL } from "node:url"
-import { withIndexes, type Feed, type FeedData } from "../../src/transit/feed.mts"
+import { withIndexes, serviceDayStart, type Feed, type FeedData } from "../../src/transit/feed.mts"
 import { extract, type Visit } from "../../src/transit/inference/events.mts"
-import { type BusFix, type SampledPrediction, alwaysListening, listening } from "../../src/transit/observations/raw.mts"
+import { type BusFix, type Observations, type SampledPrediction, alwaysListening, listening } from "../../src/transit/observations/raw.mts"
 import { observationsOf } from "../observations.mts"
-import { NO_PACE, expectedMu, paced } from "../../src/transit/models/movement.mts"
 import { NO_FORECAST } from "../../src/transit/observations/predictions.mts"
-import { type Sighting, buildRuns } from "../../src/transit/models/forecast.mts"
+import { FORECAST, type Sighting, buildRuns } from "../../src/transit/models/forecast.mts"
 import { busOn, isNews, sightingOf } from "../../src/transit/models/tracking.mts"
 import { routeLines } from "../../src/transit/shapes.mts"
 import { LEADS, asModel, dayTypeAt, emptyScores, scored, type Model, type Scores } from "../../src/transit/models/model.mts"
 import { offsetEstimate } from "../../src/transit/models/estimates.mts"
+import { HALF_LIFE } from "../../src/shared/learn.mts"
+import { contentHash } from "../../src/shared/hash.mts"
 import { type Day, addDays, localDay } from "../../src/shared/time.mts"
 import { groupBy } from "../../src/shared/group.mts"
-import { ApiError, readModel, writeModel } from "../worker.mts"
+import { readModel, request } from "../worker.mts"
 
-export const FEED = new URL("../../src/map/gtfs.json", import.meta.url)
+const FEED = new URL("../../src/map/gtfs.json", import.meta.url)
+/** The GTFS zip this build's timetable was converted from, which gtfs.mts keeps beside it */
+export const ORIGINAL = new URL("../../src/map/gtfs.zip", import.meta.url)
 
-/** The timetable as the Worker archives each version of it: the feed, with the day a build first saw it */
-export type ArchivedFeed = FeedData & { through: Day }
+// The version of replaying and scoring here, bumped with any change to how a day is evaluated
+const REPLAY = 1
 
-/** The timetable fetched for this build */
-export const localFeed = async () =>
-  JSON.parse(await readFile(FEED, "utf8")) as FeedData
+/** What an evaluation is of: forecasting, the replay that scores it, and the half-life the model is learned with */
+export const PREDICTOR = `forecast ${FORECAST}, replay ${REPLAY}, half-life ${HALF_LIFE}`
 
-// The archived versions, by the day each was first seen, the latest of them read first and only once
-const archived = new Map<Day, Promise<Feed>>()
-let days: Promise<Day[]> | undefined
+/** A timetable as acquired (worker/schema.mts feeds): its id, when, and the days it says it runs, "" for none */
+export type Acquisition = { id: string, acquired: number, version: string, start: Day | "", end: Day | "" }
 
 /**
- * The timetable in force on a day, for replaying it as the buses then ran it: the version archived last at or
- * before it, or the first archived for days before any was, or this build's own while none is
+ * Of the timetables acquired, the earliest first, which a day's buses ran by: of those whose own days don't leave the
+ * day out, the last acquired by the day's end. Before any was, it's the first whose own days name the day, which
+ * then says it ran by it, though acquired later. With neither, there's no knowing which, and it's undefined
  */
-export const feedFor = async (day: Day): Promise<Feed> => {
-  const throughs = await (days ??= readModel<ArchivedFeed>("gtfs").then(({ state, throughs }) => {
-    if (state)
-      archived.set(state.through, Promise.resolve(withIndexes(state)))
-    return throughs
-  }))
-  const through = throughs.findLast(through => through <= day) ?? throughs[0]
-  if (through === undefined)
-    return withIndexes(await localFeed())
-  if (!archived.has(through))
-    archived.set(through, readModel<ArchivedFeed>("gtfs", through).then(({ state }) => withIndexes(state!)))
-  return archived.get(through)!
+export const inEffect = (acquired: readonly Acquisition[], day: Day) => {
+  const covering = acquired.filter(({ start, end }) => (!start || start <= day) && (!end || day <= end))
+  return covering.findLast(feed => feed.acquired < serviceDayStart(addDays(day, 1))) ?? covering.find(({ start, end }) => start && end)
+}
+
+// The timetables acquired, listed once, and each read once
+let acquisitions: Promise<Acquisition[]> | undefined
+const feeds = new Map<string, Promise<Feed>>()
+
+/**
+ * The timetable in effect on a day, for replaying it as the buses then ran it, with its id and whether it was only
+ * acquired after the day, or undefined if none acquired was
+ */
+export const feedFor = async (day: Day) => {
+  const found = inEffect(await (acquisitions ??= request<Acquisition[]>("/api/feeds")), day)
+  if (!found)
+    return
+  if (!feeds.has(found.id))
+    feeds.set(found.id, request<FeedData>(`/api/feeds/${found.id}`).then(withIndexes))
+  return { id: found.id, feed: await feeds.get(found.id)!, isLater: found.acquired >= serviceDayStart(addDays(day, 1)) }
 }
 
 /**
- * Archives a timetable if its version is new, as of a day. If the latest version is archived as of that day or
- * later, the new one is as of the day after it, so no two versions share a day and a day's timetable is the first
- * version seen on it. Another build archiving it first is fine
- * @returns whether it was new
+ * Acquires this build's timetable, with the GTFS it was converted from, unless it's the one last acquired
+ * @returns whether it was
  */
-export const archiveFeed = async (feed: FeedData, today: Day) => {
-  const { state, revision } = await readModel<ArchivedFeed>("gtfs")
-  if (state?.version === feed.version)
-    return false
-  const through = state && state.through >= today ? addDays(state.through, 1) : today
-  await writeModel("gtfs", { ...feed, through } satisfies ArchivedFeed, revision ?? null)
-    .catch(error => error instanceof ApiError && error.status === 409 ? undefined : Promise.reject(error))
-  return true
+export const acquireFeed = async () => {
+  const [json, original] = await Promise.all([readFile(FEED, "utf8"), readFile(ORIGINAL)])
+  const { version, start, end } = JSON.parse(json) as FeedData
+  const form = new FormData()
+  for (const [name, value] of Object.entries({ id: await contentHash(json), source: await contentHash(original), version, start, end }))
+    form.set(name, value)
+  form.set("feed", new Blob([json], { type: "application/json" }))
+  form.set("original", new Blob([original], { type: "application/zip" }))
+  return (await request<{ acquired: boolean }>("/api/feeds", form)).acquired
 }
 
 // Umo's predictions are sampled on minutes divisible by 5, so forecasts are made then
@@ -112,35 +121,6 @@ export const attachPredictions = (visits: readonly Visit[], samples: readonly { 
 }
 
 /**
- * What the map would have seen of the buses at any epoch second of a day, from its visits: each bus's trip, the
- * stop it was at or last left, and its pace from the legs it drove before, as the map learns them live (tracking.mts)
- */
-export const sightingsOf = (model: Model, visits: readonly Visit[]) => {
-  const buses = [...groupBy(visits, visit => visit.vehicle).entries()].map(([vehicle, own]) => {
-    own = own.toSorted((a, b) => a.arrive - b.arrive)
-    let pace = NO_PACE
-    const paces = own.map(({ route, stop, from, meters, left, arrive }) =>
-      pace = from !== undefined && left !== undefined && arrive > left
-        ? paced(pace, Math.log(arrive - left) - expectedMu(model, route, from, stop, meters!, arrive), arrive)
-        : pace
-    )
-    return { vehicle, own, paces }
-  })
-  return (at: number): Sighting[] => buses.flatMap(({ vehicle, own, paces }) => {
-    const i = own.findLastIndex(visit => visit.arrive <= at)
-    const visit = own[i]
-    if (!visit?.trip || (visit.depart <= at ? visit.depart : at) < at - OUT_OF_SERVICE)
-      return []
-    return [{
-      vehicleId: vehicle, tripId: visit.trip, stop: visit.stop, arrive: visit.arrive,
-      ...visit.depart <= at && { depart: visit.depart },
-      // Its pace as of the last leg it drove, which it finished getting there
-      pace: paces[i], at
-    }]
-  })
-}
-
-/**
  * What the map would have seen of the buses at any epoch second of a day, asked in increasing order, from their
  * fixes. Each fix is fed through the location model once the Worker's poll received it, in the order received, as the
  * map gets them (fixes without a receipt time are taken as received when taken). Like the map, it passes over fixes
@@ -173,14 +153,14 @@ export const replayed = (feed: Feed, model: Model, fixes: readonly BusFix[]) => 
 
 /**
  * How each way of forecasting did on a day's visits, as scores to fold into the model. At each sample time the
- * Worker was listening up to, every departure a lead away is forecast as the map would have from what it saw then, by
- * the model as it stood before the day. That's scored beside Umo's prediction sampled then and the timetable shifted
- * by how late its route runs. What the map saw is the day's fixes replayed, where they're kept, else its visits
+ * Worker was listening up to, every departure a lead away is forecast as the map would have from the day's fixes it
+ * would have seen then, by the model as it stood before the day. That's scored beside Umo's prediction sampled then
+ * and the timetable shifted by how late its route runs
  */
-export const score = (model: Model, feed: Feed, visits: readonly Visit[], fixes?: readonly BusFix[], isListening = alwaysListening): Scores => {
+export const score = (model: Model, feed: Feed, visits: readonly Visit[], fixes: readonly BusFix[], isListening = alwaysListening): Scores => {
   const scores = emptyScores()
   const trips = new Map(feed.trips.map(trip => [trip.id, trip]))
-  const sightingsAt = fixes ? replayed(feed, model, fixes) : sightingsOf(model, visits)
+  const sightingsAt = replayed(feed, model, fixes)
   const due = new Map<number, { visit: Visit, lead: number, umo?: number | null }[]>()
   for (const visit of visits)
     if (visit.trip !== undefined && trips.has(visit.trip) && visit.position !== undefined && visit.scheduled !== undefined)
@@ -212,20 +192,21 @@ export const describe = (scores: Scores) =>
     return `${String(minutes).padStart(2)} min: ${kinds.join(", ")}`
   }).join("\n")
 
-/**
- * Each visit a service day's observations show, with Umo's predictions for them, the fixes they were read from, and
- * when the Worker was listening for buses, from the day's archive, or the Worker while it keeps them
- * (scripts/observations.mts)
- */
-export const extractDay = async (feed: Feed, day: Day) => {
-  const { fixes, predictions, coverage } = await observationsOf(day)
-  return { visits: attachPredictions(extract(feed, fixes), predictions), fixes, isListening: listening(coverage.buses, QUIET) }
-}
+/** Each visit a day's observations show, with Umo's predictions for them */
+export const visitsOf = (feed: Feed, { fixes, predictions }: Observations) =>
+  attachPredictions(extract(feed, fixes), predictions)
+
+/** When the Worker was listening for buses, as a day's observations say */
+export const listeningOf = ({ coverage }: Observations) =>
+  listening(coverage.buses, QUIET)
 
 if (import.meta.main) {
   const day = process.argv.slice(2).find(arg => !arg.startsWith("--"))!
-  const feed = await feedFor(day)
+  const timetable = await feedFor(day)
+  if (!timetable)
+    throw new Error(`No timetable acquired says it ran on ${day}`)
   const model = asModel((await readModel("buses")).state)
-  const { visits, fixes, isListening } = await extractDay(feed, day)
-  console.log(`${day}: ${visits.length} visits on timetable ${feed.version}, scored with the model through ${model.through ?? "nothing"}\n${describe(score(model, feed, visits, fixes, isListening))}`)
+  const observed = await observationsOf(day)
+  const visits = visitsOf(timetable.feed, observed)
+  console.log(`${day}: ${visits.length} visits on timetable ${timetable.feed.version}, scored with the model through ${model.through ?? "nothing"}\n${describe(score(model, timetable.feed, visits, observed.fixes, listeningOf(observed)))}`)
 }

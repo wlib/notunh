@@ -33,6 +33,14 @@ export const getJson = async <T = unknown,>(url: string | URL, { schema, ...init
   return schema ? checked(schema, body, url) : body as T
 }
 
+/** A value as gzipped JSON, as the Worker keeps what it stores */
+export const gzipJson = async (value: unknown) =>
+  new Uint8Array(await new Response(new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer())
+
+/** What gzipped JSON holds, from its bytes, which may come in parts */
+export const gunzipJson = async (...parts: Uint8Array<ArrayBuffer>[]): Promise<unknown> =>
+  JSON.parse(await new Response(new Blob(parts).stream().pipeThrough(new DecompressionStream("gzip"))).text())
+
 const isObject = (value: unknown) =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 

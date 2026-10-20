@@ -1,20 +1,19 @@
-// Every table the build reads and writes, by name, each with the column its days are on when it has one: epoch
-// milliseconds, or schedule seconds for visits, as src/transit/inference/events.mts keeps them. Reads page by rowid,
-// so rows come back in the order they were stored, and the build sorts where it must. The nightly prune drops what
-// each table no longer keeps, and samples sooner for days the observations archive has
+// Every table the build reads row by row, by name, each with the column its days are on when it has one, in epoch
+// milliseconds. Reads page by rowid, so rows come back in the order they were stored, and the build sorts where it
+// must. The nightly prune drops what each table no longer keeps: samples once the observations archive has their day,
+// and the rest by age
 
 import { drizzle } from "drizzle-orm/d1"
-import type * as v from "valibot"
-import { createInsertSchema } from "drizzle-valibot"
-import { and, asc, desc, eq, getTableColumns, getTableName, gt, gte, lt, notInArray, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, getTableColumns, getTableName, gt, gte, is, lt, notInArray, or, sql, type SQL } from "drizzle-orm"
 import type { BatchItem } from "drizzle-orm/batch"
-import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core"
+import { type SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core"
 import { HOUR, addDays, dayStart, type Day } from "../src/shared/time.mts"
 import { serviceDayStart } from "../src/transit/feed.mts"
 import { ROOMS } from "../src/laundry/rooms.mts"
 import * as schema from "./schema.mts"
-import { latest, polls, roomSnapshots, samples, summaries, transitions, visits } from "./schema.mts"
+import { API, latest, polls, roomSnapshots, samples, transitions } from "./schema.mts"
 import { MODELS, throughs } from "./models.mts"
+import { expired } from "./derived.mts"
 import type { Env } from "./collect.mts"
 
 export type Entry = {
@@ -29,10 +28,8 @@ export type Entry = {
   columns?:  Record<string, SQL | SQLiteColumn>,
   /** Rows a page, when they're bigger than most */
   page?:     number,
-  /** How many days the nightly run keeps, by the Env variable naming it */
-  keep?:     "RETAIN_DAYS" | "RETAIN_VISIT_DAYS" | "RETAIN_SUMMARY_DAYS",
-  /** What each row the build writes must be, for a table it writes */
-  row?:      v.GenericSchema<unknown, Record<string, unknown>>
+  /** Whether the nightly run keeps only RETAIN_DAYS of it */
+  isAged?:   boolean
 }
 
 const serviceDay = (day: Day): [number, number] =>
@@ -43,33 +40,24 @@ const calendarDay = (day: Day): [number, number] =>
 
 /** A sampled source's minutes, bodies in hex as SQLite writes them for free, about 1.5 KB of it each */
 const sampled = (source: string): Entry => ({
-  table: samples, at: samples.at, where: eq(samples.source, source), span: serviceDay, keep: "RETAIN_DAYS", page: 200,
+  table: samples, at: samples.at, where: eq(samples.source, source), span: serviceDay, page: 200,
   columns: { at: samples.at, body: sql<string>`hex(${samples.body})` }
 })
 
 export const ROWS: Record<string, Entry> = {
   buses:       sampled("buses"),
   predictions: sampled("predictions"),
-  visits:      { table: visits, at: visits.arrive, span: day => serviceDay(day).map(ms => ms / 1000) as [number, number], keep: "RETAIN_VISIT_DAYS", row: createInsertSchema(visits) },
-  transitions: { table: transitions, at: transitions.at, span: calendarDay, keep: "RETAIN_DAYS" },
-  polls:       { table: polls, at: polls.at, span: calendarDay, pad: HOUR, keep: "RETAIN_DAYS" },
-  machines:    { table: latest },
-  // About 90 KB a row
-  summaries:   { table: summaries, at: summaries.at, span: serviceDay, keep: "RETAIN_SUMMARY_DAYS", page: 10, row: createInsertSchema(summaries) }
+  transitions: { table: transitions, at: transitions.at, span: calendarDay, isAged: true },
+  polls:       { table: polls, at: polls.at, span: calendarDay, pad: HOUR, isAged: true },
+  machines:    { table: latest }
 }
 
 // A page of rows
 const PAGE = 1000
-// Of the 50 queries D1 allows an invocation on the free plan, what a write may insert with, after its delete
-const INSERTS = 48
 
-/** How many of a table's rows fit one insert, within D1's 100 bound parameters a statement */
-const rowsPerInsert = (table: SQLiteTable) =>
-  Math.floor(100 / Object.keys(getTableColumns(table)).length)
-
-/** Rows split into as few inserts as the bound parameters allow */
-export const chunks = <T,>(table: SQLiteTable, rows: readonly T[]) => {
-  const size = rowsPerInsert(table)
+/** Rows split into as few inserts as D1's 100 bound parameters a statement allow */
+const insertable = <T,>(table: SQLiteTable, rows: readonly T[]) => {
+  const size = Math.floor(100 / Object.keys(getTableColumns(table)).length)
   return Array.from({ length: Math.ceil(rows.length / size) }, (_, i) => rows.slice(i * size, (i + 1) * size))
 }
 
@@ -86,7 +74,7 @@ export const inserts = <T extends SQLiteTable,>(db: D1Database, table: T, rows: 
   const replace = key
     ? ` on conflict (${key.map(quoted).join(", ")}) do update set ${names.map(name => `${name} = excluded.${name}`).join(", ")}`
     : ""
-  return chunks(table, rows).map(chunk =>
+  return insertable(table, rows).map(chunk =>
     db
       .prepare(`insert into "${getTableName(table)}" (${names.join(", ")}) values ${chunk.map(() => tuple).join(", ")}${replace}`)
       .bind(...chunk.flatMap(row =>
@@ -97,10 +85,6 @@ export const inserts = <T extends SQLiteTable,>(db: D1Database, table: T, rows: 
       ))
   )
 }
-
-/** The most rows one write takes */
-export const maxRows = ({ table }: Entry) =>
-  INSERTS * rowsPerInsert(table)
 
 /** The statements as one batch, which D1 runs as a transaction */
 export const batch = (db: ReturnType<typeof drizzle>, statements: BatchItem<"sqlite">[]) =>
@@ -122,23 +106,14 @@ export const read = async (env: Env, entry: Entry, day: Day | undefined, after: 
   return { rows: rows.map(({ rowid, ...row }) => row), next: rows.length === page ? rows.at(-1)!.rowid as number : null }
 }
 
-/** Stores rows, first clearing a day's when asked to, as when it's extracted again; rows already there stay */
-export const write = (env: Env, entry: Entry, rows: readonly Record<string, unknown>[], clear?: Day) => {
-  const db = drizzle(env.DB)
-  return batch(db, [
-    ...clear !== undefined && entry.span ? [db.delete(entry.table).where(within(entry, entry.span(clear)))] : [],
-    ...chunks(entry.table, rows).map(chunk => db.insert(entry.table).values(chunk).onConflictDoNothing())
-  ])
-}
-
 /**
- * The archived service days whose samples are dropped early: older than the window but not past the cap, which the
- * ordinary prune covers anyway. As spans of epoch milliseconds, with adjacent ones merged
+ * The service days whose samples are dropped: those the archive has, older than the window. As spans of epoch
+ * milliseconds, with adjacent ones merged
  */
-export const archivedSpans = (today: Day, archived: readonly Day[], window: number, cap: number) => {
+export const archivedSpans = (today: Day, archived: readonly Day[], window: number) => {
   const spans: [number, number][] = []
   for (const day of [...new Set(archived)].sort())
-    if (day >= addDays(today, -cap) && day < addDays(today, -window)) {
+    if (day < addDays(today, -window)) {
       const [from, to] = serviceDay(day)
       const last = spans.at(-1)
       if (last?.[1] === from)
@@ -150,19 +125,21 @@ export const archivedSpans = (today: Day, archived: readonly Day[], window: numb
 }
 
 /**
- * Drops every row older than its table keeps, counting back from the day of today, samples of the days archived
- * older than RETAIN_ARCHIVED_DAYS, and laundry's records of rooms no longer listed and of machines no longer in
- * their room's snapshot, where it has one
+ * Drops laundry's transitions and polls older than RETAIN_DAYS, counting back from the day of today, the samples of
+ * days the archive has older than RETAIN_ARCHIVED_DAYS, what's derived from days past keeping (derived.mts), and
+ * laundry's records of rooms no longer listed and of machines no longer in their room's snapshot, where it has one.
+ * A day's samples are never dropped before the archive has it, however long that takes
  */
 export const prune = (env: Env, today: Day, archived: readonly Day[] = []) => {
   const db = drizzle(env.DB)
   const rooms = ROOMS.map(({ id }) => id)
   const snapshot = (room: SQL | SQLiteColumn) => sql`select 1 from ${roomSnapshots} where ${roomSnapshots.room} = ${room}`
-  const spans = archivedSpans(today, archived, env.RETAIN_ARCHIVED_DAYS, env.RETAIN_DAYS)
+  const spans = archivedSpans(today, archived, env.RETAIN_ARCHIVED_DAYS)
   return batch(db, [
-    ...Object.values(ROWS).flatMap(({ table, at, where, span, keep }) =>
-      at && span && keep ? [db.delete(table).where(and(where, lt(at, span(addDays(today, -env[keep]))[0])))] : []
+    ...Object.values(ROWS).flatMap(({ table, at, where, span, isAged }) =>
+      at && span && isAged ? [db.delete(table).where(and(where, lt(at, span(addDays(today, -env.RETAIN_DAYS))[0])))] : []
     ),
+    ...expired(db, env, today),
     ...spans.length ? [db.delete(samples).where(or(...spans.map(([from, to]) => and(gte(samples.at, from), lt(samples.at, to)))))] : [],
     db.delete(latest).where(or(
       notInArray(latest.room, rooms),
@@ -177,7 +154,7 @@ export const prune = (env: Env, today: Day, archived: readonly Day[] = []) => {
 
 /** How big the database is, in bytes and in rows of each table, which reads every row, so only when asked */
 export const storage = async (env: Env) => {
-  const tables = Object.values(schema).map(getTableName)
+  const tables = Object.values(schema).filter(value => is(value, SQLiteTable)).map(getTableName)
   const counted = await env.DB.batch<{ n: number }>(tables.map(name => env.DB.prepare(`select count(*) as n from "${name}"`)))
   return {
     bytes: counted.at(-1)!.meta.size_after,
@@ -185,7 +162,10 @@ export const storage = async (env: Env) => {
   }
 }
 
-/** When each table with days starts and ends, in its own unit, from two index lookups each, and the day each model runs through */
+/**
+ * The API version, when each table with days starts and ends, in its own unit, from two index lookups each, and the
+ * day each model runs through
+ */
 export const health = async (env: Env) => {
   const db = drizzle(env.DB)
   const timed = Object.entries(ROWS).filter(([, entry]) => entry.at)
@@ -194,6 +174,7 @@ export const health = async (env: Env) => {
   const [stored, ...ends] = await db.batch([throughs(db), ...timed.flatMap(([, entry]) => [end(entry, asc), end(entry, desc)])])
   const through = new Map(stored.map(({ name, through }) => [name, through]))
   return {
+    api: API,
     ...Object.fromEntries(timed.map(([name], i) => [name, { since: ends[2 * i][0]?.at ?? null, last: ends[2 * i + 1][0]?.at ?? null }])),
     models: Object.fromEntries(MODELS.map(name => [name, through.get(name) ?? null]))
   }

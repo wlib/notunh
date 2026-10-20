@@ -14,12 +14,25 @@ Every npm package builds into its own chunk, so a change to the app leaves mapli
 
 ## Loading data: one slot per file
 
-Pages read data through `latest(name, schema)` (`src/shell/build.mts`), a reactive value everything derived from it follows.
+Pages read data through `latest(name, schema)` (`src/shell/build.mts`), a reactive value everything derived from it follows. Each slot loads on its own, and swaps in whatever file the newest build names once it's loaded.
 
-- **Files join only by stable ids and coordinates**: the timetable's stop and route ids, the model's, the gazetteer's and places' positions, the dining index's content-named children. So any build's file goes with any other's, nothing is swapped in as a group, and whatever is derived from several files is derived again from whichever are newest.
+Every file that never changes under its name, a slot's or one a slot's file names (dining's menus, foods, and search), loads through one loader (`loadImmutable` in `src/shell/load.mts`):
+
 - A file that doesn't fit its schema is a failed load. The schema checks shape and provenance but takes big arrays of our own making on trust.
-- A failed load is retried after 5 s, 15 s, 1 min, then every 5 min, and at once when something newer is named. Retries bypass every cache (`cache: "reload"`, which the worker honors too), so a file that once answered as the wrong thing isn't read back from the cache forever.
 - A load that hangs is given up on after a minute, so it holds up no other.
+- A failed load is retried after 5 s, 15 s, 1 min, then every 5 min, and at once when the page comes back into view, until it loads or isn't wanted (a slot named a newer file, the day shown changed). Retries bypass every cache (`cache: "reload"`, which the worker honors, keeping the fresh copy over the one it had), so a malformed copy a cache kept is replaced rather than read again.
+- A page waits for its slots' first loads. One with a fallback (the map's model) starts with that if the first try fails.
+
+**What may mix.** Files from different builds meet in a page, so each pair is either matched within one file or joins only by what lasts:
+
+| Pair | Rule |
+|---|---|
+| a file and the code reading it | must match: its schema, and the model's `version`, are checked as it loads |
+| the style and its sprite and fonts | must match: one folder named by their hash, loaded with the manifest naming it |
+| the dining index and its files; the tiles manifest and its folder | must match: named by their content |
+| timetable and model | may mix, by stop and route ids. A route keeping its id through a new path keeps the times learned on the old one until they're relearned, as within one build |
+| timetable, walk network, gazetteer, places, tiles | may mix, by coordinates |
+| style and tiles | may mix, by layer name: a campus layer renamed in the style draws nothing until tiles of its schema come |
 
 ## Taking in a newer release
 
@@ -59,7 +72,12 @@ The HTTP cache sits behind the worker. Pages are fetched with `cache: "no-cache"
 
 ## Old tabs and the origin
 
-A tab on last night's release may ask for files the origin no longer has. The origin keeps the generation before the current one for this: the tiles' and style's folders for one more build, and dining files one build and 48 h past the last index naming them (see [storage.md](storage.md)). A window that can't answer the census (frozen, or in the back-forward cache) is covered as far back as its page's previous generation. Older than that, it 404s on uncached files (MapLibre draws without that glyph range or sprite) until it reloads: once out of view after a newer build is announced, or at once after an hour away.
+A tab on last night's release may ask for files the origin no longer has. What's promised is a count of generations, not a span of time:
+
+- **Browser cache**: each page's current and previous copy, and whatever an open window says it runs. A window that can't answer the census (frozen, or in the back-forward cache) is covered only as far back as its page's previous generation.
+- **Origin**: the tiles' and style's folders of the current build and the one before; dining files of the current index, of the one before, and of any index fetched within the last 48 h (see [storage.md](storage.md)).
+
+So two releases in quick succession can leave a tab two generations behind, whose uncached files 404 (MapLibre draws without that glyph range or sprite) until it reloads: once out of view after a newer build is announced, or at once after an hour away. That degradation is accepted rather than kept longer.
 
 ## iOS and Safari
 
@@ -71,4 +89,4 @@ A tab on last night's release may ask for files the origin no longer has. The or
 
 - `tests/shell/sw.test.mts` drives the worker against an in-memory world, with named regressions for each sequence that once broke it.
 - `tests/shell/sw.model.test.mts` runs it against a model over generated sequences: releases, windows, going offline, quotas full for every file or only large ones, a sign-in page answering for a data file, the network stalling a page's files, restarts, the worker killed mid-staging, and frozen windows.
-- `npm run test:browser` runs the release sequences through Chromium and WebKit (`tests/browser/`): a data-only release shown live, a worker change taking over an open tab, and a rollback from release C to A.
+- `npm run test:browser` runs the release sequences through Chromium and WebKit (`tests/browser/`): a data-only release shown live, a worker change taking over an open tab, a rollback from release C to A, and an upgrade from a real earlier release, built from its own commit, with its own worker.

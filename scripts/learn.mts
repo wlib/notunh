@@ -7,8 +7,9 @@
 //
 // Learning writes what production uses, so only a build of the production branch (as Cloudflare's builds name it in
 // WORKERS_CI_BRANCH) learns, or a command given --store (or NOTUNH_STORE=1). Any other build, like a preview or one
-// by hand, only reads and bundles what's stored. So does a build whose Worker lacks model revisions or checkpoints:
-// a build runs before its own Worker deploys, so the next build, against the new Worker, learns.
+// by hand, only reads and bundles what's stored. So does a build whose Worker serves another API version than its
+// own (worker/schema.mts API): a build runs before its own Worker deploys, so the next build, against the new
+// Worker, learns.
 //
 // What's being learned and what's published are stored apart. Learning carries on from its checkpoint
 // ("<name>.training"), stored by every build that learns. The model is published only once the checkpoint has
@@ -20,8 +21,9 @@ import { writeFile } from "node:fs/promises"
 import type { URL } from "node:url"
 import { type Learned, checkpointOf } from "../src/shared/learn.mts"
 import { addDays, type Day } from "../src/shared/time.mts"
+import { API } from "../worker/schema.mts"
 import { exists, isKept } from "./files.mts"
-import { ApiError, readModel, writeModel } from "./worker.mts"
+import { ApiError, health, readModel, writeModel } from "./worker.mts"
 
 const PRODUCTION_BRANCH = "main"
 
@@ -52,11 +54,8 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
   first:     () => Promise<Day | undefined>,
   /** The last whole day there is */
   last:      Day,
-  /**
-   * The model with a day folded in, given the last day any model stored before the build ran through, of whatever
-   * shape, for what it may skip
-   */
-  fold:      (model: M, day: Day, storedThrough: Day | null) => Promise<M>,
+  /** The model with a day folded in */
+  fold:      (model: M, day: Day) => Promise<M>,
   /** What the page loads, when that isn't the model itself */
   bundle?:   (model: M) => B,
   budgetMs?: number
@@ -69,12 +68,11 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
       throw new Error("no BUILD_TOKEN to reach the Worker with")
     const started = Date.now()
     const ofThisShape = (state: M | null | undefined) => state?.version === empty().version ? state : null
-    const { state: found, revision, throughs } = await readModel<M>(name)
-    // A Worker without checkpoints 404s on the name
-    const checkpoint = await readModel<M>(checkpointOf(name)).catch(error => error instanceof ApiError && error.status === 404 ? undefined : Promise.reject(error))
-    const learning = isStoring() && revision !== undefined && checkpoint?.revision !== undefined
+    const learning = isStoring() && (await health()).api === API
     if (isStoring() && !learning)
-      console.warn(`${name}: the Worker predates model revisions or checkpoints, so this build only reads`)
+      console.warn(`${name}: the Worker serves another API than this build's, so this build only reads`)
+    const { state: found, revision } = await readModel<M>(name)
+    const checkpoint = learning ? await readModel<M>(checkpointOf(name)) : undefined
     const published = ofThisShape(found)
     await prepare?.(learning)
     // From where learning left off, else what's published, unless that's of an older shape, which is learned again
@@ -88,7 +86,7 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
       }
       // A day that can't be read stops learning there, keeping the days before it, and the next build tries again
       try {
-        model = await fold(model, day, throughs.at(-1) ?? null)
+        model = await fold(model, day)
         folded++
       }
       catch (error) {
@@ -101,9 +99,9 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
     let bundled = isCaughtUp ? model : published ?? model
     if (learning && model.through !== null && folded)
       try {
-        await writeModel(checkpointOf(name), model, checkpoint!.revision!)
+        await writeModel(checkpointOf(name), model, checkpoint!.revision)
         if (isCaughtUp)
-          await writeModel(name, model, revision!)
+          await writeModel(name, model, revision)
       }
       catch (error) {
         // Another build learned from the same checkpoint meanwhile, or published from it. Bundle what's published,

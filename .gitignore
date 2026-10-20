@@ -8,6 +8,7 @@ playwright-report/
 # tests/fixtures/data/ are small committed copies, and the walk and gazetteer there the fallbacks while there's no
 # map data release
 src/map/gtfs.json
+src/map/gtfs.zip
 src/map/walk.json
 src/map/gazetteer.json
 src/map/model.json

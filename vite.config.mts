@@ -128,6 +128,8 @@ export default defineConfig({
   build: {
     target: esbuildTargets(browsers),
     cssMinify: "lightningcss",
+    // Published beside the code, as the code is open source anyway, so PostHog fetches them to read errors' stacks
+    sourcemap: true,
     // Data files are always files of their own, never inlined, so the service worker keeps and versions them as
     // it does code, and a page can tell a newer build's data from its code (src/shell/build.mts)
     assetsInlineLimit: file => file.endsWith(".json") ? false : undefined,

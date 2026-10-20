@@ -54,6 +54,23 @@ export default () =>
             </p>
           </section>
 
+          <section>
+            <h2>Usage stats</h2>
+            <p>
+              If you allow it, notunh counts which pages and features get used, so it's clear what to work on next. The
+              counts are kept with <a href="https://posthog.com">PostHog</a>, for notunh and nothing else. They never
+              include your location, what you search for, or anything that says who you are, and they're never sold or
+              used for ads.
+            </p>
+            <label class="choice">
+              <input type="checkbox" data-usage />
+              Share usage stats
+            </label>
+            <p class="muted" data-usage-private hidden>
+              Your browser asks sites not to share what you do there (Global Privacy Control), so notunh doesn't.
+            </p>
+          </section>
+
           <details>
             <summary>Data sources &amp; credits</summary>
             <dl class="credits">

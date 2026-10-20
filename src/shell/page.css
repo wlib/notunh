@@ -142,3 +142,11 @@
 .page :is(section, details) p.muted {
   font-size: 0.9rem;
 }
+
+/* A setting the page changes, its box beside its name */
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block: 0.75rem;
+}

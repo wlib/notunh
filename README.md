@@ -1,5 +1,7 @@
 # notunh
 
+[![notunh: a map of central UNH with a Gables Connector bus on Main Street, beside its laundry and dining screens](public/social/home.png)](https://notunh.app)
+
 The better UNH app, at [notunh.app](https://notunh.app). A PWA built with Vite and [bruh](https://github.com/Technical-Source/bruh), served as static assets by a Cloudflare Worker, on the free plan.
 
 | Page | Entry | What it does |

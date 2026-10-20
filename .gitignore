@@ -8,6 +8,9 @@ playwright-report/
 # fixtures under tests/fixtures/data/ are small committed copies, installed offline. inputs/ is where the inputs are
 # made (scripts/data.mts)
 inputs/
+# Local map-generation downloads and Planetiler's working files
+extract/
+planetiler/
 public/inputs.json
 src/map/gtfs.json
 src/map/gtfs.zip

@@ -3,6 +3,8 @@
   "name": "notunh",
   "main": "worker/index.mts",
   "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": true,
   "routes": [{ "pattern": "notunh.app", "custom_domain": true }],
   "assets": {
     "directory": "./dist",

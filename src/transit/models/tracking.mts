@@ -10,7 +10,7 @@ import type { Observation } from "../inference/likelihoods.mts"
 import { type Location, type Passage, drove } from "../inference/passages.mts"
 import { locator } from "../inference/locate.mts"
 import type { BusFix } from "../observations/raw.mts"
-import { type Pace, NO_PACE, expectedMu, paced, whereaboutsOf } from "./movement.mts"
+import { type Pace, NO_PACE, expectedMu, paced, slowSince, whereaboutsOf } from "./movement.mts"
 import type { Model } from "./model.mts"
 import type { Sighting } from "./forecast.mts"
 
@@ -31,19 +31,23 @@ export const pacedBy = (model: Model, pace: Pace, before: Passage | undefined, p
 
 /**
  * One bus followed along its route's lines, a fix at a time, as the map does live and the nightly scoring replays:
- * where the location model has it, and its pace from the legs it's finished, against a model
+ * where the location model has it, its pace from the legs it's finished, against a model, and since when it's been
+ * reported slow between stops, if it is
  */
 export const busOn = (lines: readonly RouteLine[]) => {
   const locate = locator(lines)
   let pace = NO_PACE
   let last: Passage | undefined
+  let slow: number | undefined
   return {
-    observe: (model: Model, fix: Observation) => {
+    observe: (model: Model, fix: Observation): Tracked => {
       for (const passage of locate.observe(fix)) {
         pace = pacedBy(model, pace, last, passage)
         last = passage
       }
-      return { location: locate.locate(), pace }
+      const location = locate.locate()
+      slow = location && slowSince(location, slow)
+      return { location, pace, ...slow !== undefined && { slow } }
     },
     /** Its pace forgotten, as when the model it was measured against is replaced */
     rebase: () => {
@@ -53,14 +57,14 @@ export const busOn = (lines: readonly RouteLine[]) => {
 }
 
 /** A bus on a trip, at the stop it's at or last left and how far it's got from there, as forecasting chains from */
-export const sightingOf = (vehicleId: string, tripId: string | null | undefined, location: Location | undefined, pace: Pace): Sighting | undefined =>
-  tripId && location?.last ? { vehicleId, tripId, stop: location.last.stop, ...whereaboutsOf(location).where, pace, at: location.at } : undefined
+export const sightingOf = (vehicleId: string, tripId: string | null | undefined, { location, pace, slow }: Tracked): Sighting | undefined =>
+  tripId && location?.last ? { vehicleId, tripId, stop: location.last.stop, ...whereaboutsOf(location, slow).where, pace, at: location.at } : undefined
 
 /** A fix of a bus, whichever source gave it: Umo's listing, your phone's while riding, or a stored sample */
 export type Fix = Observation & { vehicle: string, route: string | null }
 
-/** Where the location model has a bus, if it's on its route, and how it's been driving */
-export type Tracked = { location?: Location, pace: Pace }
+/** Where the location model has a bus, if it's on its route, how it's been driving, and since when it's been reported slow between stops, if it is (movement.mts) */
+export type Tracked = { location?: Location, pace: Pace, slow?: number }
 
 /**
  * The buses followed along a timetable's lines, a fix at a time, by one rule for the map live, the nightly scoring's
@@ -113,7 +117,7 @@ export const sightingsFrom = (feed: Feed, model: Model, fixes: readonly BusFix[]
       const fix = sorted[next]
       const tracked = buses.observe(model, { vehicle: fix.vehicle, route: fix.route, at: fix.at / 1000, lat: fix.lat, lon: fix.lon, heading: fix.heading, kph: fix.kph })
       if (tracked && tracked !== seen.get(fix.vehicle)?.tracked)
-        seen.set(fix.vehicle, { tracked, sighting: sightingOf(fix.vehicle, fix.trip, tracked.location, tracked.pace) })
+        seen.set(fix.vehicle, { tracked, sighting: sightingOf(fix.vehicle, fix.trip, tracked) })
     }
     // A bus not heard from in a while is out of service
     return [...seen.values()].flatMap(({ sighting }) => sighting && sighting.at >= at - OUT_OF_SERVICE ? [sighting] : [])

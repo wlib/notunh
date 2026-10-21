@@ -318,11 +318,12 @@ test("a trip from your location stays put while you're on a bus, and catches up 
   expect(state.from.peek()).toMatchObject(away)
 })
 
-test("a trip is kept for the rest of the day, so a reload picks it back up", async () => {
+test("a trip is kept for the rest of the day, so a reload picks it back up, its time to be there by only until that's past", async () => {
   const dimond = { lat: 43.1351, lon: -70.9334, name: "Dimond Library" }
   const state = await load()
   state.from.value = { ...CENTER, name: "Stop" }
   state.to.value = dimond
+  state.by.value = (NOON + 4 * 3_600_000) / 1000
   state.selected.value = "walk"
   await vi.advanceTimersByTimeAsync(0)
   const saved = { "map-trip": JSON.parse(state.storage.get("map-trip")!) }
@@ -330,7 +331,12 @@ test("a trip is kept for the rest of the day, so a reload picks it back up", asy
   const reloaded = await load({ at: NOON + 3 * 3_600_000, saved })
   expect(reloaded.from.peek()).toEqual({ ...CENTER, name: "Stop" })
   expect(reloaded.to.peek()).toEqual(dimond)
+  expect(reloaded.by.peek()).toBe((NOON + 4 * 3_600_000) / 1000)
   expect(reloaded.selected.peek()).toBe("walk")
+
+  const late = await load({ at: NOON + 5 * 3_600_000, saved })
+  expect(late.to.peek()).toEqual(dimond)
+  expect(late.by.peek()).toBeUndefined()
 
   const tomorrow = await load({ at: NOON + 24 * 3_600_000, saved })
   expect(tomorrow.from.peek()).toBeUndefined()

@@ -2,10 +2,10 @@
 // where it stands. One JSON entry in Cache Storage, which pages and the service worker share and localStorage isn't,
 // in a cache of its own apart from the app's (src/sw/worker.mts). Every change is read, edited and written under one
 // Web Lock, so two tabs setting their first reminder at once get one device and lose nothing. Storage can fail, as
-// in private browsing or when full: a read that fails is empty, and a write that fails rejects
+// in private browsing or when full: a read or write that fails rejects, and nothing is written over what's kept
 
 import * as v from "valibot"
-import { Kept } from "../reminder.mts"
+import { Kept, type State } from "../reminder.mts"
 import { randomBase64Url } from "../../shared/base64url.mts"
 
 /** The cache the reminders are kept in, which the app's service worker leaves alone */
@@ -16,21 +16,22 @@ const LOCK = "notunh-reminders"
 export const Device = v.object({ id: v.string(), secret: v.string() })
 export type Device = v.InferOutput<typeof Device>
 
-/** Everything kept, as one document, whose version is bumped with any change of meaning: another's reads as empty */
-const Doc = v.object({ version: v.literal(1), device: v.optional(Device), reminders: v.array(Kept) })
+/**
+ * Everything kept, as one document, whose version is bumped with any change of meaning: another's reads as empty,
+ * but for the device, which the Worker still knows by its secret, so its watches go on and are forgotten with it. 2
+ * keeps each reminder as its whole trip (reminder.mts); 1 kept the first bus alone
+ */
+const Doc = v.object({ version: v.literal(2), device: v.optional(Device), reminders: v.array(Kept) })
 type Doc = v.InferOutput<typeof Doc>
+const Other = v.object({ device: v.optional(Device) })
 
-const empty = (): Doc =>
-  ({ version: 1, reminders: [] })
+const empty = (device?: Device): Doc =>
+  ({ version: 2, ...device && { device }, reminders: [] })
 
+/** What's kept, or empty where nothing is or it's of another version, its device kept. Rejects where storage can't be read, so nothing is written over what it may still hold */
 const read = async (): Promise<Doc> => {
-  try {
-    const doc: unknown = await (await (await caches.open(CACHE)).match(ENTRY))?.json()
-    return v.is(Doc, doc) ? doc : empty()
-  }
-  catch {
-    return empty()
-  }
+  const doc: unknown = await (await (await caches.open(CACHE)).match(ENTRY))?.json()
+  return v.is(Doc, doc) ? doc : empty(v.is(Other, doc) ? doc.device : undefined)
 }
 
 const write = async (doc: Doc) =>
@@ -72,4 +73,17 @@ export const forgetAll = () =>
   change(doc => {
     delete doc.device
     return doc.reminders = []
+  })
+
+/**
+ * Moves a reminder from one state to another, only if it's still in the first: one taken by the Worker is set only
+ * while it's still setting, so a cancel meanwhile isn't written over
+ * @returns the reminders as they are then
+ */
+export const transition = (id: string, from: State, to: State) =>
+  change(doc => {
+    const reminder = doc.reminders.find(reminder => reminder.id === id)
+    if (reminder?.state === from)
+      reminder.state = to
+    return doc.reminders
   })

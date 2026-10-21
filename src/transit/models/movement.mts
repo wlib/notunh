@@ -32,11 +32,18 @@ const DEFAULT_DWELL = 10 // s
 const DEFAULT_LINGER = 30 // s
 // A bus seen halted between stops is halted, all told, a median HALT with a log spread of HALT_SPREAD, fitted on
 // Oct 7 to 19. CURRENT_SPREAD is how sure what's left of a stay at a stop is, as a share of it
-const HALT = 24.5 // s
+export const HALT = 24.5 // s
 const HALT_SPREAD = 0.76
 const CURRENT_SPREAD = 0.35
 // How long a bus's speed now says more of where it'll be than the leg's usual pace does
 const SPEED_MEMORY = 5 // s
+// A bus reported slower than this, m/s, between stops is standing in traffic or at a light, whatever its heading
+// and the location model's reading of it: GPS reports a residual 2 to 4 km/h from a bus that isn't moving. On Oct
+// 15, 824 of the 1,310 fixes the course had got more than 50 m ahead of were such buses, drawn driving off while
+// they stood. Held as halted since the first fix that reported it slow, they're paced as a halted bus is. One just
+// out of a stop is held too: of those reported slow within 10 s of leaving one, a third had moved on by the next
+// fix, against a seventh of the rest, so most are standing still
+export const SLOW = 1.4 // m/s
 
 /** How much longer than expected a bus has lately taken to drive, in log terms, with its variance, as of an epoch second */
 export type Pace = { mean: number, variance: number, at: number }
@@ -228,10 +235,18 @@ const along = (meters: number, took: number, profile: readonly number[], where: 
 const DRAWN_STOPS = 8
 
 /**
- * Where the location model has a bus on its way, from the stop it's at or last left, or followed since before any,
- * the stop behind it: that stop's index along its line, its meters along it, and the bus's whereabouts from there
+ * Epoch seconds a bus has been reported slower than SLOW between stops since, given when it had been as of the fix
+ * before, or undefined once it's at a stop or driving again
  */
-export const whereaboutsOf = (location: Location) => {
+export const slowSince = (location: Location, before: number | undefined) =>
+  location.mode === "moving" && location.speed < SLOW ? before ?? location.at : undefined
+
+/**
+ * Where the location model has a bus on its way, from the stop it's at or last left, or followed since before any,
+ * the stop behind it: that stop's index along its line, its meters along it, and the bus's whereabouts from there,
+ * held as halted since it was first reported slow where it has been (slowSince)
+ */
+export const whereaboutsOf = (location: Location, slow?: number) => {
   const { line, last } = location
   const start = last?.index ?? stopAhead(line, location.distance) - 1
   const [from, to] = [stopDistance(line, start), stopDistance(line, start + 1)]
@@ -242,7 +257,9 @@ export const whereaboutsOf = (location: Location) => {
       depart:   last?.depart ?? location.since,
       progress: Number.isFinite(to - from) && to > from ? (location.distance - from) / (to - from) : 0,
       speed:    location.speed,
-      ...location.mode === "halted" && { halted: location.since }
+      ...location.mode === "halted"
+        ? { halted: location.since }
+        : slow !== undefined && { halted: slow }
     }
   return { start, from, where }
 }
@@ -251,9 +268,9 @@ export const whereaboutsOf = (location: Location) => {
  * A bus's course along its line from where the location model has it, through the next few stops, for drawing a bus
  * on no trip forecasting knows of, so with nowhere to wait for a scheduled time
  */
-export const courseAlong = (model: Model, location: Location, pace: Pace): Trajectory | undefined => {
+export const courseAlong = (model: Model, location: Location, pace: Pace, slow?: number): Trajectory | undefined => {
   const { line } = location
-  const { start, from, where } = whereaboutsOf(location)
+  const { start, from, where } = whereaboutsOf(location, slow)
   if (!Number.isFinite(from))
     return
   const way = Array.from({ length: DRAWN_STOPS + 1 }, (_, i): Waypoint | undefined => {

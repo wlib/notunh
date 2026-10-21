@@ -44,14 +44,14 @@ export const follow = (feed: Reactive<Feed>, model: Reactive<Model>, vehicles: R
         continue
       // A bus followed no further keeps its object, so its course is drawn once (drawing)
       const previous = followed.peek().get(vehicle.id)
-      next.set(vehicle.id, previous && previous.location === tracked.location && previous.pace === tracked.pace ? previous : { vehicle, ...tracked })
+      next.set(vehicle.id, previous && previous.location === tracked.location && previous.pace === tracked.pace && previous.slow === tracked.slow ? previous : { vehicle, ...tracked })
     }
     followed.value = next
   })
 
   /** Each bus on a trip, at the stop it's at or last left and how far it's got from there, as forecasting chains from */
-  const sightings = r(() => [...followed.value.values()].flatMap(({ vehicle, location, pace }) =>
-    sightingOf(vehicle.id, vehicle.tripTag, location, pace) ?? []
+  const sightings = r(() => [...followed.value.values()].flatMap(bus =>
+    sightingOf(bus.vehicle.id, bus.vehicle.tripTag, bus) ?? []
   ))
 
   return { followed, sightings, stop }
@@ -66,7 +66,7 @@ export const drawing = (model: Reactive<Model>, followed: Reactive<ReadonlyMap<s
   const along = new WeakMap<Followed, Trajectory | undefined>()
   const alongOf = (bus: Followed) => {
     if (!along.has(bus))
-      along.set(bus, bus.location && courseAlong(model.peek(), bus.location, bus.pace))
+      along.set(bus, bus.location && courseAlong(model.peek(), bus.location, bus.pace, bus.slow))
     return along.get(bus)
   }
   return r(() => {

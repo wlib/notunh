@@ -19,13 +19,16 @@ import { capture } from "../shell/usage.tsx"
 import { distinct } from "../shell/state.mts"
 import { coarseName } from "../places/coarse.mts"
 import { localDay, localHour, weekday } from "../shared/time.mts"
+import { type Kept, type Reminder, firstRide, replanned } from "../reminders/reminder.mts"
+import { kept, loadKept, replan } from "./state/reminders.mts"
 
 const state = await startMap()
-const { from, to, selected, itineraries, itinerary, buildings, feed, selectedStop, selectedBus, viewedBus, suggested, locationProblem, directTo } = state
+const { from, to, by, selected, itineraries, itinerary, buildings, feed, selectedStop, selectedBus, viewedBus, suggested, locationProblem, directTo, plansFor, walkingTo, located, heard } = state
 
 const clearTrip = () => {
   from.value = undefined
   to.value = undefined
+  by.value = undefined
   selected.value = undefined
 }
 
@@ -90,6 +93,42 @@ watch([ends], () => {
     }))
   }
   planned = ends.value
+})
+
+// A reminder's trip, planned again now: from where you are, where it was from there, its way if that's still
+// offered, else the best way now, or walking so as to be there by its time. One walked for now stays as it was
+const plannedAgain = (reminder: Kept): Reminder | undefined => {
+  const here = from.peek()?.isYou ? from.peek() : undefined
+  const start = reminder.from.isYou ? here : reminder.from
+  if (!start || (!firstRide(reminder) && reminder.by === undefined))
+    return
+  const options = firstRide(reminder) ? plansFor(start, reminder.to, reminder.by) : [walkingTo(start, reminder.to, reminder.by)]
+  return replanned(feed.peek(), reminder, options, state.now.peek())
+}
+
+/** ms to wait for where you are and for live data before the reminders' trips are planned again, else not this time */
+const REPLAN_WAIT_MS = 20_000
+
+// A notification's tap opens /map/?reminder=<id>, which brings its trip back, from where you are if it was, and
+// the link is then dropped from the URL as ?to= is. With any reminders kept still ahead, each is planned again as
+// the map loads, once where you are and the live buses are known, so the plan is from where you are and as live
+// as the one kept, and the Worker told where that moves its leave time or changes its first bus
+const link = new URLSearchParams(globalThis.location.search).get("reminder")
+if (link !== null)
+  history.replaceState(history.state, "", globalThis.location.pathname)
+void loadKept().then(async () => {
+  const reminder = link === null ? undefined : kept.peek().get(link)
+  if (reminder) {
+    from.value = reminder.from.isYou ? undefined : reminder.from
+    by.value = reminder.by
+    await directTo(reminder.to)
+    selected.value = reminder.way
+  }
+  if (!kept.peek().size)
+    return
+  const isReady = await Promise.race([Promise.all([located, heard]).then(() => true), new Promise<false>(resolve => setTimeout(resolve, REPLAN_WAIT_MS, false))])
+  if (isReady)
+    await replan(plannedAgain)
 })
 
 /** The one card open on the map; any tap closes it rather than doing something else */

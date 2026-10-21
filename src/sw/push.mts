@@ -49,20 +49,21 @@ export const startPush = (scope: PushScope, store: Store, now = () => Date.now()
   // A push this worker can't read, as one of a shape it doesn't know, still shows something
   scope.addEventListener("push", event => {
     event.waitUntil(show(event).catch(() =>
-      scope.registration.showNotification("Time to head out", { body: "Open notunh for your bus.", icon: ICON })
+      scope.registration.showNotification("Time to head out", { body: "Open notunh for your trip.", icon: ICON })
     ))
   })
 
-  // An open map is brought up as it is, else one is opened
+  // An open map is brought up as it is, else one is opened on the reminder's trip, which it plans afresh
   scope.addEventListener("notificationclick", event => {
     event.notification.close()
     const target = new URL("/map/", scope.location.origin)
+    const id = event.notification.tag.replace(/^reminder-/, "")
     event.waitUntil((async () => {
       const map = (await scope.clients.matchAll({ type: "window" })).find(window => new URL(window.url).pathname === target.pathname)
       if (map)
         await map.focus()
       else
-        await scope.clients.openWindow(target.href)
+        await scope.clients.openWindow(`${target.href}?reminder=${encodeURIComponent(id)}`)
     })())
   })
 }

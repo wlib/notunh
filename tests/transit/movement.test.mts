@@ -4,7 +4,7 @@ import { type Coordinates, ruler } from "../../src/geo/projection.mts"
 import { toRouteLine } from "../../src/transit/shapes.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
 import type { Location } from "../../src/transit/inference/passages.mts"
-import { NO_PACE, type Waypoint, type Whereabouts, course, courseAlong, drifted, paced } from "../../src/transit/models/movement.mts"
+import { HALT, NO_PACE, SLOW, type Waypoint, type Whereabouts, course, courseAlong, drifted, paced, slowSince, whereaboutsOf } from "../../src/transit/models/movement.mts"
 
 const NOW = 1_791_900_000
 
@@ -117,4 +117,51 @@ test("a bus's course along its line starts where the location model has it", () 
     const along = courseAlong(emptyModel(), location, NO_PACE)!
     expect(along.from + along.course.distanceAt(NOW)).toBeCloseTo(distance, 3)
   }))
+)
+
+test("a bus reported slower than SLOW between stops is held where it is, from the first fix that had it slow, for at least the halt's median before its course drives on, whatever the location model made of it, and one at SLOW or over, or at a stop, isn't", () =>
+  fc.assert(fc.property(
+    fc.integer({ min: 1, max: 5 }),
+    fc.double({ min: 0.05, max: 0.95, noNaN: true }),
+    fc.double({ min: 0, max: 2 * SLOW, noNaN: true }),
+    fc.constantFrom("moving" as const, "halted" as const),
+    fc.option(fc.integer({ min: 1, max: 120 }), { nil: undefined }),
+    (stop, share, speed, mode, slowFor) => {
+      const east = ruler(43.135).kx
+      const street = Array.from({ length: 201 }, (_, i): Coordinates => [-70.93 + i * 10 / east, 43.135])
+      const line = toRouteLine("R", street, [Array.from({ length: 8 }, (_, i) => ({ id: `s${i}`, lat: 43.135, lon: -70.93 + (100 + i * 250) / east }))])
+      const from = line.stops[stop].distance
+      const distance = from + share * 250
+      const location: Location = {
+        line, distance, sd: 5, speed, mode, since: NOW - 20, at: NOW,
+        last: { stop: `s${stop}`, index: stop, distance: from, arrive: NOW - 40, depart: NOW - 20 }
+      }
+      // Reported slow since some fixes ago, or not until this one
+      const before = slowFor === undefined ? undefined : NOW - slowFor
+      const slow = slowSince(location, before)
+      const isSlow = mode === "moving" && speed < SLOW
+      expect(slow).toBe(isSlow ? before ?? NOW : undefined)
+      expect(slowSince({ ...location, mode: "dwelling" }, before)).toBeUndefined()
+      const { where } = whereaboutsOf(location, slow)
+      const isHeld = mode === "halted" || isSlow
+      expect(where.halted !== undefined).toBe(isHeld)
+      const along = courseAlong(emptyModel(), location, NO_PACE, slow)!
+      const at = (seconds: number) => along.from + along.course.distanceAt(NOW + seconds)
+      expect(at(0)).toBeCloseTo(distance, 3)
+      if (!isHeld)
+        expect(at(HALT)).toBeGreaterThan(distance + 1)
+      else if (mode === "halted")
+        expect(at(1)).toBeCloseTo(distance, 3)
+      else if (before === undefined) {
+        // Held since the fix, so for the halt's median at least
+        expect(where.halted).toBe(NOW)
+        expect(at(HALT)).toBeCloseTo(distance, 3)
+      }
+      else {
+        // Held since it was first slow, as a halted bus is, for what's left of a halt that long
+        expect(where.halted).toBe(before)
+        expect(at(1)).toBeCloseTo(distance, 3)
+      }
+    }
+  ))
 )

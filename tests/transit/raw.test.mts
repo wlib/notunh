@@ -147,6 +147,12 @@ test("observing rows gives every fix and prediction in the order of their minute
       expect(fixes.map(fix => fix.at)).toEqual(of("buses").map(({ minute }) => at(minute) + minute * 1000))
       expect(fixes.every(fix => (fix.received === undefined) === !of("buses").find(({ minute }) => at(minute) + minute * 1000 === fix.at)!.polls)).toBe(true)
       expect(predictions.map(({ at }) => at)).toEqual(of("predictions").map(({ minute }) => at(minute)))
+      // A sample is all in once its last poll that got anything is answered, not one that failed after, which rows
+      // from before polls were recorded don't say
+      expect(predictions.map(({ received }) => received)).toEqual(of("predictions").map(({ minute, polls }) => {
+        const answered = (polls ?? []).filter(([, seen]: RawPoll) => seen !== null)
+        return answered.length ? at(minute) + Math.round(Math.max(...answered.map(([seconds]: RawPoll) => seconds)) * 1000) : undefined
+      }))
       for (const source of ["buses", "predictions"] as const) {
         expect(coverage[source].polls).toEqual(of(source).flatMap(({ minute, polls }) =>
           (polls ?? []).map(([seconds, seen]: RawPoll) => ({ at: at(minute) + Math.round(seconds * 1000), seen }))

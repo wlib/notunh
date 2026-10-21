@@ -86,13 +86,15 @@ const Steps = ({ itinerary }: { itinerary: Itinerary }) =>
     })}
   </ol>
 
-const Leave = ({ start }: { start: number }) =>
+/** When to leave: how soon, or with a time to get there by, when, and when it gets there */
+const Leave = ({ itinerary: { start, end } }: { itinerary: Itinerary }) =>
   r(() => {
     const wait = start - state.now.value
     return (
-      wait < 60   ? "Leave now" :
-      wait < 3600 ? <>Leave in <Minutes value={minutes(wait)} /></> :
-                    <>Leave at <Time seconds={start} /></>
+      state.by.value !== undefined ? <>Leave at <Time seconds={start} /> · arrives <Time seconds={end} /></> :
+      wait < 60                    ? "Leave now" :
+      wait < 3600                  ? <>Leave in <Minutes value={minutes(wait)} /></> :
+                                     <>Leave at <Time seconds={start} /></>
     )
   })
 
@@ -117,7 +119,7 @@ const ItineraryCard = ({ itinerary: it }: { itinerary: Itinerary }) => {
         </span>
         <span class="itinerary-legs">
           {shownLegs(it).map(leg => <LegChip leg={leg} />)}
-          <span class="leave"><Leave start={it.start} /></span>
+          <span class="leave"><Leave itinerary={it} /></span>
         </span>
       </button>
       {r(() => isSelected.value && <Steps itinerary={it} />)}
@@ -126,25 +128,34 @@ const ItineraryCard = ({ itinerary: it }: { itinerary: Itinerary }) => {
   )
 }
 
+/** Walking the whole way, and once chosen, a reminder for it: leaving now, or so as to be there by the time asked */
 const WalkOption = () =>
   r(() => {
     const option = state.walk.value
+    const isSelected = r(() => state.selected.value === "walk")
     return option &&
-      <button
-        type="button"
-        class={{ "walk-option": true, selected: r(() => state.selected.value === "walk") }}
-        onclick={() => {
-          state.selected.value = "walk"
-          capture("itinerary_chosen", { rides: 0 })
-        }}
-      >
-        <Icon name="walk" />
-        {state.itineraries.value.length ? "Or walk" : "Walk"} <Minutes value={option.minutes} /> · <Distance meters={option.meters} />
-      </button>
+      <>
+        <button
+          type="button"
+          class={{ "walk-option": true, selected: isSelected }}
+          onclick={() => {
+            state.selected.value = "walk"
+            capture("itinerary_chosen", { rides: 0 })
+          }}
+        >
+          <Icon name="walk" />
+          {state.itineraries.value.length ? "Or walk" : "Walk"} <Minutes value={option.minutes} /> · <Distance meters={option.meters} />
+          {r(() => state.by.value !== undefined && state.itinerary.value && isSelected.value && <> · leave <Time seconds={state.itinerary.value.start} /></>)}
+        </button>
+        {r(() => isSelected.value && state.itinerary.value && <Remind itinerary={state.itinerary.value} />)}
+      </>
   })
 
 export const Itineraries = () =>
   <section class="itineraries" aria-live="polite">
+    {r(() => !state.makesIt.value && state.itineraries.value.length > 0 &&
+      <p class="muted notice">Nothing gets there by <Time seconds={state.by.value!} /> · soonest first</p>
+    )}
     {r(() =>
       state.itineraries.value.length
         ? <ul>

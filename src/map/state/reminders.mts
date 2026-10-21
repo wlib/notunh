@@ -7,7 +7,8 @@
 // (https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers)
 
 import { r } from "bruh/reactive"
-import { type Kept, type Reminder, watchOf } from "../../reminders/reminder.mts"
+import { type Kept, type Reminder, firstRide, watchOf } from "../../reminders/reminder.mts"
+import { SHIFT } from "../../reminders/watch.mts"
 import * as api from "../../reminders/browser/api.mts"
 import * as store from "../../reminders/browser/store.mts"
 
@@ -40,7 +41,7 @@ export const prepare = () =>
 
 /** The reminders kept on this phone, by id */
 export const kept = r<ReadonlyMap<string, Kept>>(new Map())
-/** s after its bus a reminder is kept */
+/** s after its leave time a reminder is kept */
 const KEPT = 2 * 3600
 
 const show = (reminders: readonly Kept[]) =>
@@ -53,15 +54,13 @@ const subscription = async () =>
 const isSubscribed = async () =>
   window.Notification?.permission !== "denied" && await subscription() !== undefined
 
-/** Tells the Worker what a kept reminder is waiting on, and keeps its answer. One it refuses is dropped */
+/** Tells the Worker what a kept reminder is waiting on, and keeps its answer, but for a refusal, which is the caller's to make good */
 const tell = async (reminder: Kept, device: store.Device, subscribed: PushSubscriptionJSON | undefined) => {
   if (reminder.state === "setting" && subscribed) {
     const answer = await api.set(device, reminder.id, { subscription: subscribed, watch: watchOf(reminder) })
     // One the Worker took that can't be kept as set stays setting, and is set again with the same id later
     if (answer.kind === "done")
-      await store.keep({ ...reminder, state: "set" }).then(show, () => {})
-    else if (answer.kind === "refused")
-      show(await store.forget(reminder.id))
+      await store.transition(reminder.id, "setting", "set").then(show, () => {})
     return answer
   }
   if (reminder.state === "cancelling" && (await api.cancel(device, reminder.id)).kind === "done")
@@ -74,8 +73,8 @@ const tell = async (reminder: Kept, device: store.Device, subscribed: PushSubscr
  */
 const catchUp = async () => {
   const now = Date.now() / 1000
-  for (const { id, expected } of await store.reminders())
-    if (expected < now - KEPT)
+  for (const { id, start } of await store.reminders())
+    if (start < now - KEPT)
       await store.forget(id)
   show(await store.reminders())
   const device = await store.deviceKept()
@@ -88,8 +87,8 @@ const catchUp = async () => {
   }
   const subscribed = await subscription()
   for (const reminder of kept.peek().values())
-    if (reminder.state !== "set")
-      await tell(reminder, device, subscribed)
+    if (reminder.state !== "set" && (await tell(reminder, device, subscribed))?.kind === "refused")
+      show(await store.forget(reminder.id))
 }
 
 let loaded: Promise<void> | undefined
@@ -111,8 +110,47 @@ export const remind = async ({ registration, key }: Ready, reminder: Reminder) =
   const setting: Kept = { ...reminder, state: "setting" }
   show(await store.keep(setting))
   const answer = await tell(setting, device, subscribed)
-  if (answer?.kind === "refused")
+  if (answer?.kind === "refused") {
+    show(await store.forget(reminder.id))
     throw new Error(`The reminder wasn't set: ${answer.why}`)
+  }
+}
+
+/** The first bus of a reminder, as what makes a replan a different trip to the Worker */
+const busOf = (reminder: Reminder) => {
+  const ride = firstRide(reminder)
+  return ride && `${ride.trip}@${ride.scheduled}`
+}
+
+/**
+ * Whether a kept trip is still to be planned again: one yet to be left for, by a time yet to come, that the phone
+ * hasn't been told of. Told, the trip is under way, or past, and a plan from here would be for another trip
+ */
+export const isAhead = ({ start, by, last, state }: Kept, now: number) =>
+  state !== "cancelling" && last === undefined && start > now && (by === undefined || by > now)
+
+/**
+ * Plans each kept trip still ahead again, as given, and where its leave time has moved by SHIFT or its first bus has
+ * changed, keeps the fresh plan under the same id and tells the Worker, which takes it as a replace. One the Worker
+ * hasn't taken yet is told of as it is. One it refuses is kept as it was, as the Worker still holds that watch
+ */
+export const replan = async (again: (kept: Kept) => Reminder | undefined) => {
+  const device = await store.deviceKept()
+  if (!device)
+    return
+  const subscribed = await subscription()
+  const now = Date.now() / 1000
+  for (const reminder of kept.peek().values()) {
+    if (!isAhead(reminder, now))
+      continue
+    const fresh = again(reminder)
+    if (!fresh || (Math.abs(fresh.start - reminder.start) < SHIFT && busOf(fresh) === busOf(reminder)))
+      continue
+    const setting: Kept = { ...fresh, id: reminder.id, state: "setting" }
+    show(await store.keep(setting))
+    if ((await tell(setting, device, subscribed))?.kind === "refused")
+      show(await store.keep(reminder))
+  }
 }
 
 /** Cancels a reminder: kept here as cancelling first, then cancelled with the Worker */

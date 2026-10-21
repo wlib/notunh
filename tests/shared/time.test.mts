@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { DAY, HOUR, TIME_ZONE, addDays, dayStart, daysBetween, localDay, localHour, localMinutes, offsetAt, weekday, type Day } from "../../src/shared/time.mts"
+import { DAY, HOUR, TIME_ZONE, addDays, atClock, clockOf, dayStart, daysBetween, hhmm, localDay, localHour, localMinutes, offsetAt, weekday, type Day } from "../../src/shared/time.mts"
 
 const SPRING = "2026-03-08"
 const FALL   = "2026-11-01"
@@ -61,6 +61,23 @@ test("a day starts at Durham's midnight, which is the last moment of the day bef
     expect(localDay(start)).toBe(d)
     expect(localMinutes(start)).toBe(0)
     expect(localDay(start - 1)).toBe(addDays(d, -1))
+  }))
+)
+
+test("a time of day on Durham's clock on a day is that day at that time, which reads back as it was written, an hour the clocks skip or repeat aside", () =>
+  fc.assert(fc.property(day, fc.integer({ min: 0, max: 23 }), fc.integer({ min: 0, max: 59 }), (d, hours, minutes) => {
+    const time = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
+    const ms = atClock(d, time)
+    const isChanging = offsetAt(dayStart(d)) !== offsetAt(dayStart(addDays(d, 1)))
+    if (isChanging)
+      expect(Math.abs(localMinutes(ms) - (hours * 60 + minutes))).toBeLessThanOrEqual(60)
+    else {
+      expect(localDay(ms)).toBe(d)
+      expect(hhmm(ms)).toBe(time)
+      // Read off the clock, the same time of day, as "2:35 PM"
+      const [, hour, minute, half] = clockOf(ms).match(/^(\d+):(\d\d) (AM|PM)$/)!
+      expect((+hour % 12 + (half === "PM" ? 12 : 0)) * 60 + +minute).toBe(hours * 60 + minutes)
+    }
   }))
 )
 

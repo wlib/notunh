@@ -2,6 +2,7 @@
 // umo.mts makes it of Umo's predictions
 
 import { getOrCreate } from "../../shared/group.mts"
+import type { PredictionSample } from "./raw.mts"
 
 /** A live source's word on a trip: when a bus is expected at a stop, from the bus itself or from the source's own schedule */
 export type Observation = {
@@ -42,3 +43,10 @@ export const forecastFrom = (predicted: Iterable<Predicted>, at: number): Foreca
   }
   return forecast
 }
+
+/**
+ * A stored sample of predictions (raw.mts) as the forecast the map would have had from it: given when the sample
+ * was all in, or failing that when its minute began, as rows from before polls were recorded say no more
+ */
+export const forecastOfSample = ({ at, received, predictions }: PredictionSample) =>
+  forecastFrom(predictions.map(({ at, isLayover, ...rest }) => ({ ...rest, time: at / 1000, isLive: !isLayover })), (received ?? at) / 1000)

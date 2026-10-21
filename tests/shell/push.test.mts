@@ -5,7 +5,11 @@ import { type Wake, KINDS, WAKE_VERSION, pushOf } from "../../src/reminders/watc
 import type { Kept } from "../../src/reminders/reminder.mts"
 
 const NOW = 1_790_000_000
-const KEPT: Kept = { id: "r1", trip: "t", route: "3", stop: "101", routeName: "3", stopName: "Kingsbury Hall", scheduled: NOW + 900, expected: NOW + 900, walk: 240, lead: 600, to: "MUB", arrival: NOW + 1500, state: "set" }
+const KEPT: Kept = {
+  id: "r1", from: { lat: 43.13, lon: -70.93, name: "Here" }, to: { lat: 43.14, lon: -70.94, name: "MUB" }, way: "w",
+  legs: [{ kind: "walk", walk: 240, to: "Kingsbury Hall" }, { kind: "ride", trip: "t", route: "3", stop: "101", routeName: "3", stopName: "Kingsbury Hall", scheduled: NOW + 900, expected: NOW + 900, isLive: true }, { kind: "walk", walk: 120, to: "MUB" }],
+  start: NOW + 600, end: NOW + 1500, headsUp: 300, state: "set"
+}
 
 /** A service worker scope with its notifications, windows, and kept reminders in memory, and what came of it all */
 const world = ({ kept = new Map<string, Kept>([[KEPT.id, KEPT]]), isStoreBroken = false, windows = [] as string[] } = {}) => {
@@ -81,7 +85,7 @@ test("a reminder's notification is worded on the phone from what the Worker fore
   const { shown, push } = world()
   await push(pushOf({ v: WAKE_VERSION, reminder: "r1", kind: "due", seen: { time: NOW + 900, band: 120, isLive: true, status: "coming" }, at: NOW }))
   expect(shown[0].title).toBe("Leave in 9 min")
-  expect(shown[0].options.body).toContain("You'll be at MUB")
+  expect(shown[0].options.body).toContain("MUB 10:38 AM")
   expect(shown[0].options).toMatchObject({ tag: "reminder-r1" })
   await push(pushOf({ v: WAKE_VERSION, reminder: "r1", kind: "over", seen: { time: NOW + 900, band: 120, isLive: false, status: "cancelled" }, at: NOW }))
   expect(shown.map(({ isOpen }) => isOpen)).toEqual([false, true])
@@ -96,11 +100,11 @@ test("a push of a shape this worker doesn't know shows a plain notification, and
   const newer: Wake = { v: WAKE_VERSION, reminder: "r1", kind: "update", seen: { time: NOW + 1200, band: 120, isLive: true, status: "coming" }, at: NOW - 60 }
   await push(pushOf(newer))
   await push(pushOf({ v: WAKE_VERSION, reminder: "r1", kind: "due", seen: { time: NOW + 900, band: 120, isLive: true, status: "coming" }, at: NOW - 120 }))
-  expect(shown.map(({ title, isOpen }) => `${title} ${isOpen ? "open" : "closed"}`)).toEqual(["Bus 3 is now due at 10:33 AM closed", "Bus 3 is now due at 10:33 AM open"])
+  expect(shown.map(({ title, isOpen }) => `${title} ${isOpen ? "open" : "closed"}`)).toEqual(["Bus 3 now 10:33 AM closed", "Bus 3 now 10:33 AM open"])
   expect(kept.get("r1")?.last).toEqual(newer)
 })
 
-test("tapping a notification brings up an open map as it is, or opens one", async () => {
+test("tapping a notification brings up an open map as it is, or opens one on the reminder's trip", async () => {
   const open = world({ windows: ["https://notunh.app/dining/", "https://notunh.app/map/?from=x"] })
   const notification = { tag: "reminder-r1", close: () => {} }
   await open.dispatch("notificationclick", { notification })
@@ -108,5 +112,33 @@ test("tapping a notification brings up an open map as it is, or opens one", asyn
   expect(open.opened).toEqual([])
   const closed = world()
   await closed.dispatch("notificationclick", { notification })
-  expect(closed.opened).toEqual(["https://notunh.app/map/"])
+  expect(closed.opened).toEqual(["https://notunh.app/map/?reminder=r1"])
+})
+
+test("a push for a walk-only reminder, one with a change past its margin, and one with a `by` are each worded on the phone, terse, and replace the reminder's last notification", async () => {
+  const walked: Kept = { ...KEPT, id: "r1", legs: [{ kind: "walk", walk: 840, to: "MUB" }], start: NOW + 300, end: NOW + 1140 }
+  const change: Kept = {
+    ...KEPT, id: "r2",
+    legs: [KEPT.legs[0], KEPT.legs[1], { kind: "ride", trip: "t2", route: "4", stop: "102", routeName: "4", stopName: "Main St", scheduled: NOW + 1500, expected: NOW + 1500, isLive: false }, KEPT.legs[2]],
+    end: NOW + 2400, margin: 240
+  }
+  const byTime: Kept = { ...KEPT, id: "r3", by: NOW + 1800, margin: 300 }
+  const { shown, push } = world({ kept: new Map([walked, change, byTime].map(kept => [kept.id, kept])) })
+  const due = (reminder: string, time: number, band: number) =>
+    push(pushOf({ v: WAKE_VERSION, reminder, kind: "due", seen: { time, band, isLive: true, status: "coming" }, at: NOW }))
+  await due("r1", NOW + 300, 0)
+  await due("r2", NOW + 900 + 300, 60)
+  await due("r3", NOW + 900, 60)
+  expect(shown.map(({ title, options }) => `${title} | ${options.body}`)).toEqual([
+    "Leave in 5 min | 14 min walk to MUB, there 10:32 AM.",
+    "Leave in 15 min | Bus 3 at Kingsbury Hall 10:33 AM (5 min late) · 4 min walk · may miss the 10:38 AM change · Open notunh for another way to MUB.",
+    "Leave in 10 min | Bus 3 at Kingsbury Hall 10:28 AM · 4 min walk · MUB 10:38 AM, before your 10:43 AM"
+  ])
+  for (const { options: { body } } of shown)
+    expect(body!.length).toBeLessThan(160)
+  // Each is the reminder's own, and a later push of one replaces it
+  expect(shown.map(({ options }) => options.tag)).toEqual(["reminder-r1", "reminder-r2", "reminder-r3"])
+  await due("r2", NOW + 900 + 240, 60)
+  expect(shown.map(({ isOpen }) => isOpen)).toEqual([true, false, true, true])
+  expect(shown[3].options.body).toBe("Bus 3 at Kingsbury Hall 10:32 AM (4 min late) · 4 min walk · MUB 10:57 AM")
 })

@@ -19,14 +19,16 @@ const NEAR = 300
  * The watched run among the day's, with the stop's position on it: the trip at its scheduled time at the stop, or
  * failing the trip's id, as a timetable since swapped may rename it, the route's run due at the stop nearest then
  */
-export const runOf = (feed: Feed, runs: readonly Run[], { route, stop, trip, scheduled }: Watch) => {
+export const runOf = (feed: Feed, runs: readonly Run[], { at, run: watched }: Watch) => {
   let best: { run: Run, position: number, off: number } | undefined
+  if (!watched)
+    return best
   for (const run of runs)
-    if (run.trip.route === route)
+    if (run.trip.route === watched.route)
       run.trip.stops.forEach((index, position) => {
-        if (feed.stops[index].id !== stop)
+        if (feed.stops[index].id !== watched.stop)
           return
-        const off = Math.abs(run.base + run.trip.times[position] - scheduled) + (run.trip.id === trip ? 0 : NEAR)
+        const off = Math.abs(run.base + run.trip.times[position] - at) + (run.trip.id === watched.trip ? 0 : NEAR)
         if (off <= 2 * NEAR && off < (best?.off ?? Infinity))
           best = { run, position, off }
       })
@@ -41,16 +43,22 @@ export const runsAt = (feed: Feed, model: Model, fixes: readonly BusFix[], forec
 export const scheduledRuns = (feed: Feed, model: Model, now: number) =>
   buildRuns(feed, localDay(now * 1000), NO_FORECAST, model)
 
-/** What's said of a run with no forecast to be had, from the timetable alone: due as scheduled, give or take */
-export const scheduledOnly = ({ scheduled }: Watch, now: number): Seen =>
-  ({ time: scheduled, band: uncertainty(scheduled - now) * SCHEDULE_FACTOR, isLive: false, status: now > scheduled + GONE ? "passed" : "coming" })
+/**
+ * What's said of a watch with no forecast to be had: a run's bus due as scheduled, give or take, or a fixed time to
+ * leave, which is exactly that
+ */
+export const scheduledOnly = ({ at, run }: Watch, now: number): Seen =>
+  ({ time: at, band: run ? uncertainty(at - now) * SCHEDULE_FACTOR : 0, isLive: false, status: now > at + GONE ? "passed" : "coming" })
 
 /**
  * What the forecast says of a watch's run at an epoch second: when its bus leaves the stop, how early to be there for
  * it, whether a bus is on it, and whether it's still coming. A run the forecast hasn't is cancelled if the timetable
- * still has it, as the source then dropped it, and lost if it doesn't, as a timetable swapped since the watch was set
+ * still has it, as the source then dropped it, and lost if it doesn't, as a timetable swapped since the watch was
+ * set. A watch on no run is its fixed time, as there's nothing to forecast
  */
 export const seenOf = (feed: Feed, runs: readonly Run[], scheduled: () => readonly Run[], watch: Watch, now: number): Seen => {
+  if (!watch.run)
+    return scheduledOnly(watch, now)
   const found = runOf(feed, runs, watch)
   if (!found)
     return { ...scheduledOnly(watch, now), status: runOf(feed, scheduled(), watch) ? "cancelled" : "lost" }

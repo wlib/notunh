@@ -13,7 +13,7 @@ import { withIndexes, serviceDayStart, type Feed, type FeedData } from "../../sr
 import { extract, type Visit } from "../../src/transit/inference/events.mts"
 import { type Observations, type SampledPrediction, alwaysListening, listening } from "../../src/transit/observations/raw.mts"
 import { observationsOf } from "../observations.mts"
-import { NO_FORECAST } from "../../src/transit/observations/predictions.mts"
+import { NO_FORECAST, forecastOfSample } from "../../src/transit/observations/predictions.mts"
 import { FORECAST, buildRuns } from "../../src/transit/models/forecast.mts"
 import { sightingsFrom } from "../../src/transit/models/tracking.mts"
 import { LEADS, asModel, dayTypeAt, emptyScores, scored, type Model, type Scores } from "../../src/transit/models/model.mts"
@@ -30,8 +30,13 @@ export const FEED = "src/map/gtfs.json"
 export const ORIGINAL = "src/map/gtfs.zip"
 
 // The version of replaying and scoring here, bumped with any change to how a day is evaluated. 2 scores every
-// sample before a departure once, by its lead, and the model as what the map shows, tracked or not
-const REPLAY = 2
+// sample before a departure once, by its lead, and the model as what the map shows, tracked or not. 3 scores a
+// followed bus's forecast and its band by the lead it was forecast at, as the map and the Worker ask for the band,
+// rather than by how far off the departure turned out to be, and forecasts with the source's word as sampled then,
+// as the map has it. 4 goes by the source's word only once its sample was all in, scores the chain only where it
+// foretells the stop, not where the stop is handed off to the timetable, and keeps a forecast that has the bus
+// already past the stop out of the band calibration, as its band says nothing of a bus still to come
+const REPLAY = 4
 
 /** What an evaluation is of: forecasting, the replay that scores it, and the half-life the model is learned with */
 export const PREDICTOR = `forecast ${FORECAST}, replay ${REPLAY}, half-life ${HALF_LIFE}`
@@ -143,17 +148,30 @@ export const score = (model: Model, feed: Feed, visits: readonly Visit[], { fixe
     if (visit.trip !== undefined && trips.has(visit.trip) && visit.position !== undefined && visit.scheduled !== undefined)
       forecastTimes(visit.depart).forEach((at, i) => due.set(at, [...due.get(at) ?? [], { visit, lead: visit.depart - at, umo: visit.umo?.[i] }]))
 
+  // The source's word as the map had it then: the latest sample all in at or before each forecast time
+  const sampled = predictions.map(sample => ({ ...sample, word: forecastOfSample(sample) })).sort((a, b) => a.word.at - b.word.at)
+  let latest = -1
   for (const at of [...due.keys()].sort((a, b) => a - b)) {
     if (!isListening((at - LISTENED) * 1000, at * 1000))
       continue
-    const runs = groupBy(buildRuns(feed, localDay(at * 1000), NO_FORECAST, model, sightingsAt(at)), run => `${run.trip.id}@${run.base}`)
+    while (latest + 1 < sampled.length && sampled[latest + 1].word.at <= at)
+      latest++
+    const word = latest < 0 ? NO_FORECAST : sampled[latest].word
+    const runs = groupBy(buildRuns(feed, localDay(at * 1000), word, model, sightingsAt(at)), run => `${run.trip.id}@${run.base}`)
     for (const { visit, lead, umo } of due.get(at)!) {
       const trip = trips.get(visit.trip!)!
       const run = runs.get(`${trip.id}@${visit.scheduled! - trip.times[visit.position!]}`)?.[0]
       if (run) {
-        scored(scores, "model", lead, visit.depart - run.departures[visit.position!])
-        if (run.tracked)
-          scored(scores, "tracked", lead, visit.depart - run.departures[visit.position!], Math.sqrt(run.tracked.variances[visit.position!]))
+        const off = visit.depart - run.departures[visit.position!]
+        scored(scores, "model", lead, off)
+        // The chain, where it foretells the stop, by the lead it was forecast at, as the map and the Worker ask for
+        // its band. One that has the bus past the stop already is scored but calibrates nothing: on Oct 19 such
+        // forecasts were a fifth of the 1-minute bin and most of its error, the chain running confidently ahead of
+        // the bus on the Gables loop, and their ratios would have widened every bus's "due" band
+        const variance = run.tracked?.variances[visit.position!]
+        const predicted = run.departures[visit.position!] - at
+        if (variance !== undefined)
+          scored(scores, "tracked", predicted, off, predicted >= 0 ? Math.sqrt(variance) : undefined)
       }
       if (umo !== null && umo !== undefined)
         scored(scores, "umo", lead, visit.depart - umo)

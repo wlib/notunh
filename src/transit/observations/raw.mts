@@ -96,10 +96,18 @@ export type Coverage = {
   unrecorded: number[]
 }
 
+/** A minute's sample of predictions: the epoch millisecond its minute starts, when its last poll was answered, from version 2, and what Umo predicted */
+export type PredictionSample = {
+  at:          number,
+  /** Epoch milliseconds the sample was all in, as its last answered poll was, which is when the map could first have gone by it, from version 2 */
+  received?:   number,
+  predictions: SampledPrediction[]
+}
+
 /** Everything a span of rows saw, and when it was looking */
 export type Observations = {
   fixes:       BusFix[],
-  predictions: { at: number, predictions: SampledPrediction[] }[],
+  predictions: PredictionSample[],
   coverage:    Record<Source, Coverage>
 }
 
@@ -169,8 +177,15 @@ export const observe = (rows: readonly ObservedRow[]): Observations => {
       unrecorded.push(row.at)
     if (row.source === "buses")
       observed.fixes.push(...unpackFixes(row.at, row))
-    else
-      observed.predictions.push({ at: row.at, predictions: unpackPredictions(row.at, row) })
+    else {
+      // All in once the last poll that got anything was answered, as one that failed brought nothing
+      const answered = row.polls?.filter(([, seen]) => seen !== null) ?? []
+      observed.predictions.push({
+        at: row.at,
+        ...answered.length && { received: absolute(row.at, Math.max(...answered.map(([seconds]) => seconds))) },
+        predictions: unpackPredictions(row.at, row)
+      })
+    }
   }
   return observed
 }

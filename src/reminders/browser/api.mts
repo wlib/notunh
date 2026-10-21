@@ -1,6 +1,7 @@
 // The Worker's reminder routes (worker/api.mts, docs/reminders.md), each asked as the device by its secret. An
-// answer is done, refused for something of ours, which asking again won't mend, or unreachable, as offline or with
-// the Worker down, which is asked again when the map next loads or the phone comes back online
+// answer is done, refused for something of ours, which asking again won't mend, or unreachable, as offline, with the
+// Worker down, or asked too often from this address, which is asked again when the map next loads or the phone comes
+// back online
 
 import * as v from "valibot"
 import { getJson } from "../../shared/json.mts"
@@ -20,7 +21,7 @@ const UNREACHABLE: Answer = { kind: "unreachable" }
 export const key = async () =>
   fromBase64Url((await getJson("/api/push/key", { schema: v.object({ key: v.string() }) })).key)
 
-/** The Worker's answer to the device, by status: 5xx as unreachable, since it's worth asking again */
+/** The Worker's answer to the device, by status: 5xx, and 429 for too many asked from the address, as unreachable, since it's worth asking again; the rest, like 409 for too many reminders at once, as refused */
 const ask = async (method: "PUT" | "DELETE", path: string, { secret }: Device, body?: unknown) => {
   try {
     const response = await fetch(path, {
@@ -30,7 +31,7 @@ const ask = async (method: "PUT" | "DELETE", path: string, { secret }: Device, b
     })
     if (response.ok)
       return DONE
-    return response.status >= 500 ? UNREACHABLE : { kind: "refused" as const, why: `${response.status} ${await response.text()}` }
+    return response.status >= 500 || response.status === 429 ? UNREACHABLE : { kind: "refused" as const, why: `${response.status} ${await response.text()}` }
   }
   catch {
     return UNREACHABLE

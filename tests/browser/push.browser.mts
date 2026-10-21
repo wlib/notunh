@@ -31,7 +31,7 @@ test.skip(({ browserName }) => browserName !== "chromium", "Only Chromium can be
 
 /**
  * A ride the built site's own timetable offers, whichever data the build has, real or the fixtures' few routes: the
- * first trip of the timetable's first service day, from its first stop to the stop farthest from it, which a bus
+ * trip of the timetable's first service day going farthest, from its first stop to the stop farthest from it, which a bus
  * beats walking to, its next stop, which is walked to, a time a quarter hour before it leaves, and when it gets
  * there
  */
@@ -39,11 +39,18 @@ const rideOf = (dist: string) => {
   const { data } = buildOf(readFileSync(join(dist, "map/index.html"), "utf8"))
   const feed: FeedData = JSON.parse(readFileSync(join(dist, data.gtfs), "utf8"))
   for (let day = feed.start; day <= feed.end; day = addDays(day, 1)) {
-    const [trip] = feed.trips.filter(trip => isServiceActive(feed.services[trip.service], day)).sort((a, b) => a.times[0] - b.times[0])
-    if (!trip)
+    const rides = feed.trips
+      .filter(trip => isServiceActive(feed.services[trip.service], day))
+      .sort((a, b) => a.times[0] - b.times[0])
+      .map(trip => {
+        const from = feed.stops[trip.stops[0]]
+        const farthest = trip.stops.reduce((farthest, stop, position) => distance(from, feed.stops[stop]) > distance(from, feed.stops[trip.stops[farthest]]) ? position : farthest, 0)
+        return { trip, from, farthest, meters: distance(from, feed.stops[trip.stops[farthest]]) }
+      })
+    if (rides.length === 0)
       continue
-    const from = feed.stops[trip.stops[0]]
-    const farthest = trip.stops.reduce((farthest, stop, position) => distance(from, feed.stops[stop]) > distance(from, feed.stops[trip.stops[farthest]]) ? position : farthest, 0)
+    // The ride going farthest, the earliest of those, so a bus beats walking there however few routes the build has
+    const { trip, from, farthest } = rides.reduce((best, ride) => ride.meters > best.meters ? ride : best)
     const base = serviceDayStart(day)
     return { from: from.name, near: feed.stops[trip.stops[1]].name, to: feed.stops[trip.stops[farthest]].name, at: new Date(base + (trip.times[0] - 900) * 1000), arrives: base + arrivalTime(trip, farthest) * 1000 }
   }
@@ -216,7 +223,7 @@ test("a trip to be there by a time leaves as late as makes it, its reminder keep
   await page.getByRole("button", { name: "Save", exact: true }).click()
   await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0)
   await page.getByRole("button", { name: "Clear trip" }).click()
-  const goal = page.getByRole("list", { name: "Saved goals" }).getByRole("button", { name: new RegExp(`^${ride.to} · `) })
+  const goal = page.getByRole("list", { name: "Saved goals" }).getByRole("button", { name: `${ride.to} · ` })
   await expect(goal).toBeVisible()
   await goal.click()
   await expect(page.getByPlaceholder("Where to?")).toHaveValue(ride.to)
@@ -253,5 +260,5 @@ test("walking the whole way can be reminded of too, which the Worker watches as 
   await expect.poll(shown).toHaveLength(1)
   const [notification] = await shown()
   expect(notification.title).toMatch(/^Leave (now|in \d+ min)$/)
-  expect(notification.body).toMatch(new RegExp(`^\\d+ min walk to ${ride.near}, there .+, before your .+\\.$`))
+  expect(notification.body).toMatch(new RegExp(`^\\d+ min walk to ${RegExp.escape(ride.near)}, there .+, before your .+\\.$`))
 })

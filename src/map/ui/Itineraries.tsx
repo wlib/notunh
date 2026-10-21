@@ -4,7 +4,7 @@
 
 import { r } from "bruh/reactive"
 import { lateness, slack } from "../../transit/models/forecast.mts"
-import { type Itinerary, type Leg, type RideLeg, itineraryKey } from "../../routing/plan.mts"
+import { type Itinerary, type Leg, type RideLeg, wayKey } from "../../routing/plan.mts"
 import { ClockRange, Distance, Minutes, Plural } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import { RouteBadge, StopLink, Time, minutes, route } from "./common.tsx"
@@ -96,9 +96,9 @@ const Leave = ({ start }: { start: number }) =>
   })
 
 const ItineraryCard = ({ itinerary: it }: { itinerary: Itinerary }) => {
-  // By key rather than by object, as a replan's fresher copy of the chosen itinerary is still the chosen one
-  const key = itineraryKey(it)
-  const isSelected = r(() => state.itinerary.value !== undefined && itineraryKey(state.itinerary.value) === key)
+  // By the way it goes rather than by object, as a replan's fresher copy of the chosen itinerary is still the chosen one
+  const key = wayKey(it)
+  const isSelected = r(() => state.itinerary.value !== undefined && wayKey(state.itinerary.value) === key)
   return (
     <li class={{ itinerary: true, selected: isSelected }}>
       <button

@@ -65,3 +65,31 @@ test("a place is found by the start of its name with a typo in it", () =>
     }
   ))
 )
+
+test("of places matching alike, the nearer comes first, and the more often chosen", () => {
+  const far = place("Dorvane Hall", 43.2)
+  const near = place("Dorvane Hill", 43.136)
+  const search = searchOf([far, near])
+  expect(names(search("dorvane", { near: CENTER }))).toEqual(["Dorvane Hill", "Dorvane Hall"])
+  expect(names(search("dorvane", { near: far }))).toEqual(["Dorvane Hall", "Dorvane Hill"])
+  const nearby = searchOf([place("Dorvane Hall"), place("Dorvane Hill")])
+  const often = (chosen: string) => ({ uses: ({ name }: { name: string }) => name === chosen ? 8 : 0 })
+  expect(names(nearby("dorvane", often("Dorvane Hill")))).toEqual(["Dorvane Hill", "Dorvane Hall"])
+  expect(names(nearby("dorvane", often("Dorvane Hall")))).toEqual(["Dorvane Hall", "Dorvane Hill"])
+})
+
+test("a place named exactly as searched comes first however far or seldom chosen", () =>
+  fc.assert(fc.property(
+    gazetteer.chain(all => fc.record({
+      all:  fc.constant(all),
+      name: fc.constantFrom(...all),
+      lats: fc.array(fc.double({ min: 42, max: 44, noNaN: true }), { minLength: all.length, maxLength: all.length }),
+      uses: fc.array(fc.nat(1000), { minLength: all.length, maxLength: all.length })
+    })),
+    ({ all, name, lats, uses }) => {
+      const search = searchOf(all.map((name, i) => place(name, lats[i])))
+      const ranking = { near: CENTER, uses: ({ name: other }: { name: string }) => other === name ? 0 : uses[all.indexOf(other)] }
+      expect(names(search(name, ranking))[0]).toBe(name)
+    }
+  ))
+)

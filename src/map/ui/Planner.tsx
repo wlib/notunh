@@ -1,7 +1,8 @@
 /** @jsxImportSource bruh/browser */
 
 // Where from and where to, searched as you type among the places the map knows, and with Photon for addresses and
-// anywhere else
+// anywhere else. Places nearer the trip's other end, or you, come first, as do those chosen often on this device,
+// which an empty field suggests
 
 import { r, watch } from "bruh/reactive"
 import type { Place } from "../../places/search.mts"
@@ -9,6 +10,7 @@ import * as photon from "../../places/photon.mts"
 import { Icon } from "../../shell/ui.tsx"
 import { state } from "../state/map.mts"
 import { capture } from "../../shell/usage.tsx"
+import { remembered } from "../../shell/state.mts"
 
 type Field = "from" | "to"
 
@@ -19,17 +21,66 @@ const suggestions = r<Place[]>([])
 /** Index into the options, where 0 is "Your location" */
 const active = r(0)
 
-const options = r(() => [undefined, ...suggestions.value])
-
 // Fewer places than this found here, Photon is asked too
-const FEW = 3
+const FEW      = 3
+const FREQUENT = 5  // places chosen often, suggested before anything's typed
+const KEPT     = 50 // places remembered as chosen, the most often chosen kept
+
+type Chosen = Place & { uses: number }
+
+const isChosen = (value: unknown): value is Chosen => {
+  const { lat, lon, name, uses }: { lat?: unknown, lon?: unknown, name?: unknown, uses?: unknown } = Object(value)
+  return typeof lat === "number" && typeof lon === "number" && typeof name === "string" && typeof uses === "number"
+}
+
+/** The places chosen on this device, most often first, and how many times each */
+const chosen = remembered<Chosen[]>("map-chosen", stored => Array.isArray(stored) ? stored.filter(isChosen) : [])
+
+const isSamePlace = (a: Place, b: Place) =>
+  a.name === b.name && a.lat === b.lat && a.lon === b.lon
+
+/** Counts a place chosen, unless it's you or a dropped pin, which aren't places to choose again */
+const remember = (place: Place) => {
+  if (place.isYou || place.name === "Dropped pin")
+    return
+  const uses = 1 + (chosen.peek().find(other => isSamePlace(other, place))?.uses ?? 0)
+  const { lat, lon, name } = place
+  chosen.value = [{ lat, lon, name, uses }, ...chosen.peek().filter(other => !isSamePlace(other, place))]
+    .sort((a, b) => b.uses - a.uses)
+    .slice(0, KEPT)
+}
+
+/** The trip's other end from the field being typed in */
+const otherEnd = () => {
+  const field = editing.value
+  return field && state[field === "from" ? "to" : "from"].value
+}
+
+/** Suggestions, without the trip's other end, as a trip from somewhere to itself is no trip */
+const options = r(() => {
+  const other = otherEnd()
+  const isOther = (option: Place | undefined) =>
+    option ? other !== undefined && isSamePlace(option, other) : other?.isYou === true
+  // Derived rather than suggested, as the list shows the same moment the field is focused, and bruh 2.0.0-beta.5
+  // would miss suggestions written then
+  const places = query.value.trim()
+    ? suggestions.value
+    : chosen.value.slice(0, FREQUENT).map(({ lat, lon, name }) => ({ lat, lon, name }))
+  return [undefined, ...places].filter(option => !isOther(option))
+})
 
 /** Suggestions for what's typed: the places the map knows, and Photon's, once it's had a moment to type more */
 const suggest = () => {
   const text = query.value.trim()
-  const local = state.searchPlaces.value(text)
+  const other = otherEnd()
+  const fix = state.location.peek()
+  const local = state.searchPlaces.value(text, {
+    near: other && !other.isYou ? other : fix,
+    uses: place => chosen.peek().find(({ name }) => name === place.name)?.uses ?? 0
+  })
   suggestions.value = local
-  active.value = text ? 1 : 0
+  // The first place found, after "Your location" where that's suggested
+  active.value = text && !other?.isYou ? 1 : 0
   // Only Photon knows addresses
   const isAddress = /\d/.test(text)
   if (text.length < 3 || local.length >= FEW && !isAddress)
@@ -61,6 +112,7 @@ const choose = async (option: Place | undefined) => {
     return
   state[field].value = place
   state.selectedStop.value = undefined
+  remember(place)
   capture("place_chosen", { field, you: option === undefined })
   const focused = document.activeElement as HTMLElement | null
   focused?.blur()
@@ -143,11 +195,10 @@ export const Suggestions = () =>
         id={optionId(i)}
         role="option"
         aria-selected={r(() => active.value === i ? "true" : "false")}
-        onpointerdown={event => {
-          // Keep focus in the field so it doesn't blur before choosing
-          event.preventDefault()
-          choose(option)
-        }}
+        // Keeps focus in the field so it doesn't blur before choosing, which waits for the tap to end, as a drag that
+        // scrolls the list cancels it instead
+        onpointerdown={event => event.preventDefault()}
+        onpointerup={() => choose(option)}
       >
         {option ? option.name : <><Icon name="locate" /> Your location</>}
       </li>

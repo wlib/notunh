@@ -4,7 +4,9 @@
 import { type Point, distance } from "../geo/projection.mts"
 import { fuzzySearch, latinize } from "../shared/fuzzy.mts"
 
-const LIMIT = 6
+const LIMIT      = 6
+const PER_KM     = 1   // places a match drops for each km farther away
+const PER_DOUBLE = 1.5 // places a match rises for each doubling of the times it's been chosen
 
 /** Somewhere to go from or to */
 export type Place = {
@@ -14,6 +16,9 @@ export type Place = {
   /** Where you are, moving with you */
   isYou?: true
 }
+
+/** What a search ranks matches by beyond how well they match: how near `near` they are, and how often they've been chosen */
+export type Ranking = { near?: Point, uses?: (place: Place) => number }
 
 /**
  * Searches some places, each name once. Of the places sharing a name, the one nearest `near` is kept, so a chain's
@@ -30,16 +35,22 @@ export const createPlaceSearch = (places: readonly Place[], near: Point) => {
   const names = latinize(unique.map(place => place.name))
   const lower = names.map(name => name.toLowerCase())
 
-  /** The places a search finds, best first, and one named exactly as searched before all */
-  return (query: string): Place[] => {
+  /**
+   * The places a search finds, best first, and one named exactly as searched before all. A better match comes first
+   * unless another is much nearer or much more often chosen
+   */
+  return (query: string, { near: from = near, uses = () => 0 }: Ranking = {}): Place[] => {
     const needle = latinize(query.trim())
     if (!needle)
       return []
     const exact = needle.toLowerCase()
+    const rank = (index: number, i: number) =>
+      lower[index] === exact ? -Infinity
+        : i + PER_KM * distance(unique[index], from) / 1000 - PER_DOUBLE * Math.log2(1 + uses(unique[index]))
     return fuzzySearch(names, needle)
-      .map(({ index }) => index)
-      .sort((a, b) => Number(lower[b] === exact) - Number(lower[a] === exact))
+      .map(({ index }, i) => ({ index, rank: rank(index, i) }))
+      .sort((a, b) => a.rank - b.rank)
       .slice(0, LIMIT)
-      .map(index => unique[index])
+      .map(({ index }) => unique[index])
   }
 }

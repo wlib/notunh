@@ -21,19 +21,21 @@ import { probit } from "../../shared/normal.mts"
 import { type Pace, type Trajectory, type Waypoint, type Whereabouts, course } from "./movement.mts"
 import { type Day, addDays } from "../../shared/time.mts"
 import { groupBy } from "../../shared/group.mts"
+import { MAX_EARLY } from "../inference/events.mts"
 
 /**
  * The version of forecasting, bumped with any change to what it forecasts from a model and what's seen, so the bands
- * are calibrated afresh by evaluations of what it forecasts now (fit.mts)
+ * are calibrated afresh by evaluations of what it forecasts now (fit.mts). 2 chains on by block and timetable, on
+ * through further loops, and from an approach to a trip's start
  */
-export const FORECAST = 1
+export const FORECAST = 2
 
 // How far off a predicted departure may be, growing with how far ahead it is, until the model knows better. Live
 // predictions were seen off by up to a minute or two, and Umo's guesses for a connector's next loop by far more
 const UNCERTAINTY_NOW = 60           // s, even for a bus due now
 const UNCERTAINTY_RATE = 5           // s more per minute ahead
 const UNCERTAINTY_MAX = 240          // s
-const SCHEDULE_FACTOR = 2            // a time from the timetable, with no bus tracked, is this much more uncertain
+export const SCHEDULE_FACTOR = 2            // a time from the timetable, with no bus tracked, is this much more uncertain
 export const BOARDING = 30           // s, to get on a bus waiting at the stop for its scheduled time
 // How sure the slack before a bus should be that it hasn't left yet
 const SURE_P = 0.85
@@ -43,10 +45,17 @@ const SURE_P = 0.85
 // left so rather than put in order, as forcing them in order lost at short leads about what it gained at 30
 // minutes. The planner's connections are put in order (plan.mts)
 const HANDOFF = 1800 // s
-// A loop's bus goes on into a next loop of its route only if that's due to start at most this much after the bus
-// could, or this much before, for a bus running late. Replayed, going on into whichever loop is due nearest did no
-// better
-const CONTINUITY = { after: 1800, before: 3600 } // s
+// A bus goes on from the end of its run into the one due to start there soonest after it's due to end, by the
+// timetable, if that's within CONTINUITY; a run due to start a little before counts too, as blocks overlap by a
+// minute (LATE_START). Going on into whichever run was due nearest when the bus would get in, by the clock, sent a
+// bus running more than half a headway late into the run after the one it was about to run, which held out was
+// the whole of the model's error beyond 20 minutes ahead on the connectors
+const CONTINUITY = 1800 // s
+const LATE_START = 60   // s
+// The connectors run by headway, which chaining a bus on along its loops keeps to for about an hour: held out, the
+// chain beat their timetable by 160 to 390 s up to 70 minutes ahead, and lost to it beyond. Further ahead, a run's
+// times are its timetable shifted by how late the route runs, as a run with no bus followed is
+const HORIZON = 4200 // s
 
 /** A trip running on a specific service day */
 export type Run = {
@@ -212,12 +221,17 @@ const metersTo = (feed: Feed, trip: Trip, position: number) => {
 }
 
 /**
- * Chains each bus the map is following from where it was seen along its run, up to where a route that keeps to its
- * timetable is back on it, waiting for their scheduled times at the stops between its trips' ends where they likely
- * wait. The ends are left out: on a loop they're one stop, and waiting there is a layover. Where the run ends at the
- * start of a later one of its route's the same service day, the chain lays over and goes on into the one due to start
- * there nearest when the bus would, if it's due about then (CONTINUITY). Only the run a bus is seen on is live. The
- * one after is only what it's expected to run
+ * Chains each bus the map is following from where it was seen along its run, and on into the runs after it, each
+ * starting where the one before ends, as far ahead as chaining foretells better than the timetable (HANDOFF,
+ * HORIZON). The bus waits for its scheduled time at the stops between its trips' ends where it likely does; the ends
+ * are left out, as on a loop they're one stop, and waiting there is a layover. The run after is the one of its block
+ * due next, else the one due to start soonest after this one is due to end (CONTINUITY), by the timetable rather
+ * than the clock, so a bus running late goes on into the run it's late for and not the one after. Only the run a bus
+ * is seen on is live; those after are only what it's expected to run. A bus of a route that keeps to its timetable,
+ * tagged with a trip it's too far ahead of to have started, is on its way round to where it starts, as one
+ * deadheading from the depot or tagged with its next trip while finishing this one: it's chained on to the end as
+ * usual, and then around from the trip's start to the stops before where it is, rather than those being put in the
+ * past. A bus running the trip on an earlier trip's slot is foretold the same way at every stop ahead of it
  * @returns the runs chained
  */
 const applySightings = (feed: Feed, model: Model, sightings: readonly Sighting[], runs: readonly Run[], runsByTripId: ReadonlyMap<string, Run[]>) => {
@@ -231,9 +245,11 @@ const applySightings = (feed: Feed, model: Model, sightings: readonly Sighting[]
     if (found && found.offset < (seen.get(found.run)?.offset ?? Infinity))
       seen.set(found.run, { sighting, ...found })
   }
+  const lastOf = (run: Run) => run.trip.stops.length - 1
+  const isTimed = (run: Run) => run.trip.timepoints.length > 0
   for (const [run, { sighting, position }] of seen) {
     const { trip } = run
-    const end = trip.stops.length - 1
+    const seenAt = sighting.depart ?? sighting.arrive
     const waypoint = ({ trip, base, holdChance }: Run, position: number): Waypoint => ({
       stop:    feed.stops[trip.stops[position]].id,
       route:   trip.route,
@@ -243,52 +259,69 @@ const applySightings = (feed: Feed, model: Model, sightings: readonly Sighting[]
     })
     const along = (run: Run, from: number, to: number) =>
       Array.from({ length: to - from + 1 }, (_, i) => waypoint(run, from + i))
-    // Its way to the end of its run, where it lays over if another starts there
-    const own = along(run, position, end)
-    const layover = { ...own.at(-1)!, isFirst: true }
-    const ended = sighting.depart === undefined || position < end
-      ? course(model, [...own.slice(0, -1), layover], sighting, sighting.pace, sighting.at).departures.at(-1)!
-      : -Infinity
-    // The one the source has it starting next, else the one due to start nearest when it would
-    const isNext = (other: Run) => +(other.vehicle === sighting.vehicleId)
-    const gap = (other: Run) => Math.abs(other.departures[0] - ended)
-    const isDue = (other: Run) => -CONTINUITY.before <= other.departures[0] - ended && other.departures[0] - ended <= CONTINUITY.after
-    const next = runs
-      .filter(other =>
-        other.base === run.base && other.trip.times[0] > trip.times[0] && other.trip.route === trip.route && other.trip.stops[0] === trip.stops[end] && isDue(other) &&
-        !seen.has(other) && !tracked.has(other) && !other.isLive
-      )
-      .sort((a, b) => isNext(b) - isNext(a) || gap(a) - gap(b))[0]
-    const way = next ? [...own.slice(0, -1), layover, ...along(next, 1, next.trip.stops.length - 1)] : own
+
+    // The connectors run by headway, so their timetable says nothing of where a bus is on its loop
+    const isEarly = isTimed(run) && position > 0 && run.base + trip.times[position] - seenAt > MAX_EARLY
+    const end = lastOf(run)
+    let way: Waypoint[] = along(run, position, end)
+    // Each run on the way, the positions it's chained over, and the index of the first's waypoint
+    const chain = [{ run, from: position, to: end, first: 0 }]
+    if (isEarly) {
+      const round = distance(feed.stops[trip.stops[end]], feed.stops[trip.stops[0]]) * 1.25
+      way = [...way, { ...waypoint(run, 0), meters: round }, ...along(run, 1, position - 1)]
+      chain.push({ run, from: 0, to: position - 1, first: end - position + 1 })
+    }
+    for (let last = run; !isEarly;) {
+      const terminal = last.trip.stops[lastOf(last)]
+      const endsAt = last.base + arrivalTime(last.trip, lastOf(last))
+      const isNext = (other: Run) => +(other.vehicle === sighting.vehicleId)
+      const isBlock = (other: Run) => +(last.trip.block !== undefined && other.trip.block === last.trip.block)
+      const gap = (other: Run) => other.base + other.trip.times[0] - endsAt
+      const next = runs
+        .filter(other =>
+          other.base === last.base && other.trip.stops[0] === terminal && other.trip.times[0] > last.trip.times[0] &&
+          -LATE_START <= gap(other) && gap(other) <= CONTINUITY &&
+          !seen.has(other) && !tracked.has(other) && !chain.some(link => link.run === other) && !other.isLive
+        )
+        .sort((a, b) => isNext(b) - isNext(a) || isBlock(b) - isBlock(a) || gap(a) - gap(b))[0]
+      if (!next)
+        break
+      // Only while the bus would start it before its timetable foretells better
+      const extended = [...way.slice(0, -1), { ...waypoint(next, 0), isFirst: true }, ...along(next, 1, lastOf(next))]
+      const first = extended.length - lastOf(next) - 1
+      if (course(model, extended, sighting, sighting.pace, sighting.at).departures[first] - sighting.at >= (isTimed(next) ? HANDOFF : HORIZON))
+        break
+      way = extended
+      chain.push({ run: next, from: 0, to: lastOf(next), first })
+      last = next
+    }
     const chained = course(model, way, sighting, sighting.pace, sighting.at)
     const trajectory: Trajectory = { course: chained, line: lineOf(feed, trip), from: positionsOf(feed, trip)?.[position] ?? 0 }
-    const isTimed = trip.timepoints.length > 0
 
-    // Each run's times from the chain, from a waypoint on, past which a route that keeps to its timetable is back on
-    // it, even where the chain had it later at the stop before
-    const fill = (target: Run, from: number, to: number, first: number) => {
+    // Each run's times from the chain, up to where its timetable foretells better, even where the chain had it later
+    // at the stop before
+    for (const [c, { run: target, from, to, first }] of chain.entries()) {
+      const handoff = isTimed(target) ? HANDOFF : HORIZON
+      target.tracked ??= { trajectory, variances: target.trip.stops.map(() => chained.variances[first]), scale }
       for (let i = from; i <= to; i++) {
         const k = first + i - from
-        if (isTimed && chained.departures[k] - sighting.at >= HANDOFF)
+        if (chained.departures[k] - sighting.at >= handoff)
           scheduled(target, i, target.offset?.mean ?? 0)
         else
           [target.arrivals[i], target.departures[i]] = [chained.arrivals[k], chained.departures[k]]
+        target.tracked.variances[i] = chained.variances[k]
       }
-      target.tracked = { trajectory, variances: target.trip.stops.map((_, i) => chained.variances[first + Math.max(0, i - from)]), scale }
       target.vehicle = sighting.vehicleId
       tracked.add(target)
+      // It ends its run where it gets in, where the next starts there
+      if (chain[c + 1] && chain[c + 1].run !== target)
+        target.departures[to] = target.arrivals[to]
     }
-    fill(run, position, end, 0)
     run.isLive = true
-    // It had been everywhere before by when it was seen, and ends its run where it gets in, if it lays over after
+    // It had been everywhere before by when it was seen
     const late = lateness(run, position)
-    const seenAt = sighting.depart ?? sighting.arrive
-    for (let i = 0; i < position; i++)
+    for (let i = 0; i < (isEarly ? 0 : position); i++)
       scheduled(run, i, Math.min(late, seenAt - (run.base + trip.times[i])))
-    if (next) {
-      run.departures[end] = run.arrivals[end]
-      fill(next, 0, next.trip.stops.length - 1, end - position)
-    }
   }
   return tracked
 }

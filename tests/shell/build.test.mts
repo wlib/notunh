@@ -278,7 +278,7 @@ test("a page starts with a fallback when its data can't load the first time, if 
 
 test("a data file that doesn't fit its schema fails to load as any other would: first for the fallback, later keeping what was there", async () => {
   const page = await load(dataOf(["model"], ["AAAAAAAA"]))
-  page.answers.set("/assets/model-AAAAAAAA.json", async () => ({ version: 3, through: null }))
+  page.answers.set("/assets/model-AAAAAAAA.json", async () => ({ version: 4, through: null }))
   const model = await page.latest("model", Model, emptyModel)
   expect(model.peek()).toEqual(emptyModel())
   const learned = { ...emptyModel(), through: "2026-10-06" }

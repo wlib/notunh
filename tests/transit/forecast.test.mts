@@ -96,7 +96,7 @@ test("a route that keeps to its timetable is back on it half an hour ahead, howe
   expect(run.departures[5]).toBeCloseTo(BASE + times[5], -1)
 })
 
-test("a loop's bus goes on into the next loop starting where it ends, after laying over there, and only one bus runs a loop", () =>
+test("a loop's bus goes on into the loops after, each starting where the one before ends after a layover there, as far as an hour or so ahead, and only one bus runs a loop", () =>
   fc.assert(fc.property(fc.integer({ min: 60, max: 850 }), fc.boolean(), (layover, isTaken) => {
     // Loops starting every 20 minutes from 10:00, each 15 minutes long, with layovers learned at their first stop
     const feed = lineFeed(Array.from({ length: 6 }, (_, i) => ({ times: [0, 300, 600, 900].map(s => 36000 + i * 1200 + s) })), true)
@@ -106,15 +106,25 @@ test("a loop's bus goes on into the next loop starting where it ends, after layi
     expect(zoneEstimate(model, "R", "0", true)?.mean).toBeCloseTo(layover, 0)
     // A bus on T0's second stop, and maybe another already on the loop it would run next
     const alone = buildRuns(feed, TODAY, NO_FORECAST, model, [seen("1", BASE + 36300, false)])
-    const first = runOn(alone, "T0")
-    const next = alone.find(run => run !== first && run.vehicle === "V")!
-    // It leaves the next loop's first stop a layover after it gets in at the end of T0
-    expect(next.departures[0] - first.departures[3]).toBeCloseTo(layover, -1)
+    const own = alone.filter(run => run.vehicle === "V").sort((a, b) => a.trip.times[0] - b.trip.times[0])
+    expect(own[0]).toBe(runOn(alone, "T0"))
+    expect(own.length).toBeGreaterThanOrEqual(3)
+    own.slice(1).forEach((next, i) => {
+      // It leaves each next loop's first stop a layover after it gets in at the end of the one before, and only the
+      // loop it's seen on is live
+      expect(next.trip.id).toBe(`T${i + 1}`)
+      expect(next.departures[0] - own[i].departures[3]).toBeCloseTo(layover, -1)
+      expect(next.isLive).toBe(false)
+      expect(next.tracked).toBeDefined()
+    })
+    // Beyond about an hour ahead, a loop is its timetable
+    for (const run of alone.filter(run => run.base === BASE && run.vehicle === undefined))
+      expect(run.departures[0] - run.trip.times[0] - BASE).toBe(0)
     if (isTaken) {
-      const taken = seen("1", next.departures[1], false, { vehicleId: "W", tripId: next.trip.id })
+      const taken = seen("1", own[1].departures[1], false, { vehicleId: "W", tripId: own[1].trip.id })
       const runs = buildRuns(feed, TODAY, NO_FORECAST, model, [seen("1", BASE + 36300, false), taken])
-      expect(runOn(runs, next.trip.id).vehicle).toBe("W")
-      expect(runs.filter(run => run.vehicle === "V").length).toBe(2)
+      expect(runOn(runs, own[1].trip.id).vehicle).toBe("W")
+      expect(runs.filter(run => run.vehicle === "V").map(run => run.trip.id)).not.toContain(own[1].trip.id)
     }
   }))
 )
@@ -212,5 +222,43 @@ test("the stop list, the planner, and the drawn bus agree on when a followed bus
         expect(leaving.departure).toBe(run.departures[p])
       expect(connections.find(connection => connection.position === p - 1)?.arrival ?? run.arrivals[p]).toBe(run.arrivals[p])
     }
+  }))
+)
+
+test("a bus running late goes on into the loop it's late for, the next of its block or the next due by the timetable, not the one due nearest by the clock", () =>
+  fc.assert(fc.property(fc.integer({ min: 0, max: 1500 }), fc.boolean(), (late, hasBlocks) => {
+    // Loops every 20 minutes from 10:00, each 15 minutes long, alternating between two blocks
+    const feed = lineFeed(Array.from({ length: 8 }, (_, i) => ({ times: [0, 300, 600, 900].map(s => 36000 + i * 1200 + s), ...hasBlocks && { block: `B${i % 2}` } })), true)
+    // On T2's second stop, that much late
+    const runs = buildRuns(feed, TODAY, NO_FORECAST, learned(300, 0), [seen("1", BASE + 36000 + 2 * 1200 + 300 + late, false, { tripId: "T2" })])
+    const own = runs.filter(run => run.vehicle === "V").sort((a, b) => a.trip.times[0] - b.trip.times[0])
+    expect(own[0].trip.id).toBe("T2")
+    // Its block's next loop is T4; without blocks, T3 is the one due to start as T2 is due to end
+    expect(own[1].trip.id).toBe(hasBlocks ? "T4" : "T3")
+    // However late, each loop after starts a layover after the one before gets in
+    own.slice(1).forEach((next, i) => expect(next.departures[0]).toBeGreaterThanOrEqual(own[i].arrivals[3]))
+  }))
+)
+
+test("a bus of a timetabled route tagged with a trip it's far ahead of is chained on to the end and then around to the stops before it, and a headway route's is just early", () =>
+  fc.assert(fc.property(fc.integer({ min: 1000, max: 3000 }), fc.boolean(), (early, isTimed) => {
+    // A loop whose trip starts at 10:00 and takes 25 minutes, with timepoints if timetabled
+    const feed = lineFeed([{ times: [0, 300, 600, 900, 1200, 1500].map(s => 36000 + s), timepoints: isTimed ? [0, 3] : [] }], true)
+    // Seen leaving the fourth stop that much before the trip's time there, tagged with it
+    const at = BASE + 36000 + 900 - early
+    const run = runOn(buildRuns(feed, TODAY, NO_FORECAST, learned(300, 0), [seen("3", at, false)]), "T0")
+    expect(run.tracked).toBeDefined()
+    // The stops ahead are minutes away either way
+    expect(run.departures[4] - at).toBeLessThan(600)
+    if (isTimed)
+      // It's on its way round to where the trip starts: the stops before it come after the end, in order
+      for (let i = 0; i < 3; i++) {
+        expect(run.departures[i]).toBeGreaterThan(run.departures[5])
+        if (i < 2)
+          expect(run.departures[i + 1]).toBeGreaterThanOrEqual(run.departures[i])
+      }
+    else
+      // A headway route's timetable says nothing of where its bus is, so it had been at the stops before
+      expect(run.departures[2]).toBeLessThanOrEqual(at)
   }))
 )

@@ -5,7 +5,7 @@ How the map knows where each bus is, when it'll leave each stop, and how to get 
 ## Inputs
 
 - **Live**: the Umo IQ rider API (`api.prd-1.iq.live.umoiq.com/v2.0/riders/agencies/unh`). No key and open CORS, so browsers poll it directly: vehicles every 5 s, predictions every 30 s for routes with a bus out. It 403s once a URL passes about 1 KB, so stop lists are chunked. `src/transit/observations/umo.mts` is the only code that reads Umo's shape.
-- **Timetable**: Wildcat Transit's GTFS feed on National RTAP, converted to `src/map/gtfs.json` nightly. Umo's trip and stop ids match it. Learning stores each newly acquired feed in the Worker (`/api/feeds`). A day is replayed against the timetable in effect then (`inEffect` in `scripts/map/replay.mts`): the last acquired by the day's end whose own dates don't exclude the day. Before any acquisition, it's the first whose dates name the day; with none, the day is folded in as unobserved. No effective date is ever made up.
+- **Timetable**: Wildcat Transit's GTFS feed on National RTAP, converted to `src/map/gtfs.json` nightly, with each trip's block, the trips one bus runs in a day. Umo's trip and stop ids match it. Learning stores each newly acquired feed in the Worker (`/api/feeds`). A day is replayed against the timetable in effect then (`inEffect` in `scripts/map/replay.mts`): the last acquired by the day's end whose own dates don't exclude the day. Before any acquisition, it's the first whose dates name the day; with none, the day is folded in as unobserved. No effective date is ever made up.
 - **History**: the Worker stores every minute of fixes and predictions, and Observations archives each day losslessly ([storage.md](storage.md)). These raw samples are the source of truth; visits and models are readings of them.
 
 ## The location model
@@ -41,14 +41,14 @@ Resetting pace after a break, per-time-of-day pace per bus, and a mixture model 
 
 `src/transit/models/forecast.mts` produces every departure shown.
 
-- **A followed bus** is forecast along its course; how much longer it stays at a stop depends on how long it's been there. Where its trip ends at the start of a later trip of its route, it continues through a layover into the trip due nearest when it could start (or Umo's next), within 30 min after or 60 min before. That continuation is expected, not live, until seen. Of two buses on one trip, the one nearer its time runs it.
-- **Timetabled routes** (3 and 4, which mark timepoints) are forecast from the timetable shifted by how late the route runs, from 30 min ahead on. Runs with no bus followed are shifted likewise.
+- **A followed bus** is forecast along its course; how much longer it stays at a stop depends on how long it's been there. Where its trip ends at the start of a later trip, it continues through a layover into the next trip of its GTFS block, else the trip due to start there soonest after its own is due to end, by the timetable rather than the clock (so a bus running late goes on into the trip it's late for, not the one after), within 30 min; Umo's word on which trip it runs next comes first. It goes on so from trip to trip for as long as that foretells better than the timetable: about 70 min on the headway routes. Those continuations are expected, not live, until seen. Of two buses on one trip, the one nearer its time runs it. A bus of a timetabled route tagged with a trip it's more than 15 min ahead of is on its way round to where it starts, or running it on an earlier trip's slot: it's chained on to the end as usual and then around to the stops before it, rather than those being put in the past.
+- **Timetabled routes** (3 and 4, which mark timepoints) are forecast from the timetable shifted by how late the route runs, from 30 min ahead on. Runs with no bus followed, and the headway routes beyond 70 min, are shifted likewise.
 - **Headway routes** with no bus followed show how often buses come and how soon the next likely does, rather than timetable times.
 - **Umo's predictions** assign buses to trips and cancel runs, and set times only for a bus or route the model can't follow. Umo's schedule-based start guesses are ignored.
 
 A run's times aren't forced into order. The planner's connections never go back in time (`buildConnections`), which a property test checks.
 
-Held out a day at a time on Oct 7 to 19, the median error of a followed bus's departures went from 60, 126, and 202 s to 28, 50, and 75 s at 1, 5, and 10 minutes ahead.
+Held out a day at a time on Oct 7 to 19, the median error of a followed bus's departures went from 60, 126, and 202 s to 28, 50, and 75 s at 1, 5, and 10 minutes ahead. Replayed forward on Oct 8 to 19, the mean error of what the map shows for every departure is below the timetable's and Umo's at every lead from 1 to 60 minutes (86, 148, 204, 269, 363, and 435 s at 1, 5, 10, 20, 30, and 60 minutes, against the timetable's 505 s and Umo's 117, 189, 271, 364, 419, and 394 s on the departures it predicted); before the continuation and start fixes it was worse than both from 30 minutes on.
 
 ## The learned model
 
@@ -70,9 +70,9 @@ Keyed by stop and route ids (which last across timetables, unlike trip ids), the
 
 Sparse estimates lean on broader ones (`src/transit/models/estimates.mts`). An empty model has none, and the map falls back on built-in constants. Learning bounds (a leg over 10 min, a stop over 15 min) are documented in `fit.mts`.
 
-**Scoring.** Each day is replayed (`scripts/map/replay.mts`) at 1, 3, 5, 10, 20, 30, and 60 minutes before each departure, using the fixes the map would have seen in poll order, against Umo's prediction and the timetable. Moments the Worker wasn't listening aren't scored. How many standard deviations the model was off sizes the planner's slack. Bump `FORECAST` (`forecast.mts`) with any forecasting change and `REPLAY` (`replay.mts`) with any scoring change.
+**Scoring.** Each day is replayed (`scripts/map/replay.mts`) at every 5-minute sample from a minute to just over an hour before each departure, using the fixes the map would have seen in poll order, each forecast scored once at the nearest of 1, 3, 5, 10, 20, 30, and 60 minutes by how far ahead it was made. The `model` column is what the map would have shown for the departure, a followed bus's chain or the shifted timetable, so it's scored on the same departures as the `schedule` column; `tracked` is the chain alone, and `umo` Umo's prediction sampled then. Moments the Worker wasn't listening aren't scored. How many standard deviations the chain was off sizes the planner's slack. Bump `FORECAST` (`forecast.mts`) with any forecasting change and `REPLAY` (`replay.mts`) with any scoring change.
 
-**Versions.** The model's shape `version` is 3. A stored model of another version is refit from the first day observed.
+**Versions.** The model's shape `version` is 4. A stored model of another version is refit from the first day observed.
 
 **Learning.** `scripts/learn.mts` continues from the model D1 stores, folds in each whole day since, and stores the result compare-and-swap. A day it can't read stops it there; the next night carries on. A rebuild (`gh workflow run inputs.yml -f rebuild=true`, or `npm run model -- --store --rebuild`) runs to the end in one job, reusing matching derived data, and isn't stored if cut short. A model of a new version is stored however far it gets.
 

@@ -197,7 +197,8 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
       ...arrivals.some((arrival, i) => arrival !== times[i]) ? { arrivals } : {},
       ...noPickup.length ? { noPickup } : {},
       ...noDropOff.length ? { noDropOff } : {},
-      timepoints: stopTimes.flatMap((stopTime, i) => stopTime.timepoint === "1" ? [i] : [])
+      timepoints: stopTimes.flatMap((stopTime, i) => stopTime.timepoint === "1" ? [i] : []),
+      ...trip.block_id ? { block: trip.block_id } : {}
     }
   })
 

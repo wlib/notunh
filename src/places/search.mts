@@ -5,8 +5,11 @@ import { type Point, distance } from "../geo/projection.mts"
 import { fuzzySearch, latinize } from "../shared/fuzzy.mts"
 
 const LIMIT      = 6
-const PER_KM     = 1   // places a match drops for each km farther away
-const PER_DOUBLE = 1.5 // places a match rises for each doubling of the times it's been chosen
+// A match ranks by how far down uFuzzy's order it is, from 0 for the best to MATCH for the worst, as its order among
+// many alike, like every place named "… Hall", says little. Nearer and more often chosen places then rise above it
+const MATCH      = 10
+const PER_KM     = 1 // for each km farther away
+const PER_DOUBLE = 5 // for each doubling of the times it's been chosen
 
 /** Somewhere to go from or to */
 export type Place = {
@@ -44,10 +47,11 @@ export const createPlaceSearch = (places: readonly Place[], near: Point) => {
     if (!needle)
       return []
     const exact = needle.toLowerCase()
+    const found = fuzzySearch(names, needle)
     const rank = (index: number, i: number) =>
       lower[index] === exact ? -Infinity
-        : i + PER_KM * distance(unique[index], from) / 1000 - PER_DOUBLE * Math.log2(1 + uses(unique[index]))
-    return fuzzySearch(names, needle)
+        : MATCH * i / found.length + PER_KM * distance(unique[index], from) / 1000 - PER_DOUBLE * Math.log2(1 + uses(unique[index]))
+    return found
       .map(({ index }, i) => ({ index, rank: rank(index, i) }))
       .sort((a, b) => a.rank - b.rank)
       .slice(0, LIMIT)

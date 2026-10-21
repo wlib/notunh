@@ -2,8 +2,9 @@
 
 // Where from and where to, searched as you type among the places the map knows, and with Photon for addresses and
 // anywhere else. Places nearer the trip's other end, or you, come first, as do those chosen often on this device,
-// which an empty field suggests. Under them, whether to leave now or to be there by a time, and the goals saved on
-// this device, each a place and a time to be there by, which a tap plans from where you are
+// which an empty field suggests. Under them, whether to leave now or to be there by a time. Above, the reminders set
+// on this phone (Remind.tsx), and the trips saved on this device, each a place and a time to be there by, which a
+// tap plans from where you are
 
 import { r, watch } from "bruh/reactive"
 import type { Place } from "../../places/search.mts"
@@ -13,6 +14,7 @@ import { state } from "../state/map.mts"
 import { capture } from "../../shell/usage.tsx"
 import { remembered } from "../../shell/state.mts"
 import { Time } from "./common.tsx"
+import { Reminders } from "./Remind.tsx"
 import { HOUR, addDays, atClock, hhmm, localDay } from "../../shared/time.mts"
 
 type Field = "from" | "to"
@@ -104,7 +106,7 @@ const suggest = () => {
   }
 }
 
-/** A goal saved on this device: a place, and a time of day on Durham's clock to be there by */
+/** A trip saved on this device, as a goal: a place, and a time of day on Durham's clock to be there by */
 type Saved = Place & { by: string }
 
 const isSaved = (value: unknown): value is Saved => {
@@ -284,16 +286,16 @@ const When = () => {
       </button>
       {time}
       {r(() => to.value !== undefined && by.value !== undefined && !isSaved.value &&
-        <button type="button" class="chip" onclick={save}>Save</button>
+        <button type="button" class="chip" onclick={save}><Icon name="star" /> Save trip</button>
       )}
     </div>
   )
 }
 
-/** The goals saved here, shown while no trip is planned: a tap plans getting there by its time from where you are */
+/** The trips saved here, shown while no trip is planned: a tap plans getting there by its time from where you are */
 const Goals = () =>
   r(() => !state.to.value && goals.value.length > 0 &&
-    <ul class="goals chips" aria-label="Saved goals">
+    <ul class="goals chips" aria-label="Saved trips">
       {goals.value.map(goal =>
         <li>
           <button
@@ -306,7 +308,7 @@ const Goals = () =>
               capture("goal_opened")
             }}
           >
-            {goal.name} · <Next time={goal.by} />
+            <Icon name="star" /> {goal.name} · <Next time={goal.by} />
           </button>
           <button type="button" class="clear" aria-label={`Forget ${goal.name}`} onclick={() => goals.value = goals.peek().filter(other => other !== goal)}>
             <Icon name="close" />
@@ -320,6 +322,7 @@ export const Planner = () => {
   // As long as the planner's shown, which is as long as the page
   watch([query], suggest)
   return <>
+    <Reminders />
     <Goals />
     <form class="planner" onsubmit={event => event.preventDefault()}>
       <div class="planner-fields">

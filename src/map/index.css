@@ -352,7 +352,49 @@ body {
   display: none;
 }
 
-/* Goals saved on this device, above the planner while no trip is planned */
+/* Reminders set on this phone, above the planner, each a row leading to its trip, marked by the accent apart from
+   the saved trips' chips */
+
+.reminders {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reminders li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline-start: 0.6rem;
+  border-inline-start: 3px solid var(--accent);
+  border-radius: var(--radius-s);
+  background: var(--surface-raised);
+  font-size: 0.85rem;
+}
+
+.reminders .icon-bell {
+  color: var(--accent);
+}
+
+.reminder {
+  flex: 1;
+  min-inline-size: 0;
+  padding: 0.5rem 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  text-wrap: pretty;
+}
+
+.reminder-set strong {
+  font-weight: 600;
+}
+
+/* Trips saved on this device, above the planner while no trip is planned */
 
 .goals {
   margin: 0;

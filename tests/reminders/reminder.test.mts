@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs"
 import { gunzipSync } from "node:zlib"
 import {
   type Kept, type Leg, type Reminder, HEADS_UP, HEADS_UPS, MAX_LEAD, MIN_LEAD, NOT_LIVE, STATES, TOO_SOON,
-  delayOf, firstRide, isTooSoon, leadTime, leaveAt, meaningOf, reminderOf, replanned, textOf, walkOf, watchOf
+  delayOf, firstRide, isCurrent, isTooSoon, leadTime, leaveAt, meaningOf, reminderOf, replanned, textOf, walkOf, watchOf
 } from "../../src/reminders/reminder.mts"
 import { type Wake, KINDS, WAKE_VERSION, pushOf } from "../../src/reminders/watch.mts"
 import { type FeedData, withIndexes } from "../../src/transit/feed.mts"
@@ -187,6 +187,15 @@ test("bus in 10 min, 8 min walk, 1 min band: the phone wakes at least the heads-
   // Default: the 8 min walk and 5 min heads-up, to the half minute; 2 min: no later than 2 min before leaving
   expect(wakes).toEqual([120, 300, 600, 900].map(headsUp => Math.ceil((walk + headsUp) / 30) * 30 - walk))
   expect(isTooSoon({ start: NOW + 600 + HEADS_UP + TOO_SOON + 1, headsUp: HEADS_UP }, NOW)).toBe(false)
+})
+
+test("a reminder is listed while its trip is still to end and it isn't being cancelled, and once either is past it's not", () => {
+  fc.assert(fc.property(reminder, fc.integer({ min: NOW - 600, max: NOW + 10_000 }), (kept, now) => {
+    expect(isCurrent(kept, now)).toBe(kept.state !== "cancelling" && kept.end > now)
+    expect(isCurrent({ ...kept, state: "cancelling" }, now)).toBe(false)
+    expect(isCurrent({ ...kept, state: "set" }, kept.end)).toBe(false)
+    expect(isCurrent({ ...kept, state: "set" }, kept.end - 1)).toBe(true)
+  }))
 })
 
 test("a trip to leave for within the heads-up and a minute is too soon to remind of, and one later isn't", () => {

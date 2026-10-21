@@ -102,6 +102,10 @@ export const leadTime = ({ walk, isLive, headsUp }: { walk: number, isLive: bool
 export const isTooSoon = ({ start, headsUp }: Pick<Reminder, "start" | "headsUp">, now: number) =>
   start - now <= headsUp + TOO_SOON
 
+/** Whether a kept reminder is still one to show: not being cancelled, and of a trip not yet over */
+export const isCurrent = ({ state, end }: Pick<Kept, "state" | "end">, now: number) =>
+  state !== "cancelling" && end > now
+
 /**
  * A kept trip planned again as of `now`, from the ways there now: its own way if that's still offered, else the
  * best. None where that doesn't get there by its time, as the ways fall back to leaving now when nothing makes it,

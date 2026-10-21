@@ -10,6 +10,7 @@ import { startMap } from "./state/map.mts"
 import { AppTitle, Icon } from "../shell/ui.tsx"
 import { Planner, Suggestions, editing } from "./ui/Planner.tsx"
 import { Itineraries } from "./ui/Itineraries.tsx"
+import { open as openReminder } from "./ui/Remind.tsx"
 import { StopView } from "./ui/StopView.tsx"
 import { RouteList, Status } from "./ui/RouteList.tsx"
 import { PlaceCard } from "./ui/cards.tsx"
@@ -118,12 +119,8 @@ if (link !== null)
   history.replaceState(history.state, "", globalThis.location.pathname)
 void loadKept().then(async () => {
   const reminder = link === null ? undefined : kept.peek().get(link)
-  if (reminder) {
-    from.value = reminder.from.isYou ? undefined : reminder.from
-    by.value = reminder.by
-    await directTo(reminder.to)
-    selected.value = reminder.way
-  }
+  if (reminder)
+    await openReminder(reminder)
   if (!kept.peek().size)
     return
   const isReady = await Promise.race([Promise.all([located, heard]).then(() => true), new Promise<false>(resolve => setTimeout(resolve, REPLAN_WAIT_MS, false))])

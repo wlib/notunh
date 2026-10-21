@@ -7,9 +7,9 @@ import { distance } from "../../src/geo/projection.mts"
 import { type StopPredictions, forecastOf } from "../../src/transit/observations/umo.mts"
 import { BOARDING, type Run, buildRuns as runsOf, lateness, slack, spread, uncertainty } from "../../src/transit/models/forecast.mts"
 import {
-  ALTERNATIVES, HORIZON, MIN_TIME_SAVED, MIN_TRANSFER_GAIN,
-  buildConnections, cost, isWalkOffered, itineraryKey, plan, planBy, rides, scan, walkBy, walkOnly,
-  type Itinerary
+  ALTERNATIVES, HORIZON, WALK_RELUCTANCE,
+  buildConnections, cost, dominates, itineraryKey, plan, planBy, rides, scan, walkOnly,
+  type Itinerary, type RideLeg
 } from "../../src/routing/plan.mts"
 import type { Place } from "../../src/places/search.mts"
 import {
@@ -116,20 +116,23 @@ const scenario = feed.chain(feed =>
   )
 )
 
-// The earliest arrival over every itinerary with at most two rides (or one), by brute force, leaving each boarding
-// the slack the planner needs: a walk's allowance, how unsure getting off the last bus is, and the bus's own
+/** When an itinerary feels like it gets there: when it does, with the walk from its last bus counted as walking feels */
+const feltEnd = (itinerary: Itinerary) => {
+  const walk = itinerary.legs.at(-1)!
+  return itinerary.end + (WALK_RELUCTANCE - 1) * (walk.end - walk.start)
+}
+
+// The itinerary with at most two rides (or one) that feels soonest there, by brute force, leaving each boarding the
+// slack the planner needs: a walk's allowance, how unsure getting off the last bus is, and the bus's own. When it
+// feels there, and when it is
 const bruteForce = (feed: Feed, runs: Run[], from: Place, to: Place, start: number, maxRides = 2) => {
-  let best = Infinity
+  let best = { felt: Infinity, end: Infinity }
   const stops = feed.stops
 
   const finish = (stop: number, time: number) => {
-    if (estimatedMeters(stops[stop], to) <= MAX_ACCESS_WALK)
-      best = Math.min(best, time + walkSeconds(estimatedMeters(stops[stop], to)))
-    stops.forEach((other, i) => {
-      const meters = estimatedMeters(stops[stop], other)
-      if (i !== stop && meters <= MAX_TRANSFER_WALK && estimatedMeters(other, to) <= MAX_ACCESS_WALK)
-        best = Math.min(best, time + walkSeconds(meters) + walkSeconds(estimatedMeters(other, to)))
-    })
+    const walk = walkSeconds(estimatedMeters(stops[stop], to))
+    if (estimatedMeters(stops[stop], to) <= MAX_ACCESS_WALK && time + walk * WALK_RELUCTANCE < best.felt)
+      best = { felt: time + walk * WALK_RELUCTANCE, end: time + walk }
   }
 
   const rides = function * (ready: (stop: number) => number) {
@@ -217,13 +220,7 @@ const walksOf = (feed: Feed) => {
   return walksCache.get(feed)!
 }
 
-// Rounding walk times to the second can make a detour via a stop look a second or two quicker
-const beatsWalking = (feed: Feed, from: Place, to: Place, start: number, end: number) =>
-  end < walkOnly(walksOf(feed), from, to, start).end - 2
-
-// When riding only ties walking somewhere along the way, scan rightly prefers walking there,
-// which is the walk-only option and not a bus itinerary, so these properties are about buses that help
-test("scan finds valid itineraries, with the slack every boarding needs, at least as early as any with two rides", () =>
+test("scan finds a valid itinerary, with the slack every boarding needs, whenever a bus gets there, feeling there no later than any with two rides", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
     const itinerary = scan(feed, walksOf(feed), runs, buildConnections(runs, start), from, to, start, { now: start })
@@ -231,42 +228,54 @@ test("scan finds valid itineraries, with the slack every boarding needs, at leas
 
     if (itinerary)
       expectValid(feed, itinerary, from, to, start)
-    if (beatsWalking(feed, from, to, start, best)) {
+    if (best.felt < Infinity) {
       expect(itinerary).toBeDefined()
-      expect(itinerary!.end).toBeLessThanOrEqual(best + 1e-6)
+      expect(feltEnd(itinerary!)).toBeLessThanOrEqual(best.felt + 1e-6)
     }
   }))
 )
 
-test("plan suggests valid, distinct buses that feel better than walking, best first", () =>
+/** What plan and planBy both promise of their options: valid, each way once, none beating another on every count, best first */
+const expectOptions = (feed: Feed, options: Itinerary[], from: Place, to: Place, now: number, by?: number) => {
+  expect(options.length).toBeLessThanOrEqual(ALTERNATIVES)
+  for (const option of options)
+    expectValid(feed, option, from, to, now)
+  expect(new Set(options.map(itineraryKey)).size).toBe(options.length)
+  for (const a of options)
+    for (const b of options)
+      expect(dominates(a, b)).toBe(false)
+  options.slice(1).forEach((option, i) => expect(cost(option, now, by)).toBeGreaterThanOrEqual(cost(options[i], now, by)))
+}
+
+/** Whether a bus itinerary walks less than the whole way, which is the least plan and planBy ask of one */
+const savesWalking = (feed: Feed, itinerary: Itinerary, from: Place, to: Place) =>
+  itinerary.legs.reduce((meters, leg) => meters + (leg.kind === "walk" ? leg.meters : 0), 0) < walksOf(feed).between(from, to).meters
+
+test("plan suggests valid ways, each once, none beating another on every count, best first, and however long walking is, the way that feels soonest is among them or beaten, where it saves walking at all", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
-    const itineraries = plan(feed, walksOf(feed), runs, from, to, start)
-    const walking = walkOnly(walksOf(feed), from, to, start)
-    const buses = (itinerary: Itinerary) =>
-      itinerary.legs.flatMap(leg => leg.kind === "ride" ? [leg.run] : [])
-
-    expect(itineraries.length).toBeLessThanOrEqual(ALTERNATIVES)
-    for (const itinerary of itineraries) {
-      expectValid(feed, itinerary, from, to, start)
-      expect(cost(itinerary, start)).toBeLessThan(cost(walking, start) - MIN_TIME_SAVED)
-    }
-    for (let i = 1; i < itineraries.length; i++)
-      expect(cost(itineraries[i], start)).toBeGreaterThanOrEqual(cost(itineraries[i - 1], start))
-    for (const a of itineraries)
-      for (const b of itineraries)
-        if (a !== b)
-          expect(buses(a)).not.toEqual(buses(b))
+    const options = plan(feed, walksOf(feed), runs, from, to, start)
+    expectOptions(feed, options, from, to, start)
+    for (const option of options)
+      expect(savesWalking(feed, option, from, to)).toBe(true)
+    const quickest = scan(feed, walksOf(feed), runs, buildConnections(runs, start), from, to, start, { now: start })
+    if (quickest && savesWalking(feed, quickest, from, to))
+      expect(options.some(option => itineraryKey(option) === itineraryKey(quickest) || dominates(option, quickest) || cost(option, start) <= cost(quickest, start))).toBe(true)
   }))
 )
 
-test("plan only changes buses to arrive well before one bus or walking could", () =>
+test("dominating is a strict order on what a rider weighs: nothing beats itself, and a way beaten by one that's beaten is beaten", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
-    const simpler = Math.min(bruteForce(feed, runs, from, to, start, 1), walkOnly(walksOf(feed), from, to, start).end)
-    for (const itinerary of plan(feed, walksOf(feed), runs, from, to, start))
-      if (rides(itinerary) > 1)
-        expect(itinerary.end + MIN_TRANSFER_GAIN).toBeLessThanOrEqual(simpler + 1e-6)
+    const connections = buildConnections(runs, start)
+    const ways = [0, 300, 600].flatMap(later => [true, false].map(direct => scan(feed, walksOf(feed), runs, connections, from, to, start + later, { now: start, direct }))).filter(way => way !== undefined)
+    for (const a of ways) {
+      expect(dominates(a, a)).toBe(false)
+      for (const b of ways)
+        for (const c of ways)
+          if (dominates(a, b) && dominates(b, c))
+            expect(dominates(a, c)).toBe(true)
+    }
   }))
 )
 
@@ -311,22 +320,21 @@ test("a run's connections keep a chronology however unevenly its stops are delay
   }))
 )
 
-test("plan's best option feels no worse than catching a bus from a nearer stop", () =>
+test("plan's best option feels no worse than catching a bus from a nearer stop, unless an option beats that on every count", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
     const connections = buildConnections(runs, start)
-    const [best] = plan(feed, walksOf(feed), runs, from, to, start)
+    const options = plan(feed, walksOf(feed), runs, from, to, start)
     const quickest = scan(feed, walksOf(feed), runs, connections, from, to, start, { now: start, direct: true })
-    fc.pre(best !== undefined && quickest !== undefined)
+    fc.pre(options.length > 0 && quickest !== undefined)
 
     const meters = quickest!.legs[0].kind === "walk" ? quickest!.legs[0].meters : 0
-    const walking = cost(walkOnly(walksOf(feed), from, to, start), start)
     feed.stops.forEach((stop, access) => {
       if (estimatedMeters(from, stop) >= meters)
         return
       const nearer = scan(feed, walksOf(feed), runs, connections, from, to, start, { now: start, direct: true, access })
-      if (nearer && cost(nearer, start) < walking - MIN_TIME_SAVED)
-        expect(cost(best, start)).toBeLessThanOrEqual(cost(nearer, start) + 1e-6)
+      if (nearer && !options.some(option => dominates(option, nearer)))
+        expect(cost(options[0], start)).toBeLessThanOrEqual(cost(nearer, start) + 1e-6)
     })
   }))
 )
@@ -493,99 +501,68 @@ test("a stop where buses turn out to wait for their time is held at", () => {
   expect(run.holdChance.map(isLikely)).toEqual([false, true, false])
 })
 
-/** Walking the whole way so as to be there by `by`, where that's an offer at all, which is what planBy weighs buses against */
-const walkOffered = (feed: Feed, from: Place, to: Place, by: number) => {
-  const walk = walkBy(walksOf(feed), from, to, by)
-  return isWalkOffered(walk.end - walk.start) ? walk : undefined
-}
+/** The buses an itinerary rides, by trip */
+const busesOf = (itinerary: Itinerary) =>
+  itinerary.legs.flatMap(leg => leg.kind === "ride" ? [leg.run.trip.id] : []).join(" ")
 
-/** Whether a bus itinerary feels better than walking so as to be there by `by`, as planBy keeps only those that do, or walking is no offer */
-const beatsWalkingBy = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, by: number, now: number) => {
-  const walk = walkOffered(feed, from, to, by)
-  return !walk || cost(itinerary, now, by) < cost(walk, now, by) - MIN_TIME_SAVED
-}
-
-/**
- * Over scans a minute apart that get there by `by`, as far ahead as planBy looks: the earliest arrival of any, the
- * latest start of those that beat walking so as to be there by `by`, which are the ones planBy keeps, and of those
- * on one bus, which it keeps whatever leaves after them, and the latest start on one bus of any
- */
+/** Over scans a minute apart to be there by `by`, as far ahead as planBy looks: the latest leaving of any that gets there in time saving walking, and on one bus */
 const scansBy = (feed: Feed, runs: Run[], from: Place, to: Place, by: number, now: number) => {
   const connections = buildConnections(runs, now, Math.max(now + HORIZON, by))
-  let [latest, latestDirect, latestSimple, earliest]: (number | undefined)[] = [undefined, undefined, undefined, undefined]
+  let [latest, latestDirect]: (Itinerary | undefined)[] = [undefined, undefined]
   for (let start = now; start <= by; start += 60)
     for (const direct of [false, true]) {
-      const found = scan(feed, walksOf(feed), runs, connections, from, to, start, { now, direct })
-      if (!found || found.end > by)
+      const found = scan(feed, walksOf(feed), runs, connections, from, to, start, { now, direct, by })
+      if (!found || found.end > by || !savesWalking(feed, found, from, to))
         continue
-      earliest = Math.min(earliest ?? Infinity, found.end)
-      if (direct)
-        latestSimple = Math.max(latestSimple ?? -Infinity, found.start)
-      if (beatsWalkingBy(feed, found, from, to, by, now)) {
-        latest = Math.max(latest ?? -Infinity, found.start)
-        if (direct)
-          latestDirect = Math.max(latestDirect ?? -Infinity, found.start)
-      }
+      if (found.start > (latest?.start ?? -Infinity))
+        latest = found
+      if (direct && found.start > (latestDirect?.start ?? -Infinity))
+        latestDirect = found
     }
-  return { latest, latestDirect, latestSimple, earliest }
+  return { latest, latestDirect }
 }
 
 // Planned from up to ten hours before the trip's buses, as a goal saved for tomorrow morning is tonight, which puts
 // them past HORIZON, and mostly from just before, as the brute force scans a minute at a time up to the time asked
 const earlier = fc.oneof({ weight: 3, arbitrary: fc.constant(0) }, fc.integer({ min: 0, max: 10 * 3600 }))
 
-test("planBy's options all arrive by the time asked with every boarding's slack, however far ahead that is, beat walking so as to be there then, latest start first, the first no earlier than any scan that does, and a later `by` never gives an earlier latest start while that still beats walking", () =>
-  fc.assert(fc.property(scenario, earlier, fc.integer({ min: 600, max: 5400 }), fc.integer({ min: 0, max: 1800 }), ({ feed, from, to, start }, earlier, ahead, later) => {
+test("planBy's options all arrive by the time asked with every boarding's slack, however far ahead that is, are what plan promises, and short of a full list have the latest-leaving bus that makes it, by the way of catching it that feels best", () =>
+  fc.assert(fc.property(scenario, earlier, fc.integer({ min: 600, max: 5400 }), ({ feed, from, to, start }, earlier, ahead) => {
     const runs = buildRuns(feed, TODAY, [])
     const now = start - earlier
     const by = start + ahead
     const options = planBy(feed, walksOf(feed), runs, from, to, by, now)
-    expect(options.length).toBeLessThanOrEqual(ALTERNATIVES)
-    for (const option of options) {
-      expectValid(feed, option, from, to, now)
+    expectOptions(feed, options, from, to, now, by)
+    for (const option of options)
       expect(option.end).toBeLessThanOrEqual(by)
-      expect(beatsWalkingBy(feed, option, from, to, by, now)).toBe(true)
-    }
-    options.slice(1).forEach((option, i) => expect(option.start).toBeLessThanOrEqual(options[i].start))
-    expect(new Set(options.map(itineraryKey)).size).toBe(options.length)
     const { latest, latestDirect } = scansBy(feed, runs, from, to, by, now)
     if (latest !== undefined)
       expect(options.length).toBeGreaterThan(0)
-    if (latestDirect !== undefined)
-      expect(options[0].start).toBeGreaterThanOrEqual(latestDirect)
-    // Unless a bus that makes the later time alone leaves within MIN_TRANSFER_GAIN of each change the first made
-    const laterOptions = planBy(feed, walksOf(feed), runs, from, to, by + later, now)
-    if (options.length && beatsWalkingBy(feed, options[0], from, to, by + later, now))
-      expect(laterOptions[0].start).toBeGreaterThanOrEqual(options[0].start - (rides(options[0]) - 1) * MIN_TRANSFER_GAIN)
+    if (latestDirect !== undefined && options.length < ALTERNATIVES)
+      expect(options.some(option => option.start >= latestDirect.start || busesOf(option) === busesOf(latestDirect))).toBe(true)
   }))
 )
 
-test("planBy only changes buses to leave well after one bus, or walking so as to be there by the time, could", () =>
-  fc.assert(fc.property(scenario, earlier, fc.integer({ min: 600, max: 5400 }), ({ feed, from, to, start }, earlier, ahead) => {
-    const runs = buildRuns(feed, TODAY, [])
-    const [now, by] = [start - earlier, start + ahead]
-    const { latestSimple } = scansBy(feed, runs, from, to, by, now)
-    const simpler = Math.max(latestSimple ?? -Infinity, walkOffered(feed, from, to, by)?.start ?? -Infinity)
-    for (const option of planBy(feed, walksOf(feed), runs, from, to, by, now))
-      if (rides(option) > 1)
-        expect(option.start).toBeGreaterThanOrEqual(simpler + MIN_TRANSFER_GAIN)
-  }))
-)
-
-// Route 3 from Kingsbury Hall out to Durham Road at Mast Road, 5 km off, on the timetable of tests/map/replay.test.mts
+// The timetable of tests/map/replay.test.mts: route 3 from Kingsbury Hall out to Durham Road at Mast Road, 5 km off,
+// and route Gables from the Gables apartments round campus by Kingsbury Hall
 const { feed: recorded }: { feed: FeedData } = JSON.parse(gunzipSync(readFileSync(new URL("../map/fixtures/buses.json.gz", import.meta.url))).toString())
 
-test("a time to be there by hours after the last bus still gets the last bus: a walk too long to offer is never weighed, however much earlier the bus is there", () => {
+/** The first day a trip's service runs */
+const serviceDayOf = (feed: Feed, trip: Trip) => {
+  let day = feed.start
+  while (!isServiceActive(feed.services[trip.service], day))
+    day = addDays(day, 1)
+  return day
+}
+
+test("a time to be there by hours after the last bus still gets the last bus first, however much earlier it's there", () => {
   const feed = withIndexes(recorded)
   const stopOf = (name: string) => feed.stops.findIndex(stop => stop.name === name)
   const [kingsbury, mast] = [stopOf("Kingsbury Hall"), stopOf("Durham Road @ Mast Road")]
   const from = { ...feed.stops[kingsbury], name: "Kingsbury Hall" }
   const to = { ...feed.stops[mast], name: "Mast Road" }
-  expect(isWalkOffered(walkSeconds(walksOf(feed).between(from, to).meters))).toBe(false)
   const through = feed.trips.filter(trip => trip.stops.lastIndexOf(mast) > 0)
-  let day = feed.start
-  while (!isServiceActive(feed.services[through[0].service], day))
-    day = addDays(day, 1)
+  const day = serviceDayOf(feed, through[0])
   const base = serviceDayStart(day) / 1000
   /** When the day's last bus gets to Mast Road itself; a later one gets within a walk of it an hour and a half on */
   const last = Math.max(...through.map(trip => base + trip.times[trip.stops.lastIndexOf(mast)]))
@@ -604,21 +581,85 @@ test("a time to be there by hours after the last bus still gets the last bus: a 
   }), { numRuns: 25 })
 })
 
-test("planBy finds nothing when no bus arrives in time, and by the first of plan's options' end it leaves no earlier than that option does", () =>
+/** The stop an itinerary's last bus gets off at, by name */
+const alightsAt = (feed: Feed, itinerary: Itinerary) =>
+  feed.stops[(itinerary.legs.findLast(leg => leg.kind === "ride") as RideLeg).run.trip.stops[(itinerary.legs.findLast(leg => leg.kind === "ride") as RideLeg).toPosition]].name
+
+// Gables C, a couple of minutes' walk from the Gables apartments stop, to Kingsbury Hall, a minute's walk from its
+// stop, which is the Gables bus's ninth, after Thompson Hall and Mitchell Way, both nearer the start of the ride
+// and several minutes' walk from the hall. Walking the whole way takes under twenty minutes, so the earliest
+// arrival at every stop near the hall is on foot, and the quickest way there gets off early where it rides at all
+test("from Gables C to Kingsbury Hall the Gables bus is offered, leaving now and to be there by a time, however long the wait, and ridden to the hall's own stop rather than got off early to walk", () => {
+  const feed = withIndexes(recorded)
+  const from = { lat: 43.1443, lon: -70.93756, name: "Gables C" }
+  const to = { lat: 43.13407, lon: -70.93489, name: "Kingsbury Hall" }
+  const kingsbury = feed.stops.findIndex(stop => stop.name === "Kingsbury Hall")
+  const gables = feed.trips.filter(trip => trip.route === "Gables" && trip.stops.includes(kingsbury))
+  const day = serviceDayOf(feed, gables[0])
+  const base = serviceDayStart(day) / 1000
+  const runs = buildRuns(feed, day, [])
+  const walk = walkOnly(walksOf(feed), from, to, base)
+  expect(walk.end - walk.start).toBeLessThan(20 * 60)
+  const isGables = (option: Itinerary) => option.legs.some(leg => leg.kind === "ride" && leg.run.trip.route === "Gables")
+  // From up to half an hour before each of the day's Gables buses but the last leaves, so that bus or the next is the
+  // one to catch, and the wait may be longer than the walk
+  fc.assert(fc.property(fc.constantFrom(...gables.slice(0, -1)), fc.integer({ min: 0, max: 1800 }), (trip, before) => {
+    const now = base + trip.times[0] - before
+    const options = plan(feed, walksOf(feed), runs, from, to, now)
+    expect(options.some(isGables)).toBe(true)
+    for (const option of options.filter(isGables))
+      expect(alightsAt(feed, option)).toBe("Kingsbury Hall")
+    // To be there by a time an hour on, the latest leaving may have to get off early to make it, and only then does
+    const by = now + 3600
+    const inTime = planBy(feed, walksOf(feed), runs, from, to, by, now)
+    expect(inTime.some(option => isGables(option) && alightsAt(feed, option) === "Kingsbury Hall")).toBe(true)
+    for (const option of inTime.filter(isGables)) {
+      const ride = option.legs.find(leg => leg.kind === "ride") as RideLeg
+      const onward = ride.run.arrivals[ride.run.trip.stops.indexOf(kingsbury)] + walkSeconds(estimatedMeters(feed.stops[kingsbury], to))
+      expect(alightsAt(feed, option) === "Kingsbury Hall" || onward > by).toBe(true)
+    }
+  }), { numRuns: 100 })
+})
+
+test("scan gets off where it feels soonest: at the stop nearer the end unless getting off early saves more than the walk it adds feels, or alone makes a time to be there by", () =>
+  fc.assert(fc.property(fc.integer({ min: 1, max: 9 }), fc.integer({ min: 30, max: 1500 }), (tenths, onward) => {
+    // Three stops a kilometer or so apart, the end between the last two, and the bus between them for `onward` seconds
+    const times = [8 * 3600, 8 * 3600 + 600, 8 * 3600 + 600 + onward]
+    const feed = lineFeed([{ times, timepoints: [] }])
+    const from = { ...CENTER, lat: CENTER.lat + 0.0001, name: "" }
+    const to = { ...CENTER, lat: CENTER.lat + 0.01 + tenths * 0.001, name: "" }
+    const runs = buildRuns(feed, TODAY, [])
+    const now = BASE + times[0] - 300
+    const connections = buildConnections(runs, now)
+    const [early, onward1] = [1, 2].map(stop => walkSeconds(estimatedMeters(feed.stops[stop], to)))
+    fc.pre(onward + onward1 * WALK_RELUCTANCE !== early * WALK_RELUCTANCE)
+    const isRiddenOn = onward + onward1 * WALK_RELUCTANCE < early * WALK_RELUCTANCE
+    const at = (by?: number) => scan(feed, walksOf(feed), runs, connections, from, to, now, { now, by })!
+    expect(alightsAt(feed, at())).toBe(isRiddenOn ? "Stop 2" : "Stop 1")
+    // Where only getting off early makes it in time, that's the way, and with nothing in time, the earliest way, late
+    const [offEarly, riddenOn] = [BASE + times[1] + early, BASE + times[2] + onward1]
+    const earliest = Math.min(offEarly, riddenOn)
+    expect(alightsAt(feed, at(earliest))).toBe(offEarly < riddenOn ? "Stop 1" : "Stop 2")
+    expect(at(earliest).end).toBe(earliest)
+    expect(at(earliest - 1).end).toBe(earliest)
+  }))
+)
+
+test("planBy finds nothing when no bus arrives in time, and by the first of plan's options' end, short of a full list, leaves no earlier than that option does", () =>
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
     expect(planBy(feed, walksOf(feed), runs, from, to, start, start)).toEqual([])
-    // A minute's steps find the earliest any bus gets there, to within what a step can miss, which nothing beats
-    const { earliest } = scansBy(feed, runs, from, to, start + HORIZON, start)
-    if (earliest !== undefined)
-      for (const option of planBy(feed, walksOf(feed), runs, from, to, earliest - 1, start))
-        expect(option.start).toBeLessThan(start + 60)
+    // The earliest any bus gets there, which a scan to be there by now, as nothing is, falls back to
+    const connections = buildConnections(runs, start)
+    const earliest = Math.min(...[false, true].map(direct => scan(feed, walksOf(feed), runs, connections, from, to, start, { now: start, direct, by: start })?.end ?? Infinity))
+    if (earliest < Infinity)
+      expect(planBy(feed, walksOf(feed), runs, from, to, earliest - 1, start)).toEqual([])
     const [best] = plan(feed, walksOf(feed), runs, from, to, start)
     if (!best)
       return
-    const [latest] = planBy(feed, walksOf(feed), runs, from, to, best.end, start)
-    expect(latest).toBeDefined()
-    expect(latest.start).toBeGreaterThanOrEqual(best.start)
-    expect(latest.end).toBeLessThanOrEqual(best.end)
+    const inTime = planBy(feed, walksOf(feed), runs, from, to, best.end, start)
+    expect(inTime.length).toBeGreaterThan(0)
+    if (inTime.length < ALTERNATIVES)
+      expect(Math.max(...inTime.map(option => option.start))).toBeGreaterThanOrEqual(best.start)
   }))
 )

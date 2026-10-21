@@ -128,12 +128,15 @@ const ItineraryCard = ({ itinerary: it }: { itinerary: Itinerary }) => {
   )
 }
 
-/** Walking the whole way, and once chosen, a reminder for it: leaving now, or so as to be there by the time asked */
-const WalkOption = () =>
+/**
+ * Walking the whole way, and once chosen, a reminder for it: leaving now, or so as to be there by the time asked.
+ * Before the buses where it feels better than the best of them, else after
+ */
+const WalkOption = ({ first }: { first: boolean }) =>
   r(() => {
     const option = state.walk.value
     const isSelected = r(() => state.selected.value === "walk")
-    return option &&
+    return option && option.isFirst === first &&
       <>
         <button
           type="button"
@@ -156,12 +159,13 @@ export const Itineraries = () =>
     {r(() => !state.makesIt.value && state.itineraries.value.length > 0 &&
       <p class="muted notice">Nothing gets there by <Time seconds={state.by.value!} /> · soonest first</p>
     )}
+    <WalkOption first={true} />
     {r(() =>
       state.itineraries.value.length
         ? <ul>
             {state.itineraries.value.map(it => <ItineraryCard itinerary={it} />)}
           </ul>
-        : <p class="muted">No good bus options in the next few hours.</p>
+        : <p class="muted">No bus gets there in the next few hours.</p>
     )}
-    <WalkOption />
+    <WalkOption first={false} />
   </section>

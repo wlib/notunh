@@ -3,7 +3,7 @@
 import { r, watch } from "bruh/reactive"
 import { ridePath } from "../../transit/shapes.mts"
 import { type Progress, type Walk, type Walks, isOffPath, walkOn, walkSeconds } from "../../routing/walks.mts"
-import { type Itinerary, type WalkLeg, isSameItinerary, isWalkOffered, plan, planBy, walkBy, walkOnly, wayKey } from "../../routing/plan.mts"
+import { type Itinerary, type WalkLeg, cost, isSameItinerary, isWalkOffered, plan, planBy, walkBy, walkOnly, wayKey } from "../../routing/plan.mts"
 import type { Place } from "../../places/search.mts"
 import { buildingAt } from "../../places/buildings.mts"
 import { type Line, sliceLine, toLine } from "../../geo/lines.mts"
@@ -73,7 +73,7 @@ export const createTrip = (
   /** Whether the ways shown get there by the time asked, which with none asked they do */
   const makesIt = r(() => by.value === undefined || itineraries.value.some(itinerary => itinerary.end <= by.value!))
 
-  /** Minutes and meters to walk the whole way, if worth suggesting */
+  /** Minutes and meters to walk the whole way, if worth suggesting, and whether it feels better than the best bus, to go first */
   const walk = r(() => {
     if (!from.value || !to.value)
       return
@@ -86,7 +86,10 @@ export const createTrip = (
       !best ||
       isWalkOffered(seconds) ||
       seconds <= 1.5 * (best.end - best.start)
-    return isWorthIt ? { minutes: Math.max(1, Math.round(seconds / 60)), meters } : undefined
+    if (!isWorthIt)
+      return
+    const isFirst = !best || cost(walkingTo(from.value, to.value, by.value), now.value, by.value) < cost(best, now.value, by.value)
+    return { minutes: Math.max(1, Math.round(seconds / 60)), meters, isFirst }
   })
 
   const itinerary = r((): Itinerary | undefined => {

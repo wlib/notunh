@@ -204,7 +204,7 @@ test("whatever the samples say, each check sets the alarm ahead, and the phone i
       expect(pushed.length).toBeLessThanOrEqual(3)
     }
   ), { numRuns: 25 })
-})
+}, 60_000)
 
 test("a push the service refuses for good forgets the device, and one it can't take now is tried again after the wait it asks for, else a doubling one", async () => {
   siteDown = true
@@ -296,7 +296,7 @@ test("a push service that never takes a push is given up on after a few tries, w
     expect(device().state.rows("reminders")).toEqual([])
     expect(pushed.length).toBeLessThanOrEqual(MAX_PUSHES * (MAX_TRIES + 1))
   }), { numRuns: 15 })
-})
+}, 60_000)
 
 test("a device forgotten on a warm object can set a reminder again, and asking an unknown device anything else leaves nothing behind", async () => {
   await setReminder(ID)

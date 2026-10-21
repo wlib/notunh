@@ -46,7 +46,9 @@ export type Trip = {
   noPickup?:  number[],
   noDropOff?: number[],
   /** Positions in stops where the bus waits for its scheduled time before going on, which the connectors don't */
-  timepoints: number[]
+  timepoints: number[],
+  /** The GTFS block: the trips one bus runs in a day, in order of their times, which it goes on into from one to the next */
+  block?:   string
 }
 
 /** The JSON written at build time, by its version and the days it runs, its contents taken on trust */

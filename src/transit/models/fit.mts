@@ -56,6 +56,7 @@ const scale = (model: Model, by: number): Model => {
     headways: scaledEach(model.headways, cells),
     scores: {
       model:    model.scores.model.map(tally => tally.map(x => x * by) as Tally),
+      tracked:  model.scores.tracked.map(tally => tally.map(x => x * by) as Tally),
       umo:      model.scores.umo.map(tally => tally.map(x => x * by) as Tally),
       schedule: model.scores.schedule.map(tally => tally.map(x => x * by) as Tally),
       ratios:   model.scores.ratios.map(counts => counts.map(x => x * by))

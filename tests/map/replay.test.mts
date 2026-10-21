@@ -18,7 +18,8 @@ const fixes = rows.filter(row => row.source === "buses").flatMap(row => unpackFi
 const samples = rows
   .filter(row => row.source === "predictions")
   .map(row => ({ at: row.at, predictions: unpackPredictions(row.at, { version: 0, samples: row.body as RawPrediction[], polls: null }) }))
-const visits = attachPredictions(extract(feed, fixes), samples)
+const visits = extract(feed, fixes)
+const predicted = attachPredictions(visits, samples)
 const DAY = "2026-10-07"
 
 test("real fixes show every bus going through its trip's stops in order, at plausible paces", () => {
@@ -41,7 +42,7 @@ test("real fixes show every bus going through its trip's stops in order, at plau
   // A connector's bus gets in at the end of a loop and lays over before the next
   expect(visits.filter(visit => visit.gotIn !== undefined && visit.position === 0).length).toBeGreaterThanOrEqual(3)
   // Umo was sampled predicting most of them
-  expect(visits.filter(visit => visit.umo).length / visits.length).toBeGreaterThan(0.5)
+  expect(predicted.filter(visit => visit.umo).length / visits.length).toBeGreaterThan(0.5)
 })
 
 test("the buses are replayed as the map got their fixes, each once a poll got it, and an older fix got after a newer one passed over", () => {
@@ -54,23 +55,32 @@ test("the buses are replayed as the map got their fixes, each once a poll got it
     expect(asGot(at + LAG / 1000)).toEqual(asTaken(at))
 })
 
-// How far off the model's forecasts were on the recording: mean absolute error in seconds at leads of 1, 3, 5, 10,
-// and 20 minutes. Changes to extraction or the model should only bring these down, or explain why. The 5- and
-// 10-minute leads rest on only 50 to 110 departures in this half hour, so a few seconds either way can be noise. The
-// 20-minute one rests on 7: following a bus from the stop it was first seen at, rather than the stop after, chains
-// one WestEdge bus into its next loop 14 minutes off, as the connectors' detours do, which held out cost nothing
-const MAE = [62, 116, 172, 192, 341]
+// How far off the chain's forecasts of followed buses were on the recording: mean absolute error in seconds at
+// leads of 1, 3, 5, 10, and 20 minutes, each lead scored at every 5-minute sample that far ahead. Changes to
+// extraction or the model should only bring these down, or explain why. The 5- and 10-minute leads rest on only 50
+// to 90 departures in this half hour, so a few seconds either way can be noise. From 5 minutes on, the chain also
+// covers the loops a bus goes on into, which with nothing learned yet lay over 10 s rather than the two minutes they
+// do, and so come out a few minutes early, still half the timetable's error
+const MAE = [65, 110, 215, 250, 415]
 
-test("forecasts from the model do no worse on the recording than they did", () => {
-  const scored = score(emptyModel(), feed, visits, fixes)
+test("forecasts from the model do no worse on the recording than they did, and what the map shows is never worse than the timetable", () => {
+  const observed = { fixes, predictions: samples }
+  const scored = score(emptyModel(), feed, visits, observed)
   LEADS.slice(0, MAE.length).forEach((_, i) => {
-    const [n, error] = scored.model[i]
+    const [n, error] = scored.tracked[i]
     expect(n).toBeGreaterThan(0)
     expect(error / n).toBeLessThanOrEqual(MAE[i])
   })
+  // Every departure is scored as the map would show it, which is the timetable where no bus is followed, so at the
+  // leads the half hour has followed buses at, it's never worse than the timetable
+  LEADS.forEach((_, i) => {
+    expect(scored.model[i][0]).toBe(scored.schedule[i][0])
+    if (scored.tracked[i][0] >= 20)
+      expect(scored.model[i][1]).toBeLessThanOrEqual(scored.schedule[i][1])
+  })
   // And having learned from it, better still
-  const learned = score(update(emptyModel(), DAY, visits, { predictor: PREDICTOR, scores: scored }), feed, visits, fixes)
-  expect(learned.model[0][1]).toBeLessThan(scored.model[0][1])
+  const learned = score(update(emptyModel(), DAY, visits, { predictor: PREDICTOR, scores: scored }), feed, visits, observed)
+  expect(learned.tracked[0][1]).toBeLessThan(scored.tracked[0][1])
 })
 
 test("a bus Umo predicts at a stop for two loops is matched to its next visit by the sooner prediction", () => {
@@ -80,7 +90,7 @@ test("a bus Umo predicts at a stop for two loops is matched to its next visit by
   const prediction = (minutes: number) =>
     ({ route: visit.route, stop: visit.stop, vehicle: visit.vehicle, trip: null, at: visit.depart * 1000 + minutes * 60_000, isLayover: false })
   for (const order of [[0, 40], [40, 0]]) {
-    const [matched] = attachPredictions([{ ...visit, umo: undefined }], [{ at, predictions: order.map(prediction) }])
+    const [matched] = attachPredictions([visit], [{ at, predictions: order.map(prediction) }])
     const times = matched.umo?.filter(time => time !== null) ?? []
     expect(times.length).toBeGreaterThan(0)
     expect(times.every(time => time === visit.depart)).toBe(true)

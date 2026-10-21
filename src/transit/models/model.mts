@@ -26,8 +26,10 @@ export type Cell = [n: number, sum: number, sum2: number]
 export type Tally = [n: number, error: number]
 
 export type Scores = {
-  /** From where the map would have seen the bus, chained along its trip */
+  /** What the map would have shown for the departure: a followed bus's chain where there was one, else the timetable shifted */
   model:    Tally[],
+  /** Of those, the departures a followed bus was chained to, alone */
+  tracked:  Tally[],
   /** Umo's own predictions */
   umo:      Tally[],
   /** The timetable, shifted by how late its route runs */
@@ -38,7 +40,7 @@ export type Scores = {
 
 /** The model as the build writes it, its statistics taken on trust once its version says what shape they're in */
 export const Model = v.object({
-  version:  v.literal(3),
+  version:  v.literal(4),
   through:  v.nullable(Day),
   /** log s from leaving one stop to getting to the next, by "route:from>to" stop ids, by context */
   legs:     objectOf<Record<string, (Cell | null)[]>>(),
@@ -85,10 +87,10 @@ const tallies = () =>
   LEADS.map((): Tally => [0, 0])
 
 export const emptyScores = (): Scores =>
-  ({ model: tallies(), umo: tallies(), schedule: tallies(), ratios: LEADS.map(() => Array(RATIOS).fill(0)) })
+  ({ model: tallies(), tracked: tallies(), umo: tallies(), schedule: tallies(), ratios: LEADS.map(() => Array(RATIOS).fill(0)) })
 
 export const emptyModel = (): Model => ({
-  version:  3,
+  version:  4,
   through:  null,
   legs:     {},
   lengths:  [0, 0, 0, 0, 0],

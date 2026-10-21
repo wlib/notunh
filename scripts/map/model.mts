@@ -55,7 +55,7 @@ const model = await learn("buses", new URL("src/map/model.json", STAGED), {
     )
     const predictor = { ...inputs, predictor: PREDICTOR, model: await contentHash(JSON.stringify(model)) }
     const evaluation = await derived("evaluation", day, predictor, async (): Promise<Evaluation> =>
-      ({ predictor: PREDICTOR, scores: score(model, timetable.feed, await visited(), observed.fixes, isListening) })
+      ({ predictor: PREDICTOR, scores: score(model, timetable.feed, await visited(), observed, isListening) })
     )
     console.log(`buses: ${day}, ${observed.fixes.length} fixes`)
     return fold(model, day, statistics, evaluation)

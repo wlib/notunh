@@ -23,8 +23,8 @@ export const EXTRACTOR = 4
 const MAX_VISIT = 1800      // s
 // Longer without a report, there's no telling what it did
 const MAX_SILENCE = 120_000 // ms
-// Further ahead of its timetable, a bus joining a trip partway is on its way to where it starts
-const MAX_EARLY = 900       // s
+/** Further ahead of its timetable, a bus joining a trip partway is on its way to where it starts, which forecasting chains it to */
+export const MAX_EARLY = 900 // s
 
 /** A visit flag: the bus was last seen still at the stop, so when it left is unknown, and depart is when it was last seen */
 export const INCOMPLETE = 2
@@ -63,9 +63,7 @@ export type Visit = {
   /** Of the drive from there, the share of its time it took to get a quarter, half, and three quarters of the way */
   profile?: number[],
   /** At the first stop of a trip, when it got in at the end of the one before */
-  gotIn?:  number,
-  /** Umo's predicted departure, as sampled at each of the model's LEADS before it left */
-  umo?:    (number | null)[]
+  gotIn?:  number
 }
 
 /** The index of the first of a bus's sorted fixes after an epoch millisecond, or their count */

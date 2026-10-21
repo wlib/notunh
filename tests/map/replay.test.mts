@@ -57,12 +57,15 @@ test("the buses are replayed as the map got their fixes, each once a poll got it
 })
 
 // How far off the chain's forecasts of followed buses were on the recording: mean absolute error in seconds at
-// leads of 1, 3, 5, 10, and 20 minutes, each lead scored at every 5-minute sample that far ahead. Changes to
-// extraction or the model should only bring these down, or explain why. The 5- and 10-minute leads rest on only 50
+// leads of 1, 3, 5, 10, and 20 minutes, each forecast at a 5-minute sample scored by the lead it was forecast at,
+// as the map and the Worker ask for its band, and only where the chain foretells the stop (REPLAY 4; with the
+// stops handed off to the timetable counted in, as REPLAY 3 had it, the 20-minute lead was 350 on 60 departures,
+// and by how far off the departure turned out to be, as before that, 65, 110, 215, 250, and 415). Changes to
+// extraction or the model should only bring these down, or explain why. The 5- to 20-minute leads rest on only 50
 // to 90 departures in this half hour, so a few seconds either way can be noise. From 5 minutes on, the chain also
 // covers the loops a bus goes on into, which with nothing learned yet lay over 10 s rather than the two minutes they
 // do, and so come out a few minutes early, still half the timetable's error
-const MAE = [65, 110, 215, 250, 415]
+const MAE = [65, 85, 130, 210, 355]
 
 test("forecasts from the model do no worse on the recording than they did, and what the map shows is never worse than the timetable", () => {
   const observed = { fixes, predictions: samples }
@@ -72,12 +75,14 @@ test("forecasts from the model do no worse on the recording than they did, and w
     expect(n).toBeGreaterThan(0)
     expect(error / n).toBeLessThanOrEqual(MAE[i])
   })
-  // Every departure is scored as the map would show it, which is the timetable where no bus is followed, so at the
-  // leads the half hour has followed buses at, it's never worse than the timetable
+  // Every departure is scored as the map would show it, which is the timetable where no bus is followed, short of
+  // the few Umo's word as sampled then had as not coming, which the map shows nothing for, so at the leads the half
+  // hour has followed buses at, it's never worse than the timetable
   LEADS.forEach((_, i) => {
-    expect(scored.model[i][0]).toBe(scored.schedule[i][0])
+    expect(scored.model[i][0]).toBeLessThanOrEqual(scored.schedule[i][0])
+    expect(scored.model[i][0]).toBeGreaterThanOrEqual(0.98 * scored.schedule[i][0])
     if (scored.tracked[i][0] >= 20)
-      expect(scored.model[i][1]).toBeLessThanOrEqual(scored.schedule[i][1])
+      expect(scored.model[i][1] / scored.model[i][0]).toBeLessThanOrEqual(scored.schedule[i][1] / scored.schedule[i][0])
   })
   // And having learned from it, better still
   const learned = score(update(emptyModel(), DAY, visits, { predictor: PREDICTOR, scores: scored }), feed, visits, observed)

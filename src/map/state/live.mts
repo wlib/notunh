@@ -110,6 +110,21 @@ export const createLive = ({ feed, model }: MapData, own: Own) => {
   // Keyed by the sorted route ids, so that a new bus going out refreshes right away, and nothing else does
   const liveRoutes = distinct(() => [...liveCounts.value.keys()].sort().join(" "))
 
+  /**
+   * Settled once Umo has answered for the buses and, with any out, for their predictions, or can't be reached, so a
+   * trip planned then is as live as it's going to be
+   */
+  const heard = new Promise<void>(resolve => {
+    const stop = watch(() => {
+      const isAnswered = listed.value.received !== undefined && (asked.value.received !== undefined || asked.value.isFailing || !liveRoutes.value)
+      if (isAnswered || isLiveDown.value) {
+        resolve()
+        queueMicrotask(stop)
+      }
+    })
+    own(stop)
+  })
+
   own(watch([liveRoutes, predictionPairs], () => {
     const routes = new Set(liveRoutes.value.split(" "))
     const pairs = predictionPairs.value.filter(pair => routes.has(pair.route))
@@ -130,5 +145,5 @@ export const createLive = ({ feed, model }: MapData, own: Own) => {
   /** The buses as the map draws them, each along its course */
   const drawn = drawing(model, followed, runs)
 
-  return { now, runningToday, lastUpdate, forecast, ageOf, isLiveDown, vehicles, liveCounts, fused, followed, sightings, runs, drawn }
+  return { now, runningToday, lastUpdate, forecast, ageOf, isLiveDown, heard, vehicles, liveCounts, fused, followed, sightings, runs, drawn }
 }

@@ -16,6 +16,7 @@ const dayFormat    = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE })
 const hourFormat   = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hour: "numeric", hourCycle: "h23" })
 const minuteFormat = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hour: "numeric", minute: "numeric", hourCycle: "h23" })
 const offsetFormat = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, timeZoneName: "longOffset" })
+const clockFormat  = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hour: "numeric", minute: "2-digit" })
 
 export const localDay = (ms: number): Day =>
   dayFormat.format(ms)
@@ -45,6 +46,24 @@ export const dayStart = (day: Day) => {
   const utc = Date.parse(`${day}T00:00:00Z`)
   return utc - offsetAt(utc - offsetAt(utc))
 }
+
+/**
+ * Epoch milliseconds of a time of day on Durham's clock, "HH:MM", on a day. The offset is the one in force at that
+ * time, found as dayStart finds midnight's, so an hour that the clocks skip or repeat lands an hour off at worst
+ */
+export const atClock = (day: Day, time: string) => {
+  const [hours, minutes] = time.split(":").map(Number)
+  const guess = dayStart(day) + (hours * 60 + minutes) * 60_000
+  return guess + offsetAt(dayStart(day)) - offsetAt(guess)
+}
+
+/** A moment as "HH:MM" on Durham's clock, as atClock takes it back and a time field holds it */
+export const hhmm = (ms: number) =>
+  `${String(Math.floor(localMinutes(ms) / 60)).padStart(2, "0")}:${String(localMinutes(ms) % 60).padStart(2, "0")}`
+
+/** A moment as read off Durham's clock, like "2:35 PM", where there's no element to format it (src/shell/intl.tsx) */
+export const clockOf = (ms: number) =>
+  clockFormat.format(ms)
 
 // A day's noon in UTC, which is on that day whatever the clocks do
 const noonOf = (day: Day) =>

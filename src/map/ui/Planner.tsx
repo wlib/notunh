@@ -2,7 +2,8 @@
 
 // Where from and where to, searched as you type among the places the map knows, and with Photon for addresses and
 // anywhere else. Places nearer the trip's other end, or you, come first, as do those chosen often on this device,
-// which an empty field suggests
+// which an empty field suggests. Under them, whether to leave now or to be there by a time, and the goals saved on
+// this device, each a place and a time to be there by, which a tap plans from where you are
 
 import { r, watch } from "bruh/reactive"
 import type { Place } from "../../places/search.mts"
@@ -11,6 +12,8 @@ import { Icon } from "../../shell/ui.tsx"
 import { state } from "../state/map.mts"
 import { capture } from "../../shell/usage.tsx"
 import { remembered } from "../../shell/state.mts"
+import { Time } from "./common.tsx"
+import { HOUR, addDays, atClock, hhmm, localDay } from "../../shared/time.mts"
 
 type Field = "from" | "to"
 
@@ -101,6 +104,30 @@ const suggest = () => {
   }
 }
 
+/** A goal saved on this device: a place, and a time of day on Durham's clock to be there by */
+type Saved = Place & { by: string }
+
+const isSaved = (value: unknown): value is Saved => {
+  const { lat, lon, name, by }: { lat?: unknown, lon?: unknown, name?: unknown, by?: unknown } = Object(value)
+  return typeof lat === "number" && typeof lon === "number" && typeof name === "string" && typeof by === "string" && /^\d\d:\d\d$/.test(by)
+}
+
+const goals = remembered<Saved[]>("map-goals", stored => Array.isArray(stored) ? stored.filter(isSaved) : [])
+
+/** Epoch seconds of a time of day, today as of a moment in epoch milliseconds, or tomorrow if that's already past */
+const nextAt = (time: string, now: number) => {
+  const today = atClock(localDay(now), time)
+  return (today > now ? today : atClock(addDays(localDay(now), 1), time)) / 1000
+}
+
+/** When a time of day next comes, as of now, said to be tomorrow's once today's is past */
+const Next = ({ time }: { time: string }) =>
+  r(() => {
+    const now = state.now.value * 1000
+    const at = nextAt(time, now)
+    return <><Time seconds={at} />{localDay(at * 1000) !== localDay(now) && " tomorrow"}</>
+  })
+
 /** undefined means the current location */
 const choose = async (option: Place | undefined) => {
   const field = editing.peek()
@@ -178,6 +205,9 @@ const PlaceInput = ({ field, label, placeholder }: { field: Field, label: string
           onpointerdown={event => event.preventDefault()}
           onclick={() => {
             place.value = undefined
+            // A time to be there by goes with where, so it's cleared along
+            if (field === "to")
+              state.by.value = undefined
             input.focus()
           }}
         >
@@ -212,10 +242,85 @@ const LocationNotice = () =>
                                   undefined
   )
 
+/** Leave now, or be there by a time: the time is today's at that hour, or tomorrow's once today's is past */
+const When = () => {
+  const { by, to } = state
+  const time: HTMLInputElement =
+    <input
+      type="time"
+      aria-label="Arrive by"
+      onchange={() => {
+        if (time.value)
+          by.value = nextAt(time.value, Date.now())
+      }}
+    />
+  watch([by], () => {
+    time.value = by.value === undefined ? "" : hhmm(by.value * 1000)
+  })
+  const isSaved = r(() => to.value !== undefined && by.value !== undefined && goals.value.some(goal => goal.name === to.value!.name && goal.by === hhmm(by.value! * 1000)))
+  const save = () => {
+    const place = to.peek()
+    if (!place || by.peek() === undefined)
+      return
+    const saved: Saved = { lat: place.lat, lon: place.lon, name: place.name, by: hhmm(by.peek()! * 1000) }
+    goals.value = [saved, ...goals.peek().filter(goal => !(goal.name === saved.name && goal.by === saved.by))]
+    capture("goal_saved")
+  }
+  return (
+    <div class="when" role="group" aria-label="When">
+      <button type="button" class="chip" aria-pressed={r(() => by.value === undefined ? "true" : "false")} onclick={() => by.value = undefined}>Leave now</button>
+      <button
+        type="button"
+        class="chip"
+        aria-pressed={r(() => by.value === undefined ? "false" : "true")}
+        onclick={() => {
+          // The next whole hour, until a time is picked
+          if (by.peek() === undefined)
+            by.value = nextAt(hhmm(Math.ceil(Date.now() / HOUR) * HOUR), Date.now())
+          time.focus()
+        }}
+      >
+        Arrive by
+      </button>
+      {time}
+      {r(() => to.value !== undefined && by.value !== undefined && !isSaved.value &&
+        <button type="button" class="chip" onclick={save}>Save</button>
+      )}
+    </div>
+  )
+}
+
+/** The goals saved here, shown while no trip is planned: a tap plans getting there by its time from where you are */
+const Goals = () =>
+  r(() => !state.to.value && goals.value.length > 0 &&
+    <ul class="goals chips" aria-label="Saved goals">
+      {goals.value.map(goal =>
+        <li>
+          <button
+            type="button"
+            class="chip"
+            onclick={() => {
+              state.from.value = undefined
+              state.by.value = nextAt(goal.by, Date.now())
+              void state.directTo({ lat: goal.lat, lon: goal.lon, name: goal.name })
+              capture("goal_opened")
+            }}
+          >
+            {goal.name} · <Next time={goal.by} />
+          </button>
+          <button type="button" class="clear" aria-label={`Forget ${goal.name}`} onclick={() => goals.value = goals.peek().filter(other => other !== goal)}>
+            <Icon name="close" />
+          </button>
+        </li>
+      )}
+    </ul>
+  )
+
 export const Planner = () => {
   // As long as the planner's shown, which is as long as the page
   watch([query], suggest)
   return <>
+    <Goals />
     <form class="planner" onsubmit={event => event.preventDefault()}>
       <div class="planner-fields">
         <PlaceInput field="from" label="From" placeholder="Search or tap the map" />
@@ -229,6 +334,7 @@ export const Planner = () => {
       >
         <Icon name="swap" />
       </button>
+      <When />
     </form>
     <LocationNotice />
   </>

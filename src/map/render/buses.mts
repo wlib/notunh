@@ -1,20 +1,40 @@
 // Buses drawn where we expect them to be now. Each moves along its course (movement.mts) from where the location
 // model had it at its last fix, which is the course forecasting chained it along (forecast.mts), so it's at each stop
-// when its forecast says. Every leg, stop, and wait is the course's. Each new fix or course is eased into without
-// backing up, and a bus fades the longer it's been since a fix. The easing is the drawing's alone: what's learned of
-// how the buses run comes from the fixes, never from where one was drawn
+// when its forecast says. Every leg, stop, and wait is the course's. A new fix or course moves where the model has
+// the bus, and the drawn bus follows it (smoothed): slowing, never stopping while the model drives and never backing
+// up, where it had got ahead, and hurrying, never faster than a bus, where it had fallen behind. On Oct 15's fixes
+// that leaves it standing while the model moves 0 s an hour against 481 s for waiting on the model, and closing at
+// 12 m/s over the model's speed at most against 62. The smoothing is the drawing's alone: what's learned of how the
+// buses run comes from the fixes, never from where one was drawn
 
 import { watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, Map as MapLibre } from "maplibre-gl"
 import { routeLabel, type Feed } from "../../transit/feed.mts"
 import { along, pointAt } from "../../geo/lines.mts"
 import type { Coordinates } from "../../geo/projection.mts"
+import type { RouteLine } from "../../transit/shapes.mts"
 import type { Drawn } from "../state/following.mts"
 
 const MAX_EXTRAPOLATION = 45 // s of driving guessed past a fix
-const BLEND_MS = 1500        // to ease from where a bus was drawn to where a new fix puts it
-const MAX_LAG = 300         // m off a new fix along the line, past which the bus jumps there rather than easing
 const FRAME_MS = 50          // ~20 fps is plenty for buses
+/** s the drawn bus takes to close most of its gap to the model, m/s over the model's speed it may hurry by at most, and m off the model past which it jumps there */
+export const SMOOTHING = 4
+export const CATCH_UP = 12
+export const MAX_LAG = 300
+/** s between frames past which the page was hidden, so the bus jumps to where the model has it rather than driving the gap */
+const PAUSE = 5
+
+/**
+ * Where a bus is drawn a frame on: from `drawn` meters along its line toward the model's `modeled` meters, which
+ * moves at `speed` m/s, over `dt` seconds. Never backwards, never slower than half the model's speed while ahead
+ * of it, never more than CATCH_UP faster than the model while behind, and closing the gap over about SMOOTHING
+ * seconds, or over a frame longer than that, so a long frame never overshoots. At the model's point it moves with
+ * the model
+ */
+export const smoothed = (drawn: number, modeled: number, speed: number, dt: number) => {
+  const v = Math.min(speed + CATCH_UP, Math.max(drawn > modeled ? speed / 2 : 0, speed + (modeled - drawn) / Math.max(SMOOTHING, dt)))
+  return drawn + Math.max(0, v) * dt
+}
 
 /** How sure we are that a bus is where it's drawn, from how many seconds ago it reported */
 export const confidence = (age: number) =>
@@ -24,13 +44,11 @@ type Fix = {
   /** The bus as last reported, where on its route that is, and its course from there, if it's on its route */
   bus: Drawn,
   /** Epoch milliseconds the GPS fix was taken, by our clock */
-  at: number,
-  /** Meters along the line that the bus was drawn ahead (+) or behind (-) of this course when it came */
-  lag: number,
-  /** How far the drawn bus was from this fix's model off the line, eased away */
-  correction: Coordinates,
-  correctedAt: number
+  at: number
 }
+
+/** Where a bus was last drawn: meters along its line, laps and all, as of epoch milliseconds */
+type Smoothed = { line: RouteLine, distance: number, at: number }
 
 /**
  * Meters along its line that a fix's bus has likely got to by now. The course is timed from the fix, by our clock,
@@ -41,26 +59,25 @@ const modeledDistance = ({ bus: { location, course }, at }: Fix, now: number) =>
     ? location!.distance
     : course.from + course.course.distanceAt(location!.at + Math.min(MAX_EXTRAPOLATION, Math.max(0, now - at) / 1000))
 
-const drawn = (fix: Fix, now: number) => {
-  const remaining = Math.max(0, 1 - (now - fix.correctedAt) / BLEND_MS)
-  const ease = ({ point, bearing }: { point: Coordinates, bearing: number }) => ({
-    point: [point[0] + fix.correction[0] * remaining, point[1] + fix.correction[1] * remaining] as Coordinates,
-    bearing
-  })
-
-  // Off its route there's no telling where it's headed, so it stays where it reported
+/**
+ * Where a bus is drawn now, following the model from where it was last drawn: along its line toward where the model
+ * has it, or there outright when it's first drawn, on another line, hidden a while, or further off than MAX_LAG,
+ * as a new course can put it. Off its route there's no telling where it's headed, so it stays where it reported
+ */
+const drawn = (fix: Fix, was: Smoothed | undefined, now: number) => {
   const { vehicle, location } = fix.bus
   if (!location)
-    return { ...ease({ point: [vehicle.lon, vehicle.lat], bearing: vehicle.heading ?? 0 }), distance: 0 }
+    return { point: [vehicle.lon, vehicle.lat] as Coordinates, bearing: vehicle.heading ?? 0, smoothed: undefined }
 
   const modeled = modeledDistance(fix, now)
-  // A bus drawn ahead of its fix waits there until the model catches up, rather than reversing. One drawn behind
-  // hurries forward along the street
+  const dt = was ? (now - was.at) / 1000 : Infinity
+  // The short way around a loop, in the model's own laps
+  const gap = was?.line === location.line ? along(location.line, was.distance - modeled) : Infinity
   const distance =
-    fix.lag > 0
-      ? Math.max(modeled, modeledDistance(fix, fix.correctedAt) + fix.lag)
-      : modeled + fix.lag * remaining
-  return { ...ease(pointAt(location.line, distance)), distance }
+    dt > PAUSE || Math.abs(gap) > MAX_LAG ? modeled :
+    dt <= 0                              ? modeled + gap :
+                                           smoothed(modeled + gap, modeled, (modeled - modeledDistance(fix, was!.at)) / dt, dt)
+  return { ...pointAt(location.line, distance), smoothed: { line: location.line, distance, at: now } }
 }
 
 /** @returns where a bus is drawn right now, for things that follow it */
@@ -73,6 +90,7 @@ export const animateBuses = (
   focus: Reactive<{ vehicles?: ReadonlySet<string>, route?: string }>
 ) => {
   let fixes = new Map<string, Fix>()
+  const smoothing = new Map<string, Smoothed>()
   const positions = new Map<string, Coordinates>()
 
   watch(() => {
@@ -80,33 +98,9 @@ export const animateBuses = (
     const now = Date.now()
     const next = new Map<string, Fix>()
     for (const [id, bus] of buses.value) {
-      const { vehicle, location, course } = bus
       const previous = fixes.get(id)
-      const isSameFix = previous?.bus.vehicle === vehicle
-      if (isSameFix && previous.bus.course === course) {
-        next.set(id, previous)
-        continue
-      }
-      const fix: Fix = {
-        bus,
-        at: isSameFix ? previous.at : now - vehicle.secsSinceReport * 1000,
-        lag: 0,
-        correction: [0, 0],
-        correctedAt: now
-      }
-      if (previous) {
-        const was = drawn(previous, now)
-        if (location && previous.bus.location?.line === location.line) {
-          // Along the street, the short way around a loop
-          const lag = along(location.line, was.distance - modeledDistance(fix, now))
-          fix.lag = Math.abs(lag) <= MAX_LAG ? lag : 0
-        }
-        else {
-          const is = drawn(fix, now).point
-          fix.correction = [was.point[0] - is[0], was.point[1] - is[1]]
-        }
-      }
-      next.set(id, fix)
+      const isSameFix = previous?.bus.vehicle === bus.vehicle
+      next.set(id, isSameFix && previous.bus.course === bus.course ? previous : { bus, at: isSameFix ? previous.at : now - bus.vehicle.secsSinceReport * 1000 })
     }
     fixes = next
   })
@@ -127,7 +121,11 @@ export const animateBuses = (
       // Gone from a newer timetable
       if (!route)
         return []
-      const { point, bearing } = drawn(fix, now)
+      const { point, bearing, smoothed } = drawn(fix, smoothing.get(vehicle.id), now)
+      if (smoothed)
+        smoothing.set(vehicle.id, smoothed)
+      else
+        smoothing.delete(vehicle.id)
       const isFocused =
         focused      ? focused.has(vehicle.id) :
         focusedRoute ? focusedRoute === route.id :
@@ -149,6 +147,9 @@ export const animateBuses = (
         geometry: { type: "Point", coordinates: point }
       }]
     })
+    for (const id of smoothing.keys())
+      if (!fixes.has(id))
+        smoothing.delete(id)
     map.getSource<GeoJSONSource>("vehicles")?.setData({ type: "FeatureCollection", features })
   }
   requestAnimationFrame(render)

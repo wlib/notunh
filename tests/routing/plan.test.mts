@@ -1,12 +1,14 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { canAlight, canBoard, serviceDayStart, withIndexes, type Feed, type FeedData, type Trip } from "../../src/transit/feed.mts"
+import { readFileSync } from "node:fs"
+import { gunzipSync } from "node:zlib"
+import { canAlight, canBoard, isServiceActive, serviceDayStart, withIndexes, type Feed, type FeedData, type Trip } from "../../src/transit/feed.mts"
 import { distance } from "../../src/geo/projection.mts"
 import { type StopPredictions, forecastOf } from "../../src/transit/observations/umo.mts"
 import { BOARDING, type Run, buildRuns as runsOf, lateness, slack, spread, uncertainty } from "../../src/transit/models/forecast.mts"
 import {
   ALTERNATIVES, HORIZON, MIN_TIME_SAVED, MIN_TRANSFER_GAIN,
-  buildConnections, cost, itineraryKey, plan, rides, scan, walkOnly,
+  buildConnections, cost, isWalkOffered, itineraryKey, plan, planBy, rides, scan, walkBy, walkOnly,
   type Itinerary
 } from "../../src/routing/plan.mts"
 import type { Place } from "../../src/places/search.mts"
@@ -490,3 +492,133 @@ test("a stop where buses turn out to wait for their time is held at", () => {
   const [run] = buildRuns(feed, TODAY, [], update(emptyModel(), addDays(TODAY, -1), waited))
   expect(run.holdChance.map(isLikely)).toEqual([false, true, false])
 })
+
+/** Walking the whole way so as to be there by `by`, where that's an offer at all, which is what planBy weighs buses against */
+const walkOffered = (feed: Feed, from: Place, to: Place, by: number) => {
+  const walk = walkBy(walksOf(feed), from, to, by)
+  return isWalkOffered(walk.end - walk.start) ? walk : undefined
+}
+
+/** Whether a bus itinerary feels better than walking so as to be there by `by`, as planBy keeps only those that do, or walking is no offer */
+const beatsWalkingBy = (feed: Feed, itinerary: Itinerary, from: Place, to: Place, by: number, now: number) => {
+  const walk = walkOffered(feed, from, to, by)
+  return !walk || cost(itinerary, now, by) < cost(walk, now, by) - MIN_TIME_SAVED
+}
+
+/**
+ * Over scans a minute apart that get there by `by`, as far ahead as planBy looks: the earliest arrival of any, the
+ * latest start of those that beat walking so as to be there by `by`, which are the ones planBy keeps, and of those
+ * on one bus, which it keeps whatever leaves after them, and the latest start on one bus of any
+ */
+const scansBy = (feed: Feed, runs: Run[], from: Place, to: Place, by: number, now: number) => {
+  const connections = buildConnections(runs, now, Math.max(now + HORIZON, by))
+  let [latest, latestDirect, latestSimple, earliest]: (number | undefined)[] = [undefined, undefined, undefined, undefined]
+  for (let start = now; start <= by; start += 60)
+    for (const direct of [false, true]) {
+      const found = scan(feed, walksOf(feed), runs, connections, from, to, start, { now, direct })
+      if (!found || found.end > by)
+        continue
+      earliest = Math.min(earliest ?? Infinity, found.end)
+      if (direct)
+        latestSimple = Math.max(latestSimple ?? -Infinity, found.start)
+      if (beatsWalkingBy(feed, found, from, to, by, now)) {
+        latest = Math.max(latest ?? -Infinity, found.start)
+        if (direct)
+          latestDirect = Math.max(latestDirect ?? -Infinity, found.start)
+      }
+    }
+  return { latest, latestDirect, latestSimple, earliest }
+}
+
+// Planned from up to ten hours before the trip's buses, as a goal saved for tomorrow morning is tonight, which puts
+// them past HORIZON, and mostly from just before, as the brute force scans a minute at a time up to the time asked
+const earlier = fc.oneof({ weight: 3, arbitrary: fc.constant(0) }, fc.integer({ min: 0, max: 10 * 3600 }))
+
+test("planBy's options all arrive by the time asked with every boarding's slack, however far ahead that is, beat walking so as to be there then, latest start first, the first no earlier than any scan that does, and a later `by` never gives an earlier latest start while that still beats walking", () =>
+  fc.assert(fc.property(scenario, earlier, fc.integer({ min: 600, max: 5400 }), fc.integer({ min: 0, max: 1800 }), ({ feed, from, to, start }, earlier, ahead, later) => {
+    const runs = buildRuns(feed, TODAY, [])
+    const now = start - earlier
+    const by = start + ahead
+    const options = planBy(feed, walksOf(feed), runs, from, to, by, now)
+    expect(options.length).toBeLessThanOrEqual(ALTERNATIVES)
+    for (const option of options) {
+      expectValid(feed, option, from, to, now)
+      expect(option.end).toBeLessThanOrEqual(by)
+      expect(beatsWalkingBy(feed, option, from, to, by, now)).toBe(true)
+    }
+    options.slice(1).forEach((option, i) => expect(option.start).toBeLessThanOrEqual(options[i].start))
+    expect(new Set(options.map(itineraryKey)).size).toBe(options.length)
+    const { latest, latestDirect } = scansBy(feed, runs, from, to, by, now)
+    if (latest !== undefined)
+      expect(options.length).toBeGreaterThan(0)
+    if (latestDirect !== undefined)
+      expect(options[0].start).toBeGreaterThanOrEqual(latestDirect)
+    // Unless a bus that makes the later time alone leaves within MIN_TRANSFER_GAIN of each change the first made
+    const laterOptions = planBy(feed, walksOf(feed), runs, from, to, by + later, now)
+    if (options.length && beatsWalkingBy(feed, options[0], from, to, by + later, now))
+      expect(laterOptions[0].start).toBeGreaterThanOrEqual(options[0].start - (rides(options[0]) - 1) * MIN_TRANSFER_GAIN)
+  }))
+)
+
+test("planBy only changes buses to leave well after one bus, or walking so as to be there by the time, could", () =>
+  fc.assert(fc.property(scenario, earlier, fc.integer({ min: 600, max: 5400 }), ({ feed, from, to, start }, earlier, ahead) => {
+    const runs = buildRuns(feed, TODAY, [])
+    const [now, by] = [start - earlier, start + ahead]
+    const { latestSimple } = scansBy(feed, runs, from, to, by, now)
+    const simpler = Math.max(latestSimple ?? -Infinity, walkOffered(feed, from, to, by)?.start ?? -Infinity)
+    for (const option of planBy(feed, walksOf(feed), runs, from, to, by, now))
+      if (rides(option) > 1)
+        expect(option.start).toBeGreaterThanOrEqual(simpler + MIN_TRANSFER_GAIN)
+  }))
+)
+
+// Route 3 from Kingsbury Hall out to Durham Road at Mast Road, 5 km off, on the timetable of tests/map/replay.test.mts
+const { feed: recorded }: { feed: FeedData } = JSON.parse(gunzipSync(readFileSync(new URL("../map/fixtures/buses.json.gz", import.meta.url))).toString())
+
+test("a time to be there by hours after the last bus still gets the last bus: a walk too long to offer is never weighed, however much earlier the bus is there", () => {
+  const feed = withIndexes(recorded)
+  const stopOf = (name: string) => feed.stops.findIndex(stop => stop.name === name)
+  const [kingsbury, mast] = [stopOf("Kingsbury Hall"), stopOf("Durham Road @ Mast Road")]
+  const from = { ...feed.stops[kingsbury], name: "Kingsbury Hall" }
+  const to = { ...feed.stops[mast], name: "Mast Road" }
+  expect(isWalkOffered(walkSeconds(walksOf(feed).between(from, to).meters))).toBe(false)
+  const through = feed.trips.filter(trip => trip.stops.lastIndexOf(mast) > 0)
+  let day = feed.start
+  while (!isServiceActive(feed.services[through[0].service], day))
+    day = addDays(day, 1)
+  const base = serviceDayStart(day) / 1000
+  /** When the day's last bus gets to Mast Road itself; a later one gets within a walk of it an hour and a half on */
+  const last = Math.max(...through.map(trip => base + trip.times[trip.stops.lastIndexOf(mast)]))
+  const runs = buildRuns(feed, day, [])
+  // From hours before, to be there by two hours after the last bus, which is past every way there, or up to six: the
+  // same bus leaving at the same time, however much earlier it gets there
+  fc.assert(fc.property(fc.integer({ min: 2 * 3600, max: 10 * 3600 }), fc.oneof(fc.integer({ min: 2 * 3600, max: 6 * 3600 }), fc.constantFrom(160 * 60, 190 * 60)), (before, after) => {
+    const now = last - before
+    const [best, ...rest] = planBy(feed, walksOf(feed), runs, from, to, last + after, now)
+    expect(best).toBeDefined()
+    expect(rides(best)).toBe(1)
+    expect(best.end).toBeLessThanOrEqual(last + 2 * 3600)
+    expect(itineraryKey(best)).toBe(itineraryKey(planBy(feed, walksOf(feed), runs, from, to, last + 2 * 3600, now)[0]))
+    for (const option of rest)
+      expect(option.start).toBeLessThan(best.start)
+  }), { numRuns: 25 })
+})
+
+test("planBy finds nothing when no bus arrives in time, and by the first of plan's options' end it leaves no earlier than that option does", () =>
+  fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
+    const runs = buildRuns(feed, TODAY, [])
+    expect(planBy(feed, walksOf(feed), runs, from, to, start, start)).toEqual([])
+    // A minute's steps find the earliest any bus gets there, to within what a step can miss, which nothing beats
+    const { earliest } = scansBy(feed, runs, from, to, start + HORIZON, start)
+    if (earliest !== undefined)
+      for (const option of planBy(feed, walksOf(feed), runs, from, to, earliest - 1, start))
+        expect(option.start).toBeLessThan(start + 60)
+    const [best] = plan(feed, walksOf(feed), runs, from, to, start)
+    if (!best)
+      return
+    const [latest] = planBy(feed, walksOf(feed), runs, from, to, best.end, start)
+    expect(latest).toBeDefined()
+    expect(latest.start).toBeGreaterThanOrEqual(best.start)
+    expect(latest.end).toBeLessThanOrEqual(best.end)
+  }))
+)

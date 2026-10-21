@@ -3,7 +3,7 @@
 import { r, watch } from "bruh/reactive"
 import { ridePath } from "../../transit/shapes.mts"
 import { type Progress, type Walk, type Walks, isOffPath, walkOn, walkSeconds } from "../../routing/walks.mts"
-import { type Itinerary, type WalkLeg, isSameItinerary, plan, walkOnly, wayKey } from "../../routing/plan.mts"
+import { type Itinerary, type WalkLeg, isSameItinerary, isWalkOffered, plan, planBy, walkBy, walkOnly, wayKey } from "../../routing/plan.mts"
 import type { Place } from "../../places/search.mts"
 import { buildingAt } from "../../places/buildings.mts"
 import { type Line, sliceLine, toLine } from "../../geo/lines.mts"
@@ -37,23 +37,41 @@ export const createTrip = (
     MapData & ReturnType<typeof createLocation> & ReturnType<typeof createLive> & ReturnType<typeof createRiding>,
   own: Own
 ) => {
-  const trip: { day?: unknown, from?: unknown, to?: unknown, selected?: unknown } = Object(stored(TRIP))
+  const trip: { day?: unknown, from?: unknown, to?: unknown, by?: unknown, selected?: unknown } = Object(stored(TRIP))
   const isTripToday = trip.day === today.peek()
 
   const from = r(isTripToday && isPlace(trip.from) ? trip.from : undefined)
   const to = r(isTripToday && isPlace(trip.to) ? trip.to : undefined)
+  /** Epoch seconds to get there by, or undefined to leave now and get there soonest. One kept that's already past is no time to plan for */
+  const by = r(isTripToday && typeof trip.by === "number" && trip.by > now.peek() ? trip.by : undefined)
   /** The wayKey of the chosen itinerary, which stays chosen as its times change and as you walk, or "walk" */
   const selected = r(isTripToday && typeof trip.selected === "string" ? trip.selected : undefined)
   own(watch(() => {
-    store(TRIP, { day: today.peek(), from: from.value, to: to.value, selected: selected.value })
+    store(TRIP, { day: today.peek(), from: from.value, to: to.value, by: by.value, selected: selected.value })
   }))
+
+  /**
+   * The ways there by bus from a place to another, as of now: the best leaving now, or with a time to get there by,
+   * the latest leaving that make it, else, as none does, the best leaving now, soonest first
+   */
+  const plansFor = (from: Place, to: Place, by: number | undefined): Itinerary[] => {
+    const inTime = by === undefined ? [] : planBy(feed.value, walks.value, runs.value, from, to, by, now.value)
+    return inTime.length ? inTime : plan(feed.value, walks.value, runs.value, from, to, now.value)
+  }
+
+  /** Walking the whole way, leaving now, or with a time to get there by, so as to be there then, its allowance left */
+  const walkingTo = (from: Place, to: Place, by: number | undefined) =>
+    by === undefined ? walkOnly(walks.value, from, to, now.peek()) : walkBy(walks.value, from, to, by)
 
   // Cards only rerender when something they show changes: the trips, their times to the minute, or how live they are.
   // A newer timetable's runs are new objects, so its itineraries come through though they read the same
   const itineraries = distinct(
-    (): Itinerary[] => from.value && to.value ? plan(feed.value, walks.value, runs.value, from.value, to.value, now.value) : [],
+    (): Itinerary[] => from.value && to.value ? plansFor(from.value, to.value, by.value) : [],
     (a, b) => a.length === b.length && a.every((itinerary, i) => isSameItinerary(itinerary, b[i]))
   )
+
+  /** Whether the ways shown get there by the time asked, which with none asked they do */
+  const makesIt = r(() => by.value === undefined || itineraries.value.some(itinerary => itinerary.end <= by.value!))
 
   /** Minutes and meters to walk the whole way, if worth suggesting */
   const walk = r(() => {
@@ -61,19 +79,19 @@ export const createTrip = (
       return
 
     const { meters } = walks.value.between(from.value, to.value)
-    const minutes = Math.max(1, Math.round(walkSeconds(meters) / 60))
+    const seconds = walkSeconds(meters)
     const [best] = itineraries.value
     // Short walks, walks not much longer than the bus, or the only option
     const isWorthIt =
       !best ||
-      minutes <= 30 ||
-      minutes * 60 <= 1.5 * (best.end - best.start)
-    return isWorthIt ? { minutes, meters } : undefined
+      isWalkOffered(seconds) ||
+      seconds <= 1.5 * (best.end - best.start)
+    return isWorthIt ? { minutes: Math.max(1, Math.round(seconds / 60)), meters } : undefined
   })
 
   const itinerary = r((): Itinerary | undefined => {
     if (selected.value === "walk" && from.value && to.value)
-      return walkOnly(walks.value, from.value, to.value, now.peek())
+      return walkingTo(from.value, to.value, by.value)
     return (
       itineraries.value.find(itinerary => wayKey(itinerary) === selected.value) ??
       itineraries.value[0]
@@ -188,7 +206,8 @@ export const createTrip = (
   // Start from the current location if the user already allowed it. Otherwise don't keep a trip from or to where you
   // were, as there's no following you from there. Browsers without the permissions API keep it until you next locate
   // yourself
-  navigator.permissions?.query({ name: "geolocation" })
+  /** Settled once where you are has been looked for, or found not to be allowed, so a trip from you can be planned */
+  const located = (navigator.permissions?.query({ name: "geolocation" }) ?? Promise.reject())
     .then(async status => {
       if (status.state !== "granted") {
         for (const place of [from, to])
@@ -204,5 +223,5 @@ export const createTrip = (
     })
     .catch(() => {})
 
-  return { from, to, selected, itineraries, walk, itinerary, progress, legPaths, isLocating, useCurrentLocation, directTo }
+  return { from, to, by, selected, itineraries, makesIt, walk, itinerary, progress, legPaths, isLocating, located, useCurrentLocation, directTo, plansFor, walkingTo }
 }

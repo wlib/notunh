@@ -26,12 +26,19 @@ import { MAX_EARLY } from "../inference/events.mts"
 /**
  * The version of forecasting, bumped with any change to what it forecasts from a model and what's seen, so the bands
  * are calibrated afresh by evaluations of what it forecasts now (fit.mts). 2 chains on by block and timetable, on
- * through further loops, and from an approach to a trip's start
+ * through further loops, and from an approach to a trip's start. 3 holds a bus reported slow as halted, leaves a
+ * followed bus's band to its calibration rather than clipping it, and gives a stop handed off to the timetable the
+ * route's own spread. 4 holds the slow bus from when it was first reported slow rather than afresh at each fix, one
+ * just pulling out of a stop included, and gives a handed-off stop the timetable's band whole, unscaled by the
+ * chain's calibration
  */
-export const FORECAST = 2
+export const FORECAST = 4
 
 // How far off a predicted departure may be, growing with how far ahead it is, until the model knows better. Live
-// predictions were seen off by up to a minute or two, and Umo's guesses for a connector's next loop by far more
+// predictions were seen off by up to a minute or two, and Umo's guesses for a connector's next loop by far more.
+// UNCERTAINTY_MAX bounds only what's guessed with nothing learned: a followed bus's band is its chain's spread as
+// calibrated, which on Oct 15 the bound cut off at 91 % of forecasts 30 min ahead, catching 81 % of buses for the
+// 85 % asked
 const UNCERTAINTY_NOW = 60           // s, even for a bus due now
 const UNCERTAINTY_RATE = 5           // s more per minute ahead
 const UNCERTAINTY_MAX = 240          // s
@@ -71,10 +78,12 @@ export type Run = {
   /** How likely the bus is to wait at each stop for its scheduled time when it's early */
   holdChance: number[],
   /**
-   * For a bus the map is following on this run, its course, the s² its departure from each stop varies by, and how many
-   * standard deviations a forecast some seconds ahead is off by at most with a probability, as the model's turned out
+   * For a bus the map is following on this run, its course, the s² its departure from each stop varies by where the
+   * chain foretells it, and none where the stop is handed off to the timetable, whose time varies as the route's
+   * lateness does, and how many standard deviations a forecast some seconds ahead is off by at most with a
+   * probability, as the model's turned out
    */
-  tracked?: { trajectory: Trajectory, variances: number[], scale: (lead: number, p: number) => number },
+  tracked?: { trajectory: Trajectory, variances: (number | undefined)[], scale: (lead: number, p: number) => number },
   /** How late its route leaves its stops, and how much that varies, as the model has it */
   offset?: Estimate,
   /** A bus is on this trip, rather than it being forecast from the timetable */
@@ -105,16 +114,18 @@ export const uncertainty = (lead: number) =>
 
 /**
  * How far off a bus's time at a stop may be with probability p, early when boarding or late when getting off. For a
- * bus the map is following, it's the chain's spread, scaled to how far off its forecasts turn out. With no bus
- * tracked, it's how much its route's lateness varies. With nothing learned, it's a fixed spread growing with the
- * lead, wider for boarding by a time from the timetable alone
+ * bus the map is following, it's the chain's spread, scaled to how far off its forecasts turn out. A stop handed off
+ * to the timetable, or with no bus tracked, is the timetable's: how much its route's lateness varies, the same band
+ * whether a bus happens to be followed or not. With nothing learned, it's a fixed spread growing with the lead,
+ * wider for boarding by a time from the timetable alone
  */
 const spreadTo = (run: Run, position: number, time: number, now: number, isBoarding: boolean, p: number) => {
   const { tracked, offset } = run
-  if (tracked)
-    return Math.min(UNCERTAINTY_MAX, Math.max(BOARDING, Math.sqrt(tracked.variances[position]) * tracked.scale(time - now, 2 * p - 1)))
+  const variance = tracked?.variances[position]
+  if (variance !== undefined)
+    return Math.max(BOARDING, Math.sqrt(variance) * tracked!.scale(time - now, 2 * p - 1))
   const z = probit(p)
-  if (offset && !run.isLive)
+  if (offset && (tracked || !run.isLive))
     return Math.min(UNCERTAINTY_MAX * (isBoarding ? SCHEDULE_FACTOR : 1), Math.max(BOARDING, z * Math.sqrt(offset.variance)))
   return uncertainty(time - now) * (isBoarding && !run.isLive ? SCHEDULE_FACTOR : 1) * (z / probit(SURE_P))
 }
@@ -305,11 +316,15 @@ const applySightings = (feed: Feed, model: Model, sightings: readonly Sighting[]
       target.tracked ??= { trajectory, variances: target.trip.stops.map(() => chained.variances[first]), scale }
       for (let i = from; i <= to; i++) {
         const k = first + i - from
-        if (chained.departures[k] - sighting.at >= handoff)
+        // Handed off to the timetable, the stop's time varies as the route's lateness does, not as the chain would
+        if (chained.departures[k] - sighting.at >= handoff) {
           scheduled(target, i, target.offset?.mean ?? 0)
-        else
+          target.tracked.variances[i] = undefined
+        }
+        else {
           [target.arrivals[i], target.departures[i]] = [chained.arrivals[k], chained.departures[k]]
-        target.tracked.variances[i] = chained.variances[k]
+          target.tracked.variances[i] = chained.variances[k]
+        }
       }
       target.vehicle = sighting.vehicleId
       tracked.add(target)

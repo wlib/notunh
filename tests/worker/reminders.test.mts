@@ -24,7 +24,7 @@ const DEVICE = "device-aaaaaaaaaaaaaaaa"
 const SECRET = "secret-bbbbbbbbbbbbbbbb"
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/abc"
 const ID = "reminder-cccccccccccccc"
-const WATCH: Watch = { stop: "209", route: "3", trip: "3B FULL_T04", scheduled: 1791397860, lead: 600 }
+const WATCH: Watch = { at: 1791397860, lead: 600, run: { stop: "209", route: "3", trip: "3B FULL_T04" } }
 const LEFT = 1791398421
 
 let env: Env
@@ -159,7 +159,7 @@ test("with the site's timetable and model out of reach, the run is due as schedu
   while (device().state.alarm()! < NOW + 3600_000 && device().state.rows("reminders").length)
     await fire()
   expect(wakes().map(({ kind }) => kind)).toEqual(["due"])
-  expect(wakes()[0].seen).toMatchObject({ time: WATCH.scheduled, isLive: false, status: "coming" })
+  expect(wakes()[0].seen).toMatchObject({ time: WATCH.at, isLive: false, status: "coming" })
 })
 
 test("the site is looked for again soon after it couldn't be read, and the last read stands while it can't be", async () => {
@@ -192,7 +192,7 @@ test("whatever the samples say, each check sets the alarm ahead, and the phone i
       vi.setSystemTime(NOW)
       objects.objects.clear()
       pushed = []
-      await setReminder(ID, { ...WATCH, scheduled: NOW / 1000 + 600 + story[0].ahead })
+      await setReminder(ID, { ...WATCH, at: NOW / 1000 + 600 + story[0].ahead })
       for (const step of story) {
         if (device().state.alarm() === null || device().state.rows("reminders").length === 0)
           break
@@ -210,18 +210,18 @@ test("a push the service refuses for good forgets the device, and one it can't t
   siteDown = true
   await setReminder(ID)
   // The bus is within the lead
-  vi.setSystemTime((WATCH.scheduled - 300) * 1000)
+  vi.setSystemTime((WATCH.at - 300) * 1000)
   pushStatus = 503
   await fire()
   expect(pushed).toHaveLength(1)
   expect(device().state.rows("reminders")).toHaveLength(1)
-  expect(device().state.alarm()).toBe((WATCH.scheduled - 300 + MIN_CHECK) * 1000)
+  expect(device().state.alarm()).toBe((WATCH.at - 300 + MIN_CHECK) * 1000)
   retryAfter = "90"
   await fire()
-  expect(device().state.alarm()).toBe((WATCH.scheduled - 300 + MIN_CHECK + 90) * 1000)
+  expect(device().state.alarm()).toBe((WATCH.at - 300 + MIN_CHECK + 90) * 1000)
   retryAfter = undefined
   await fire()
-  expect(device().state.alarm()).toBe((WATCH.scheduled - 300 + MIN_CHECK + 90 + 4 * MIN_CHECK) * 1000)
+  expect(device().state.alarm()).toBe((WATCH.at - 300 + MIN_CHECK + 90 + 4 * MIN_CHECK) * 1000)
   pushStatus = 410
   await fire()
   expect(pushed).toHaveLength(4)
@@ -232,9 +232,9 @@ test("a push the service refuses for good forgets the device, and one it can't t
 test("a subscription replaced while an old push is on its way, which the service then says is gone, is kept, with its watch", async () => {
   siteDown = true
   await setReminder(ID)
-  vi.setSystemTime((WATCH.scheduled - 300) * 1000)
+  vi.setSystemTime((WATCH.at - 300) * 1000)
   const newer = "https://web.push.apple.com/newer"
-  const later = { ...WATCH, scheduled: WATCH.scheduled + 1800 }
+  const later = { ...WATCH, at: WATCH.at + 1800 }
   pushing = () => setReminder(ID, later, SECRET, newer)
   pushStatus = 410
   await fire()
@@ -243,7 +243,7 @@ test("a subscription replaced while an old push is on its way, which the service
   expect(JSON.parse(device().state.rows("reminders")[0].state as string)).toMatchObject({ ...later, pushes: 0 })
   // Gone at the endpoint the device is at now, it's forgotten
   pushing = undefined
-  vi.setSystemTime((later.scheduled - 300) * 1000)
+  vi.setSystemTime((later.at - 300) * 1000)
   await fire()
   expect(pushedTo).toEqual([ENDPOINT, newer])
   expect(device().state.rows("device")).toEqual([])
@@ -252,7 +252,7 @@ test("a subscription replaced while an old push is on its way, which the service
 test("an object evicted between making a push and sending it delivers the push when it's next run, and no push is made twice", async () => {
   siteDown = true
   await setReminder(ID)
-  vi.setSystemTime((WATCH.scheduled - 300) * 1000)
+  vi.setSystemTime((WATCH.at - 300) * 1000)
   pushStatus = "never"
   void device().object.alarm!()
   await vi.waitFor(() => expect(pushed).toHaveLength(1))
@@ -287,7 +287,7 @@ test("a push service that never takes a push is given up on after a few tries, w
     pushed = []
     siteDown = isSiteDown
     pushStatus = status
-    await setReminder(ID, { ...WATCH, scheduled: NOW / 1000 + 600 + ahead })
+    await setReminder(ID, { ...WATCH, at: NOW / 1000 + 600 + ahead })
     let fires = 0
     while (device().state.rows("reminders").length && device().state.alarm()! < NOW + (LATEST + 7200) * 1000) {
       await fire()
@@ -320,8 +320,8 @@ test("the samples are read by the table's key, not by reading it through", () =>
 
 test("a reminder replaced or cancelled while the samples are being read is left as the phone left it", async () => {
   await setReminder(ID)
-  vi.setSystemTime((WATCH.scheduled - 300) * 1000)
-  const later = { ...WATCH, scheduled: WATCH.scheduled + 7200 }
+  vi.setSystemTime((WATCH.at - 300) * 1000)
+  const later = { ...WATCH, at: WATCH.at + 7200 }
   meanwhile = () => setReminder(ID, later)
   await fire()
   expect(pushed).toEqual([])
@@ -341,7 +341,7 @@ test("a device's reminders are its own: changed or cancelled only with its secre
   expect((await send("DELETE", `/api/reminders/${ID}?device=${DEVICE}`)).status).toBe(401)
   for (let i = 1; i < MAX_REMINDERS; i++)
     expect((await setReminder(`reminder-${String(i).padStart(14, "0")}`)).status).toBe(204)
-  expect((await setReminder("reminder-eeeeeeeeeeeeee")).status).toBe(429)
+  expect((await setReminder("reminder-eeeeeeeeeeeeee")).status).toBe(409)
   expect((await send("DELETE", `/api/reminders/${ID}?device=${DEVICE}`, undefined, SECRET)).status).toBe(204)
   expect(device().state.rows("reminders")).toHaveLength(MAX_REMINDERS - 1)
   expect((await send("DELETE", `/api/push/devices/${DEVICE}`, undefined, SECRET)).status).toBe(204)
@@ -360,11 +360,59 @@ test("only a push service's address is taken, and a watch must be a run still to
   const apple = { endpoint: "https://web.push.apple.com/abc", keys: phone.keys }
   expect(await bad({ ...apple, keys: { p256dh: "not base64!", auth: "x" } })).toBe(400)
   expect(await bad(apple, { ...WATCH, lead: 30 })).toBe(400)
-  expect(await bad(apple, { stop: "209", route: "3", lead: 600 })).toBe(400)
-  expect(await bad(apple, { ...WATCH, scheduled: NOW / 1000 - GONE - 1 })).toBe(400)
-  expect(await bad(apple, { ...WATCH, scheduled: NOW / 1000 + FURTHEST + 60 })).toBe(400)
-  expect(await bad(apple, { ...WATCH, scheduled: WATCH.scheduled + 0.5 })).toBe(400)
+  expect(await bad(apple, { at: WATCH.at, run: { stop: "209", route: "3" }, lead: 600 })).toBe(400)
+  expect(await bad(apple, { ...WATCH, at: NOW / 1000 - GONE - 1 })).toBe(400)
+  expect(await bad(apple, { ...WATCH, at: NOW / 1000 + FURTHEST + 60 })).toBe(400)
+  expect(await bad(apple, { ...WATCH, at: WATCH.at + 0.5 })).toBe(400)
+  expect(await bad(apple, { lead: 600 })).toBe(400)
+  expect(await bad(apple, { at: NOW / 1000 - GONE - 1, lead: 600 })).toBe(400)
   expect(await bad({ ...apple, endpoint: `https://web.push.apple.com/${"a".repeat(2000)}` })).toBe(400)
   expect((await send("PUT", `/api/reminders/${ID}`, { device: DEVICE, subscription: apple, watch: WATCH })).status).toBe(401)
   expect(await bad(apple)).toBe(204)
+})
+
+test("a watch kept from before watches had a time is dropped when the object next runs, and leaves the rest be", async () => {
+  await setReminder(ID)
+  device().state.state.storage.sql.exec("insert into reminders (id, next, stamp, state) values (?, ?, ?, ?)", "old", NOW, "s", JSON.stringify({ stop: "209", route: "3", trip: "3B FULL_T04", scheduled: WATCH.at, lead: 600, pushes: 0, next: NOW / 1000 }))
+  expect(device().state.rows("reminders")).toHaveLength(2)
+  await fire()
+  expect(device().state.rows("reminders").map(({ id }) => id)).toEqual([ID])
+  expect(device().state.alarm()).toBeGreaterThan(NOW)
+})
+
+test("a watch on no run is set with its time alone, checked once more at its wake, and pushed at its time less its lead with nothing forecast or read", async () => {
+  const fixed: Watch = { at: NOW / 1000 + 1800, lead: 300 }
+  expect((await setReminder(ID, fixed)).status).toBe(204)
+  expect(JSON.parse(device().state.rows("reminders")[0].state as string)).toEqual({ ...fixed, pushes: 0, next: NOW / 1000 })
+  // Nothing to forecast, so neither the site nor the samples are read
+  siteDown = true
+  let reads = 0
+  meanwhile = () => reads++
+  const checks: number[] = []
+  while (device().state.rows("reminders").length && checks.length < 10)
+    checks.push(await fire())
+  expect(checks).toEqual([NOW, (fixed.at - fixed.lead) * 1000])
+  expect(reads).toBe(0)
+  expect(wakes()).toEqual([{ v: 1, reminder: ID, kind: "due", seen: { time: fixed.at, band: 0, isLive: false, status: "coming" }, at: fixed.at - fixed.lead }])
+  expect(device().state.rows("reminders")).toEqual([])
+})
+
+test("a watch set again on the same run, as the phone plans its trip afresh, goes on as told, so the phone isn't woken twice for one bus, and on another run starts afresh", async () => {
+  await setReminder(ID)
+  while (!pushed.length && device().state.rows("reminders").length)
+    await fire()
+  expect(wakes().map(({ kind }) => kind)).toEqual(["due"])
+  const state = () => JSON.parse(device().state.rows("reminders")[0].state as string) as { pushes: number, told?: unknown }
+  const { told } = state()
+  expect(told).toBeDefined()
+  // The lead moved as the trip was planned again: the same run, so told stays
+  expect((await setReminder(ID, { ...WATCH, lead: 900 })).status).toBe(204)
+  expect(state()).toMatchObject({ lead: 900, pushes: 1, told })
+  while (device().state.alarm()! < (LEFT + GONE + 60) * 1000 && device().state.rows("reminders").length)
+    await fire()
+  expect(wakes().filter(({ kind }) => kind === "due")).toHaveLength(1)
+  // Another run: a fresh watch, to be told of anew
+  await setReminder(ID, { ...WATCH, at: WATCH.at + 1800 })
+  expect(state()).toMatchObject({ pushes: 0 })
+  expect(state().told).toBeUndefined()
 })

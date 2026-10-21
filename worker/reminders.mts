@@ -11,10 +11,11 @@ import { type Feed, loadFeed } from "../src/transit/feed.mts"
 import { type Model, asModel } from "../src/transit/models/model.mts"
 import type { Run } from "../src/transit/models/forecast.mts"
 import { type ObservedRow, decode, observe } from "../src/transit/observations/raw.mts"
-import { NO_FORECAST, forecastFrom } from "../src/transit/observations/predictions.mts"
+import { NO_FORECAST, forecastOfSample } from "../src/transit/observations/predictions.mts"
 import { runsAt, scheduledOnly, scheduledRuns, seenOf } from "../src/reminders/forecast.mts"
-import { type Seen, type Wake, type Watched, FURTHEST, GONE, WAKE_VERSION, Watch, check, pushOf, retried, watched } from "../src/reminders/watch.mts"
+import { type Seen, type Wake, type Watched, FURTHEST, GONE, WAKE_VERSION, Watch, check, pushOf, replaced, retried } from "../src/reminders/watch.mts"
 import { buildOf } from "../src/shell/manifest.mts"
+import { localDay } from "../src/shared/time.mts"
 import { getOrCreate } from "../src/shared/group.mts"
 import { type Vapid, Subscription, push } from "./push.mts"
 import type { Env } from "./env.mts"
@@ -49,7 +50,7 @@ export const vapidOf = (env: Env): Vapid | undefined =>
 type Device = { secret: string, endpoint: string, p256dh: string, auth: string, touched: number }
 /** A reminder's row: its watch, and a stamp of its setting, so a check begun before it was replaced leaves it be */
 type Row = { id: string, stamp: string, watched: Watched }
-/** A release's timetable and model, and the timetable's own runs by day, for telling a run the source dropped from one it no longer has */
+/** A release's timetable and model, and the timetable's own runs by local service day, for telling a run the source dropped from one it no longer has */
 type Site = { release: string, feed: Feed, model: Model, scheduled: Map<string, Run[]> }
 
 // The tables, made on a device's first reminder, and again after the object forgets everything, which drops them
@@ -99,11 +100,17 @@ export class Reminders implements DurableObject {
   private device = () =>
     this.isKnown() ? this.ctx.storage.sql.exec<Device>("select secret, endpoint, p256dh, auth, touched from device").toArray()[0] : undefined
 
-  private reminders = (): Row[] =>
-    this.isKnown()
-      ? this.ctx.storage.sql.exec<{ id: string, stamp: string, state: string }>("select id, stamp, state from reminders").toArray()
-        .map(({ id, stamp, state }) => ({ id, stamp, watched: JSON.parse(state) as Watched }))
-      : []
+  /** Each reminder as kept, dropping any of a shape from before watches had a time, which nothing could check */
+  private reminders = (): Row[] => {
+    if (!this.isKnown())
+      return []
+    const rows = this.ctx.storage.sql.exec<{ id: string, stamp: string, state: string }>("select id, stamp, state from reminders").toArray()
+      .map(({ id, stamp, state }) => ({ id, stamp, watched: JSON.parse(state) as Watched }))
+    for (const { id, watched } of rows)
+      if (typeof watched.at !== "number")
+        this.ctx.storage.sql.exec("delete from reminders where id = ?", id)
+    return rows.filter(({ watched }) => typeof watched.at === "number")
+  }
 
   /** A reminder as it stands, due next at its owed push's try, else its check, or never once it's over, which the alarm prunes at its end */
   private save = ({ id, stamp, watched }: Row) => {
@@ -161,18 +168,23 @@ export class Reminders implements DurableObject {
     const rows = await Promise.all(results.map(async ({ source, at, body }) => ({ source, at, ...await decode(new Uint8Array(body)) }) as ObservedRow))
     const { fixes, predictions } = observe(rows)
     const latest = predictions.at(-1)
-    return { fixes, forecast: latest ? forecastFrom(latest.predictions.map(({ at, isLayover, ...rest }) => ({ ...rest, time: at / 1000, isLive: !isLayover })), latest.at / 1000) : NO_FORECAST }
+    return { fixes, forecast: latest ? forecastOfSample(latest) : NO_FORECAST }
   }
 
-  /** What the forecast says of each due watch at an epoch second, from the samples read and the day's runs built once for all of them */
+  /**
+   * What the forecast says of each due watch at an epoch second, from the samples read and the day's runs built
+   * once for all of them. Watches on no run are their fixed times, which need neither
+   */
   private seen = async (watches: readonly Watch[], now: number): Promise<(Seen | undefined)[]> => {
+    if (watches.every(watch => !watch.run))
+      return watches.map(watch => scheduledOnly(watch, now))
     const site = await this.siteAt(now * 1000)
     if (!site)
       return watches.map(watch => scheduledOnly(watch, now))
     try {
       const { fixes, forecast } = await this.samplesAt(now * 1000)
       const runs = runsAt(site.feed, site.model, fixes, forecast, now)
-      const scheduled = () => getOrCreate(site.scheduled, String(Math.floor(now / 86400)), () => scheduledRuns(site.feed, site.model, now))
+      const scheduled = () => getOrCreate(site.scheduled, localDay(now * 1000), () => scheduledRuns(site.feed, site.model, now))
       return watches.map(watch => seenOf(site.feed, runs, scheduled, watch, now))
     }
     catch (error) {
@@ -200,10 +212,10 @@ export class Reminders implements DurableObject {
     }
     else {
       if (device && this.reminders().filter(({ id }) => id !== ask.id).length >= MAX_REMINDERS)
-        return new Response(`At most ${MAX_REMINDERS} reminders at once`, { status: 429 })
-      if (ask.watch.scheduled + GONE < now / 1000)
-        return new Response("The bus has gone", { status: 400 })
-      if (ask.watch.scheduled > now / 1000 + FURTHEST)
+        return new Response(`At most ${MAX_REMINDERS} reminders at once`, { status: 409 })
+      if (ask.watch.at + GONE < now / 1000)
+        return new Response("The time has gone", { status: 400 })
+      if (ask.watch.at > now / 1000 + FURTHEST)
         return new Response("Too far ahead", { status: 400 })
       const { endpoint, keys } = ask.subscription
       this.ctx.storage.sql.exec(TABLES)
@@ -211,7 +223,9 @@ export class Reminders implements DurableObject {
         "insert or replace into device (id, secret, endpoint, p256dh, auth, touched) values (1, ?, ?, ?, ?, ?)",
         hash, endpoint, keys.p256dh, keys.auth, now
       )
-      this.save({ id: ask.id, stamp: crypto.randomUUID(), watched: watched(ask.watch, now / 1000) })
+      // Set again on the same run, as the phone plans a kept trip afresh, it goes on as told
+      const was = this.reminders().find(({ id }) => id === ask.id)?.watched
+      this.save({ id: ask.id, stamp: crypto.randomUUID(), watched: replaced(was, ask.watch, now / 1000) })
       await this.schedule()
     }
     return new Response(null, { status: 204 })
@@ -236,7 +250,7 @@ export class Reminders implements DurableObject {
     const { wake } = row.watched.owed!
     const subscription: Subscription = { endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }
     // Of no use once the bus is long gone, and a newer push of the same reminder replaces it while it waits
-    const ttl = Math.max(60, Math.max(wake.seen.time, row.watched.scheduled) + GONE - at)
+    const ttl = Math.max(60, Math.max(wake.seen.time, row.watched.at) + GONE - at)
     const sent = await push(subscription, pushOf(wake), vapid, { ttl, topic: row.id.slice(0, 32) }, at)
     if (sent.sent === "gone") {
       if (this.device()?.endpoint === device.endpoint)

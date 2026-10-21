@@ -84,6 +84,28 @@ input[type="checkbox"] {
   color: var(--on-accent);
 }
 
+/* Small choices in a row, like a menu's filters or a trip's saved goals, each pressed or not */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.chip {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
 /* The question of usage stats, at the foot of whichever page asks it, over everything but out of its way */
 .usage-prompt-slot {
   display: contents;

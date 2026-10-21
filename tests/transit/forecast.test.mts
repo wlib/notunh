@@ -3,7 +3,7 @@ import fc from "fast-check"
 import { serviceDayStart, withIndexes, type Trip } from "../../src/transit/feed.mts"
 import type { Visit } from "../../src/transit/inference/events.mts"
 import { NO_FORECAST } from "../../src/transit/observations/predictions.mts"
-import { type Run, type Sighting, buildRuns, spread } from "../../src/transit/models/forecast.mts"
+import { BOARDING, type Run, type Sighting, buildRuns, spread } from "../../src/transit/models/forecast.mts"
 import { NO_PACE } from "../../src/transit/models/movement.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
 import { update } from "../../src/transit/models/fit.mts"
@@ -261,5 +261,35 @@ test("a bus of a timetabled route tagged with a trip it's far ahead of is chaine
     else
       // A headway route's timetable says nothing of where its bus is, so it had been at the stops before
       expect(run.departures[2]).toBeLessThanOrEqual(at)
+  }))
+)
+
+test("a followed bus's band is never below its chain's spread scaled by the model's calibration at that lead, however far ahead, and a stop handed off to the timetable has the band it would with no bus followed", () =>
+  fc.assert(fc.property(fc.integer({ min: 0, max: 600 }), fc.integer({ min: 1, max: 48 }), fc.integer({ min: 0, max: 600 }), (late, position, ahead) => {
+    // A timetabled route with a stop every 5 minutes for four hours, which hands a followed bus back to the timetable
+    // from half an hour ahead, and whose lateness the model has learned
+    const feed = lineFeed([{ times: Array.from({ length: 49 }, (_, i) => 36000 + i * 300), timepoints: [0, 24, 48] }])
+    const model = learned(300, 30, late)
+    const at = BASE + 36000 + late
+    const run = runOn(buildRuns(feed, TODAY, NO_FORECAST, model, [seen("0", at, false)]), "T0")
+    const { tracked, offset } = run
+    expect(tracked).toBeDefined()
+    expect(offset).toBeDefined()
+    const time = run.departures[position]
+    const band = spread(run, position, time, at + ahead)
+    expect(band).toBeGreaterThanOrEqual(BOARDING)
+    if (time - at >= 1800) {
+      // Handed off, the stop's time is the timetable's shifted by the route's lateness, and its band is the
+      // timetable's whole, as a run with no bus followed has, not the chain's calibration on top of it
+      expect(tracked!.variances[position]).toBeUndefined()
+      expect(time).toBe(run.base + run.trip.times[position] + offset!.mean)
+      const untracked = runOn(buildRuns(feed, TODAY, NO_FORECAST, model), "T0")
+      expect(band).toBe(spread(untracked, position, time, at + ahead))
+    }
+    else {
+      const sd = Math.sqrt(tracked!.variances[position]!)
+      expect(sd).toBeGreaterThan(0)
+      expect(band).toBeGreaterThanOrEqual(sd * tracked!.scale(time - at - ahead, 0.7) - 1e-9)
+    }
   }))
 )

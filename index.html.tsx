@@ -75,18 +75,20 @@ export default () =>
             <summary>Reminders</summary>
             <p>
               When you ask notunh to remind you when to leave, your phone plans the trip and keeps the plan. notunh's
-              server is told only which bus you want to catch: the route, its scheduled time at the stop, and the
-              stop, along with how much warning you want, which by default is your walk to the stop plus five minutes,
-              so it can tell about how far you walk. It's also given the address your phone's maker (like Apple or
-              Google) uses for sending it notifications.
+              server is told only when to wake your phone: for a trip by bus, the first bus you want to catch (the
+              route, its scheduled time at the stop, and the stop) and how far ahead, which is your walk to the stop
+              plus the heads-up you choose, so it can tell about how far you walk; for a walk, just the time to leave
+              and the heads-up. It's also given the address your phone's maker (like Apple or Google) uses for sending
+              it notifications.
             </p>
             <p>
               The server forecasts that bus from the bus locations it already records and wakes your phone when it's
               that close, sending when it expects the bus and how sure it is. Your phone works out the rest and what to
-              tell you. The server never learns where you're going or where you're coming from.
+              tell you, and plans the trip again whenever you open the map. The server never learns where you're going
+              or where you're coming from.
             </p>
             <p>
-              A reminder is deleted once its bus has gone or you cancel it. Your phone's notification address is
+              A reminder is deleted once its time has gone or you cancel it. Your phone's notification address is
               deleted 30 days after your last reminder, or the next time you plan a trip after turning notifications
               off.
             </p>

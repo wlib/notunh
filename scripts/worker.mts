@@ -1,7 +1,7 @@
 // How the scripts that learn and archive reach the Worker: through its token-gated /api/ routes, so they need no D1
 // credentials of their own, only BUILD_TOKEN. The origin is notunh.app, or WORKER_ORIGIN, or with --local,
 // `wrangler dev` on localhost:8787, which checks against the BUILD_TOKEN in .dev.vars (site.mts). Run directly to look:
-// BUILD_TOKEN=… node scripts/worker.mts health | storage | rows <name> [day] [--local]
+// node --env-file=.dev.vars scripts/worker.mts health | storage | rows <name> [day] [--local]
 
 import type { Day } from "../src/shared/time.mts"
 import { gunzipJson, gzipJson } from "../src/shared/json.mts"

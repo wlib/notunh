@@ -71,6 +71,25 @@ export default () =>
             </p>
           </details>
 
+          <details id="reminders">
+            <summary>Reminders</summary>
+            <p>
+              When you ask notunh to remind you when to leave, your phone plans the trip and keeps the plan. notunh's
+              server is told only which bus you want to catch: the route, its scheduled time at the stop, and the
+              stop, along with how many minutes' warning you want. It's also given the address your phone's maker
+              (like Apple or Google) uses for sending it notifications.
+            </p>
+            <p>
+              The server forecasts that bus from the bus locations it already records and wakes your phone when it's
+              that close, sending when it expects the bus and how sure it is. Your phone works out the rest and what to
+              tell you. The server never learns where you're going, where you're coming from, or how far you walk.
+            </p>
+            <p>
+              A reminder is deleted once its bus has gone or you cancel it. Your phone's notification address is
+              deleted 30 days after your last reminder, or as soon as you turn notifications off.
+            </p>
+          </details>
+
           <details>
             <summary>Data sources &amp; credits</summary>
             <dl class="credits">

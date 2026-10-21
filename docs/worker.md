@@ -34,10 +34,18 @@ Retention days are `vars` in `wrangler.jsonc`, explained in [storage.md](storage
 | `POST /api/derived/:name` `{ day, identity, generation, parts }` | token | Commits a generation once every part is stored, else 409 |
 | `GET /api/storage` | token | D1's bytes and rows per table; counts every row, so on demand only |
 | `GET /api/laundry/rooms[/:id]` | public | See [Laundry](#laundry) |
+| `GET /api/push/key`, `PUT`/`DELETE /api/reminders/:id`, `DELETE /api/push/devices/:device` | public, each device's by its secret | See [reminders.md](reminders.md) |
 
-Scripts call it through `scripts/worker.mts`, which also works by hand: `BUILD_TOKEN=… node scripts/worker.mts health|storage|rows <name> [day]`, with `--local` for `npm run worker`.
+Scripts call it through `scripts/worker.mts`, which also works by hand: `node --env-file=.dev.vars scripts/worker.mts health|storage|rows <name> [day]`, with `--local` for `npm run worker`.
 
 Learning runs `main`'s code against the deployed Worker, so a route change meets the old Worker during a deploy. Make such changes ones the old Worker refuses (a missing route, a rejected body) rather than misreads; learning then stores nothing that night and the inputs carry the stored model.
+
+## Reminders
+
+Each device's reminders are a SQLite-backed Durable Object, `Reminders` (`worker/reminders.mts`), whose alarm
+forecasts a run from the last minutes of `samples` with the site's own timetable and model, and pushes when its bus
+is near. It's told the run and the stop, never where the trip goes. No cron is involved. See
+[reminders.md](reminders.md).
 
 ## Schema changes
 

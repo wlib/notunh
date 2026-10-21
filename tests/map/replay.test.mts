@@ -6,7 +6,8 @@ import { extract, type Visit } from "../../src/transit/inference/events.mts"
 import { unpackFixes, unpackPredictions, type RawFix, type RawPrediction } from "../../src/transit/observations/raw.mts"
 import { LEADS, emptyModel } from "../../src/transit/models/model.mts"
 import { update } from "../../src/transit/models/fit.mts"
-import { PREDICTOR, attachPredictions, replayed, score } from "../../scripts/map/replay.mts"
+import { PREDICTOR, attachPredictions, score } from "../../scripts/map/replay.mts"
+import { sightingsFrom } from "../../src/transit/models/tracking.mts"
 
 // Half an hour of the Worker's samples, recorded on a Wednesday afternoon with seven buses out, and the timetable
 // then, cut down to their routes
@@ -49,7 +50,7 @@ test("the buses are replayed as the map got their fixes, each once a poll got it
   const LAG = 25_000
   // Every fix got LAG after it was taken, and some fixes got again much later, as Umo sometimes sends an old one
   const got = [...fixes.map(fix => ({ ...fix, received: fix.at + LAG })), ...fixes.filter((_, i) => i % 7 === 0).map(fix => ({ ...fix, received: fix.at + 10 * LAG }))]
-  const [asGot, asTaken] = [replayed(feed, emptyModel(), got), replayed(feed, emptyModel(), fixes)]
+  const [asGot, asTaken] = [sightingsFrom(feed, emptyModel(), got), sightingsFrom(feed, emptyModel(), fixes)]
   const start = Math.min(...fixes.map(fix => fix.at)) / 1000
   for (let at = start + 300; at < start + 1500; at += 60)
     expect(asGot(at + LAG / 1000)).toEqual(asTaken(at))

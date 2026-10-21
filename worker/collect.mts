@@ -23,7 +23,14 @@ export type Env = {
   /** Lets the workflows read and write rows and models through /api/, so they need no D1 credentials, a secret */
   BUILD_TOKEN?:           string,
   /** A GitHub token that can start the workflows, a secret, for the nightly run to start them */
-  GITHUB_TOKEN?:          string
+  GITHUB_TOKEN?:          string,
+  /** Each device's reminders (reminders.mts), where they're set up, which Previews aren't */
+  REMINDERS?:             DurableObjectNamespace,
+  /** The VAPID key pair reminders are pushed with (push.mts), base64url, both secrets */
+  VAPID_PUBLIC_KEY?:      string,
+  VAPID_PRIVATE_KEY?:     string,
+  /** Who push services can reach about our pushes, a mailto: or https: URL */
+  VAPID_SUBJECT?:         string
 }
 
 /** What a cron trigger runs, given the epoch milliseconds its minute started at and a signal for the minute running out */

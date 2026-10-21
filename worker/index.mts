@@ -10,6 +10,8 @@ import { buses } from "./buses.mts"
 import { predictions } from "./predictions.mts"
 import { collector } from "./laundry.mts"
 
+export { Reminders } from "./reminders.mts"
+
 // As written in wrangler.jsonc: 4:17 AM in Durham (EDT), before anyone's looking for a bus
 const NIGHTLY = "17 8 * * *"
 

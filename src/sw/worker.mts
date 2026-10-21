@@ -16,6 +16,7 @@ import { type Build, type Generation, buildOf, closureOf, isOlder, isSameBuild, 
 import { TILES_FOLDER } from "../map/basemap/tiles.mts"
 import { STYLE_ROOT } from "../map/basemap/style.mts"
 import { type CacheLike, ANY, deleteWhere, generationOf, isBrandAsset, isHashed, pageOf, prune } from "./retention.mts"
+import { CACHE as REMINDERS } from "../reminders/browser/store.mts"
 
 type Extendable = { waitUntil(promise: Promise<unknown>): void }
 type FetchLike = Extendable & { request: Request, clientId?: string, respondWith(response: Promise<Response>): void }
@@ -34,7 +35,8 @@ export type Scope = {
   location: { origin: string }
 }
 
-// Renamed whenever what's kept changes meaning, so activating deletes every older cache. The first worker's pages
+// Renamed whenever what's kept changes meaning, so activating deletes every older cache, the reminders' apart, which
+// pages write too (src/reminders/browser/store.mts). The first worker's pages
 // named only their code and loaded their data by URL, so what they need can't be told. Their pages are fetched
 // afresh instead, like pages not visited yet
 const CACHE = "app-v2"
@@ -321,7 +323,7 @@ export const start = (scope: Scope) => {
   scope.addEventListener("activate", event => {
     event.waitUntil(
       serially(async () => {
-        for (const name of (await scope.caches.keys()).filter(name => name !== CACHE))
+        for (const name of (await scope.caches.keys()).filter(name => name !== CACHE && name !== REMINDERS))
           await scope.caches.delete(name)
         await scope.clients.claim()
         await prune(await open(), live)

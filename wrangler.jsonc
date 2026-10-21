@@ -37,7 +37,18 @@
       "migrations_dir": "worker/migrations"
     }
   ],
+  // Each device's reminders, in a SQLite-backed Durable Object of its own, the only kind the free plan has
+  // (worker/reminders.mts, docs/reminders.md)
+  "durable_objects": {
+    "bindings": [{ "name": "REMINDERS", "class_name": "Reminders" }]
+  },
+  "migrations": [{ "tag": "reminders-1", "new_sqlite_classes": ["Reminders"] }],
+  // How many reminders one address may set a minute (worker/api.mts): a phone sets a few, and a client minting device
+  // ids would otherwise make an object of each (https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+  "ratelimits": [{ "name": "RATE_LIMIT", "namespace_id": "1", "simple": { "limit": 30, "period": 60 } }],
   "vars": {
+    // Who push services can reach about our pushes (worker/push.mts)
+    "VAPID_SUBJECT": "https://notunh.app",
     // Days the nightly prune keeps (worker/rows.mts, docs/storage.md):
     // - RETAIN_DAYS: laundry's transitions and polls
     // - RETAIN_ARCHIVED_DAYS: samples once the observations archive has their day, since learning reads older days
@@ -54,6 +65,8 @@
   // Secrets, set once with `wrangler secret put` (locally, in .dev.vars):
   // - BUILD_TOKEN: what the workflows read and write rows and models with
   // - GITHUB_TOKEN: for the nightly run to start the Observations and Inputs workflows, and Map data on Mondays
+  // - VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY: what reminders are pushed with, made once by
+  //   `node scripts/secrets.mts vapid`. Without them, reminders aren't offered
   "observability": { "enabled": true },
   // Previews (`npx wrangler preview`) get none of the above: no route, no crons, and their own database, which every
   // branch's Preview shares, migrated before a Preview is made. They have no secrets, so nothing reaches production

@@ -464,6 +464,30 @@ body {
   font-size: 0.85rem;
 }
 
+/* A reminder of when to leave, under the chosen itinerary's steps */
+
+.remind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0.75rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.remind:empty {
+  display: none;
+}
+
+.remind p {
+  margin: 0;
+}
+
+.remind select {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
 /* Stop */
 
 .stop-view header {

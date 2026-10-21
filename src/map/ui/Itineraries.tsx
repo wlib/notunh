@@ -10,6 +10,7 @@ import { Icon } from "../../shell/ui.tsx"
 import { RouteBadge, StopLink, Time, minutes, route } from "./common.tsx"
 import { state } from "../state/map.mts"
 import { capture } from "../../shell/usage.tsx"
+import { Remind } from "./Remind.tsx"
 
 /** Minutes between two times as displayed, so durations agree with the clock times beside them */
 const minutesBetween = (start: number, end: number) =>
@@ -120,6 +121,7 @@ const ItineraryCard = ({ itinerary: it }: { itinerary: Itinerary }) => {
         </span>
       </button>
       {r(() => isSelected.value && <Steps itinerary={it} />)}
+      {r(() => isSelected.value && <Remind itinerary={it} />)}
     </li>
   )
 }

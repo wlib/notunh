@@ -3,12 +3,15 @@
 
 import { CATALOG, fetchCatalog } from "../src/transit/observations/archive.mts"
 import { localDay, weekday } from "../src/shared/time.mts"
-import { HEADERS, sampling, type Env, type Job } from "./collect.mts"
+import { HEADERS, sampling, type Job } from "./collect.mts"
+import type { Env } from "./env.mts"
 import { app } from "./api.mts"
 import { prune } from "./rows.mts"
 import { buses } from "./buses.mts"
 import { predictions } from "./predictions.mts"
 import { collector } from "./laundry.mts"
+
+export { Reminders } from "./reminders.mts"
 
 // As written in wrangler.jsonc: 4:17 AM in Durham (EDT), before anyone's looking for a bus
 const NIGHTLY = "17 8 * * *"

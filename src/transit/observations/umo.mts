@@ -3,7 +3,7 @@
 
 import * as v from "valibot"
 import { getJson, usable } from "../../shared/json.mts"
-import type { Forecast } from "./predictions.mts"
+import { type Forecast, forecastFrom } from "./predictions.mts"
 
 const BASE = "https://api.prd-1.iq.live.umoiq.com/v2.0/riders/agencies/unh"
 
@@ -61,20 +61,10 @@ export type StopPredictions = v.InferOutput<typeof StopPredictions>
  * an observation of that trip at the stop, live unless Umo is predicting from its schedule before the bus starts the
  * trip. The latest time predicted at each of a route's stops is how far ahead Umo covers it there
  */
-export const forecastOf = (predictions: readonly StopPredictions[], at: number): Forecast => {
-  const forecast: Forecast = { observations: [], at, coverage: new Map() }
-  for (const { route, stop, values } of predictions)
-    for (const { timestamp, vehicleId, tripId, affectedByLayover } of values) {
-      // One without a trip can't say which runs it's of, so it says nothing of which aren't coming
-      if (!tripId)
-        continue
-      const time = timestamp / 1000
-      const stops = forecast.coverage.get(route.id) ?? forecast.coverage.set(route.id, new Map()).get(route.id)!
-      stops.set(stop.id, Math.max(stops.get(stop.id) ?? -Infinity, time))
-      forecast.observations.push({ tripId, stopId: stop.id, time, vehicleId, isLive: !affectedByLayover })
-    }
-  return forecast
-}
+export const forecastOf = (predictions: readonly StopPredictions[], at: number): Forecast =>
+  forecastFrom(predictions.flatMap(({ route, stop, values }) =>
+    values.map(({ timestamp, vehicleId, tripId, affectedByLayover }) => ({ route: route.id, stop: stop.id, vehicle: vehicleId, trip: tripId ?? null, time: timestamp / 1000, isLive: !affectedByLayover }))
+  ), at)
 
 /** One of a route's stops, as Umo's route config lists them */
 const RouteStop = v.object({ id: v.string() })

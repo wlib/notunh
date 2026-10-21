@@ -1,6 +1,8 @@
 // The one name content goes by, in the scripts and everywhere else: its SHA-256. Under Node it streams through
 // node:crypto a chunk at a time; anywhere else it's hashed whole with WebCrypto
 
+import { toBase64Url } from "./base64url.mts"
+
 /** Bytes, or text, or what a stream of either yields */
 export type Chunks = Uint8Array | string | AsyncIterable<Uint8Array | string>
 
@@ -24,5 +26,5 @@ export const contentHash = async (data: Chunks, encoding: "hex" | "base64url" = 
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", await new Blob(parts).arrayBuffer()))
   return encoding === "hex"
     ? Array.from(digest, byte => byte.toString(16).padStart(2, "0")).join("")
-    : btoa(String.fromCharCode(...digest)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "")
+    : toBase64Url(digest)
 }

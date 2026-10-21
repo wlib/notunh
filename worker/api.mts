@@ -1,8 +1,9 @@
 // The few requests that reach the Worker: learning's and archiving's token-gated rows, models, timetables, and what
-// learning derives, public health, the laundry page's rooms, and the laundry page under each room's own address. Every
-// other page and asset is served without it
+// learning derives, public health, the laundry page's rooms, the laundry page under each room's own address, and
+// devices' reminders, each device's own by its secret. Every other page and asset is served without it
 
 import { Hono } from "hono/tiny"
+import type { MiddlewareHandler } from "hono"
 import { bearerAuth } from "hono/bearer-auth"
 import { timingSafeEqual } from "hono/utils/buffer"
 import { sValidator } from "@hono/standard-validator"
@@ -12,11 +13,12 @@ import * as v from "valibot"
 import { ROOMS, roomAtSlug } from "../src/laundry/rooms.mts"
 import { Day } from "../src/shared/time.mts"
 import { describeIssues } from "../src/shared/json.mts"
-import type { Env } from "./collect.mts"
+import type { Env } from "./env.mts"
 import { ROWS, health, read, storage } from "./rows.mts"
 import { MODELS, acquireFeed, feedJson, feedList, latestModel, saveModel } from "./models.mts"
 import { DERIVED, commit, derivedOf, putPart } from "./derived.mts"
 import { room, rooms } from "./laundry.mts"
+import { type Ask, Setting, vapidOf } from "./reminders.mts"
 
 type Worker = { Bindings: Env }
 
@@ -27,8 +29,8 @@ const isBuild = bearerAuth<Worker>({
   verifyToken: async (token, c) => Boolean(c.env.BUILD_TOKEN) && timingSafeEqual(token, c.env.BUILD_TOKEN!)
 })
 
-// Every route under /api/ but health and laundry's
-app.use("/api/*", (c, next) => /^\/api\/(health$|laundry\/)/.test(c.req.path) ? next() : isBuild(c, next))
+// Every route under /api/ but health, laundry's, and reminders', which go by each device's own secret
+app.use("/api/*", (c, next) => /^\/api\/(health$|laundry\/|push\/|reminders\/)/.test(c.req.path) ? next() : isBuild(c, next))
 
 /** Part of a request as a schema makes it, its JSON body by default, or a 400 saying what's wrong with it */
 const valid = <S extends StandardSchemaV1, T extends "json" | "form" | "query" | "param" = "json">(schema: S, target = "json" as T) =>
@@ -141,6 +143,53 @@ app.get("/api/laundry/rooms", c =>
 app.get("/api/laundry/rooms/:id", c => {
   const id = c.req.param("id")
   return ROOMS.some(room => room.id === id) ? room(c.req.raw, c.env, id) : c.notFound()
+})
+
+// Reminders: the public key pages subscribe to pushes with, and each device's reminders, kept by its Durable Object
+// (reminders.mts) and reached by its id, given its secret. Where they aren't set up, as in Previews, there's none
+const ID = v.pipe(v.string(), v.regex(/^[\w-]{16,64}$/))
+
+/** A device's Durable Object, asked something, or 404 where reminders aren't set up */
+const ask = (env: Env, device: string, asked: Ask) =>
+  env.REMINDERS && vapidOf(env)
+    ? env.REMINDERS.get(env.REMINDERS.idFromName(device)).fetch("https://reminders/", { method: "POST", body: JSON.stringify(asked) })
+    : new Response("Reminders aren't set up here", { status: 404 })
+
+/** The device's secret, as a bearer token */
+const secretOf = (header: string | undefined) =>
+  header?.match(/^Bearer (\S{16,200})$/)?.[1]
+
+/**
+ * Only so many reminders set a minute from one address, by the Rate Limiting binding where it's bound, since any
+ * client can mint device ids and each is an object of its own. Counted per Cloudflare location, so it bounds one
+ * client's minting rather than accounting exactly
+ */
+const limited: MiddlewareHandler<Worker> = async (c, next) => {
+  const address = c.req.header("cf-connecting-ip")
+  if (c.env.RATE_LIMIT && address && !(await c.env.RATE_LIMIT.limit({ key: address })).success)
+    return c.text("Too many reminders set from here; try again in a minute", 429)
+  return next()
+}
+
+app.get("/api/push/key", c => {
+  const vapid = vapidOf(c.env)
+  return vapid && c.env.REMINDERS ? c.json({ key: vapid.publicKey }) : c.text("Reminders aren't set up here", 404)
+})
+
+app.put("/api/reminders/:id", limited, valid(v.object({ id: ID }), "param"), valid(v.object({ device: ID, ...Setting.entries })), c => {
+  const secret = secretOf(c.req.header("authorization"))
+  const { device, ...setting } = c.req.valid("json")
+  return secret ? ask(c.env, device, { kind: "set", id: c.req.valid("param").id, secret, ...setting }) : c.text("No secret", 401)
+})
+
+app.delete("/api/reminders/:id", valid(v.object({ id: ID }), "param"), valid(v.object({ device: ID }), "query"), c => {
+  const secret = secretOf(c.req.header("authorization"))
+  return secret ? ask(c.env, c.req.valid("query").device, { kind: "cancel", id: c.req.valid("param").id, secret }) : c.text("No secret", 401)
+})
+
+app.delete("/api/push/devices/:device", valid(v.object({ device: ID }), "param"), c => {
+  const secret = secretOf(c.req.header("authorization"))
+  return secret ? ask(c.env, c.req.valid("param").device, { kind: "forget", secret }) : c.text("No secret", 401)
 })
 
 // The laundry page, which opens the room its address names

@@ -5,18 +5,17 @@
 // Where the bus was is what the map would have made of its fixes then, replayed through the same location model and
 // pace in the order they arrived. Each day is replayed against the timetable in effect then, of those acquired. Run
 // directly on a day of samples to see how each did:
-// BUILD_TOKEN=… node scripts/map/replay.mts 2026-10-07 [--local]
+// node --env-file=.dev.vars scripts/map/replay.mts 2026-10-07 [--local]
 
 import { readFile } from "node:fs/promises"
 import { URL } from "node:url"
 import { withIndexes, serviceDayStart, type Feed, type FeedData } from "../../src/transit/feed.mts"
 import { extract, type Visit } from "../../src/transit/inference/events.mts"
-import { type BusFix, type Observations, type SampledPrediction, alwaysListening, listening } from "../../src/transit/observations/raw.mts"
+import { type Observations, type SampledPrediction, alwaysListening, listening } from "../../src/transit/observations/raw.mts"
 import { observationsOf } from "../observations.mts"
 import { NO_FORECAST } from "../../src/transit/observations/predictions.mts"
-import { FORECAST, type Sighting, buildRuns } from "../../src/transit/models/forecast.mts"
-import { busOn, isNews, sightingOf } from "../../src/transit/models/tracking.mts"
-import { routeLines } from "../../src/transit/shapes.mts"
+import { FORECAST, buildRuns } from "../../src/transit/models/forecast.mts"
+import { sightingsFrom } from "../../src/transit/models/tracking.mts"
 import { LEADS, asModel, dayTypeAt, emptyScores, scored, type Model, type Scores } from "../../src/transit/models/model.mts"
 import { offsetEstimate } from "../../src/transit/models/estimates.mts"
 import { HALF_LIFE } from "../../src/shared/learn.mts"
@@ -87,8 +86,6 @@ export const acquireFeed = async () => {
 // before a departure back to just past the last of LEADS
 const SAMPLED = 300 // s
 const SAMPLES = LEADS.at(-1)! * 60 / SAMPLED + 1
-// A bus last seen at a stop longer ago than this, without leaving the route, is out of service
-const OUT_OF_SERVICE = 1800 // s
 // The Worker polls buses every 10 s, so a silence longer than this between answers may have missed a bus. A forecast
 // is only scored where the Worker was listening for the minute before, so what replay saw then is what the map would
 const QUIET = 30_000 // ms
@@ -131,37 +128,6 @@ export const attachPredictions = (visits: readonly Visit[], samples: Observation
 }
 
 /**
- * What the map would have seen of the buses at any epoch second of a day, asked in increasing order, from their
- * fixes. Each fix is fed through the location model once the Worker's poll received it, in the order received, as the
- * map gets them (fixes without a receipt time are taken as received when taken). Like the map, it passes over fixes
- * older than one already followed, and takes a bus's trip as its last fix had it tagged
- */
-export const replayed = (feed: Feed, model: Model, fixes: readonly BusFix[]) => {
-  const lines = routeLines(feed)
-  const got = (fix: BusFix) => fix.received ?? fix.at
-  const sorted = fixes.toSorted((a, b) => got(a) - got(b) || a.at - b.at)
-  const buses = new Map<string, { route: string, bus: ReturnType<typeof busOn>, at: number, seen?: Sighting }>()
-  let next = 0
-  return (at: number): Sighting[] => {
-    for (; next < sorted.length && got(sorted[next]) <= at * 1000; next++) {
-      const fix = sorted[next]
-      if (fix.route === null || !lines.has(fix.route))
-        continue
-      let own = buses.get(fix.vehicle)
-      if (!isNews(own, { at: fix.at, route: fix.route }))
-        continue
-      if (own?.route !== fix.route)
-        buses.set(fix.vehicle, own = { route: fix.route, bus: busOn(lines.get(fix.route)!), at: fix.at })
-      const { location, pace } = own.bus.observe(model, { at: fix.at / 1000, lat: fix.lat, lon: fix.lon, heading: fix.heading, kph: fix.kph })
-      own.at = fix.at
-      own.seen = sightingOf(fix.vehicle, fix.trip, location, pace)
-    }
-    // A bus not heard from in a while is out of service
-    return [...buses.values()].flatMap(({ seen }) => seen && seen.at >= at - OUT_OF_SERVICE ? [seen] : [])
-  }
-}
-
-/**
  * How each way of forecasting did on a day's visits, as scores to fold into the model. At each sample time the
  * Worker was listening up to, every departure within the leads is forecast as the map would have from the day's
  * fixes it would have seen then, by the model as it stood before the day: the run's time, which is a followed bus's
@@ -171,7 +137,7 @@ export const replayed = (feed: Feed, model: Model, fixes: readonly BusFix[]) => 
 export const score = (model: Model, feed: Feed, visits: readonly Visit[], { fixes, predictions }: Pick<Observations, "fixes" | "predictions">, isListening = alwaysListening): Scores => {
   const scores = emptyScores()
   const trips = new Map(feed.trips.map(trip => [trip.id, trip]))
-  const sightingsAt = replayed(feed, model, fixes)
+  const sightingsAt = sightingsFrom(feed, model, fixes)
   const due = new Map<number, { visit: Visit, lead: number, umo?: number | null }[]>()
   for (const visit of attachPredictions(visits, predictions))
     if (visit.trip !== undefined && trips.has(visit.trip) && visit.position !== undefined && visit.scheduled !== undefined)

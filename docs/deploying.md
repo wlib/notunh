@@ -46,10 +46,10 @@ Nothing deletes releases. Old `inputs-*` and `map-data-*` releases are safe to d
 
 Secrets live in two places. `node scripts/secrets.mts check` says whether each is set.
 
-- **Worker**: `BUILD_TOKEN`, and `GITHUB_TOKEN`, a fine-grained token with Actions read and write on this repository. The nightly cron uses it to start Observations and Inputs, and Map data on Mondays. Inputs has no schedule of its own, because GitHub pauses schedules after 60 days without a commit. Without `GITHUB_TOKEN` the site keeps its last inputs, map data stops refreshing, and samples pile up in D1 until archiving resumes.
+- **Worker**: `BUILD_TOKEN`; the push keys reminders are sent with, `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`; and `GITHUB_TOKEN`, a fine-grained token with Actions read and write on this repository. The nightly cron uses it to start Observations and Inputs, and Map data on Mondays. Inputs has no schedule of its own, because GitHub pauses schedules after 60 days without a commit. Without `GITHUB_TOKEN` the site keeps its last inputs, map data stops refreshing, and samples pile up in D1 until archiving resumes.
 - **GitHub `production` environment** (only `main` can use it): `BUILD_TOKEN`, and `CLOUDFLARE_DEPLOY_HOOK`, the URL of a Workers Builds deploy hook for `main`. Inputs and Map data record each run as a deployment of notunh.app.
 
-`BUILD_TOKEN` is on both sides and in `.dev.vars`, so change it only with `node scripts/secrets.mts rotate`, which sets all three.
+`BUILD_TOKEN` is on both sides and in `.dev.vars`, so change it only with `node scripts/secrets.mts rotate`, which sets all three. `node scripts/secrets.mts vapid` makes push keys wherever they're missing: one pair for the Worker, never shown and never replaced, as a new pair would cut off every device subscribed with the old, and another for `.dev.vars`.
 
 ## Rolling back
 

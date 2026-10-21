@@ -325,8 +325,9 @@ const between = (state: State, to: Matched, expect: Expectations): Passage[] => 
 
     if (state.at) {
       const depart = spreadAt(sample => sample.depart, t0)
-      passages.push(passageOf(line, state.at, depart))
-      state.left = { index: state.at.index, at: depart.median }
+      const passage = passageOf(line, state.at, depart)
+      passages.push(passage)
+      state.left = { index: state.at.index, at: passage.depart.median }
       state.quarters = []
       state.at = undefined
     }
@@ -335,8 +336,9 @@ const between = (state: State, to: Matched, expect: Expectations): Passage[] => 
       const arrive = spreadAt(sample => sample.stops[s]?.arrive, timeAlong(stopDistance(line, index)))
       const depart = spreadAt(sample => sample.stops[s]?.depart, timeAlong(stopDistance(line, index)))
       const dwelled = total > 0 ? samples.reduce((sum, sample) => sum + (sample.stops[s]?.dwelled ? sample.weight : 0), 0) / total : 0
-      passages.push(passageOf(line, { index, chance: dwelled, arrive, profile: profileTo(index, arrive.median) }, depart))
-      state.left = { index, at: depart.median }
+      const passage = passageOf(line, { index, chance: dwelled, arrive, profile: profileTo(index, arrive.median) }, depart)
+      passages.push(passage)
+      state.left = { index, at: passage.depart.median }
       state.quarters = []
     })
     if (toAt !== undefined) {
@@ -357,9 +359,13 @@ const between = (state: State, to: Matched, expect: Expectations): Passage[] => 
 }
 
 /** A bus's passage through the stop it was at, as it left it, or was last seen there */
+// Arrive and depart are each spread over the samples that time them, which needn't be the same ones, so a bus
+// leaving soon after it got there could be had leaving before it arrived: it leaves no sooner
 const passageOf = (line: RouteLine, { index, chance, arrive, profile, isJoined = false }: At, depart: Spread, isIncomplete = false): Passage => ({
   line, index, stop: stopId(line, index), distance: stopDistance(line, index),
-  arrive, depart, dwelled: chance, ...profile && { profile }, isJoined, isIncomplete
+  arrive,
+  depart: { low: Math.max(depart.low, arrive.low), median: Math.max(depart.median, arrive.median), high: Math.max(depart.high, arrive.high) },
+  dwelled: chance, ...profile && { profile }, isJoined, isIncomplete
 })
 
 /**

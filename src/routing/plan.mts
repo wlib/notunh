@@ -12,10 +12,12 @@ import type { Place } from "../places/search.mts"
 
 export const HORIZON = 4 * 3600      // s, how far ahead to look for buses
 export const ALTERNATIVES = 5
-const DEPARTURES = 6                 // first buses considered, with and without changing buses
+const DEPARTURES_WITHIN = 3600       // s, first buses leaving this soon are considered, with and without changing buses
 const STEP = 60                      // s planBy looks on by while there's no bus to catch yet
 const NEARER_STOPS = 8               // first stops nearer than the quickest one's to try as well
 export const WALK_OFFERED = 30 * 60  // s, walking the whole way is offered up to this long however the buses do
+export const STICKINESS = 300        // s of cost a way has to feel better than one shown already to take its place
+export const LEEWAY = 30             // s within which leaving or arriving counts as no later, give or take, when one way beats another
 
 // How long an itinerary feels, relative to riding
 export const WALK_RELUCTANCE = 2     // walking feels twice as long
@@ -145,6 +147,8 @@ export type Options = {
   access?: number,
   /** Buses taken already, by the position each was boarded at, not to board again there or before: only further on, as a loop's bus comes round */
   skip?: ReadonlyMap<Run, number>,
+  /** The only bus to take first, by its trip and day, as an option shown already is planned again */
+  only?: { trip: string, base: number },
   /**
    * A time to be there by: of the ways there by then, the one that feels soonest, which rides on to a stop nearer the
    * end rather than walk from an earlier one. With none there by then, the earliest way there, late as it is
@@ -170,7 +174,7 @@ export const scan = (
   from: Place,
   to: Place,
   start: number,
-  { now, direct = false, access, skip, by = Infinity }: Options
+  { now, direct = false, access, skip, only, by = Infinity }: Options
 ): Itinerary | undefined => {
   const transfers = walks.transfers()
   // The earliest a bus gets you to each stop, for getting off and walking on
@@ -223,6 +227,8 @@ export const scan = (
     if (!boarded.has(connection.run)) {
       const before = readyHow[connection.from]
       if (!before || (direct && before.kind !== "origin") || connection.position <= (skip?.get(run) ?? -1) || !canBoard(run.trip, connection.position))
+        continue
+      if (only && before.kind === "origin" && (run.trip.id !== only.trip || run.base !== only.base))
         continue
       if (ready[connection.from] + slack(run, connection.position, connection.departure, now) > connection.departure)
         continue
@@ -342,12 +348,19 @@ const nearerStops = (walks: Walks, from: Place) =>
  * The ways that feel soonest from each of the next first buses, with and without changing: scan from `now`, then
  * from wherever `next` says to scan from given what was found, leaving out the first buses found so far, until it
  * says to stop, and from the nearer stops each could start at instead. With a time to be there `by`, buses up to then
- * are looked at, however far ahead
+ * are looked at, however far ahead. The first bus of each option `shown` last time is planned again as well, so it's
+ * weighed whatever the stepping finds, until it can't be caught
  */
-const candidatesOf = (feed: Feed, walks: Walks, runs: Run[], from: Place, to: Place, now: number, by: number | undefined, next: (after: number, quickest: Itinerary | undefined, scans: number) => number | undefined) => {
+const candidatesOf = (feed: Feed, walks: Walks, runs: Run[], from: Place, to: Place, now: number, by: number | undefined, shown: Itinerary[], next: (after: number, quickest: Itinerary | undefined, scans: number) => number | undefined) => {
   const connections = buildConnections(runs, now, Math.max(now + HORIZON, by ?? now))
   const nearest = nearerStops(walks, from)
   const candidates: Itinerary[] = []
+  for (const option of shown) {
+    const { run, fromPosition } = option.legs.find(leg => leg.kind === "ride") as RideLeg
+    const again = scan(feed, walks, runs, connections, from, to, now, { now, direct: rides(option) === 1, access: run.trip.stops[fromPosition], only: { trip: run.trip.id, base: run.base }, by })
+    if (again)
+      candidates.push(again)
+  }
   for (const direct of [true, false]) {
     const skip = new Map<Run, number>()
     let after: number | undefined = now
@@ -379,11 +392,13 @@ export const rides = (itinerary: Itinerary) =>
 
 /**
  * Whether `a` is at least as good a way as `b` on every count a rider weighs, and better on one: it leaves no earlier,
- * gets there no later, walks no further and changes buses no more
+ * gets there no later, walks no further and changes buses no more. Leaving or arriving within `leeway` seconds the
+ * wrong way still counts as no later, so a forecast shifting by seconds doesn't decide it, and a negative leeway asks
+ * for a clear beating
  */
-export const dominates = (a: Itinerary, b: Itinerary) =>
-  a.start >= b.start && a.end <= b.end && walking(a) <= walking(b) && rides(a) <= rides(b) &&
-  (a.start > b.start || a.end < b.end || walking(a) < walking(b) || rides(a) < rides(b))
+export const dominates = (a: Itinerary, b: Itinerary, leeway = 0) =>
+  a.start + leeway >= b.start && a.end - leeway <= b.end && walking(a) <= walking(b) && rides(a) <= rides(b) &&
+  (a.start !== b.start || a.end !== b.end || walking(a) < walking(b) || rides(a) < rides(b))
 
 /** The buses an itinerary rides, which is what makes options different to a rider */
 const busesOf = (itinerary: Itinerary) =>
@@ -394,33 +409,41 @@ const busesOf = (itinerary: Itinerary) =>
 /**
  * The options among some candidates, best by `cost` first, up to ALTERNATIVES: the best way of catching each set of
  * buses, less any that another beats on every count, and any that walks no less than walking the whole way, `meters`,
- * which is no way by bus at all. Walking the whole way is otherwise left to the caller, and never hides a bus
+ * which is no way by bus at all. Walking the whole way is otherwise left to the caller, and never hides a bus. An
+ * option `shown` already stays until its bus can't be caught or another beats it clearly: its way ranks STICKINESS
+ * better than it feels and isn't cut for the count, so a forecast shifting by seconds doesn't swap options in and out
  */
-const options = (candidates: Itinerary[], meters: number, now: number, by?: number) => {
+const options = (candidates: Itinerary[], meters: number, now: number, by: number | undefined, shown: Itinerary[]) => {
+  const kept = new Set(shown.map(busesOf))
+  const rank = (itinerary: Itinerary) => cost(itinerary, now, by) - (kept.has(busesOf(itinerary)) ? STICKINESS : 0)
   const best = new Map<string, Itinerary>()
-  for (const candidate of candidates.filter(candidate => walking(candidate) < meters).sort((a, b) => cost(a, now, by) - cost(b, now, by)))
+  for (const candidate of candidates.filter(candidate => walking(candidate) < meters).sort((a, b) => rank(a) - rank(b)))
     if (!best.has(busesOf(candidate)))
       best.set(busesOf(candidate), candidate)
   const distinct = [...best.values()]
+  // A way beaten only give or take the leeway is beaten by one ranked better, so near-equal ways keep the better ranked
+  const isBeaten = (candidate: Itinerary, i: number) =>
+    distinct.some((other, j) => dominates(other, candidate, kept.has(busesOf(candidate)) ? -LEEWAY : LEEWAY) && (j < i || dominates(other, candidate)))
   return distinct
-    .filter(candidate => !distinct.some(other => dominates(other, candidate)))
-    .slice(0, ALTERNATIVES)
+    .filter((candidate, i) => !isBeaten(candidate, i))
+    .filter((candidate, i) => i < ALTERNATIVES || kept.has(busesOf(candidate)))
 }
 
 /**
  * The bus itineraries that get there by `by`, best first: the ways `plan` would give from `now`, stepped through
  * their first buses until one is due too late, however far ahead `by` is, kept where they arrive by `by` with every
  * boarding's slack and change's spread as `scan` allows them. No bus gets to a stop earlier for a later start, so once
- * nothing is there by `by`, nothing leaving later is either. Empty when nothing makes it, which the caller says so of
+ * nothing is there by `by`, nothing leaving later is either. Empty when nothing makes it, which the caller says so of.
+ * The options `shown` last time keep their place while they hold up
  */
-export const planBy = (feed: Feed, walks: Walks, runs: Run[], from: Place, to: Place, by: number, now: number): Itinerary[] => {
+export const planBy = (feed: Feed, walks: Walks, runs: Run[], from: Place, to: Place, by: number, now: number, shown: Itinerary[] = []): Itinerary[] => {
   // On past each first bus found, and with none to catch yet, a minute on, as long as there's time to get there by
   // `by` at all
-  const candidates = candidatesOf(feed, walks, runs, from, to, now, by, (after, quickest) => {
+  const candidates = candidatesOf(feed, walks, runs, from, to, now, by, shown, (after, quickest) => {
     const next = quickest ? quickest.start + 1 : now + STEP * (Math.floor((after - now) / STEP) + 1)
     return (quickest ? quickest.end <= by : true) && next <= by ? next : undefined
   })
-  return options(candidates.filter(candidate => candidate.end <= by), walks.between(from, to).meters, now, by)
+  return options(candidates.filter(candidate => candidate.end <= by), walks.between(from, to).meters, now, by, shown)
 }
 
 /**
@@ -450,6 +473,10 @@ export const cost = (itinerary: Itinerary, now: number, by = itinerary.end) => {
   )
 }
 
-/** The bus itineraries leaving at or after `now`, best first: the next few first buses, with and without changing */
-export const plan = (feed: Feed, walks: Walks, runs: Run[], from: Place, to: Place, now: number) =>
-  options(candidatesOf(feed, walks, runs, from, to, now, undefined, (_, quickest, scans) => quickest && scans < DEPARTURES ? quickest.start + 1 : undefined), walks.between(from, to).meters, now)
+/**
+ * The bus itineraries leaving at or after `now`, best first: the first buses of the next DEPARTURES_WITHIN, with and
+ * without changing, which is every bus a rider would weigh, so a forecast shifting by seconds doesn't change which
+ * are weighed, only how they rank. The options `shown` last time keep their place while they hold up
+ */
+export const plan = (feed: Feed, walks: Walks, runs: Run[], from: Place, to: Place, now: number, shown: Itinerary[] = []) =>
+  options(candidatesOf(feed, walks, runs, from, to, now, undefined, shown, (_, quickest) => quickest && quickest.start <= now + DEPARTURES_WITHIN ? quickest.start + 1 : undefined), walks.between(from, to).meters, now, undefined, shown)

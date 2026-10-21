@@ -3,7 +3,7 @@
 import { r, watch } from "bruh/reactive"
 import { ridePath } from "../../transit/shapes.mts"
 import { type Progress, type Walk, type Walks, isOffPath, walkOn, walkSeconds } from "../../routing/walks.mts"
-import { type Itinerary, type WalkLeg, cost, isSameItinerary, isWalkOffered, plan, planBy, walkBy, walkOnly, wayKey } from "../../routing/plan.mts"
+import { type Itinerary, type WalkLeg, STICKINESS, cost, isSameItinerary, isWalkOffered, plan, planBy, walkBy, walkOnly, wayKey } from "../../routing/plan.mts"
 import type { Place } from "../../places/search.mts"
 import { buildingAt } from "../../places/buildings.mts"
 import { type Line, sliceLine, toLine } from "../../geo/lines.mts"
@@ -52,21 +52,32 @@ export const createTrip = (
 
   /**
    * The ways there by bus from a place to another, as of now: the best leaving now, or with a time to get there by,
-   * the latest leaving that make it, else, as none does, the best leaving now, soonest first
+   * the best that make it, else, as none does, the best leaving now. Those `shown` last time keep their place while
+   * they hold up
    */
-  const plansFor = (from: Place, to: Place, by: number | undefined): Itinerary[] => {
-    const inTime = by === undefined ? [] : planBy(feed.value, walks.value, runs.value, from, to, by, now.value)
-    return inTime.length ? inTime : plan(feed.value, walks.value, runs.value, from, to, now.value)
+  const plansFor = (from: Place, to: Place, by: number | undefined, shown: Itinerary[] = []): Itinerary[] => {
+    const inTime = by === undefined ? [] : planBy(feed.value, walks.value, runs.value, from, to, by, now.value, shown)
+    return inTime.length ? inTime : plan(feed.value, walks.value, runs.value, from, to, now.value, shown)
   }
 
   /** Walking the whole way, leaving now, or with a time to get there by, so as to be there then, its allowance left */
   const walkingTo = (from: Place, to: Place, by: number | undefined) =>
     by === undefined ? walkOnly(walks.value, from, to, now.peek()) : walkBy(walks.value, from, to, by)
 
+  /** The options last planned, and for which trip, which stay shown while they hold up as the forecast shifts, and whether the walk led them */
+  let shown: { from?: Place, to?: Place, by?: number, options: Itinerary[], isWalkFirst?: boolean } = { options: [] }
+
   // Cards only rerender when something they show changes: the trips, their times to the minute, or how live they are.
   // A newer timetable's runs are new objects, so its itineraries come through though they read the same
   const itineraries = distinct(
-    (): Itinerary[] => from.value && to.value ? plansFor(from.value, to.value, by.value) : [],
+    (): Itinerary[] => {
+      if (!from.value || !to.value)
+        return []
+      const isSameTrip = shown.from === from.value && shown.to === to.value && shown.by === by.value
+      const options = plansFor(from.value, to.value, by.value, isSameTrip ? shown.options : [])
+      shown = { from: from.value, to: to.value, by: by.value, options, isWalkFirst: isSameTrip ? shown.isWalkFirst : undefined }
+      return options
+    },
     (a, b) => a.length === b.length && a.every((itinerary, i) => isSameItinerary(itinerary, b[i]))
   )
 
@@ -88,7 +99,10 @@ export const createTrip = (
       seconds <= 1.5 * (best.end - best.start)
     if (!isWorthIt)
       return
-    const isFirst = !best || cost(walkingTo(from.value, to.value, by.value), now.value, by.value) < cost(best, now.value, by.value)
+    // Leading while it feels better than the best bus, and once leading or not, until that changes by STICKINESS
+    const walking = cost(walkingTo(from.value, to.value, by.value), now.value, by.value)
+    const isFirst = !best || walking + (shown.isWalkFirst === undefined ? 0 : shown.isWalkFirst ? -STICKINESS : STICKINESS) < cost(best, now.value, by.value)
+    shown.isWalkFirst = isFirst
     return { minutes: Math.max(1, Math.round(seconds / 60)), meters, isFirst }
   })
 

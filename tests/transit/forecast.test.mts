@@ -149,12 +149,13 @@ test("a loop's bus goes on only into a loop of its own service day due to start 
         if (run.vehicle === undefined)
           expect(run.departures[0]).toBe(scheduled)
         else {
-          // Only a later loop of today's, and not long after the bus could start it, or long before, for a bus running
-          // late
+          // Only a later loop of today's, each due to start at most half an hour after the loop before it is due to
+          // end, or a minute before
           expect(run.base).toBe(BASE)
           expect(run.trip.times[0]).toBeGreaterThan(starts[on])
-          expect(run.departures[0] - scheduled).toBeGreaterThanOrEqual(-1800)
-          expect(run.departures[0] - scheduled).toBeLessThanOrEqual(3600)
+          const loop = starts.indexOf(run.trip.times[0])
+          expect(starts[loop] - (starts[loop - 1] + 900)).toBeGreaterThanOrEqual(-60)
+          expect(starts[loop] - (starts[loop - 1] + 900)).toBeLessThanOrEqual(1800)
         }
       }
     }

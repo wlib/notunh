@@ -3,7 +3,7 @@ import fc from "fast-check"
 import { type FeedData, serviceDayStart } from "../../src/transit/feed.mts"
 import { distance } from "../../src/geo/projection.mts"
 import type { Vehicle } from "../../src/transit/observations/umo.mts"
-import { itineraryKey } from "../../src/routing/plan.mts"
+import { itineraryKey, wayKey } from "../../src/routing/plan.mts"
 import type { Place } from "../../src/places/search.mts"
 import type { Building } from "../../src/places/buildings.mts"
 import places from "../../src/map/places.json"
@@ -503,7 +503,7 @@ test("a newer timetable with its stops numbered otherwise keeps the itinerary ch
   const before = state.itinerary.peek()!
   const ride = before.legs.find(leg => leg.kind === "ride")!
   expect(ride).toMatchObject({ fromPosition: 0, toPosition: 2 })
-  state.selected.value = itineraryKey(before)
+  state.selected.value = wayKey(before)
   await vi.advanceTimersByTimeAsync(0)
 
   state.receive(headOf({ ...DATA, gtfs: "/assets/gtfs-BBBBBBBB.json" }))
@@ -517,6 +517,31 @@ test("a newer timetable with its stops numbered otherwise keeps the itinerary ch
   expect(after).not.toBe(before)
   expect(feed.trips).toContain(rideAfter.run.trip)
   expect([rideAfter.fromPosition, rideAfter.toPosition].map(position => feed.stops[rideAfter.run.trip.stops[position]].id)).toEqual(["0", "2"])
+})
+
+test("an itinerary chosen from your location stays chosen as you walk to it and its times change", async () => {
+  const feed = tripFeed(["0", "1", "2"])
+  const [early] = feed.trips
+  // The same trip, half an hour later
+  const late = { ...early, id: "L", times: early.times.map(time => time + 1800) }
+  const state = await load({ files: { "/src/map/gtfs.json": { ...feed, trips: [early, late] } } })
+  await state.moveTo({ ...stopById("0"), lat: stopById("0").lat - 0.002 })
+  state.to.value = { ...stopById("2"), name: "Work" }
+  await vi.advanceTimersByTimeAsync(0)
+  const rideOf = () => state.itinerary.peek()?.legs.find(leg => leg.kind === "ride")?.run.trip.id
+  const chosen = state.itineraries.peek().find(itinerary => itinerary.legs.some(leg => leg.kind === "ride" && leg.run.trip.id === "L"))!
+  expect(state.itineraries.peek()[0]).not.toBe(chosen)
+  state.selected.value = wayKey(chosen)
+  await vi.advanceTimersByTimeAsync(0)
+  expect(rideOf()).toBe("L")
+
+  // Far enough toward the stop to plan from there again, a few minutes on
+  for (const step of [1, 2, 3]) {
+    await state.moveTo({ ...stopById("0"), lat: stopById("0").lat - 0.002 + step * 0.0006 })
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(state.from.peek()).toMatchObject({ isYou: true })
+    expect(rideOf()).toBe("L")
+  }
 })
 
 test("newer code leaves the data as it is, for the reload that brings both in", async () => {

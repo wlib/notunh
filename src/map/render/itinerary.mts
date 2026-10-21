@@ -1,19 +1,27 @@
 // The itinerary drawn on the map: walks along the streets and paths, and rides along their route's shape, with the
-// camera fitted to it whenever it goes another way
+// camera fitted to it whenever the trip's ends or the itinerary chosen change
 
 import { watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, Map as MapLibre } from "maplibre-gl"
 import type { Feed } from "../../transit/feed.mts"
-import { type Itinerary, wayKey } from "../../routing/plan.mts"
+import type { Itinerary } from "../../routing/plan.mts"
+import type { Place } from "../../places/search.mts"
 import type { LegPath } from "../state/trip.mts"
 import type { Show } from "./camera.mts"
 import { collection, line } from "./layers.mts"
 
-/** Draws the itinerary as its legs' paths have it, showing the whole of it when it's a new way */
+/** Where a trip's end is, or "you" wherever you've got to */
+const endKey = (place: Place | undefined) =>
+  place?.isYou ? "you" : place && `${place.lat},${place.lon}`
+
+/** Draws the itinerary as its legs' paths have it, showing the whole of it for a new trip or a new choice */
 export const drawItinerary = (
   map: MapLibre,
   state: {
     feed:      Reactive<Feed>,
+    from:      Reactive<Place | undefined>,
+    to:        Reactive<Place | undefined>,
+    selected:  Reactive<string | undefined>,
     itinerary: Reactive<Itinerary | undefined>,
     legPaths:  Reactive<LegPath[]>
   },
@@ -40,8 +48,9 @@ export const drawItinerary = (
       })
     )))
 
-    // Replanning with fresher times, or as you walk, redraws the same trip without moving the map
-    const key = wayKey(itinerary)
+    // Replanning with fresher times, or as you walk, redraws the trip without moving the map, even where it then
+    // suggests another bus, as the map zooming out from under you as you walk is worse than a way that runs off it
+    const key = `${endKey(state.from.peek())} ${endKey(state.to.peek())} ${state.selected.peek()}`
     if (key !== fitted) {
       fitted = key
       const all = paths.flatMap(path => path.coordinates)

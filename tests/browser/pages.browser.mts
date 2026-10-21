@@ -52,12 +52,14 @@ test("each file a page names downloads once, on a first visit however slowly it 
   }
 })
 
-// The dining fixtures' menus are for October 7 and 8, 2026, when every hall but Philbrook on weekends is open
+// The dining fixtures' menus are for October 7 and 8, 2026, when every hall but Philbrook on weekends is open. A
+// build here may take real menus instead, which run a couple of weeks from the day it's made, so the day with none is
+// a couple of months after the tests run, as a day before any menus opens on the first that has one
 const WITH_MENUS = new Date("2026-10-07T16:00:00Z")
-const PAST_MENUS = new Date("2026-10-20T16:00:00Z")
+const NO_MENUS   = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
 
 test("dining first opens on a day without a menu saying so, not loading forever", async ({ page, fixture }) => {
-  await page.clock.setFixedTime(PAST_MENUS)
+  await page.clock.setFixedTime(NO_MENUS)
   await page.goto(`${fixture.origin}/dining/`)
   await expect(page.locator("main.dining")).toContainText("hasn't posted a menu for that day yet")
 })

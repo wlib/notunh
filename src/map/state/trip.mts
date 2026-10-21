@@ -3,7 +3,7 @@
 import { r, watch } from "bruh/reactive"
 import { ridePath } from "../../transit/shapes.mts"
 import { type Progress, type Walk, type Walks, isOffPath, walkOn, walkSeconds } from "../../routing/walks.mts"
-import { type Itinerary, type WalkLeg, isSameItinerary, itineraryKey, plan, walkOnly } from "../../routing/plan.mts"
+import { type Itinerary, type WalkLeg, isSameItinerary, plan, walkOnly, wayKey } from "../../routing/plan.mts"
 import type { Place } from "../../places/search.mts"
 import { buildingAt } from "../../places/buildings.mts"
 import { type Line, sliceLine, toLine } from "../../geo/lines.mts"
@@ -42,7 +42,7 @@ export const createTrip = (
 
   const from = r(isTripToday && isPlace(trip.from) ? trip.from : undefined)
   const to = r(isTripToday && isPlace(trip.to) ? trip.to : undefined)
-  /** The itineraryKey of the chosen itinerary, or "walk" */
+  /** The wayKey of the chosen itinerary, which stays chosen as its times change and as you walk, or "walk" */
   const selected = r(isTripToday && typeof trip.selected === "string" ? trip.selected : undefined)
   own(watch(() => {
     store(TRIP, { day: today.peek(), from: from.value, to: to.value, selected: selected.value })
@@ -75,7 +75,7 @@ export const createTrip = (
     if (selected.value === "walk" && from.value && to.value)
       return walkOnly(walks.value, from.value, to.value, now.peek())
     return (
-      itineraries.value.find(itinerary => itineraryKey(itinerary) === selected.value) ??
+      itineraries.value.find(itinerary => wayKey(itinerary) === selected.value) ??
       itineraries.value[0]
     )
   })

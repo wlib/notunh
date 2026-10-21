@@ -83,7 +83,10 @@ const addressIn = (map: MapLibre, rings: Coordinates[][]) => {
   return street && `${house.properties.housenumber} ${street.name}`
 }
 
-/** A pin at each end of the trip, dropped elsewhere by dragging it, and named for where it's dropped */
+/**
+ * A pin at each end of the trip, dropped elsewhere by dragging it, and named for where it's dropped. An end that's
+ * you has your dot instead, as a pin would only catch up with you every so often
+ */
 export const dropPins = (map: MapLibre, state: { from: SourceNode<Place | undefined>, to: SourceNode<Place | undefined>, gazetteer: Reactive<readonly GazetteerPlace[]> }) => {
   for (const [color, place] of [[START, state.from], [END, state.to]] as const) {
     const marker = new Marker({ color, draggable: true })
@@ -96,7 +99,7 @@ export const dropPins = (map: MapLibre, state: { from: SourceNode<Place | undefi
         place.value = { ...dropped, name }
     })
     watch(() => {
-      if (place.value)
+      if (place.value && !place.value.isYou)
         marker.setLngLat([place.value.lon, place.value.lat]).addTo(map)
       else
         marker.remove()

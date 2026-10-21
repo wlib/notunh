@@ -5,7 +5,7 @@
 
 import * as v from "valibot"
 import { Wake } from "../reminders/watch.mts"
-import { type Reminder, textOf } from "../reminders/reminder.mts"
+import { type Kept, textOf } from "../reminders/reminder.mts"
 
 type Extendable = { waitUntil(promise: Promise<unknown>): void }
 type Shown = { tag: string, close(): void }
@@ -25,24 +25,31 @@ export type PushScope = {
   location: { origin: string }
 }
 
-/** The reminders the phone keeps, src/reminders/store.mts in the service worker */
-export type Kept = { reminderOf(id: string): Promise<Reminder | undefined> }
+/** The reminders the phone keeps, src/reminders/browser/store.mts in the service worker */
+export type Store = { reminderOf(id: string): Promise<Kept | undefined>, keep(kept: Kept): Promise<unknown> }
 
-export const startPush = (scope: PushScope, kept: Kept, now = () => Date.now() / 1000) => {
+const ICON = "/icon-192.png"
+
+export const startPush = (scope: PushScope, store: Store, now = () => Date.now() / 1000) => {
   const show = async ({ data }: PushLike) => {
-    const wake = v.parse(Wake, data?.json())
-    const reminder = await kept.reminderOf(wake.reminder).catch(() => undefined)
+    const pushed = v.parse(Wake, data?.json())
+    const reminder = await store.reminderOf(pushed.reminder).catch(() => undefined)
+    // Pushes can arrive out of order, so one older than the last shown shows the last again, and the newest is kept
+    const wake = reminder?.last && pushed.at < reminder.last.at ? reminder.last : pushed
+    if (reminder && wake !== reminder.last)
+      await store.keep({ ...reminder, last: wake }).catch(() => {})
     const { title, body } = textOf(wake, reminder, now())
     const tag = `reminder-${wake.reminder}`
     // Safari keeps every notification of a tag, so the one this replaces is closed first
     for (const notification of await scope.registration.getNotifications({ tag }).catch(() => []))
       notification.close()
-    await scope.registration.showNotification(title, { body, tag, renotify: true, icon: "/icon-192.png" })
+    await scope.registration.showNotification(title, { body, tag, renotify: true, icon: ICON })
   }
 
+  // A push this worker can't read, as one of a shape it doesn't know, still shows something
   scope.addEventListener("push", event => {
     event.waitUntil(show(event).catch(() =>
-      scope.registration.showNotification("notunh", { body: "Open notunh for your bus.", icon: "/icon-192.png" })
+      scope.registration.showNotification("Time to head out", { body: "Open notunh for your bus.", icon: ICON })
     ))
   })
 

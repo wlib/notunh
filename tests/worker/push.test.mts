@@ -1,6 +1,7 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { encrypt, fromBase64Url, localOf, push, toBase64Url, vapidAuthorization, type Subscription } from "../../worker/push.mts"
+import { encrypt, localOf, push, vapidAuthorization, type Subscription } from "../../worker/push.mts"
+import { fromBase64Url, toBase64Url } from "../../src/shared/base64url.mts"
 import { browser, vapidKeys } from "./webpush.mts"
 
 // RFC 8291's example (section 5 and Appendix A), with the whitespace the RFC wraps its base64url in taken out

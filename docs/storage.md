@@ -28,7 +28,7 @@ A build only installs (`scripts/inputs.mts`) and writes nothing outside its fold
 | `public/inputs.json` | The build | Inputs and map data versions | Static | With the deploy |
 | Page HTML, `/sw.js` | `vite build` | `<meta name="release">` and the hashed files it names; the worker by its bytes | Static; SW cache | Current + previous per page in browsers |
 | Reminders: a device's push subscription, a hash of its secret, and each reminder's watch: a run (its trip and scheduled time at the stop), the stop and route, a lead, and the time it was last told | `PUT /api/reminders/:id` | `reminders-1` migration | The device's `Reminders` Durable Object ([reminders.md](reminders.md)) | A reminder until its bus has gone; the device 30 days after its last, or until its push service says it's gone |
-| IndexedDB `notunh-reminders` | Pages, and the service worker | Version 1 | Browser | Each reminder whole, the bus and where it goes included, until its bus is 2 h past or it's cancelled; the device's id and secret |
+| Cache Storage `reminders-v1`, one JSON entry | Pages, and the service worker, under one Web Lock | `version` in the entry | Browser | Each reminder whole, the bus and where it goes included, with where it stands with the Worker, until its bus is 2 h past or it's cancelled; the device's id and secret |
 | `localStorage` | Pages | `laundry-favorites`, `map-riding`, `dining-hall`, map state (`src/shell/state.mts`) | Browser | Until cleared, or Safari's seven-day rule |
 
 The nightly prune reads the catalog first and prunes no samples if it can't. Live data (Umo, `/api/*`) is never cached by the service worker. Laundry's room list is edge-cached 300 s and a room 30 s (`worker/laundry.mts`), `max-age=0` in browsers.

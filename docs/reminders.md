@@ -12,11 +12,21 @@
 
 ## How it works
 
-1. **The phone sets the reminder.** `src/map/ui/Remind.tsx` builds the reminder (`src/reminders/reminder.mts`),
-   subscribes to pushes, and `PUT`s the watch to the Worker (`src/reminders/client.mts`).
-   - The reminder is kept whole in IndexedDB (`src/reminders/store.mts`), which pages and the service worker share and
-     `localStorage` isn't: the trip, its route and stop by id and by name, the bus's scheduled and expected times, the
-     walk, the lead, and where the trip goes and when it gets there.
+1. **The phone sets the reminder.** `src/map/ui/Remind.tsx` builds the reminder from the itinerary (`reminderOf` in
+   `src/reminders/reminder.mts`, pure), and `src/map/state/reminders.mts` subscribes to pushes, keeps it, and `PUT`s
+   the watch to the Worker (`src/reminders/browser/api.mts`, the one client of the routes).
+   - The reminder is kept whole (`src/reminders/browser/store.mts`): the trip, its route and stop by id and by name,
+     the bus's scheduled and expected times, the walk, the lead, where the trip goes and when it gets there, and where
+     it stands with the Worker. It's one JSON entry in a Cache Storage cache of its own (`reminders-v1`), which pages
+     and the service worker share and `localStorage` isn't, and which the app's worker leaves alone when it drops
+     older caches. Every change is read, edited and written under one Web Lock (`navigator.locks`, Safari 15.4+), so
+     two tabs setting their first reminder at once get one device id and secret. IndexedDB would do the same with
+     transactions and a schema, for more code.
+   - **The phone and the Worker are kept agreeing by keeping first and telling after.** A reminder is kept as
+     `setting` before the Worker is asked, and as `set` once it answers 204; a cancel is kept as `cancelling` until the
+     Worker answers. Whatever the Worker refuses (4xx) is dropped with the reason; whatever it couldn't be told
+     (offline, 5xx) is asked again with the same reminder id when the map next loads or the phone comes back online,
+     which the Worker takes as a replace. The service worker words a push for a `cancelling` reminder as cancelled.
    - The walk is the itinerary's first walk leg's own length, as the planner has it, without the wait at the stop.
    - The lead (`leadTime`) is how long before the bus could leave to be woken: the walk, a 5-minute heads-up, and a
      minute more while no bus is on the trip yet, as a whole half minute between 1 and 60 minutes. A lead chosen from
@@ -25,6 +35,9 @@
    - The watch (`watchOf`) is the stop, the route, the trip's id, its scheduled departure from the stop in epoch
      seconds, and the lead. The trip and time name the run among the day's, and the route, stop and time find it again
      under a timetable that has since renamed its trips (`runOf` in `src/reminders/forecast.mts`).
+   - `PUT` is rate limited by address through the Workers Rate Limiting binding (`RATE_LIMIT` in `wrangler.jsonc`, 30
+     a minute, counted per Cloudflare location), since any client can mint device ids and each is an object; where the
+     binding isn't bound, as in tests, nothing is bounded.
 2. **The Worker hands the watch to the device's Durable Object.** There's one SQLite-backed `Reminders` object per
    device (`worker/reminders.mts`).
    - It keeps the subscription, a SHA-256 of the device's secret, and each watch with its state.
@@ -32,30 +45,40 @@
 3. **Each check forecasts the run from what the Worker already has,** and costs nothing visible.
    - It reads the last 10 minutes of `samples` from D1: every bus fix, and the latest of Umo's predictions, which say
      which bus runs which trip and which runs aren't coming.
-   - It follows the route's buses through the location model and pace (`sightingsFrom` in
-     `src/transit/models/tracking.mts`), as the map does live and the nightly scoring replays.
-   - It builds the day's runs of that route alone with `buildRuns`, the map's forecasting, from the timetable and
-     model the site serves (read from the map page's head once an hour), and reads the run's departure from the stop,
-     its band (`slack`), and whether a bus is on it (`seenOf`).
+   - It follows every route's buses through the location model and pace (`sightingsFrom` over the `fleet` in
+     `src/transit/models/tracking.mts`), by the one rule the map follows live and the nightly scoring replays.
+   - It builds the day's runs once a check from the whole timetable with `buildRuns`, the map's forecasting, from the
+     timetable and model the site serves (read from the map page's head, the build's manifest, once an hour, and a
+     minute after a read that failed, keeping the last read meanwhile), so a bus going on from another route is
+     followed onto the watched run, then looks each watched run up (`seenOf`): its departure from the stop, its band
+     (`slack`), and whether a bus is on it. A run the forecast hasn't is `cancelled` if the timetable alone still has
+     it, as the source then dropped it, and `lost` if it doesn't, as a timetable swapped since the watch was set.
    - Without the site's timetable or model, the run is due as scheduled, give or take (`scheduledOnly`), so the phone
      is still woken.
    - `src/reminders/watch.mts` decides, purely: when to check again (halving the wait until the bus could leave,
      band allowed, within the lead, then a minute at a time), and what to push (`check`): `due` once it could; after
-     that, `update` if its time moves by 2 minutes or more or it's cancelled; or `over`, once, if the run is cancelled
-     or past before it was ever near. A watch pushes at most 3 times.
+     that, `update` if its time moves by 2 minutes or more or it's cancelled or lost; or `over`, once, if the run is
+     gone or past before it was ever near. A watch pushes at most 3 times.
+   - A push made is saved on the watch as owed before it's sent, and alarms run at least once, so an object evicted
+     between the two sends it when it next runs, and none is made twice. The alarm (`worker/reminders.mts`) delivers
+     what's owed, then evaluates the due watches, then settles: `deliver`, `evaluate`, and the handler in that order.
 4. **Pushes are Web Push from WebCrypto alone** (`worker/push.mts`): RFC 8291 encryption (aes128gcm, RFC 8188), RFC
    8292 VAPID, and RFC 8030's headers.
-   - Each push carries what the forecast says of the run (`Seen` in `watch.mts`): when its bus leaves the stop, how
-     early to be there, whether a bus is on it, and whether it's still coming, cancelled, or past. It sends `TTL`
-     until the bus is gone, `Urgency: high`, and `Topic` set to the reminder, so a newer push replaces an undelivered
-     one.
-   - On 404 or 410, the device is forgotten. On 429 or 5xx, the push is tried again after `Retry-After` if the
-     service gives one, else after 30 s doubled each try, and given up after 5 tries or once the run is 2 h past its
-     time, so a service that's down can't be asked forever.
+   - Each push carries its shape's version (`v`), and what the forecast says of the run (`Seen` in `watch.mts`): when
+     its bus leaves the stop, how early to be there, whether a bus is on it, and whether it's still coming, cancelled,
+     lost, or past, and when the check was. It sends `TTL` until the bus is gone, `Urgency: high`, and `Topic` set to
+     the reminder, so a newer push replaces an undelivered one.
+   - On 404 or 410, the device is forgotten, unless the phone has subscribed anew at another endpoint meanwhile, in
+     which case the old push's answer says nothing about the new subscription. On 429 or 5xx, the push stays owed and
+     is tried again after `Retry-After` if the service gives one, else after 30 s doubled each try, and given up
+     after 5 tries or once the run is 2 h past its time, so a service that's down can't be asked forever.
 5. **The service worker always shows a notification** (`src/sw/push.mts`), as iOS requires.
    - It words the notification from the push and the reminder it keeps (`meaningOf` and `textOf`): when to leave,
      which is the bus's time less the walk and the band, the stop, how late the bus runs, and when you'll get there.
-     A run cancelled or past, or gone before it was near, says the bus may not be coming.
+     A run cancelled or past, or gone before it was near, says the bus may not be coming; one lost says notunh lost
+     track of the bus, as the timetable changed.
+   - A push of a shape it doesn't know (another `v`) shows a plain "Time to head out". Pushes can arrive out of order,
+     so the last shown is kept on the reminder, and a push older than it (by `at`) shows the last again.
    - It closes the reminder's earlier notification first, since Safari ignores `tag`.
    - Tapping the notification brings up an open map as it is, or opens `/map/` when none is.
 
@@ -111,13 +134,15 @@ reminder and dropped when it's forgotten, so asking an unknown device anything b
 
 ## Routes
 
-All of these are public. Each device's reminders go by its secret, sent as a bearer token. The routes aren't rate
-limited beyond the ten reminders a device may hold; a Rate Limiting binding on `PUT` is a follow-up.
+All of these are public. Each device's reminders go by its secret, sent as a bearer token. `PUT` is limited to 30 a
+minute from one address through the Rate Limiting binding
+(https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/), besides the ten reminders a device may
+hold.
 
 | Route | |
 |---|---|
 | `GET /api/push/key` | The VAPID public key, or 404 where reminders aren't set up, as in Previews |
-| `PUT /api/reminders/:id` `{ device, subscription, watch }` with `Authorization: Bearer <secret>` | Sets a watch, 204. 401 without the secret, 403 for another device's, 429 past 10 at once, 400 for an endpoint that isn't a push service's (Apple, Google, Mozilla, Microsoft), a run already gone or more than 36 h ahead, or a lead outside 1 to 60 minutes |
+| `PUT /api/reminders/:id` `{ device, subscription, watch }` with `Authorization: Bearer <secret>` | Sets a watch, 204. 401 without the secret, 403 for another device's, 429 past 10 at once or past the address's limit, 400 for an endpoint that isn't a push service's (Apple, Google, Mozilla, Microsoft), a run already gone or more than 36 h ahead, or a lead outside 1 to 60 minutes |
 | `DELETE /api/reminders/:id?device=` with `Authorization: Bearer <secret>` | Cancels one |
 | `DELETE /api/push/devices/:device` with the same | Forgets the device |
 
@@ -143,19 +168,31 @@ The Worker needs a VAPID key pair as secrets. Without one, reminders aren't offe
       pushes at most 3 times, says `due` before anything else or `over` alone, wakes the lead before the bus could
       leave to within a check, and tries a push the service couldn't take with a doubling wait, a few times;
     - the forecast on half an hour of real samples (`tests/map/fixtures/buses.json.gz`): a route 3 bus followed to its
-      stop, found by its trip or by its time under a renamed one, and the timetable fallback;
-    - what a push means for a reminder and its wording: never empty, the destination never in what the Worker sends.
+      stop, found by its trip or by its time under a renamed one, a run the source dropped as against one the timetable
+      lost, a run on another route the bus goes on to foretold from the bus, and the timetable fallback;
+    - what a push means for a reminder and its wording: never empty, the destination never in what the Worker sends;
+    - the store (`store.test.mts`) over Cache Storage and Web Locks in memory: two tabs asking for the device at once
+      get one, and random batches of concurrent keeps and forgets end as a reference map does;
+    - the page's reminders (`client.test.mts`), each tab the module loaded afresh over one storage: two tabs' first
+      reminders share a device, a reminder the Worker took but the phone couldn't keep as set is set again with the
+      same id, one refused is dropped, one cancelled offline is kept as cancelling, worded so by a push meanwhile, and
+      cancelled once back online.
   - `tests/worker/push.test.mts`: RFC 8291's example byte for byte, a browser-side decryption of random messages, the
     VAPID JWT verified with the public key, and status handling.
   - `tests/worker/reminders.test.mts`: the routes and the Durable Object, with a fake object state on Node's SQLite
     (`tests/worker/durable.mts`), the same half hour of samples in a fake D1, the site's files served from memory, and
     the push service stubbed. Pushes are decrypted as the phone would, a watch replaced or cancelled while the
-    samples are read is left alone, a service that never takes a push is given up on, a forgotten device can set a
-    reminder again, and the samples query is checked to go by the table's key.
+    samples are read is left alone, a subscription replaced while an old push comes back 410 is kept, an object
+    restarted between making a push and sending it sends it once, the site is read again soon after a failed read
+    and kept through a later one, a service that never takes a push is given up on, a forgotten device can set a
+    reminder again, the address limit answers 429, and the samples query is checked to go by the table's key.
   - `tests/shell/push.test.mts`: the service worker's handlers. Every push shows exactly one notification, whatever it
-    carries or the phone keeps.
+    carries or the phone keeps, a push of an unknown shape shows a plain one, and an older push shows the last again.
+  - `tests/layers.test.mts`: `src/reminders/` imports only the domain beneath it and names no browser or storage
+    global; `src/reminders/browser/` keeps and sends, and only the map's state is reactive.
 - **Browser** (`npm run test:browser`): `tests/browser/push.browser.mts`, Chromium only.
-  - It plans a trip, sets a reminder, and checks what the stubbed Worker is told against what IndexedDB keeps.
+  - It plans a ride the built site's own timetable offers, real or the fixtures', sets a reminder, and checks what the
+    stubbed Worker is told against what Cache Storage keeps.
   - It then delivers a push straight to the service worker with DevTools' `ServiceWorker.deliverPushMessage` and checks
     the notification shown.
   - The subscription is stubbed, since headless Chromium has no push service. Notifications are recorded as shown,
@@ -181,6 +218,10 @@ The Worker needs a VAPID key pair as secrets. Without one, reminders aren't offe
   "by". A `planBy` in `plan.mts` would latest-start over the scans `plan` already runs.
 - **The service worker doesn't replan.** It rewords the stored itinerary with the bus's time now. A bus that may not
   be coming says to open notunh for another way.
+- **Rolling back** to before this storage: the IndexedDB `notunh-reminders` database isn't read any more and is left
+  behind until the browser clears it; reminders set under it are forgotten on the phone, and the Worker ends their
+  watches as their buses go by. The entry's `version` is bumped with any change of meaning, and another version reads
+  as nothing kept.
 - **Previews have no Durable Object binding or secrets,** so reminders are off there, and `/api/push/key` 404s.
   Whether wrangler's `previews` block takes `durable_objects` is unverified.
 

@@ -1,7 +1,7 @@
 // How the Worker watches a bus for a phone: told which run, by its trip and its scheduled time at the stop, and how
 // far ahead of the bus to wake the phone, it forecasts the run's departure from the stop with the model each check
 // (forecast.mts), halving the wait as the time nears, and pushes once the bus could leave within the lead. It then
-// follows the bus and pushes again only if its time moves by minutes or it's cancelled, or once, if the run is gone
+// follows the bus and pushes again only if its time moves by minutes or it's gone, or once, if the run was gone
 // before it was ever near. Every push shows a notification, as iOS requires, so pushes are few. The phone makes of
 // each what it means for its trip (reminder.mts)
 
@@ -22,6 +22,8 @@ export const LATEST = 2 * 3600
 export const FURTHEST = 36 * 3600
 /** Times a push the service couldn't take is tried, each wait twice the last from MIN_CHECK, unless it says when */
 export const MAX_TRIES = 5
+/** The shape of a push, which a service worker that doesn't know shows a plain notification for */
+export const WAKE_VERSION = 1
 
 /**
  * What the Worker is told: the run, as the trip's id and its scheduled departure from the stop in epoch seconds,
@@ -40,22 +42,22 @@ export type Watch = v.InferOutput<typeof Watch>
 /**
  * What the forecast says of the run at a check: when its bus leaves the stop, in epoch seconds, how early to be there
  * for it (the band), whether a bus is on it rather than it being foretold from the timetable, and whether it's still
- * coming, cancelled, or past the stop
+ * coming, cancelled by the source's word, lost to a timetable that no longer has it, or past the stop
  */
 export const Seen = v.object({
   time:   v.number(),
   band:   v.number(),
   isLive: v.boolean(),
-  status: v.picklist(["coming", "cancelled", "passed"])
+  status: v.picklist(["coming", "cancelled", "lost", "passed"])
 })
 export type Seen = v.InferOutput<typeof Seen>
 
-/** Why a push came: the bus is within the lead, its time moved by minutes or it was cancelled since, or the run was gone before it was ever near */
+/** Why a push came: the bus is within the lead, its time moved by minutes or it went missing since, or the run was gone before it was ever near */
 export const KINDS = ["due", "update", "over"] as const
 export type Kind = typeof KINDS[number]
 
-/** What a push carries to the phone: the reminder, why, what the forecast says of its run, and when */
-export const Wake = v.object({ reminder: v.string(), kind: v.picklist(KINDS), seen: Seen, at: v.number() })
+/** What a push carries to the phone: its shape's version, the reminder, why, what the forecast says of its run, and when */
+export const Wake = v.object({ v: v.literal(WAKE_VERSION), reminder: v.string(), kind: v.picklist(KINDS), seen: Seen, at: v.number() })
 export type Wake = v.InferOutput<typeof Wake>
 
 export type Watched = Watch & {
@@ -64,8 +66,8 @@ export type Watched = Watch & {
   told?:  number,
   /** Epoch seconds of the next check, or undefined once there's nothing more to do */
   next?:  number,
-  /** Times the last push has been tried without the service taking it */
-  tries?: number
+  /** A push made that the service hasn't taken yet: how many times it's been tried, and epoch seconds to try it next */
+  owed?:  { wake: Wake, tries: number, at: number }
 }
 
 /** A watch as set, due for its first check at once */
@@ -76,22 +78,28 @@ export const watched = (watch: Watch, now: number): Watched =>
 export const pushOf = (wake: Wake) =>
   JSON.stringify(wake)
 
+/** The run isn't coming: the source says so, or the timetable no longer has it */
+const isGone = (seen: Seen | undefined) =>
+  seen?.status === "cancelled" || seen?.status === "lost"
+
 /**
- * A watch whose push the service couldn't take just now: tried again after the seconds the service asked for, else
- * after MIN_CHECK doubled each try, as though the check hadn't been made; or, once tried MAX_TRIES times or the run
- * is long past, let be as the check left it, the push given up
+ * A watch whose push the service couldn't take just now: owed still, and tried again after the seconds the service
+ * asked for, else after MIN_CHECK doubled each try; or, once tried MAX_TRIES times or the run is long past, the push
+ * given up
  */
-export const retried = (before: Watched, after: Watched, now: number, asked?: number): Watched => {
-  const tries = (before.tries ?? 0) + 1
-  return tries > MAX_TRIES || now > before.scheduled + LATEST
-    ? { ...after, tries: 0 }
-    : { ...before, tries, next: now + (asked ?? MIN_CHECK * 2 ** (tries - 1)) }
+export const retried = (watched: Watched, now: number, asked?: number): Watched => {
+  const tries = (watched.owed?.tries ?? 0) + 1
+  if (tries > MAX_TRIES || now > watched.scheduled + LATEST || !watched.owed)
+    return { ...watched, owed: undefined }
+  return { ...watched, owed: { ...watched.owed, tries, at: now + (asked ?? MIN_CHECK * 2 ** (tries - 1)) } }
 }
 
 /** The next check: halving the wait until the bus could be within the lead, then a minute at a time */
 const plan = (watched: Watched, now: number, earliest: number): Watched => {
   const wait = earliest - watched.lead - now
-  return { ...watched, next: now + (wait <= 0 ? FOLLOW : wait < 2 * MIN_CHECK ? Math.max(wait, MIN_CHECK / 2) : wait / 2) }
+  if (wait <= 0)
+    return { ...watched, next: now + FOLLOW }
+  return { ...watched, next: now + (wait < 2 * MIN_CHECK ? Math.max(wait, MIN_CHECK / 2) : wait / 2) }
 }
 
 const ended = (watched: Watched): Watched =>
@@ -100,13 +108,13 @@ const ended = (watched: Watched): Watched =>
 /**
  * A check at `now`, with what the forecast says of the run, or undefined if it couldn't be made: the watch as it goes
  * on, and what to push. Before the phone's told, it's woken once the bus could leave, its band allowed, within the
- * lead; a run cancelled or past before then is said so once. Told, it hears again only of a move by SHIFT or a
- * cancellation, at most MAX_PUSHES times in all, and the watch ends once the bus has gone by
+ * lead; a run gone or past before then is said so once. Told, it hears again only of a move by SHIFT or of the run
+ * going missing, at most MAX_PUSHES times in all, and the watch ends once the bus has gone by
  */
 export const check = (before: Watched, seen: Seen | undefined, now: number): { watched: Watched, push?: Kind } => {
   const { told } = before
   if (told === undefined) {
-    if (seen?.status === "passed" || seen?.status === "cancelled" || now > before.scheduled + LATEST)
+    if (seen?.status === "passed" || isGone(seen) || now > before.scheduled + LATEST)
       return { watched: { ...ended(before), pushes: 1 }, push: "over" }
     if (!seen)
       return { watched: plan(before, now, before.scheduled) }
@@ -116,9 +124,11 @@ export const check = (before: Watched, seen: Seen | undefined, now: number): { w
   }
   if (seen?.status === "passed" || now > Math.max(told, before.scheduled) + LATEST)
     return { watched: ended(before) }
-  if (seen && before.pushes < MAX_PUSHES && (seen.status === "cancelled" || Math.abs(seen.time - told) >= SHIFT))
-    return { watched: seen.status === "cancelled" ? { ...ended(before), pushes: before.pushes + 1 } : { ...before, pushes: before.pushes + 1, told: seen.time, next: now + FOLLOW }, push: "update" }
-  if (seen?.status === "cancelled" || (seen === undefined && now > told + GONE))
+  if (seen && before.pushes < MAX_PUSHES && (isGone(seen) || Math.abs(seen.time - told) >= SHIFT)) {
+    const pushed = { ...before, pushes: before.pushes + 1 }
+    return { watched: isGone(seen) ? ended(pushed) : { ...pushed, told: seen.time, next: now + FOLLOW }, push: "update" }
+  }
+  if (isGone(seen) || (seen === undefined && now > told + GONE))
     return { watched: ended(before) }
   return { watched: { ...before, next: now + FOLLOW } }
 }

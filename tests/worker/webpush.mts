@@ -2,7 +2,8 @@
 // has the user agent do, and a VAPID key pair of the Worker's
 
 import { expect } from "vitest"
-import { toBase64Url, type Vapid } from "../../worker/push.mts"
+import type { Vapid } from "../../worker/push.mts"
+import { toBase64Url } from "../../src/shared/base64url.mts"
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()

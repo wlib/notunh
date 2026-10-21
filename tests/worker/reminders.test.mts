@@ -3,13 +3,13 @@ import fc from "fast-check"
 import { readFileSync } from "node:fs"
 import { gunzipSync } from "node:zlib"
 import { app } from "../../worker/api.mts"
-import { FORGET_MS, MAX_REMINDERS, Reminders, WINDOW_MS } from "../../worker/reminders.mts"
+import { FORGET_MS, MAX_REMINDERS, Reminders, SITE_RETRY_MS, WINDOW_MS } from "../../worker/reminders.mts"
 import { samples } from "../../worker/schema.mts"
 import { inserts } from "../../worker/rows.mts"
 import { FURTHEST, GONE, LATEST, MAX_PUSHES, MAX_TRIES, MIN_CHECK, type Watch, Wake } from "../../src/reminders/watch.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
 import { gzipJson } from "../../src/shared/json.mts"
-import type { Env } from "../../worker/collect.mts"
+import type { Env } from "../../worker/env.mts"
 import { d1 } from "./d1.mts"
 import { durableNamespace } from "./durable.mts"
 import { browser, vapidKeys } from "./webpush.mts"
@@ -32,22 +32,24 @@ let objects: ReturnType<typeof durableNamespace<Reminders>>
 let phone: Awaited<ReturnType<typeof browser>>
 /** Whether the site's timetable and model can be read */
 let siteDown: boolean
-/** Something to do while the samples are being read, as another request of the object */
+/** Something to do while the samples are being read, or while the push service is asked, as another request of the object */
 let meanwhile: (() => unknown) | undefined
-/** What reaches the push service, and what it answers */
+let pushing: (() => unknown) | undefined
+/** What reaches the push service, at which endpoints, and what it answers, or never, as to an object evicted meanwhile */
 let pushed: string[]
-let pushStatus: number
+let pushedTo: string[]
+let pushStatus: number | "never"
 let retryAfter: string | undefined
 
-const send = (method: string, path: string, body?: unknown, secret?: string) =>
+const send = (method: string, path: string, body?: unknown, secret?: string, headers: Record<string, string> = {}) =>
   app.fetch(new Request(`https://notunh.app${path}`, {
     method,
-    headers: { "content-type": "application/json", ...secret ? { authorization: `Bearer ${secret}` } : {} },
+    headers: { "content-type": "application/json", ...secret ? { authorization: `Bearer ${secret}` } : {}, ...headers },
     body: body === undefined ? undefined : JSON.stringify(body)
   }), env)
 
-const setReminder = (id: string, watch: object = WATCH, secret: string | undefined = SECRET) =>
-  send("PUT", `/api/reminders/${id}`, { device: DEVICE, subscription: { endpoint: ENDPOINT, keys: phone.keys }, watch }, secret)
+const setReminder = (id: string, watch: object = WATCH, secret: string | undefined = SECRET, endpoint = ENDPOINT) =>
+  send("PUT", `/api/reminders/${id}`, { device: DEVICE, subscription: { endpoint, keys: phone.keys }, watch }, secret)
 
 const device = () => objects.objectOf(DEVICE)
 const wakes = () => pushed.map(json => v.parse(Wake, JSON.parse(json)))
@@ -87,7 +89,9 @@ beforeEach(async () => {
   env = { DB, ASSETS, REMINDERS: objects.namespace, VAPID_PUBLIC_KEY: vapid.publicKey, VAPID_PRIVATE_KEY: vapid.privateKey } as unknown as Env
   siteDown = false
   meanwhile = undefined
+  pushing = undefined
   pushed = []
+  pushedTo = []
   pushStatus = 201
   retryAfter = undefined
   const original = DB.prepare.bind(DB)
@@ -107,10 +111,13 @@ beforeEach(async () => {
   }) as typeof DB.prepare
   vi.stubGlobal("fetch", async (input: Request | string) => {
     const request = input instanceof Request ? input : new Request(input)
-    expect(request.url).toBe(ENDPOINT)
     expect(request.headers.get("urgency")).toBe("high")
     expect(request.headers.get("topic")).toBe(ID)
+    pushedTo.push(request.url)
     pushed.push(await phone.decrypt(new Uint8Array(await request.arrayBuffer())))
+    await pushing?.()
+    if (pushStatus === "never")
+      return new Promise<Response>(() => {})
     return new Response(null, { status: pushStatus, headers: retryAfter ? { "retry-after": retryAfter } : {} })
   })
 })
@@ -136,6 +143,7 @@ test("a run is forecast from the Worker's own samples as its time nears, the pho
   // Woken the lead before the bus could leave to within a check, followed until it went by, and checked on few times in all
   expect(wake.seen.time - wake.seen.band - wake.at).toBeLessThanOrEqual(WATCH.lead)
   expect(wakes().length).toBeLessThanOrEqual(3)
+  expect(pushedTo.every(url => url === ENDPOINT)).toBe(true)
   expect(checks.length).toBeLessThan(50)
   expect(checks.at(-1)! / 1000).toBeGreaterThan(LEFT)
   expect(device().state.rows("reminders")).toEqual([])
@@ -152,6 +160,29 @@ test("with the site's timetable and model out of reach, the run is due as schedu
     await fire()
   expect(wakes().map(({ kind }) => kind)).toEqual(["due"])
   expect(wakes()[0].seen).toMatchObject({ time: WATCH.scheduled, isLive: false, status: "coming" })
+})
+
+test("the site is looked for again soon after it couldn't be read, and the last read stands while it can't be", async () => {
+  // A short lead, so the first check, going by the timetable alone, doesn't wake the phone yet
+  const soon = { ...WATCH, lead: 60 }
+  siteDown = true
+  await setReminder(ID, soon)
+  await fire()
+  siteDown = false
+  expect(device().state.alarm()! - Date.now()).toBeGreaterThanOrEqual(SITE_RETRY_MS)
+  while (!pushed.length)
+    await fire()
+  expect(wakes()[0].seen.isLive).toBe(true)
+  // Read once, the site is kept through outages
+  objects.objects.clear()
+  pushed = []
+  vi.setSystemTime(NOW)
+  await setReminder(ID, soon)
+  await fire()
+  siteDown = true
+  while (!pushed.length)
+    await fire()
+  expect(wakes()[0].seen.isLive).toBe(true)
 })
 
 test("whatever the samples say, each check sets the alarm ahead, and the phone is told at most three times", async () => {
@@ -196,6 +227,57 @@ test("a push the service refuses for good forgets the device, and one it can't t
   expect(pushed).toHaveLength(4)
   expect(device().state.rows("device")).toEqual([])
   expect(device().state.alarm()).toBeNull()
+})
+
+test("a subscription replaced while an old push is on its way, which the service then says is gone, is kept, with its watch", async () => {
+  siteDown = true
+  await setReminder(ID)
+  vi.setSystemTime((WATCH.scheduled - 300) * 1000)
+  const newer = "https://web.push.apple.com/newer"
+  const later = { ...WATCH, scheduled: WATCH.scheduled + 1800 }
+  pushing = () => setReminder(ID, later, SECRET, newer)
+  pushStatus = 410
+  await fire()
+  expect(pushedTo).toEqual([ENDPOINT])
+  expect(device().state.rows("device")).toMatchObject([{ endpoint: newer }])
+  expect(JSON.parse(device().state.rows("reminders")[0].state as string)).toMatchObject({ ...later, pushes: 0 })
+  // Gone at the endpoint the device is at now, it's forgotten
+  pushing = undefined
+  vi.setSystemTime((later.scheduled - 300) * 1000)
+  await fire()
+  expect(pushedTo).toEqual([ENDPOINT, newer])
+  expect(device().state.rows("device")).toEqual([])
+})
+
+test("an object evicted between making a push and sending it delivers the push when it's next run, and no push is made twice", async () => {
+  siteDown = true
+  await setReminder(ID)
+  vi.setSystemTime((WATCH.scheduled - 300) * 1000)
+  pushStatus = "never"
+  void device().object.alarm!()
+  await vi.waitFor(() => expect(pushed).toHaveLength(1))
+  expect(JSON.parse(device().state.rows("reminders")[0].state as string)).toMatchObject({ pushes: 1, owed: { wake: { kind: "due" }, tries: 0 } })
+  objects.restart(DEVICE)
+  pushStatus = 201
+  await device().object.alarm!()
+  expect(pushed).toHaveLength(2)
+  expect(pushed[1]).toBe(pushed[0])
+  expect(JSON.parse(device().state.rows("reminders")[0].state as string)).toMatchObject({ pushes: 1 })
+  expect(JSON.parse(device().state.rows("reminders")[0].state as string).owed).toBeUndefined()
+  while (device().state.rows("reminders").length)
+    await fire()
+  expect(wakes().map(({ kind }) => kind)).toEqual(["due", "due"])
+})
+
+test("only so many reminders a minute are set from one address, where the Rate Limiting binding is bound", async () => {
+  const counts = new Map<string, number>()
+  env.RATE_LIMIT = { limit: async ({ key }) => ({ success: (counts.set(key, (counts.get(key) ?? 0) + 1).get(key) ?? 0) <= 2 }) }
+  const from = (address: string) => send("PUT", `/api/reminders/${ID}`, { device: DEVICE, subscription: { endpoint: ENDPOINT, keys: phone.keys }, watch: WATCH }, SECRET, { "cf-connecting-ip": address })
+  expect((await from("1.1.1.1")).status).toBe(204)
+  expect((await from("1.1.1.1")).status).toBe(204)
+  expect((await from("1.1.1.1")).status).toBe(429)
+  expect((await from("2.2.2.2")).status).toBe(204)
+  expect((await send("DELETE", `/api/reminders/${ID}?device=${DEVICE}`, undefined, SECRET, { "cf-connecting-ip": "1.1.1.1" })).status).toBe(204)
 })
 
 test("a push service that never takes a push is given up on after a few tries, whatever the run does, and the watch ends", async () => {

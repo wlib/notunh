@@ -1,20 +1,19 @@
-// What the model says of a watched run, as the Worker forecasts it from its own samples: the buses it followed, the
-// source's latest word, and the timetable, through the same buildRuns the map uses, so a reminder's "leave" is as
-// good as the map's times. Pure: the Worker (worker/reminders.mts) reads the samples and hands them here
+// What the model says of a watched run, as the Worker forecasts it from its own samples: the day's runs built once a
+// check from the whole timetable, the buses followed across every route and the source's latest word, through the
+// same buildRuns the map uses, so a reminder's "leave" is as good as the map's times and a bus going on from another
+// route is followed onto this one. Pure: the Worker (worker/reminders.mts) reads the samples and hands them here
 
-import { type Feed, withIndexes } from "../transit/feed.mts"
+import type { Feed } from "../transit/feed.mts"
 import type { Model } from "../transit/models/model.mts"
-import { type Run, type Sighting, SCHEDULE_FACTOR, buildRuns, slack, uncertainty } from "../transit/models/forecast.mts"
-import type { Forecast } from "../transit/observations/predictions.mts"
+import { type Run, SCHEDULE_FACTOR, buildRuns, slack, uncertainty } from "../transit/models/forecast.mts"
+import { type Forecast, NO_FORECAST } from "../transit/observations/predictions.mts"
+import type { BusFix } from "../transit/observations/raw.mts"
+import { sightingsFrom } from "../transit/models/tracking.mts"
 import { localDay } from "../shared/time.mts"
 import { GONE, type Seen, type Watch } from "./watch.mts"
 
 /** s a run's scheduled time at the stop may differ from the watch's and still be its run, as a swapped timetable may move it a little */
 const NEAR = 300
-
-/** A route's trips alone, which is all forecasting one of its runs needs, and a tenth of the work */
-export const routeFeed = (feed: Feed, route: string): Feed =>
-  withIndexes({ ...feed, trips: feed.trips.filter(trip => trip.route === route) })
 
 /**
  * The watched run among the day's, with the stop's position on it: the trip at its scheduled time at the stop, or
@@ -34,19 +33,27 @@ export const runOf = (feed: Feed, runs: readonly Run[], { route, stop, trip, sch
   return best
 }
 
+/** The day's runs at an epoch second, forecast from the buses as their fixes had them by then and the source's word */
+export const runsAt = (feed: Feed, model: Model, fixes: readonly BusFix[], forecast: Forecast, now: number) =>
+  buildRuns(feed, localDay(now * 1000), forecast, model, sightingsFrom(feed, model, fixes)(now))
+
+/** The day's runs as the timetable alone has them, which a run the forecast drops is cancelled against */
+export const scheduledRuns = (feed: Feed, model: Model, now: number) =>
+  buildRuns(feed, localDay(now * 1000), NO_FORECAST, model)
+
 /** What's said of a run with no forecast to be had, from the timetable alone: due as scheduled, give or take */
 export const scheduledOnly = ({ scheduled }: Watch, now: number): Seen =>
   ({ time: scheduled, band: uncertainty(scheduled - now) * SCHEDULE_FACTOR, isLive: false, status: now > scheduled + GONE ? "passed" : "coming" })
 
 /**
- * What the model foretells of a watch's run at an epoch second, from the buses as last seen and the source's word:
- * when its bus leaves the stop, how early to be there for it, whether a bus is on it, and whether it's still coming.
- * A run the day's runs don't have, as one the source says isn't coming, is cancelled
+ * What the forecast says of a watch's run at an epoch second: when its bus leaves the stop, how early to be there for
+ * it, whether a bus is on it, and whether it's still coming. A run the forecast hasn't is cancelled if the timetable
+ * still has it, as the source then dropped it, and lost if it doesn't, as a timetable swapped since the watch was set
  */
-export const seenOf = (feed: Feed, model: Model, watch: Watch, sightings: readonly Sighting[], forecast: Forecast, now: number): Seen => {
-  const found = runOf(feed, buildRuns(feed, localDay(now * 1000), forecast, model, sightings), watch)
+export const seenOf = (feed: Feed, runs: readonly Run[], scheduled: () => readonly Run[], watch: Watch, now: number): Seen => {
+  const found = runOf(feed, runs, watch)
   if (!found)
-    return { ...scheduledOnly(watch, now), status: "cancelled" }
+    return { ...scheduledOnly(watch, now), status: runOf(feed, scheduled(), watch) ? "cancelled" : "lost" }
   const { run, position } = found
   const time = run.departures[position]
   return { time, band: slack(run, position, time, now), isLive: run.isLive, status: now > time + GONE ? "passed" : "coming" }

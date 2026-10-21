@@ -9,7 +9,7 @@ import { and, eq, lt, notInArray } from "drizzle-orm"
 import { serviceDayStart } from "../src/transit/feed.mts"
 import { type Day, addDays } from "../src/shared/time.mts"
 import { chunks, derived } from "./schema.mts"
-import type { Env } from "./collect.mts"
+import type { Env } from "./env.mts"
 
 /** What's derived, by name, with the Env variable naming how many days of it the nightly run keeps */
 export const DERIVED = {

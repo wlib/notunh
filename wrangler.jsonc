@@ -43,6 +43,9 @@
     "bindings": [{ "name": "REMINDERS", "class_name": "Reminders" }]
   },
   "migrations": [{ "tag": "reminders-1", "new_sqlite_classes": ["Reminders"] }],
+  // How many reminders one address may set a minute (worker/api.mts): a phone sets a few, and a client minting device
+  // ids would otherwise make an object of each (https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+  "ratelimits": [{ "name": "RATE_LIMIT", "namespace_id": "1", "simple": { "limit": 30, "period": 60 } }],
   "vars": {
     // Who push services can reach about our pushes (worker/push.mts)
     "VAPID_SUBJECT": "https://notunh.app",

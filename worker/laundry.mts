@@ -14,7 +14,8 @@ import { pollMinutes } from "../src/laundry/model.mts"
 import { assess, summarize, type History, type Machine, type RoomLive, type Status, type Summaries, type Transition } from "../src/laundry/infer.mts"
 import { latest, transitions, roomSnapshots } from "./schema.mts"
 import { inserts } from "./rows.mts"
-import type { Env, Job } from "./collect.mts"
+import type { Job } from "./collect.mts"
+import type { Env } from "./env.mts"
 
 /** The trigger in wrangler.jsonc: every minute but every fifth, which has the buses and predictions to itself */
 const CRON = "1-4,6-9,11-14,16-19,21-24,26-29,31-34,36-39,41-44,46-49,51-54,56-59 * * * *"

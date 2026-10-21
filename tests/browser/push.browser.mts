@@ -2,13 +2,19 @@
 // asking a stubbed Worker to watch the run and nothing more, then a push delivered straight to the service worker
 // through DevTools (ServiceWorker.deliverPushMessage), which shows the notification the phone words. Headless
 // Chromium has no push service to subscribe with, so the subscription is a stub too, and shows no notifications, so
-// they're recorded as the service worker shows them. WebKit can't be sent a push, so
-// tests/shell/push.test.mts covers its handlers
+// they're recorded as the service worker shows them. WebKit can't be sent a push, so tests/shell/push.test.mts
+// covers its handlers
 
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { test as base, expect } from "@playwright/test"
 import { type Fixture, startFixture } from "./fixture.mts"
-import { pushOf } from "../../src/reminders/watch.mts"
-import type { Reminder } from "../../src/reminders/reminder.mts"
+import { WAKE_VERSION, pushOf } from "../../src/reminders/watch.mts"
+import type { Kept } from "../../src/reminders/reminder.mts"
+import { type FeedData, isServiceActive, serviceDayStart } from "../../src/transit/feed.mts"
+import { buildOf } from "../../src/shell/manifest.mts"
+import { addDays } from "../../src/shared/time.mts"
+import { distance } from "../../src/geo/projection.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
   fixture: async ({}, use) => {
@@ -18,21 +24,40 @@ const test = base.extend<{ fixture: Fixture }>({
   }
 })
 
-// A Wednesday at noon in Durham, with buses running, and every other origin, like Umo and the map's tiles, out of reach
-const NOON = new Date("2026-10-07T16:00:00Z")
+// Every other origin, like Umo and the map's tiles, is out of reach
 test.use({ proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" } })
+
+/**
+ * A ride the built site's own timetable offers, whichever data the build has, real or the fixtures' few routes: the
+ * first trip of the timetable's first service day, from its first stop to the stop farthest from it, which a bus
+ * beats walking to, and a time shortly before it leaves
+ */
+const rideOf = (dist: string) => {
+  const { data } = buildOf(readFileSync(join(dist, "map/index.html"), "utf8"))
+  const feed: FeedData = JSON.parse(readFileSync(join(dist, data.gtfs), "utf8"))
+  for (let day = feed.start; day <= feed.end; day = addDays(day, 1)) {
+    const [trip] = feed.trips.filter(trip => isServiceActive(feed.services[trip.service], day)).sort((a, b) => a.times[0] - b.times[0])
+    if (!trip)
+      continue
+    const from = feed.stops[trip.stops[0]]
+    const to = trip.stops.map(stop => feed.stops[stop]).reduce((farthest, stop) => distance(from, stop) > distance(from, farthest) ? stop : farthest)
+    return { from: from.name, to: to.name, at: new Date(serviceDayStart(day) + (trip.times[0] - 600) * 1000) }
+  }
+  throw new Error("The timetable has no service")
+}
 
 const KEY = "BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8"
 
 test("a reminder set from an itinerary asks the Worker only to watch the run, and its push shows when to leave", async ({ page, context, fixture, browserName }) => {
   test.skip(browserName !== "chromium", "Only Chromium can be sent a push through DevTools")
-  await page.clock.setFixedTime(NOON)
+  const ride = rideOf(process.env.NOTUNH_DIST!)
+  await page.clock.setFixedTime(ride.at)
   await context.addInitScript(() => {
     PushManager.prototype.subscribe = async () => ({
       toJSON: () => ({ endpoint: "https://fcm.googleapis.com/fcm/send/stub", keys: { p256dh: "BCVxsr7N_eNgVRqvHtD0zTZsEc6", auth: "BTBZMqHH6r4Tts7J_aSIgg" } })
     }) as unknown as PushSubscription
   })
-  const sent: { url: string, body: { watch: Record<string, unknown> }, secret?: string }[] = []
+  const sent: { url: string, body: { device: string, watch: Record<string, unknown> }, secret?: string }[] = []
   await context.route("**/api/push/key", route => route.fulfill({ json: { key: KEY } }))
   await context.route("**/api/reminders/**", async route => {
     sent.push({ url: route.request().url(), body: route.request().postDataJSON(), secret: route.request().headers().authorization })
@@ -51,7 +76,7 @@ test("a reminder set from an itinerary asks the Worker only to watch the run, an
 
   await page.goto(`${fixture.origin}/map/`)
   await page.getByRole("button", { name: "No", exact: true }).click()
-  for (const [field, place] of [["Search or tap the map", "Dover Transportation Center"], ["Where to?", "Kingsbury Hall"]]) {
+  for (const [field, place] of [["Search or tap the map", ride.from], ["Where to?", ride.to]]) {
     await page.getByPlaceholder(field).click()
     await page.getByPlaceholder(field).fill(place)
     await page.keyboard.press("Enter")
@@ -69,16 +94,11 @@ test("a reminder set from an itinerary asks the Worker only to watch the run, an
   expect(watch.lead).toBe(600)
   expect(Object.keys(sent[0].body).sort()).toEqual(["device", "subscription", "watch"])
   expect(sent[0].secret).toMatch(/^Bearer /)
-  expect(JSON.stringify(sent[0].body)).not.toContain("Kingsbury")
+  expect(JSON.stringify(sent[0].body)).not.toContain(ride.to)
   const id = decodeURIComponent(new URL(sent[0].url).pathname.split("/").at(-1)!)
-  const reminder = await page.evaluate(() => new Promise<Reminder>(resolve => {
-    const open = indexedDB.open("notunh-reminders")
-    open.onsuccess = () => {
-      const all = open.result.transaction("reminders").objectStore("reminders").getAll()
-      all.onsuccess = () => resolve(all.result[0])
-    }
-  }))
-  expect(reminder).toMatchObject({ id, stop: watch.stop, route: watch.route, trip: watch.trip, scheduled: watch.scheduled, lead: 600, to: "Kingsbury Hall" })
+  const kept = async () => (await page.evaluate(async () => (await (await caches.open("reminders-v1")).match("/reminders.json"))!.json())) as { reminders: Kept[] }
+  const [reminder] = (await kept()).reminders
+  expect(reminder).toMatchObject({ id, stop: watch.stop, route: watch.route, trip: watch.trip, scheduled: watch.scheduled, lead: 600, to: ride.to, state: "set" })
 
   // Headless Chromium shows no notifications, so the service worker's are recorded as it shows them
   const [worker] = context.serviceWorkers()
@@ -94,18 +114,20 @@ test("a reminder set from an itinerary asks the Worker only to watch the run, an
   await cdp.send("ServiceWorker.deliverPushMessage", {
     origin:         fixture.origin,
     registrationId: await registration,
-    data:           pushOf({ reminder: id, kind: "due", seen: { time: reminder.expected + 120, band: 90, isLive: true, status: "coming" }, at: reminder.expected - 900 })
+    data:           pushOf({ v: WAKE_VERSION, reminder: id, kind: "due", seen: { time: reminder.expected + 120, band: 90, isLive: true, status: "coming" }, at: reminder.expected - 900 })
   })
   const shown = () => worker.evaluate(() => (self as unknown as { shown: { title: string, body: string, tag: string }[] }).shown)
   await expect.poll(shown).toHaveLength(1)
   const [notification] = await shown()
   expect(notification.title).toMatch(/^Leave (now|in \d+ min)$/)
   expect(notification.body).toContain("(2 min late)")
-  expect(notification.body).toContain("Kingsbury")
+  expect(notification.body).toContain(ride.to)
   expect(notification).toMatchObject({ tag: `reminder-${id}` })
 
-  // Cancelling it tells the Worker, by the device's secret
+  // Cancelling it tells the Worker, by the device's secret, and the phone keeps nothing of it once the Worker's heard
   await page.getByRole("button", { name: "Cancel reminder" }).click()
   await expect(page.getByRole("button", { name: "Remind me when to leave" })).toBeVisible()
-  expect(sent).toHaveLength(2)
+  await expect.poll(() => sent.length).toBe(2)
+  expect(sent[1]).toMatchObject({ url: sent[0].url.replace(`/${encodeURIComponent(id)}`, `/${encodeURIComponent(id)}?device=${encodeURIComponent(sent[0].body.device)}`), secret: sent[0].secret })
+  await expect.poll(async () => (await kept()).reminders).toEqual([])
 })

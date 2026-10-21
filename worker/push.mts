@@ -3,6 +3,7 @@
 // tests/worker/push.test.mts checks the encryption against RFC 8291's own example
 
 import * as v from "valibot"
+import { fromBase64Url, toBase64Url } from "../src/shared/base64url.mts"
 
 /** The push services browsers subscribe with: Apple's, Google's, Mozilla's, and Microsoft's, so nothing else is posted to */
 const PUSH_HOSTS = /^(?:[\w-]+\.)*(?:push\.apple\.com|fcm\.googleapis\.com|push\.services\.mozilla\.com|notify\.windows\.com)$/
@@ -34,12 +35,6 @@ const RECORD_SIZE = 4096
 const TOKEN_SECONDS = 12 * 3600
 
 const encoder = new TextEncoder()
-
-export const toBase64Url = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "")
-
-export const fromBase64Url = (text: string) =>
-  Uint8Array.from(atob(text.replaceAll("-", "+").replaceAll("_", "/")), char => char.charCodeAt(0))
 
 const concat = (...parts: Uint8Array[]) => {
   const bytes = new Uint8Array(parts.reduce((length, part) => length + part.length, 0))

@@ -1,7 +1,7 @@
 // Which way the source's dependencies run, read from every import, so a shortcut across layers fails here rather
-// than tangling quietly. Geometry and the transit, places, and routing domains import only what's beneath them and
-// never the browser. Observations as stored never depend on what's made of them. The Worker and the scripts that
-// train and replay reach none of the pages
+// than tangling quietly. Geometry and the transit, places, routing and reminders domains import only what's beneath
+// them and never the browser. Observations as stored never depend on what's made of them. The Worker and the scripts
+// that train and replay reach none of the pages
 
 import { test, expect } from "vitest"
 import { globSync, readFileSync } from "node:fs"
@@ -22,8 +22,16 @@ const LAYERS: Record<string, string[]> = {
   "src/transit":              ["src/shared", "src/geo"],
   "src/transit/inference":    ["src/shared", "src/geo", "src/transit", "src/transit/observations"],
   "src/transit/models":       ["src/shared", "src/geo", "src/transit", "src/transit/observations", "src/transit/inference"],
-  "src/routing":              ["src/shared", "src/geo", "src/places", "src/transit", "src/transit/observations", "src/transit/inference", "src/transit/models"]
+  "src/routing":              ["src/shared", "src/geo", "src/places", "src/transit", "src/transit/observations", "src/transit/inference", "src/transit/models"],
+  "src/reminders":            ["src/shared", "src/geo", "src/transit", "src/transit/observations", "src/transit/inference", "src/transit/models", "src/routing"],
+  "src/reminders/browser":    ["src/shared", "src/reminders"]
 }
+
+/**
+ * The globals only a browser or its storage has. The reminders' domain (src/reminders/ itself) decides what a reminder
+ * and a watch are and what a push means with none of them, and src/reminders/browser/ keeps and sends them
+ */
+const PLATFORM = /(?<![\w.$])(navigator|window|document|caches|indexedDB|localStorage|fetch)\b/
 
 /**
  * What only a page has: bruh's reactivity and browser rendering (not its server rendering, which the build uses), the
@@ -87,4 +95,15 @@ test("the Worker and the scripts, training and replay among them, never reach wh
     .filter(file => /^(worker|scripts)\//.test(file))
     .flatMap(file => [...reached(file)].filter(target => BROWSER.some(pattern => pattern.test(target))).map(target => `${file} -> ${target}`))
   expect(reaches).toEqual([])
+})
+
+test("the reminders' domain touches no browser or storage global, which only its browser folder and the pages do", () => {
+  const touches = files
+    .filter(file => dirname(file) === "src/reminders")
+    .flatMap(file => readFileSync(join(ROOT, file), "utf8").split("\n").flatMap((line, i) => {
+      // Comments only mention them
+      const code = /^\s*(\/\/|\/?\*)/.test(line) ? "" : line.replace(/\s\/\/\s.*$/, "")
+      return PLATFORM.test(code) ? [`${file}:${i + 1}`] : []
+    }))
+  expect(touches).toEqual([])
 })

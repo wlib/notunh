@@ -1,6 +1,8 @@
 // A live source's word on the buses out now, as forecasting (models/forecast.mts) reads it whatever the source:
 // umo.mts makes it of Umo's predictions
 
+import { getOrCreate } from "../../shared/group.mts"
+
 /** A live source's word on a trip: when a bus is expected at a stop, from the bus itself or from the source's own schedule */
 export type Observation = {
   tripId:    string,
@@ -34,7 +36,7 @@ export const forecastFrom = (predicted: Iterable<Predicted>, at: number): Foreca
   for (const { route, stop, vehicle, trip, time, isLive } of predicted) {
     if (!trip)
       continue
-    const stops = forecast.coverage.get(route) ?? forecast.coverage.set(route, new Map()).get(route)!
+    const stops = getOrCreate(forecast.coverage, route, () => new Map<string, number>())
     stops.set(stop, Math.max(stops.get(stop) ?? -Infinity, time))
     forecast.observations.push({ tripId: trip, stopId: stop, time, vehicleId: vehicle, isLive })
   }

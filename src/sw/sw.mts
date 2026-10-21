@@ -2,7 +2,7 @@
 
 import { type Scope, start } from "./worker.mts"
 import { type PushScope, startPush } from "./push.mts"
-import { reminderOf } from "../reminders/store.mts"
+import { keep, reminderOf } from "../reminders/browser/store.mts"
 
 start(self as unknown as Scope)
-startPush(self as unknown as PushScope, { reminderOf })
+startPush(self as unknown as PushScope, { reminderOf, keep })

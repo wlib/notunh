@@ -5,28 +5,25 @@
 import { r, watch, type Reactive } from "bruh/reactive"
 import type { Feed } from "../../transit/feed.mts"
 import type { Vehicle } from "../../transit/observations/umo.mts"
-import { routeLines } from "../../transit/shapes.mts"
-import type { Location } from "../../transit/inference/passages.mts"
-import { type Pace, type Trajectory, NO_PACE, courseAlong } from "../../transit/models/movement.mts"
+import { type Trajectory, courseAlong } from "../../transit/models/movement.mts"
 import type { Model } from "../../transit/models/model.mts"
 import type { Run } from "../../transit/models/forecast.mts"
-import { busOn, isNews, sightingOf } from "../../transit/models/tracking.mts"
+import { type Tracked, fleet, sightingOf } from "../../transit/models/tracking.mts"
 
 /** A fix as the map gets it: Umo's, or your phone's while you're riding the bus, which says how sure it is */
 export type Fixed = Vehicle & { accuracy?: number }
 
 /** A bus as last reported, with where on its route the location model has it (if it's on its route), and how it's been driving */
-export type Followed = { vehicle: Fixed, location?: Location, pace: Pace }
+export type Followed = Tracked & { vehicle: Fixed }
 
 /** A bus as the map draws it: followed, and moving along its course from where it was */
 export type Drawn = Followed & { course?: Trajectory }
 
 export const follow = (feed: Reactive<Feed>, model: Reactive<Model>, vehicles: Reactive<Fixed[]>) => {
-  // Each bus on its route's lines, and the timetable and model it was last followed by. Only what the fixes say
-  // survives a change of either. Under a newer timetable, buses are followed afresh along its lines from their last
-  // fix, as its lines may run otherwise. Under a newer model, buses keep where they are, but their paces start afresh,
-  // as they were measured against the old model's legs
-  let buses = new Map<string, { route: string, bus: ReturnType<typeof busOn> }>()
+  // Only what the fixes say survives a change of timetable or model. Under a newer timetable, buses are followed afresh
+  // along its lines from their last fix, as its lines may run otherwise. Under a newer model, buses keep where they
+  // are, but their paces start afresh, as they were measured against the old model's legs
+  let buses = fleet(feed.peek())
   let [lastFeed, lastModel] = [feed.peek(), model.peek()]
 
   const followed = r<ReadonlyMap<string, Followed>>(new Map())
@@ -35,31 +32,19 @@ export const follow = (feed: Reactive<Feed>, model: Reactive<Model>, vehicles: R
     lastFeed = feed.peek()
     lastModel = model.peek()
     if (isNewFeed)
-      buses = new Map()
+      buses = fleet(lastFeed)
     else if (isNewModel)
-      for (const { bus } of buses.values())
-        bus.rebase()
-    const linesByRoute = routeLines(feed.peek())
+      buses.rebase()
     const next = new Map<string, Followed>()
     for (const vehicle of vehicles.value) {
-      const route = vehicle.route?.id
-      if (!route || !linesByRoute.has(route))
-        continue
-      const previous = followed.peek().get(vehicle.id)
-      let own = buses.get(vehicle.id)
-      if (previous && own?.route === route && !isNews({ at: previous.vehicle.gpsTime, route: previous.vehicle.route?.id }, { at: vehicle.gpsTime, route })) {
-        next.set(vehicle.id, isNewModel ? { ...previous, pace: NO_PACE } : previous)
-        continue
-      }
-      // A bus put on another route starts afresh, as the nightly extraction treats it too
-      if (own?.route !== route) {
-        own = { route, bus: busOn(linesByRoute.get(route)!) }
-        buses.set(vehicle.id, own)
-      }
-      const { location, pace } = own.bus.observe(model.peek(), {
-        at: vehicle.gpsTime / 1000, lat: vehicle.lat, lon: vehicle.lon, heading: vehicle.heading, kph: vehicle.kph, accuracy: vehicle.accuracy
+      const tracked = buses.observe(lastModel, {
+        vehicle: vehicle.id, route: vehicle.route?.id ?? null, at: vehicle.gpsTime / 1000, lat: vehicle.lat, lon: vehicle.lon, heading: vehicle.heading, kph: vehicle.kph, accuracy: vehicle.accuracy
       })
-      next.set(vehicle.id, { vehicle, location, pace })
+      if (!tracked)
+        continue
+      // A bus followed no further keeps its object, so its course is drawn once (drawing)
+      const previous = followed.peek().get(vehicle.id)
+      next.set(vehicle.id, previous && previous.location === tracked.location && previous.pace === tracked.pace ? previous : { vehicle, ...tracked })
     }
     followed.value = next
   })

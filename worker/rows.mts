@@ -14,7 +14,7 @@ import * as schema from "./schema.mts"
 import { latest, polls, roomSnapshots, samples, transitions } from "./schema.mts"
 import { MODELS, throughs } from "./models.mts"
 import { expired } from "./derived.mts"
-import type { Env } from "./collect.mts"
+import type { Env } from "./env.mts"
 
 export type Entry = {
   table:     SQLiteTable,

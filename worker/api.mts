@@ -3,6 +3,7 @@
 // devices' reminders, each device's own by its secret. Every other page and asset is served without it
 
 import { Hono } from "hono/tiny"
+import type { MiddlewareHandler } from "hono"
 import { bearerAuth } from "hono/bearer-auth"
 import { timingSafeEqual } from "hono/utils/buffer"
 import { sValidator } from "@hono/standard-validator"
@@ -12,7 +13,7 @@ import * as v from "valibot"
 import { ROOMS, roomAtSlug } from "../src/laundry/rooms.mts"
 import { Day } from "../src/shared/time.mts"
 import { describeIssues } from "../src/shared/json.mts"
-import type { Env } from "./collect.mts"
+import type { Env } from "./env.mts"
 import { ROWS, health, read, storage } from "./rows.mts"
 import { MODELS, acquireFeed, feedJson, feedList, latestModel, saveModel } from "./models.mts"
 import { DERIVED, commit, derivedOf, putPart } from "./derived.mts"
@@ -158,12 +159,24 @@ const ask = (env: Env, device: string, asked: Ask) =>
 const secretOf = (header: string | undefined) =>
   header?.match(/^Bearer (\S{16,200})$/)?.[1]
 
+/**
+ * Only so many reminders set a minute from one address, by the Rate Limiting binding where it's bound, since any
+ * client can mint device ids and each is an object of its own. Counted per Cloudflare location, so it bounds one
+ * client's minting rather than accounting exactly
+ */
+const limited: MiddlewareHandler<Worker> = async (c, next) => {
+  const address = c.req.header("cf-connecting-ip")
+  if (c.env.RATE_LIMIT && address && !(await c.env.RATE_LIMIT.limit({ key: address })).success)
+    return c.text("Too many reminders set from here; try again in a minute", 429)
+  return next()
+}
+
 app.get("/api/push/key", c => {
   const vapid = vapidOf(c.env)
   return vapid && c.env.REMINDERS ? c.json({ key: vapid.publicKey }) : c.text("Reminders aren't set up here", 404)
 })
 
-app.put("/api/reminders/:id", valid(v.object({ id: ID }), "param"), valid(v.object({ device: ID, ...Setting.entries })), c => {
+app.put("/api/reminders/:id", limited, valid(v.object({ id: ID }), "param"), valid(v.object({ device: ID, ...Setting.entries })), c => {
   const secret = secretOf(c.req.header("authorization"))
   const { device, ...setting } = c.req.valid("json")
   return secret ? ask(c.env, device, { kind: "set", id: c.req.valid("param").id, secret, ...setting }) : c.text("No secret", 401)

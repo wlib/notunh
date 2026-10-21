@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { type Kind, type Seen, type Watch, type Watched, FOLLOW, GONE, LATEST, MAX_PUSHES, MAX_TRIES, MIN_CHECK, SHIFT, Wake, check, pushOf, retried, watched } from "../../src/reminders/watch.mts"
+import { type Kind, type Seen, type Watch, type Watched, FOLLOW, GONE, LATEST, MAX_PUSHES, MAX_TRIES, MIN_CHECK, SHIFT, WAKE_VERSION, Wake, check, pushOf, retried, watched } from "../../src/reminders/watch.mts"
 import * as v from "valibot"
 
 const NOW = 1_790_000_000
@@ -15,10 +15,10 @@ const story = fc.record({
   drifts:      fc.array(fc.integer({ min: -240, max: 240 }), { maxLength: 400 }),
   bands:       fc.array(fc.integer({ min: 30, max: 480 }), { maxLength: 400 }),
   silences:    fc.array(fc.boolean(), { maxLength: 400 }),
-  goneFrom:    fc.option(fc.record({ at: fc.nat(60), status: fc.constantFrom("cancelled" as const, "passed" as const) }), { nil: undefined }),
+  goneFrom:    fc.option(fc.record({ at: fc.nat(60), status: fc.constantFrom("cancelled" as const, "lost" as const, "passed" as const) }), { nil: undefined }),
   isLiveFrom:  fc.nat(30)
 })
-type Story = { drifts: number[], bands: number[], silences: boolean[], goneFrom?: { at: number, status: "cancelled" | "passed" }, isLiveFrom: number }
+type Story = { drifts: number[], bands: number[], silences: boolean[], goneFrom?: { at: number, status: "cancelled" | "lost" | "passed" }, isLiveFrom: number }
 
 /** Runs a watch's checks to the end, as its Durable Object's alarm would, recording each push */
 const run = (start: Watched, { drifts, bands, silences, goneFrom, isLiveFrom }: Story) => {
@@ -65,7 +65,7 @@ test("a bus that keeps its time has the phone woken once, the lead before it cou
       expect(earliest - pushes[0].at).toBeGreaterThanOrEqual(watch.lead - MIN_CHECK)
     // Halving the wait to the wake, then following the bus a minute at a time past the stop
     expect(checks.length).toBeLessThanOrEqual(Math.ceil(Math.log2(watch.scheduled - NOW + 1)) + (watch.lead + GONE) / FOLLOW + 4)
-    for (const status of ["cancelled", "passed"] as const) {
+    for (const status of ["cancelled", "lost", "passed"] as const) {
       const over = run(watched(watch, NOW), { drifts: [], bands: [], silences: [], goneFrom: { at: 0, status }, isLiveFrom: 0 }).pushes
       expect(over.map(({ kind }) => kind)).toEqual(["over"])
     }
@@ -91,9 +91,10 @@ test("an update comes only for the bus moving by minutes or being cancelled afte
 
 test("a push is small and reads back as a wake", () => {
   const wake = fc.record({
+    v:        fc.constant(WAKE_VERSION),
     reminder: fc.string({ minLength: 1, maxLength: 64 }),
     kind:     fc.constantFrom("due" as const, "update" as const, "over" as const),
-    seen:     fc.record({ time: fc.integer({ min: NOW, max: NOW + 7200 }), band: fc.integer({ min: 0, max: 3600 }), isLive: fc.boolean(), status: fc.constantFrom("coming" as const, "cancelled" as const, "passed" as const) }),
+    seen:     fc.record({ time: fc.integer({ min: NOW, max: NOW + 7200 }), band: fc.integer({ min: 0, max: 3600 }), isLive: fc.boolean(), status: fc.constantFrom("coming" as const, "cancelled" as const, "lost" as const, "passed" as const) }),
     at:       fc.constant(NOW)
   })
   fc.assert(fc.property(wake, wake => {
@@ -103,20 +104,20 @@ test("a push is small and reads back as a wake", () => {
   }))
 })
 
-test("a push the service can't take is tried again after a wait doubled each time, or as the service asks, and given up after a few tries or once the run is long past", () => {
+test("a push the service can't take is owed still and tried again after a wait doubled each time, or as the service asks, and given up after a few tries or once the run is long past", () => {
   fc.assert(fc.property(fc.integer({ min: 0, max: 3600 }), fc.option(fc.integer({ min: 1, max: 600 }), { nil: undefined }), (ahead, asked) => {
-    const before = watched({ stop: "101", route: "3", trip: TRIP, scheduled: NOW + ahead, lead: 600 }, NOW)
-    const after: Watched = { ...before, pushes: 1, told: NOW + ahead, next: NOW + FOLLOW }
-    let state = before
+    const wake: Wake = { v: WAKE_VERSION, reminder: "r1", kind: "due", seen: { time: NOW + ahead, band: 60, isLive: true, status: "coming" }, at: NOW }
+    const told: Watched = { ...watched({ stop: "101", route: "3", trip: TRIP, scheduled: NOW + ahead, lead: 600 }, NOW), pushes: 1, told: NOW + ahead, next: NOW + FOLLOW, owed: { wake, tries: 0, at: NOW } }
+    let state = told
     const waits: number[] = []
     for (let i = 0; i < MAX_TRIES; i++) {
-      const next = retried(state, after, NOW + i, asked)
-      expect(next).toMatchObject({ pushes: 0, tries: i + 1 })
-      waits.push(next.next! - (NOW + i))
+      const next = retried(state, NOW + i, asked)
+      expect(next).toMatchObject({ pushes: 1, next: NOW + FOLLOW, owed: { wake, tries: i + 1 } })
+      waits.push(next.owed!.at - (NOW + i))
       state = next
     }
     expect(waits).toEqual(asked === undefined ? [30, 60, 120, 240, 480] : waits.map(() => asked))
-    expect(retried(state, after, NOW + MAX_TRIES, asked)).toEqual({ ...after, tries: 0 })
-    expect(retried(before, after, NOW + ahead + LATEST + 1, asked)).toEqual({ ...after, tries: 0 })
+    expect(retried(state, NOW + MAX_TRIES, asked)).toEqual({ ...state, owed: undefined })
+    expect(retried(told, NOW + ahead + LATEST + 1, asked)).toEqual({ ...told, owed: undefined })
   }))
 })

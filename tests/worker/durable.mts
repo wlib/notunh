@@ -51,9 +51,12 @@ export const durableNamespace = <T extends DurableObject>(make: (state: DurableO
     }
     return objects.get(name)!
   }
+  /** The object made anew over its storage, as after Cloudflare evicts it */
+  const restart = (name: string) =>
+    objectOf(name).object = make(objectOf(name).state.state)
   const namespace = {
     idFromName: (name: string) => name,
     get:        (name: string) => ({ fetch: (input: string, init?: RequestInit) => objectOf(name).object.fetch!(new Request(input, init)) })
   } as unknown as DurableObjectNamespace
-  return { namespace, objectOf, objects }
+  return { namespace, objectOf, objects, restart }
 }

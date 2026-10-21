@@ -13,3 +13,11 @@ export const groupBy = <T, K>(items: Iterable<T>, keyOf: (item: T) => K) => {
   }
   return groups
 }
+
+/** A map's value at a key, made and kept there the first time it's asked for */
+export const getOrCreate = <K, V>(map: Map<K, V>, key: K, make: () => V): V => {
+  let value = map.get(key)
+  if (value === undefined)
+    map.set(key, value = make())
+  return value
+}

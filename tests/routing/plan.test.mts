@@ -694,8 +694,10 @@ test("planBy finds nothing when no bus arrives in time, and by the first of plan
   fc.assert(fc.property(scenario, ({ feed, from, to, start }) => {
     const runs = buildRuns(feed, TODAY, [])
     expect(planBy(feed, walksOf(feed), runs, from, to, start, start)).toEqual([])
-    // The earliest any bus gets there, which a scan to be there by now, as nothing is, falls back to
-    const connections = buildConnections(runs, start)
+    // The earliest any bus gets there, which a scan to be there by now, as nothing is, falls back to, over every run
+    // there is, through tomorrow's: further than planBy looks for a bus to be there by then, which is as far as the
+    // time asked
+    const connections = buildConnections(runs, start, start + 2 * 86400)
     const earliest = Math.min(...[false, true].map(direct => scan(feed, walksOf(feed), runs, connections, from, to, start, { now: start, direct, by: start })?.end ?? Infinity))
     if (earliest < Infinity)
       expect(planBy(feed, walksOf(feed), runs, from, to, earliest - 1, start)).toEqual([])

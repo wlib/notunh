@@ -14,7 +14,8 @@ export const COUNTED = new Set(["$pageview", "$pageleave", "$exception"])
 
 /** Events sent unlinked, by name, with the properties each keeps */
 export const UNLINKED: Record<string, string[]> = {
-  trip_planned: ["from", "to", "hour_of_week", "itineraries", "rides_bus", "walk_only"]
+  trip_planned: ["from", "to", "hour_of_week", "itineraries", "rides_bus", "walk_only"],
+  reminder_set: []
 }
 
 const HOUR_MS = 3_600_000

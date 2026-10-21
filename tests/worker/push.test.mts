@@ -60,7 +60,7 @@ test("a push is one POST to the endpoint with RFC 8030's headers, the browser re
   const subscription: Subscription = { endpoint: "https://fcm.googleapis.com/fcm/send/abc", keys }
   let request!: Request
   const sent = (status: number) => push(subscription, "{\"hello\":1}", vapid, { ttl: 120.4, topic: "r1" }, 1_790_000_000, async sent => (request = sent as Request, new Response(null, { status })))
-  expect(await sent(201)).toBe("sent")
+  expect(await sent(201)).toEqual({ sent: "sent" })
   expect(request.method).toBe("POST")
   expect(request.url).toBe(subscription.endpoint)
   expect(Object.fromEntries([...request.headers].filter(([name]) => name !== "authorization"))).toEqual({
@@ -73,6 +73,8 @@ test("a push is one POST to the endpoint with RFC 8030's headers, the browser re
   expect(request.headers.get("authorization")).toMatch(/^vapid t=/)
   expect(await decrypt(new Uint8Array(await request.arrayBuffer()))).toBe("{\"hello\":1}")
   for (const [status, result] of [[404, "gone"], [410, "gone"], [429, "retry"], [503, "retry"], [400, "refused"], [403, "refused"], [413, "refused"]] as const)
-    expect(await sent(status)).toBe(result)
-  expect(await push(subscription, "x", vapid, { ttl: 60, topic: "r1" }, 0, async () => { throw new TypeError("offline") })).toBe("retry")
+    expect((await sent(status)).sent).toBe(result)
+  expect(await push(subscription, "x", vapid, { ttl: 60, topic: "r1" }, 0, async () => { throw new TypeError("offline") })).toEqual({ sent: "retry" })
+  // A service that says when to come back is heeded
+  expect(await push(subscription, "x", vapid, { ttl: 60, topic: "r1" }, 0, async () => new Response(null, { status: 429, headers: { "retry-after": "90" } }))).toEqual({ sent: "retry", after: 90 })
 })

@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { type Kind, type Seen, type Watch, type Watched, FOLLOW, GONE, LATEST, MAX_BYTES, MAX_PUSHES, MIN_CHECK, SHIFT, Wake, check, pushOf, watched } from "../../src/reminders/watch.mts"
+import { type Kind, type Seen, type Watch, type Watched, FOLLOW, GONE, LATEST, MAX_PUSHES, MAX_TRIES, MIN_CHECK, SHIFT, Wake, check, pushOf, retried, watched } from "../../src/reminders/watch.mts"
 import * as v from "valibot"
 
 const NOW = 1_790_000_000
@@ -89,7 +89,7 @@ test("an update comes only for the bus moving by minutes or being cancelled afte
   expect(check(start, undefined, NOW + 1800 + LATEST + 1)).toMatchObject({ push: "over", watched: { next: undefined } })
 })
 
-test("a push fits what push services take and reads back as a wake", () => {
+test("a push is small and reads back as a wake", () => {
   const wake = fc.record({
     reminder: fc.string({ minLength: 1, maxLength: 64 }),
     kind:     fc.constantFrom("due" as const, "update" as const, "over" as const),
@@ -98,7 +98,25 @@ test("a push fits what push services take and reads back as a wake", () => {
   })
   fc.assert(fc.property(wake, wake => {
     const json = pushOf(wake)
-    expect(new TextEncoder().encode(json).length).toBeLessThanOrEqual(MAX_BYTES)
+    expect(new TextEncoder().encode(json).length).toBeLessThan(400)
     expect(v.parse(Wake, JSON.parse(json))).toEqual(wake)
+  }))
+})
+
+test("a push the service can't take is tried again after a wait doubled each time, or as the service asks, and given up after a few tries or once the run is long past", () => {
+  fc.assert(fc.property(fc.integer({ min: 0, max: 3600 }), fc.option(fc.integer({ min: 1, max: 600 }), { nil: undefined }), (ahead, asked) => {
+    const before = watched({ stop: "101", route: "3", trip: TRIP, scheduled: NOW + ahead, lead: 600 }, NOW)
+    const after: Watched = { ...before, pushes: 1, told: NOW + ahead, next: NOW + FOLLOW }
+    let state = before
+    const waits: number[] = []
+    for (let i = 0; i < MAX_TRIES; i++) {
+      const next = retried(state, after, NOW + i, asked)
+      expect(next).toMatchObject({ pushes: 0, tries: i + 1 })
+      waits.push(next.next! - (NOW + i))
+      state = next
+    }
+    expect(waits).toEqual(asked === undefined ? [30, 60, 120, 240, 480] : waits.map(() => asked))
+    expect(retried(state, after, NOW + MAX_TRIES, asked)).toEqual({ ...after, tries: 0 })
+    expect(retried(before, after, NOW + ahead + LATEST + 1, asked)).toEqual({ ...after, tries: 0 })
   }))
 })

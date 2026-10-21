@@ -34,7 +34,7 @@ Retention days are `vars` in `wrangler.jsonc`, explained in [storage.md](storage
 | `POST /api/derived/:name` `{ day, identity, generation, parts }` | token | Commits a generation once every part is stored, else 409 |
 | `GET /api/storage` | token | D1's bytes and rows per table; counts every row, so on demand only |
 | `GET /api/laundry/rooms[/:id]` | public | See [Laundry](#laundry) |
-| `GET /api/push/key`, `PUT`/`DELETE /api/reminders/:id`, `DELETE /api/push/devices/:device` | public, each device's by its secret | See [reminders.md](reminders.md) |
+| `GET /api/push/key`, `PUT`/`DELETE /api/reminders/:id`, `DELETE /api/push/devices/:device` | public, each device's by its secret as a bearer token | See [reminders.md](reminders.md) |
 
 Scripts call it through `scripts/worker.mts`, which also works by hand: `node --env-file=.dev.vars scripts/worker.mts health|storage|rows <name> [day]`, with `--local` for `npm run worker`.
 

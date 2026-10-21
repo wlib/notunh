@@ -12,7 +12,7 @@ const world = ({ kept = new Map<string, Reminder>([[KEPT.id, KEPT]]), isStoreBro
   const listeners = new Map<string, (event: never) => void>()
   const shown: { title: string, options: NotificationOptions, isOpen: boolean }[] = []
   const opened: string[] = []
-  const navigated: string[] = []
+  const focused: string[] = []
   const scope: PushScope = {
     addEventListener: (type: string, listener: (event: never) => void) => void listeners.set(type, listener),
     registration: {
@@ -20,12 +20,11 @@ const world = ({ kept = new Map<string, Reminder>([[KEPT.id, KEPT]]), isStoreBro
       getNotifications: async ({ tag } = {}) =>
         shown.filter(notification => notification.isOpen && notification.options.tag === tag).map(notification => ({
           tag: notification.options.tag!,
-          data: notification.options.data,
           close: () => notification.isOpen = false
         }))
     },
     clients: {
-      matchAll: async () => windows.map(url => ({ url, focus: async () => {}, navigate: async (to: string) => void navigated.push(to) })),
+      matchAll: async () => windows.map(url => ({ url, focus: async () => void focused.push(url) })),
       openWindow: async url => void opened.push(url)
     },
     location: { origin: "https://notunh.app" }
@@ -46,7 +45,7 @@ const world = ({ kept = new Map<string, Reminder>([[KEPT.id, KEPT]]), isStoreBro
   }
   const push = (data: unknown) =>
     dispatch("push", { data: data === undefined ? null : { json: () => typeof data === "string" ? JSON.parse(data) : data } })
-  return { shown, opened, navigated, push, dispatch }
+  return { shown, opened, focused, push, dispatch }
 }
 
 const wake = fc.record({
@@ -74,19 +73,19 @@ test("a reminder's notification is worded on the phone from what the Worker fore
   await push(pushOf({ reminder: "r1", kind: "due", seen: { time: NOW + 900, band: 120, isLive: true, status: "coming" }, at: NOW }))
   expect(shown[0].title).toBe("Leave in 9 min")
   expect(shown[0].options.body).toContain("You'll be at MUB")
-  expect(shown[0].options).toMatchObject({ tag: "reminder-r1", data: { url: "/map/?reminder=r1" } })
+  expect(shown[0].options).toMatchObject({ tag: "reminder-r1" })
   await push(pushOf({ reminder: "r1", kind: "over", seen: { time: NOW + 900, band: 120, isLive: false, status: "cancelled" }, at: NOW }))
   expect(shown.map(({ isOpen }) => isOpen)).toEqual([false, true])
   expect(shown[1].title).toBe("Bus 3 may not be coming")
 })
 
-test("tapping a notification brings up an open map at the reminder, or opens one", async () => {
-  const open = world({ windows: ["https://notunh.app/dining/", "https://notunh.app/map/"] })
-  const notification = { tag: "reminder-r1", data: { url: "/map/?reminder=r1" }, close: () => {} }
+test("tapping a notification brings up an open map as it is, or opens one", async () => {
+  const open = world({ windows: ["https://notunh.app/dining/", "https://notunh.app/map/?from=x"] })
+  const notification = { tag: "reminder-r1", close: () => {} }
   await open.dispatch("notificationclick", { notification })
-  expect(open.navigated).toEqual(["https://notunh.app/map/?reminder=r1"])
+  expect(open.focused).toEqual(["https://notunh.app/map/?from=x"])
   expect(open.opened).toEqual([])
   const closed = world()
   await closed.dispatch("notificationclick", { notification })
-  expect(closed.opened).toEqual(["https://notunh.app/map/?reminder=r1"])
+  expect(closed.opened).toEqual(["https://notunh.app/map/"])
 })

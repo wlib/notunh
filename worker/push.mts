@@ -11,19 +11,22 @@ const Base64Url = v.pipe(v.string(), v.regex(/^[\w-]+$/))
 
 /** A browser's push subscription, as PushSubscription.toJSON() gives it, at a push service's address */
 export const Subscription = v.object({
-  endpoint: v.pipe(v.string(), v.url(), v.check(url => {
+  endpoint: v.pipe(v.string(), v.maxLength(2000), v.url(), v.check(url => {
     const { protocol, hostname } = new URL(url)
     return protocol === "https:" && PUSH_HOSTS.test(hostname)
   }, "A push service's address")),
-  keys: v.object({ p256dh: Base64Url, auth: Base64Url })
+  keys: v.object({ p256dh: v.pipe(Base64Url, v.maxLength(200)), auth: v.pipe(Base64Url, v.maxLength(200)) })
 })
 export type Subscription = v.InferOutput<typeof Subscription>
 
 /** The Worker's VAPID key pair, each base64url: the public key's 65 raw bytes, and the private key's 32 */
 export type Vapid = { publicKey: string, privateKey: string, subject: string }
 
-/** How a push service answered: taken, gone for good, worth trying again later, or refused for something of ours, which trying again won't mend */
-export type Sent = "sent" | "gone" | "retry" | "refused"
+/**
+ * How a push service answered: taken, gone for good, worth trying again later, after the seconds it asked for if it
+ * did (RFC 8030 8.4), or refused for something of ours, which trying again won't mend
+ */
+export type Sent = { sent: "sent" | "gone" | "refused" } | { sent: "retry", after?: number }
 
 // A record holds the whole message, which push services cap at 4 KB
 const RECORD_SIZE = 4096
@@ -116,7 +119,7 @@ export type PushOptions = {
  */
 export const push = async (subscription: Subscription, message: string, vapid: Vapid, { ttl, topic }: PushOptions, now: number, send = fetch): Promise<Sent> => {
   try {
-    const { status } = await send(new Request(subscription.endpoint, {
+    const { status, headers } = await send(new Request(subscription.endpoint, {
       method:  "POST",
       headers: {
         authorization:      await vapidAuthorization(subscription.endpoint, vapid, now),
@@ -130,10 +133,18 @@ export const push = async (subscription: Subscription, message: string, vapid: V
     }))
     if (status < 200 || status >= 300)
       console.warn(`A push service answered ${status}`)
-    return status >= 200 && status < 300 ? "sent" : status === 404 || status === 410 ? "gone" : status === 429 || status >= 500 ? "retry" : "refused"
+    if (status >= 200 && status < 300)
+      return { sent: "sent" }
+    if (status === 404 || status === 410)
+      return { sent: "gone" }
+    if (status === 429 || status >= 500) {
+      const after = Number(headers.get("retry-after"))
+      return { sent: "retry", ...after > 0 && { after } }
+    }
+    return { sent: "refused" }
   }
   catch (error) {
     console.warn("A push service couldn't be reached", error)
-    return "retry"
+    return { sent: "retry" }
   }
 }

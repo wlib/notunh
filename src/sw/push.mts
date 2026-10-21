@@ -8,10 +8,10 @@ import { Wake } from "../reminders/watch.mts"
 import { type Reminder, textOf } from "../reminders/reminder.mts"
 
 type Extendable = { waitUntil(promise: Promise<unknown>): void }
-type Shown = { tag: string, data?: unknown, close(): void }
+type Shown = { tag: string, close(): void }
 type PushLike = Extendable & { data: { json(): unknown } | null }
 type ClickLike = Extendable & { notification: Shown }
-type Window = { url: string, focus(): Promise<unknown>, navigate(url: string): Promise<unknown> }
+type Window = { url: string, focus(): Promise<unknown> }
 
 /** What the push handlers use of the service worker's global scope, so tests can hand it one of their own */
 export type PushScope = {
@@ -37,26 +37,23 @@ export const startPush = (scope: PushScope, kept: Kept, now = () => Date.now() /
     // Safari keeps every notification of a tag, so the one this replaces is closed first
     for (const notification of await scope.registration.getNotifications({ tag }).catch(() => []))
       notification.close()
-    await scope.registration.showNotification(title, { body, tag, renotify: true, icon: "/icon-192.png", data: { url: `/map/?reminder=${encodeURIComponent(wake.reminder)}` } })
+    await scope.registration.showNotification(title, { body, tag, renotify: true, icon: "/icon-192.png" })
   }
 
   scope.addEventListener("push", event => {
     event.waitUntil(show(event).catch(() =>
-      scope.registration.showNotification("notunh", { body: "Open notunh for your bus.", icon: "/icon-192.png", data: { url: "/map/" } })
+      scope.registration.showNotification("notunh", { body: "Open notunh for your bus.", icon: "/icon-192.png" })
     ))
   })
 
-  // An open map is brought up at the reminder, else one is opened there
+  // An open map is brought up as it is, else one is opened
   scope.addEventListener("notificationclick", event => {
     event.notification.close()
-    const { url = "/map/" } = Object(event.notification.data) as { url?: string }
-    const target = new URL(url, scope.location.origin)
+    const target = new URL("/map/", scope.location.origin)
     event.waitUntil((async () => {
       const map = (await scope.clients.matchAll({ type: "window" })).find(window => new URL(window.url).pathname === target.pathname)
-      if (map) {
+      if (map)
         await map.focus()
-        await map.navigate(target.href).catch(() => {})
-      }
       else
         await scope.clients.openWindow(target.href)
     })())

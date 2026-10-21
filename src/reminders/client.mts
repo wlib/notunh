@@ -7,7 +7,7 @@ import { r } from "bruh/reactive"
 import * as v from "valibot"
 import type { Reminder } from "./reminder.mts"
 import type { Watch } from "./watch.mts"
-import { device, forget, keep, reminders } from "./store.mts"
+import { type Device, device, deviceKept, forget, forgetDevice, keep, reminders } from "./store.mts"
 import { getJson } from "../shared/json.mts"
 
 /** Whether this browser can be reminded: by push, once notunh is on the Home Screen, as iOS pushes only to web apps there (https://webkit.org/blog/13878/), or not at all */
@@ -39,12 +39,31 @@ const KEPT = 2 * 3600
 
 let loaded: Promise<void> | undefined
 export const loadKept = () =>
-  loaded ??= reminders().catch(() => [] as Reminder[]).then(all => {
+  loaded ??= reminders().catch(() => [] as Reminder[]).then(async all => {
     const now = Date.now() / 1000
     for (const { id } of all.filter(({ expected }) => expected < now - KEPT))
       void forget(id)
     kept.value = new Map(all.filter(({ expected }) => expected >= now - KEPT).map(reminder => [reminder.id, reminder]))
+    // A device the Worker may still know, which pushes no longer reach, is forgotten on both sides
+    const known = await deviceKept()
+    if (known && !await isSubscribed())
+      await unsubscribe(known)
   })
+
+/** Whether pushes can still reach this phone: notifications allowed, and the subscription still there */
+const isSubscribed = async () =>
+  window.Notification?.permission !== "denied" &&
+  (await (await navigator.serviceWorker.ready).pushManager.getSubscription().catch(() => null)) !== null
+
+/** Pushes being off, the Worker forgets the device, its reminders with it, and so does the phone, which makes a new one next time */
+const unsubscribe = async ({ id, secret }: Device) => {
+  await fetch(`/api/push/devices/${encodeURIComponent(id)}`, { method: "DELETE", headers: { authorization: `Bearer ${secret}` } })
+    .catch(error => console.warn("The Worker couldn't be told to forget this device", error))
+  for (const id of kept.value.keys())
+    await forget(id)
+  await forgetDevice()
+  kept.value = new Map()
+}
 
 /** Sets a reminder, given what's ready, which a tap's handler must call straight away for iOS to ask for permission */
 export const remind = async ({ registration, key }: Ready, reminder: Reminder, watch: Watch) => {
@@ -52,8 +71,8 @@ export const remind = async ({ registration, key }: Ready, reminder: Reminder, w
   const { id, secret } = await device()
   const response = await fetch(`/api/reminders/${encodeURIComponent(reminder.id)}`, {
     method:  "PUT",
-    headers: { "content-type": "application/json" },
-    body:    JSON.stringify({ device: id, secret, subscription: subscription.toJSON(), watch })
+    headers: { "content-type": "application/json", authorization: `Bearer ${secret}` },
+    body:    JSON.stringify({ device: id, subscription: subscription.toJSON(), watch })
   })
   if (!response.ok)
     throw new Error(`The reminder wasn't set: ${response.status} ${await response.text()}`)

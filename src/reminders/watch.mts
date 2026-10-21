@@ -18,8 +18,10 @@ export const MAX_PUSHES = 3
 export const GONE = 120
 /** s past its scheduled time a run still followed is given up on */
 export const LATEST = 2 * 3600
-/** Bytes a push's message may be: push services take 4 KB in all, less the 103 bytes encryption adds */
-export const MAX_BYTES = 3900
+/** s ahead a run may be watched from: tomorrow's last bus, set tonight */
+export const FURTHEST = 36 * 3600
+/** Times a push the service couldn't take is tried, each wait twice the last from MIN_CHECK, unless it says when */
+export const MAX_TRIES = 5
 
 /**
  * What the Worker is told: the run, as the trip's id and its scheduled departure from the stop in epoch seconds,
@@ -30,7 +32,7 @@ export const Watch = v.object({
   stop:      v.pipe(v.string(), v.maxLength(100)),
   route:     v.pipe(v.string(), v.maxLength(100)),
   trip:      v.pipe(v.string(), v.maxLength(100)),
-  scheduled: v.number(),
+  scheduled: v.pipe(v.number(), v.integer()),
   lead:      v.pipe(v.number(), v.minValue(60), v.maxValue(3600))
 })
 export type Watch = v.InferOutput<typeof Watch>
@@ -61,16 +63,30 @@ export type Watched = Watch & {
   /** The bus's time as the phone was last told it, once it's been told */
   told?:  number,
   /** Epoch seconds of the next check, or undefined once there's nothing more to do */
-  next?:  number
+  next?:  number,
+  /** Times the last push has been tried without the service taking it */
+  tries?: number
 }
 
 /** A watch as set, due for its first check at once */
 export const watched = (watch: Watch, now: number): Watched =>
   ({ ...watch, pushes: 0, next: now })
 
-/** A push's JSON, which is always within what push services take */
+/** A push's JSON, a couple of hundred bytes, well within the 4 KB push services take */
 export const pushOf = (wake: Wake) =>
   JSON.stringify(wake)
+
+/**
+ * A watch whose push the service couldn't take just now: tried again after the seconds the service asked for, else
+ * after MIN_CHECK doubled each try, as though the check hadn't been made; or, once tried MAX_TRIES times or the run
+ * is long past, let be as the check left it, the push given up
+ */
+export const retried = (before: Watched, after: Watched, now: number, asked?: number): Watched => {
+  const tries = (before.tries ?? 0) + 1
+  return tries > MAX_TRIES || now > before.scheduled + LATEST
+    ? { ...after, tries: 0 }
+    : { ...before, tries, next: now + (asked ?? MIN_CHECK * 2 ** (tries - 1)) }
+}
 
 /** The next check: halving the wait until the bus could be within the lead, then a minute at a time */
 const plan = (watched: Watched, now: number, earliest: number): Watched => {

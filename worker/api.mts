@@ -164,8 +164,9 @@ app.get("/api/push/key", c => {
 })
 
 app.put("/api/reminders/:id", valid(v.object({ id: ID }), "param"), valid(v.object({ device: ID, ...Setting.entries })), c => {
+  const secret = secretOf(c.req.header("authorization"))
   const { device, ...setting } = c.req.valid("json")
-  return ask(c.env, device, { kind: "set", id: c.req.valid("param").id, ...setting })
+  return secret ? ask(c.env, device, { kind: "set", id: c.req.valid("param").id, secret, ...setting }) : c.text("No secret", 401)
 })
 
 app.delete("/api/reminders/:id", valid(v.object({ id: ID }), "param"), valid(v.object({ device: ID }), "query"), c => {

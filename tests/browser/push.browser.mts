@@ -32,10 +32,10 @@ test("a reminder set from an itinerary asks the Worker only to watch the run, an
       toJSON: () => ({ endpoint: "https://fcm.googleapis.com/fcm/send/stub", keys: { p256dh: "BCVxsr7N_eNgVRqvHtD0zTZsEc6", auth: "BTBZMqHH6r4Tts7J_aSIgg" } })
     }) as unknown as PushSubscription
   })
-  const sent: { url: string, body: { watch: Record<string, unknown> } }[] = []
+  const sent: { url: string, body: { watch: Record<string, unknown> }, secret?: string }[] = []
   await context.route("**/api/push/key", route => route.fulfill({ json: { key: KEY } }))
   await context.route("**/api/reminders/**", async route => {
-    sent.push({ url: route.request().url(), body: route.request().postDataJSON() })
+    sent.push({ url: route.request().url(), body: route.request().postDataJSON(), secret: route.request().headers().authorization })
     await route.fulfill({ status: 204 })
   })
 
@@ -67,6 +67,8 @@ test("a reminder set from an itinerary asks the Worker only to watch the run, an
   const { watch } = sent[0].body
   expect(Object.keys(watch).sort()).toEqual(["lead", "route", "scheduled", "stop", "trip"])
   expect(watch.lead).toBe(600)
+  expect(Object.keys(sent[0].body).sort()).toEqual(["device", "subscription", "watch"])
+  expect(sent[0].secret).toMatch(/^Bearer /)
   expect(JSON.stringify(sent[0].body)).not.toContain("Kingsbury")
   const id = decodeURIComponent(new URL(sent[0].url).pathname.split("/").at(-1)!)
   const reminder = await page.evaluate(() => new Promise<Reminder>(resolve => {
@@ -81,7 +83,7 @@ test("a reminder set from an itinerary asks the Worker only to watch the run, an
   // Headless Chromium shows no notifications, so the service worker's are recorded as it shows them
   const [worker] = context.serviceWorkers()
   await worker.evaluate(() => {
-    type Shown = { title: string, body?: string, tag?: string, data?: unknown }
+    type Shown = { title: string, body?: string, tag?: string }
     const scope = self as unknown as { shown: Shown[], registration: { showNotification(title: string, options?: Omit<Shown, "title">): Promise<void> } }
     scope.shown = []
     scope.registration.showNotification = async (title, options = {}) => void scope.shown.push({ title, ...options })
@@ -94,13 +96,13 @@ test("a reminder set from an itinerary asks the Worker only to watch the run, an
     registrationId: await registration,
     data:           pushOf({ reminder: id, kind: "due", seen: { time: reminder.expected + 120, band: 90, isLive: true, status: "coming" }, at: reminder.expected - 900 })
   })
-  const shown = () => worker.evaluate(() => (self as unknown as { shown: { title: string, body: string, tag: string, data: unknown }[] }).shown)
+  const shown = () => worker.evaluate(() => (self as unknown as { shown: { title: string, body: string, tag: string }[] }).shown)
   await expect.poll(shown).toHaveLength(1)
   const [notification] = await shown()
   expect(notification.title).toMatch(/^Leave (now|in \d+ min)$/)
   expect(notification.body).toContain("(2 min late)")
   expect(notification.body).toContain("Kingsbury")
-  expect(notification).toMatchObject({ tag: `reminder-${id}`, data: { url: `/map/?reminder=${encodeURIComponent(id)}` } })
+  expect(notification).toMatchObject({ tag: `reminder-${id}` })
 
   // Cancelling it tells the Worker, by the device's secret
   await page.getByRole("button", { name: "Cancel reminder" }).click()

@@ -3,10 +3,10 @@ import fc from "fast-check"
 import { readFileSync } from "node:fs"
 import { gunzipSync } from "node:zlib"
 import { app } from "../../worker/api.mts"
-import { FORGET_MS, MAX_REMINDERS, Reminders } from "../../worker/reminders.mts"
+import { FORGET_MS, MAX_REMINDERS, Reminders, WINDOW_MS } from "../../worker/reminders.mts"
 import { samples } from "../../worker/schema.mts"
 import { inserts } from "../../worker/rows.mts"
-import { GONE, MIN_CHECK, type Watch, Wake } from "../../src/reminders/watch.mts"
+import { FURTHEST, GONE, LATEST, MAX_PUSHES, MAX_TRIES, MIN_CHECK, type Watch, Wake } from "../../src/reminders/watch.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
 import { gzipJson } from "../../src/shared/json.mts"
 import type { Env } from "../../worker/collect.mts"
@@ -37,6 +37,7 @@ let meanwhile: (() => unknown) | undefined
 /** What reaches the push service, and what it answers */
 let pushed: string[]
 let pushStatus: number
+let retryAfter: string | undefined
 
 const send = (method: string, path: string, body?: unknown, secret?: string) =>
   app.fetch(new Request(`https://notunh.app${path}`, {
@@ -45,8 +46,8 @@ const send = (method: string, path: string, body?: unknown, secret?: string) =>
     body: body === undefined ? undefined : JSON.stringify(body)
   }), env)
 
-const setReminder = (id: string, watch: object = WATCH, secret = SECRET) =>
-  send("PUT", `/api/reminders/${id}`, { device: DEVICE, secret, subscription: { endpoint: ENDPOINT, keys: phone.keys }, watch })
+const setReminder = (id: string, watch: object = WATCH, secret: string | undefined = SECRET) =>
+  send("PUT", `/api/reminders/${id}`, { device: DEVICE, subscription: { endpoint: ENDPOINT, keys: phone.keys }, watch }, secret)
 
 const device = () => objects.objectOf(DEVICE)
 const wakes = () => pushed.map(json => v.parse(Wake, JSON.parse(json)))
@@ -88,6 +89,7 @@ beforeEach(async () => {
   meanwhile = undefined
   pushed = []
   pushStatus = 201
+  retryAfter = undefined
   const original = DB.prepare.bind(DB)
   DB.prepare = ((query: string) => {
     const statement = original(query)
@@ -109,7 +111,7 @@ beforeEach(async () => {
     expect(request.headers.get("urgency")).toBe("high")
     expect(request.headers.get("topic")).toBe(ID)
     pushed.push(await phone.decrypt(new Uint8Array(await request.arrayBuffer())))
-    return new Response(null, { status: pushStatus })
+    return new Response(null, { status: pushStatus, headers: retryAfter ? { "retry-after": retryAfter } : {} })
   })
 })
 
@@ -173,7 +175,7 @@ test("whatever the samples say, each check sets the alarm ahead, and the phone i
   ), { numRuns: 25 })
 })
 
-test("a push the service refuses for good forgets the device, and one it can't take now is tried again", async () => {
+test("a push the service refuses for good forgets the device, and one it can't take now is tried again after the wait it asks for, else a doubling one", async () => {
   siteDown = true
   await setReminder(ID)
   // The bus is within the lead
@@ -183,11 +185,55 @@ test("a push the service refuses for good forgets the device, and one it can't t
   expect(pushed).toHaveLength(1)
   expect(device().state.rows("reminders")).toHaveLength(1)
   expect(device().state.alarm()).toBe((WATCH.scheduled - 300 + MIN_CHECK) * 1000)
+  retryAfter = "90"
+  await fire()
+  expect(device().state.alarm()).toBe((WATCH.scheduled - 300 + MIN_CHECK + 90) * 1000)
+  retryAfter = undefined
+  await fire()
+  expect(device().state.alarm()).toBe((WATCH.scheduled - 300 + MIN_CHECK + 90 + 4 * MIN_CHECK) * 1000)
   pushStatus = 410
   await fire()
-  expect(pushed).toHaveLength(2)
+  expect(pushed).toHaveLength(4)
   expect(device().state.rows("device")).toEqual([])
   expect(device().state.alarm()).toBeNull()
+})
+
+test("a push service that never takes a push is given up on after a few tries, whatever the run does, and the watch ends", async () => {
+  await fc.assert(fc.asyncProperty(fc.integer({ min: -300, max: 1800 }), fc.boolean(), fc.constantFrom(429, 500, 503), async (ahead, isSiteDown, status) => {
+    vi.setSystemTime(NOW)
+    objects.objects.clear()
+    pushed = []
+    siteDown = isSiteDown
+    pushStatus = status
+    await setReminder(ID, { ...WATCH, scheduled: NOW / 1000 + 600 + ahead })
+    let fires = 0
+    while (device().state.rows("reminders").length && device().state.alarm()! < NOW + (LATEST + 7200) * 1000) {
+      await fire()
+      expect(++fires).toBeLessThan(200)
+    }
+    expect(device().state.rows("reminders")).toEqual([])
+    expect(pushed.length).toBeLessThanOrEqual(MAX_PUSHES * (MAX_TRIES + 1))
+  }), { numRuns: 15 })
+})
+
+test("a device forgotten on a warm object can set a reminder again, and asking an unknown device anything else leaves nothing behind", async () => {
+  await setReminder(ID)
+  expect((await send("DELETE", `/api/push/devices/${DEVICE}`, undefined, SECRET)).status).toBe(204)
+  expect(device().state.rows("device")).toEqual([])
+  expect((await setReminder(ID)).status).toBe(204)
+  expect(device().state.rows("reminders")).toHaveLength(1)
+  const other = "device-ffffffffffffffff"
+  expect((await send("DELETE", `/api/reminders/${ID}?device=${other}`, undefined, SECRET)).status).toBe(403)
+  expect((await send("DELETE", `/api/push/devices/${other}`, undefined, SECRET)).status).toBe(403)
+  expect(objects.objectOf(other).state.rows("sqlite_master")).toEqual([])
+  expect(objects.objectOf(other).state.alarm()).toBeNull()
+})
+
+test("the samples are read by the table's key, not by reading it through", () => {
+  const plan = (env.DB as unknown as { sqlite: { prepare(sql: string): { all(...values: unknown[]): { detail: string }[] } } }).sqlite
+    .prepare("explain query plan select source, at, body from samples where source in ('buses', 'predictions') and at > ? order by at").all(NOW - WINDOW_MS)
+  expect(plan.map(({ detail }) => detail).join(" ")).toMatch(/USING (PRIMARY KEY|INDEX)/)
+  expect(plan.map(({ detail }) => detail).join(" ")).not.toContain("SCAN")
 })
 
 test("a reminder replaced or cancelled while the samples are being read is left as the phone left it", async () => {
@@ -226,7 +272,7 @@ test("a device's reminders are its own: changed or cancelled only with its secre
 
 test("only a push service's address is taken, and a watch must be a run still to come at a stop, and a lead", async () => {
   const bad = async (subscription: object, watch: object = WATCH) =>
-    (await send("PUT", `/api/reminders/${ID}`, { device: DEVICE, secret: SECRET, subscription, watch })).status
+    (await send("PUT", `/api/reminders/${ID}`, { device: DEVICE, subscription, watch }, SECRET)).status
   for (const endpoint of ["http://fcm.googleapis.com/x", "https://example.com/push", "https://fcm.googleapis.com.example.com/x", "https://169.254.169.254/"])
     expect(await bad({ endpoint, keys: phone.keys })).toBe(400)
   const apple = { endpoint: "https://web.push.apple.com/abc", keys: phone.keys }
@@ -234,5 +280,9 @@ test("only a push service's address is taken, and a watch must be a run still to
   expect(await bad(apple, { ...WATCH, lead: 30 })).toBe(400)
   expect(await bad(apple, { stop: "209", route: "3", lead: 600 })).toBe(400)
   expect(await bad(apple, { ...WATCH, scheduled: NOW / 1000 - GONE - 1 })).toBe(400)
+  expect(await bad(apple, { ...WATCH, scheduled: NOW / 1000 + FURTHEST + 60 })).toBe(400)
+  expect(await bad(apple, { ...WATCH, scheduled: WATCH.scheduled + 0.5 })).toBe(400)
+  expect(await bad({ ...apple, endpoint: `https://web.push.apple.com/${"a".repeat(2000)}` })).toBe(400)
+  expect((await send("PUT", `/api/reminders/${ID}`, { device: DEVICE, subscription: apple, watch: WATCH })).status).toBe(401)
   expect(await bad(apple)).toBe(204)
 })

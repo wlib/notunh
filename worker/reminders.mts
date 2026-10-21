@@ -2,8 +2,9 @@
 // (src/reminders/watch.mts). Its one alarm is always the soonest check. A check forecasts the run with the model
 // from the Worker's own samples (src/reminders/forecast.mts): the last minutes of fixes and the latest predictions
 // from D1, the buses of the run's route followed through the location model, and buildRuns on the route's trips, with
-// the timetable and model the site serves, read once an hour. A device's object forgets everything 30 days after its
-// last reminder, at once when its push service says the subscription's gone, or when asked
+// the timetable and model the site serves, read once an hour and parsed once a release for every object in the
+// isolate. A device's object forgets everything 30 days after its last reminder, at once when its push service says
+// the subscription's gone, or when asked
 
 import * as v from "valibot"
 import { type Feed, loadFeed } from "../src/transit/feed.mts"
@@ -12,7 +13,7 @@ import { sightingsFrom } from "../src/transit/models/tracking.mts"
 import { type ObservedRow, decode, observe } from "../src/transit/observations/raw.mts"
 import { NO_FORECAST, forecastFrom } from "../src/transit/observations/predictions.mts"
 import { routeFeed, scheduledOnly, seenOf } from "../src/reminders/forecast.mts"
-import { type Seen, type Watched, GONE, MIN_CHECK, Watch, check, pushOf, watched } from "../src/reminders/watch.mts"
+import { type Seen, type Watched, FURTHEST, GONE, Watch, check, pushOf, retried, watched } from "../src/reminders/watch.mts"
 import { buildOf } from "../src/shell/manifest.mts"
 import { type Vapid, Subscription, push } from "./push.mts"
 import type { Env } from "./collect.mts"
@@ -23,14 +24,16 @@ export const FORGET_MS = 30 * 86_400_000
 export const MAX_REMINDERS = 10
 /** ms of samples a check reads: enough fixes to follow each bus through a few stops and settle its pace */
 export const WINDOW_MS = 10 * 60_000
-/** ms the site's timetable and model are kept before they're read again, as the nightly build replaces them */
+/** ms before the site's timetable and model are looked for again, as the nightly build replaces them */
 const SITE_MS = 3600_000
+/** ms before checking again when the Worker has no push keys, which a deploy may yet set */
+const NO_KEYS_MS = 3600_000
 
-export const Setting = v.object({ secret: v.pipe(v.string(), v.minLength(16), v.maxLength(200)), subscription: Subscription, watch: Watch })
+export const Setting = v.object({ subscription: Subscription, watch: Watch })
 
-/** What the object is asked, by the Worker's routes (api.mts) */
+/** What the object is asked, by the Worker's routes (api.mts), each with the device's secret */
 export type Ask =
-  | { kind: "set", id: string } & v.InferOutput<typeof Setting>
+  | { kind: "set", id: string, secret: string } & v.InferOutput<typeof Setting>
   | { kind: "cancel", id: string, secret: string }
   | { kind: "forget", secret: string }
 
@@ -44,40 +47,54 @@ export const vapidOf = (env: Env): Vapid | undefined =>
 type Device = { secret: string, endpoint: string, p256dh: string, auth: string, touched: number }
 /** A reminder's row: its watch, and a stamp of its setting, so a check begun before it was replaced leaves it be */
 type Row = { id: string, stamp: string, watched: Watched }
-/** The timetable and model the site serves, as read at an instant, and the timetable cut to each route asked for */
-type Site = { at: number, feed: Feed, model: Model, routes: Map<string, Feed> }
+/** A release's timetable and model, and the timetable cut to each route asked for */
+type Site = { release: string, feed: Feed, model: Model, routes: Map<string, Feed> }
 
-/** The site's timetable and model, from the map page's head, as a page loads them */
-const siteOf = async (assets: Fetcher, at: number): Promise<Site> => {
+// The tables, made on a device's first reminder, and again after the object forgets everything, which drops them
+const TABLES = `
+  create table if not exists device (id integer primary key check (id = 1), secret text not null, endpoint text not null, p256dh text not null, auth text not null, touched integer not null);
+  create table if not exists reminders (id text primary key, next integer, stamp text not null, state text not null);
+`
+
+// Each release's timetable and model, parsed once for every object in the isolate
+const sites = new Map<string, Promise<Site>>()
+
+/** The site's timetable and model, from the map page's head, as a page loads them, parsed once a release */
+const siteOf = async (assets: Fetcher): Promise<Site> => {
   const page = await assets.fetch("https://notunh.app/map/")
   if (!page.ok)
     throw new Error(`The map page is ${page.status}`)
-  const { data } = buildOf(await page.text())
+  const { release, data } = buildOf(await page.text())
   if (!data.gtfs || !data.model)
     throw new Error("The map page names no timetable or model")
-  const [feed, model] = await Promise.all([
-    assets.fetch(new URL(data.gtfs, "https://notunh.app").href).then(loadFeed),
-    assets.fetch(new URL(data.model, "https://notunh.app").href).then(response => response.json()).then(asModel)
-  ])
-  return { at, feed, model, routes: new Map() }
+  const key = `${release} ${data.gtfs} ${data.model}`
+  if (!sites.has(key)) {
+    sites.clear()
+    sites.set(key, Promise.all([
+      assets.fetch(new URL(data.gtfs, "https://notunh.app").href).then(loadFeed),
+      assets.fetch(new URL(data.model, "https://notunh.app").href).then(response => response.json()).then(asModel)
+    ]).then(([feed, model]) => ({ release, feed, model, routes: new Map() })))
+    sites.get(key)!.catch(() => sites.delete(key))
+  }
+  return sites.get(key)!
 }
 
 export class Reminders implements DurableObject {
   private readonly ctx: DurableObjectState
   private readonly env: Env
-  private site?: Promise<Site>
+  private site?: { at: number, found: Promise<Site | undefined> }
 
   constructor(ctx: DurableObjectState, env: Env) {
     this.ctx = ctx
     this.env = env
-    ctx.storage.sql.exec(`
-      create table if not exists device (id integer primary key check (id = 1), secret text not null, endpoint text not null, p256dh text not null, auth text not null, touched integer not null);
-      create table if not exists reminders (id text primary key, next integer, stamp text not null, state text not null);
-    `)
   }
 
+  /** Whether the object knows a device: its tables are made on a device's first reminder and dropped with it */
+  private isKnown = () =>
+    this.ctx.storage.sql.exec("select 1 from sqlite_master where name = 'device'").toArray().length > 0
+
   private device = () =>
-    this.ctx.storage.sql.exec<Device>("select secret, endpoint, p256dh, auth, touched from device").toArray()[0]
+    this.isKnown() ? this.ctx.storage.sql.exec<Device>("select secret, endpoint, p256dh, auth, touched from device").toArray()[0] : undefined
 
   private reminders = (): Row[] =>
     this.ctx.storage.sql.exec<{ id: string, stamp: string, state: string }>("select id, stamp, state from reminders").toArray()
@@ -107,24 +124,26 @@ export class Reminders implements DurableObject {
     await this.ctx.storage.deleteAll()
   }
 
-  /** The site's timetable and model, read anew once an hour, or none when they can't be read */
-  private siteAt = async (now: number) => {
-    const kept = await this.site?.catch(() => undefined)
-    if (kept && now - kept.at < SITE_MS)
-      return kept
-    this.site = siteOf(this.env.ASSETS, now)
-    return this.site.catch(error => {
-      console.warn("The timetable and model couldn't be read, so the reminders go by the timetable they were set from", error)
-      return undefined
-    })
+  /** The site's timetable and model, looked for anew once an hour, or none when they can't be read */
+  private siteAt = (now: number) => {
+    if (!this.site || now - this.site.at >= SITE_MS)
+      this.site = {
+        at: now,
+        found: siteOf(this.env.ASSETS).catch(error => {
+          console.warn("The timetable and model couldn't be read, so the reminders go by the timetable they were set from", error)
+          return undefined
+        })
+      }
+    return this.site.found
   }
 
   /**
    * What the Worker's samples of the last WINDOW_MS say at an instant, read once a check for every due reminder:
-   * the fixes, and the source's latest predictions as a forecast, or none without a row
+   * the fixes, and the source's latest predictions as a forecast, or none without a row. Both sources are named, so
+   * the rows are found by the table's key rather than by reading it through
    */
   private samplesAt = async (now: number) => {
-    const { results } = await this.env.DB.prepare("select source, at, body from samples where at > ? order by at")
+    const { results } = await this.env.DB.prepare("select source, at, body from samples where source in ('buses', 'predictions') and at > ? order by at")
       .bind(now - WINDOW_MS)
       .all<{ source: ObservedRow["source"], at: number, body: ArrayBuffer }>()
     const rows = await Promise.all(results.map(async ({ source, at, body }) => ({ source, at, ...await decode(new Uint8Array(body)) }) as ObservedRow))
@@ -153,7 +172,10 @@ export class Reminders implements DurableObject {
     }
   }
 
-  /** The first reminder from a device sets its secret, which every ask after goes by, as its SHA-256 */
+  /**
+   * The first reminder from a device sets its secret, which every ask after goes by, as its SHA-256. A device it
+   * doesn't know can only set one, and asking it anything else leaves nothing behind
+   */
   async fetch(request: Request) {
     const ask = await request.json<Ask>()
     const hash = await sha256(ask.secret)
@@ -168,11 +190,14 @@ export class Reminders implements DurableObject {
       await this.schedule()
     }
     else {
-      if (this.reminders().filter(({ id }) => id !== ask.id).length >= MAX_REMINDERS)
+      if (device && this.reminders().filter(({ id }) => id !== ask.id).length >= MAX_REMINDERS)
         return new Response(`At most ${MAX_REMINDERS} reminders at once`, { status: 429 })
       if (ask.watch.scheduled + GONE < now / 1000)
         return new Response("The bus has gone", { status: 400 })
+      if (ask.watch.scheduled > now / 1000 + FURTHEST)
+        return new Response("Too far ahead", { status: 400 })
       const { endpoint, keys } = ask.subscription
+      this.ctx.storage.sql.exec(TABLES)
       this.ctx.storage.sql.exec(
         "insert or replace into device (id, secret, endpoint, p256dh, auth, touched) values (1, ?, ?, ?, ?, ?)",
         hash, endpoint, keys.p256dh, keys.auth, now
@@ -193,8 +218,12 @@ export class Reminders implements DurableObject {
     const device = this.device()
     const vapid = vapidOf(this.env)
     const now = Date.now()
-    if (!device || !vapid)
+    if (!device)
       return this.forget()
+    if (!vapid) {
+      console.warn("The Worker has no push keys, so the reminders wait for a deploy that sets them")
+      return this.ctx.storage.setAlarm(now + NO_KEYS_MS)
+    }
     // A little early, as alarms can be, counts as due, rather than setting the same alarm again
     const due = this.reminders().filter(({ watched: { next } }) => next !== undefined && next * 1000 <= now + 1000)
     if (!due.length)
@@ -209,17 +238,17 @@ export class Reminders implements DurableObject {
       if (!row)
         continue
       const result = check(row.watched, seen[i], at)
-      this.save({ ...row, watched: result.watched })
+      this.save({ ...row, watched: { ...result.watched, tries: 0 } })
       if (!result.push)
         continue
       const wake = { reminder: row.id, kind: result.push, seen: seen[i] ?? scheduledOnly(row.watched, at), at }
       // Of no use once the bus is long gone, and a newer push of the same reminder replaces it while it waits
       const sent = await push(subscription, pushOf(wake), vapid, { ttl: Math.max(60, Math.max(wake.seen.time, row.watched.scheduled) + GONE - at), topic: row.id.slice(0, 32) }, at)
-      if (sent === "gone")
+      if (sent.sent === "gone")
         return this.forget()
-      // Not taken this time, so it's tried again at the next check, as though it hadn't been due
-      if (sent === "retry" && unchanged(row))
-        this.save({ ...row, watched: { ...row.watched, next: at + MIN_CHECK } })
+      // Not taken this time, so it's tried again later, a few times, as though the check hadn't been made
+      if (sent.sent === "retry" && unchanged(row))
+        this.save({ ...row, watched: retried(row.watched, result.watched, at, sent.after) })
     }
     this.ctx.storage.sql.exec("delete from reminders where next is null")
     this.ctx.storage.sql.exec("update device set touched = ?", now)

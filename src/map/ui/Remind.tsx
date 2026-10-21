@@ -5,7 +5,6 @@
 
 import { r } from "bruh/reactive"
 import { routeLabel } from "../../transit/feed.mts"
-import { slack } from "../../transit/models/forecast.mts"
 import type { Itinerary, RideLeg } from "../../routing/plan.mts"
 import { type Reminder, leadTime, watchOf } from "../../reminders/reminder.mts"
 import { randomId } from "../../reminders/store.mts"
@@ -20,12 +19,12 @@ const CHOICES = [5, 10, 15, 20, 30]
 
 const isSupported = support()
 
-/** The reminder an itinerary would set: its first bus, the walk to its stop with the slack the bus needs, and where it goes */
+/** The reminder an itinerary would set: its first bus, the walk to its stop, and where it goes */
 const reminderOf = (itinerary: Itinerary, ride: RideLeg, override: number | undefined): Reminder => {
   const { run, fromPosition, start } = ride
   const feed = state.feed.peek()
-  const band = slack(run, fromPosition, start, state.now.peek())
-  const walk = Math.max(0, start - band - itinerary.start)
+  const [first] = itinerary.legs
+  const walk = first.kind === "walk" ? first.end - first.start : 0
   const last = itinerary.legs.at(-1)!
   const stop = feed.stops[run.trip.stops[fromPosition]]
   return {
@@ -59,7 +58,8 @@ export const Remind = ({ itinerary }: { itinerary: Itinerary }) => {
   const override = r<number | undefined>(undefined)
   const problem = r<string | undefined>()
   const isSetting = r(false)
-  const set = r(() => [...kept.value.values()].find(reminder => reminder.trip === trip && reminder.stop === stopId))
+  const scheduled = ride.run.base + ride.run.trip.times[ride.fromPosition]
+  const set = r(() => [...kept.value.values()].find(reminder => reminder.trip === trip && reminder.stop === stopId && reminder.scheduled === scheduled))
 
   const select: HTMLSelectElement =
     <select aria-label="When to remind you" onchange={() => override.value = select.value ? Number(select.value) * 60 : undefined}>

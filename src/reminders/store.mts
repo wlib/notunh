@@ -51,15 +51,24 @@ export const keep = async (reminder: Reminder) =>
 export const forget = async (id: string) =>
   void await done((await store(REMINDERS, "readwrite")).delete(id))
 
+/** This device's id and secret, if it has had any */
+export const deviceKept = async (): Promise<Device | undefined> => {
+  const kept = await done((await store(DEVICE, "readonly")).get(DEVICE))
+  return v.is(Device, kept) ? kept : undefined
+}
+
 /** This device's id and secret, made the first time they're asked for */
 export const device = async (): Promise<Device> => {
-  const kept = await done((await store(DEVICE, "readonly")).get(DEVICE))
-  if (v.is(Device, kept))
+  const kept = await deviceKept()
+  if (kept)
     return kept
   const made = { id: randomId(), secret: randomId() + randomId() }
   await done((await store(DEVICE, "readwrite")).put(made, DEVICE))
   return made
 }
+
+export const forgetDevice = async () =>
+  void await done((await store(DEVICE, "readwrite")).delete(DEVICE))
 
 /** 128 random bits, base64url */
 export const randomId = () =>

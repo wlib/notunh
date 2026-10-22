@@ -14,6 +14,7 @@ import type { createLive } from "./live.mts"
 import type { createRiding } from "./riding.mts"
 import { today } from "../../shell/lifecycle.mts"
 import { type Own, distinct, store, stored } from "../../shell/state.mts"
+import { byPattern } from "./ways.mts"
 
 const isPlace = (value: unknown): value is Place => {
   const { lat, lon, name }: { lat?: unknown, lon?: unknown, name?: unknown } = Object(value)
@@ -80,6 +81,9 @@ export const createTrip = (
     },
     (a, b) => a.length === b.length && a.every((itinerary, i) => isSameItinerary(itinerary, b[i]))
   )
+
+  /** The itineraries by the way they go, one card each, its other departures a line under it */
+  const ways = r(() => byPattern(itineraries.value))
 
   /** Whether the ways shown get there by the time asked, which with none asked they do */
   const makesIt = r(() => by.value === undefined || itineraries.value.some(itinerary => itinerary.end <= by.value!))
@@ -240,5 +244,5 @@ export const createTrip = (
     })
     .catch(() => {})
 
-  return { from, to, by, selected, itineraries, makesIt, walk, itinerary, progress, legPaths, isLocating, located, useCurrentLocation, directTo, plansFor, walkingTo }
+  return { from, to, by, selected, itineraries, ways, makesIt, walk, itinerary, progress, legPaths, isLocating, located, useCurrentLocation, directTo, plansFor, walkingTo }
 }

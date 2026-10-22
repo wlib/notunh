@@ -128,6 +128,7 @@
 }
 
 .filters summary {
+  padding-block: calc((var(--tap) - 1.45em) / 2);
   cursor: pointer;
   color: var(--muted);
   font-size: 0.9rem;

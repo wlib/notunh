@@ -308,7 +308,7 @@ const Goals = () =>
               capture("goal_opened")
             }}
           >
-            <Icon name="star" /> {goal.name} · <Next time={goal.by} />
+            <Icon name="star" /><span class="truncate">{goal.name}</span> · <Next time={goal.by} />
           </button>
           <button type="button" class="clear" aria-label={`Forget ${goal.name}`} onclick={() => goals.value = goals.peek().filter(other => other !== goal)}>
             <Icon name="close" />

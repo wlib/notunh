@@ -525,7 +525,7 @@ test("a newer timetable with its stops numbered otherwise keeps the itinerary ch
   expect([rideAfter.fromPosition, rideAfter.toPosition].map(position => feed.stops[rideAfter.run.trip.stops[position]].id)).toEqual(["0", "2"])
 })
 
-test("an itinerary chosen from your location stays chosen as you walk to it and its times change", async () => {
+test("a later departure of the same way, chosen from your location, stays chosen as you walk to it and its times change", async () => {
   const feed = tripFeed(["0", "1", "2"])
   const [early] = feed.trips
   // The same trip, half an hour later
@@ -537,6 +537,8 @@ test("an itinerary chosen from your location stays chosen as you walk to it and 
   const rideOf = () => state.itinerary.peek()?.legs.find(leg => leg.kind === "ride")?.run.trip.id
   const chosen = state.itineraries.peek().find(itinerary => itinerary.legs.some(leg => leg.kind === "ride" && leg.run.trip.id === "L"))!
   expect(state.itineraries.peek()[0]).not.toBe(chosen)
+  // One way, its later departure under the best
+  expect(state.ways.peek()).toEqual([state.itineraries.peek()])
   state.selected.value = wayKey(chosen)
   await vi.advanceTimersByTimeAsync(0)
   expect(rideOf()).toBe("L")
@@ -547,6 +549,7 @@ test("an itinerary chosen from your location stays chosen as you walk to it and 
     await vi.advanceTimersByTimeAsync(60_000)
     expect(state.from.peek()).toMatchObject({ isYou: true })
     expect(rideOf()).toBe("L")
+    expect(state.ways.peek()[0][0]).not.toBe(state.itinerary.peek())
   }
 })
 

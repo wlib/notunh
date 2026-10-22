@@ -19,15 +19,17 @@ export const RouteList = () =>
         const isPicked = r(() => state.pickedRoute.value === id)
         return (
           <li class={{ "not-running": r(() => !isRunning.value) }}>
-            <input
-              type="checkbox"
-              aria-label={`Show ${long}`}
-              checked={r(() => state.shownRoutes.value.has(id))}
-              onchange={() => {
-                state.chosenRoutes.value = toggled(state.shownRoutes.peek(), id)
-                capture("route_toggled", { route: id, shown: state.shownRoutes.peek().has(id) })
-              }}
-            />
+            <label class="check">
+              <input
+                type="checkbox"
+                aria-label={`Show ${long}`}
+                checked={r(() => state.shownRoutes.value.has(id))}
+                onchange={() => {
+                  state.chosenRoutes.value = toggled(state.shownRoutes.peek(), id)
+                  capture("route_toggled", { route: id, shown: state.shownRoutes.peek().has(id) })
+                }}
+              />
+            </label>
             <button
               type="button"
               aria-pressed={r(() => isPicked.value ? "true" : "false")}

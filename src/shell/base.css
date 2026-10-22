@@ -16,6 +16,8 @@
   --radius-l: 1.125rem;
   --radius-m: 0.75rem;
   --radius-s: 0.5rem;
+  /* The least a control takes up for a finger, however small it's drawn */
+  --tap: max(44px, 2.75rem);
 
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -52,7 +54,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
   color: inherit;
 }
@@ -62,19 +65,52 @@ button {
 }
 
 input[type="checkbox"] {
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+  margin: 0;
   accent-color: var(--accent);
 }
 
-/* A plain action, like "Directions from here" */
-.button {
-  padding: 0.55rem 0.75rem;
+/* A plain action, like "Directions from here", and a choice of a few drawn the same, like a heads-up */
+.button,
+select {
+  min-block-size: var(--tap);
+  padding: 0.25rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-s);
-  background: var(--surface-raised);
+  background-color: var(--surface-raised);
 }
 
-.button:hover {
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+}
+
+.button:hover,
+select:hover {
   border-color: var(--muted);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* At least 16px so iOS doesn't zoom in on focus, with a chevron in the text color, which follows the theme */
+select {
+  appearance: none;
+  padding-inline-end: 2rem;
+  font-size: max(1rem, 16px);
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.05rem) 55%,
+    calc(100% - 0.75rem) 55%;
+  background-size: 0.3rem 0.3rem;
+  background-repeat: no-repeat;
 }
 
 /* The one action a choice leans toward */
@@ -92,12 +128,34 @@ input[type="checkbox"] {
 }
 
 .chip {
-  padding: 0.25rem 0.6rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  min-block-size: 2.25rem;
+  padding: 0 0.75rem;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: none;
   font-size: 0.85rem;
   white-space: nowrap;
+}
+
+/* Text in a chip or row that's cut short rather than pushing it wider, like a long place's name */
+.truncate {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Controls drawn smaller than a finger still take a tap from --tap around them */
+.chip::after,
+.close::after,
+.also-time::after {
+  content: "";
+  position: absolute;
+  inset: min(0px, (100% - var(--tap)) / 2);
 }
 
 .chip[aria-pressed="true"] {

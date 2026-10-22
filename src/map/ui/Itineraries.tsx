@@ -11,6 +11,8 @@ import { RouteBadge, StopLink, Time, minutes, route } from "./common.tsx"
 import { state } from "../state/map.mts"
 import { capture } from "../../shell/usage.tsx"
 import { Remind } from "./Remind.tsx"
+import { othersOf } from "../state/ways.mts"
+import { clockOf } from "../../shared/time.mts"
 
 /** Minutes between two times as displayed, so durations agree with the clock times beside them */
 const minutesBetween = (start: number, end: number) =>
@@ -98,32 +100,75 @@ const Leave = ({ itinerary: { start, end } }: { itinerary: Itinerary }) =>
     )
   })
 
-const ItineraryCard = ({ itinerary: it }: { itinerary: Itinerary }) => {
-  // By the way it goes rather than by object, as a replan's fresher copy of the chosen itinerary is still the chosen one
-  const key = wayKey(it)
-  const isSelected = r(() => state.itinerary.value !== undefined && wayKey(state.itinerary.value) === key)
+/** The times and legs of a departure, and when to leave for it */
+const Summary = ({ itinerary: it }: { itinerary: Itinerary }) =>
+  <>
+    <span class="itinerary-times">
+      <strong><ClockRange from={new Date(it.start * 1000)} to={new Date(it.end * 1000)} /></strong>
+      <span class="duration"><Minutes value={minutesBetween(it.start, it.end)} /></span>
+    </span>
+    <span class="itinerary-legs">
+      {shownLegs(it).map(leg => <LegChip leg={leg} />)}
+      <span class="leave"><Leave itinerary={it} /></span>
+    </span>
+  </>
+
+/** Chooses a departure, by the way it goes rather than by object, as a replan's fresher copy of it is still the one chosen */
+const choose = (it: Itinerary) => {
+  state.selected.value = wayKey(it)
+  capture("itinerary_chosen", { rides: it.legs.filter(leg => leg.kind === "ride").length })
+}
+
+/**
+ * A way there, at its best departure, or the one of its departures chosen, and its other departures in a line under
+ * it, each a tap from being the one chosen, its steps and reminder with it
+ */
+const WayCard = ({ departures }: { departures: Itinerary[] }) => {
+  const keys = departures.map(wayKey)
+  const chosen = r(() => {
+    const current = state.itinerary.value
+    return current && departures[keys.indexOf(wayKey(current))]
+  })
+  const isSelected = r(() => chosen.value !== undefined)
+  const shown = r(() => chosen.value ?? departures[0])
+
+  const summary: HTMLButtonElement =
+    <button
+      type="button"
+      class="itinerary-summary"
+      aria-expanded={r(() => isSelected.value ? "true" : "false")}
+      onclick={() => choose(shown.peek())}
+    >
+      {r(() => <Summary itinerary={shown.value} />)}
+    </button>
+
   return (
     <li class={{ itinerary: true, selected: isSelected }}>
-      <button
-        type="button"
-        class="itinerary-summary"
-        aria-expanded={r(() => isSelected.value ? "true" : "false")}
-        onclick={() => {
-          state.selected.value = key
-          capture("itinerary_chosen", { rides: it.legs.filter(leg => leg.kind === "ride").length })
-        }}
-      >
-        <span class="itinerary-times">
-          <strong><ClockRange from={new Date(it.start * 1000)} to={new Date(it.end * 1000)} /></strong>
-          <span class="duration"><Minutes value={minutesBetween(it.start, it.end)} /></span>
-        </span>
-        <span class="itinerary-legs">
-          {shownLegs(it).map(leg => <LegChip leg={leg} />)}
-          <span class="leave"><Leave itinerary={it} /></span>
-        </span>
-      </button>
-      {r(() => isSelected.value && <Steps itinerary={it} />)}
-      {r(() => isSelected.value && <Remind itinerary={it} />)}
+      {summary}
+      {departures.length > 1 &&
+        <div class="also" role="group" aria-label="Other departures">
+          Also{" "}
+          {r(() => othersOf(departures, shown.value).map((other, i) =>
+            <>
+              {i > 0 && ", "}
+              <button
+                type="button"
+                class="also-time"
+                aria-label={`Leave at ${clockOf(other.start * 1000)}`}
+                onclick={() => {
+                  choose(other)
+                  // The button tapped is now the card's own departure, so focus goes there
+                  summary.focus()
+                }}
+              >
+                <Time seconds={other.start} />
+              </button>
+            </>
+          ))}
+        </div>
+      }
+      {r(() => isSelected.value && <Steps itinerary={shown.value} />)}
+      {r(() => isSelected.value && <Remind itinerary={shown.value} />)}
     </li>
   )
 }
@@ -161,9 +206,9 @@ export const Itineraries = () =>
     )}
     <WalkOption first={true} />
     {r(() =>
-      state.itineraries.value.length
+      state.ways.value.length
         ? <ul>
-            {state.itineraries.value.map(it => <ItineraryCard itinerary={it} />)}
+            {state.ways.value.map(departures => <WayCard departures={departures} />)}
           </ul>
         : <p class="muted">No bus gets there in the next few hours.</p>
     )}

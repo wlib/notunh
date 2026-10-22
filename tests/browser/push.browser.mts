@@ -14,7 +14,7 @@ import { WAKE_VERSION, pushOf } from "../../src/reminders/watch.mts"
 import type { Kept } from "../../src/reminders/reminder.mts"
 import { type FeedData, arrivalTime, isServiceActive, serviceDayStart } from "../../src/transit/feed.mts"
 import { buildOf } from "../../src/shell/manifest.mts"
-import { addDays, hhmm } from "../../src/shared/time.mts"
+import { addDays, clockOf, hhmm } from "../../src/shared/time.mts"
 import { distance } from "../../src/geo/projection.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
@@ -35,9 +35,11 @@ test.skip(({ browserName }) => browserName !== "chromium", "Only Chromium can be
  * beats walking to, its next stop, which is walked to, a time a quarter hour before it leaves, and when it gets
  * there
  */
+const feedOf = (dist: string): FeedData =>
+  JSON.parse(readFileSync(join(dist, buildOf(readFileSync(join(dist, "map/index.html"), "utf8")).data.gtfs), "utf8"))
+
 const rideOf = (dist: string) => {
-  const { data } = buildOf(readFileSync(join(dist, "map/index.html"), "utf8"))
-  const feed: FeedData = JSON.parse(readFileSync(join(dist, data.gtfs), "utf8"))
+  const feed = feedOf(dist)
   for (let day = feed.start; day <= feed.end; day = addDays(day, 1)) {
     const rides = feed.trips
       .filter(trip => isServiceActive(feed.services[trip.service], day))
@@ -55,6 +57,25 @@ const rideOf = (dist: string) => {
     return { from: from.name, near: feed.stops[trip.stops[1]].name, to: feed.stops[trip.stops[farthest]].name, at: new Date(base + (trip.times[0] - 900) * 1000), arrives: base + arrivalTime(trip, farthest) * 1000 }
   }
   throw new Error("The timetable has no service")
+}
+
+/**
+ * A way the built site's timetable runs often: of the first service day's trips, those of the route and first stop
+ * with the most, from that stop to the farthest along them, ten minutes before the hour they leave most in begins
+ */
+const oftenOf = (dist: string) => {
+  const feed = feedOf(dist)
+  let day = feed.start
+  while (!feed.trips.some(trip => isServiceActive(feed.services[trip.service], day)))
+    day = addDays(day, 1)
+  const trips = Object.values(Object.groupBy(feed.trips.filter(trip => isServiceActive(feed.services[trip.service], day)), trip => `${trip.route} ${trip.stops[0]}`))
+    .reduce((most, trips) => trips!.length > most!.length ? trips : most)!
+  const times = trips.map(trip => trip.times[0]).sort((a, b) => a - b)
+  const busiest = times.reduce((best, time) => times.filter(other => other >= time && other < time + 3600).length > times.filter(other => other >= best && other < best + 3600).length ? time : best)
+  const [trip] = trips
+  const from = feed.stops[trip.stops[0]]
+  const farthest = trip.stops.reduce((farthest, stop) => distance(from, feed.stops[stop]) > distance(from, feed.stops[farthest]) ? stop : farthest)
+  return { from: from.name, to: feed.stops[farthest].name, at: new Date(serviceDayStart(day) + (busiest - 600) * 1000) }
 }
 
 const KEY = "BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8"
@@ -194,6 +215,29 @@ test("a reminder set from an itinerary asks the Worker only to watch the first b
   await expect.poll(() => sent.filter(({ body }) => !body?.watch).length).toBe(1)
   expect(sent.at(-1)).toMatchObject({ url: `${puts()[0].url}?device=${encodeURIComponent(puts()[0].body.device)}`, secret: puts()[0].secret })
   await expect.poll(kept).toEqual([])
+})
+
+test("a later departure of the same way, tapped under its card, is the one chosen and the one reminded of", async ({ page, context, fixture }) => {
+  const ride = oftenOf(process.env.NOTUNH_DIST!)
+  const { puts, kept, plan } = await setUp(page, context, fixture, ride.at)
+  await plan(ride.from, ride.to)
+  const card = page.locator(".itinerary").filter({ has: page.getByRole("group", { name: "Other departures" }) }).first()
+  const later = card.getByRole("group", { name: "Other departures" }).getByRole("button").last()
+  const leave = (await later.getAttribute("aria-label"))!.replace("Leave at ", "")
+  await later.click()
+
+  // The card shows it, chosen and open, focus on it, and its best departure is now the other one offered
+  const summary = card.locator(".itinerary-summary")
+  await expect(card).toHaveClass(/selected/)
+  await expect(summary).toHaveAttribute("aria-expanded", "true")
+  await expect(summary).toBeFocused()
+  await expect(card.getByRole("button", { name: `Leave at ${leave}`, exact: true })).toHaveCount(0)
+
+  await card.getByRole("button", { name: "Remind me" }).click()
+  await expect(card.getByText("Reminder set")).toBeVisible()
+  expect(puts()).toHaveLength(1)
+  const [reminder] = await kept()
+  expect(clockOf(reminder.start * 1000)).toBe(leave)
 })
 
 test("a trip to be there by a time leaves as late as makes it, its reminder keeps the time, and the goal can be saved and opened again", async ({ page, context, fixture }) => {

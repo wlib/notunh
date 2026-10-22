@@ -95,18 +95,16 @@ export const isSameItinerary = (a: Itinerary, b: Itinerary) =>
     )
   })
 
+/** Identifies a walk by the places it's between, and not as where you are moves with you */
+export const walkKey = (leg: WalkLeg) =>
+  [leg.from, leg.to].map(place => place.isYou ? "you" : `${place.lat},${place.lon}`).join(">")
+
 /**
  * Identifies where an itinerary goes, changing only when its rides or the places it walks between do, and not as
  * where you are moves with you
  */
 export const wayKey = (itinerary: Itinerary) =>
-  itinerary.legs
-    .map(leg =>
-      leg.kind === "ride"
-        ? rideKey(leg)
-        : [leg.from, leg.to].map(place => place.isYou ? "you" : `${place.lat},${place.lon}`).join(">")
-    )
-    .join(" ")
+  itinerary.legs.map(leg => leg.kind === "ride" ? rideKey(leg) : walkKey(leg)).join(" ")
 
 /** The connections leaving between `start` and `until`, which is HORIZON on unless there's a time to get there by later than that */
 export const buildConnections = (runs: Run[], start: number, until = start + HORIZON) => {

@@ -93,7 +93,7 @@ test("the sheet keeps its height through Directions and Back, from home and from
   await back.tap()
   await holds(page, half)
 
-  await page.goto(fixture.origin + "/map/?place=Kingsbury+Hall")
+  await page.goto(fixture.origin + "/map/place/Kingsbury+Hall")
   await holds(page, half)
   await page.locator(".view-actions").getByRole("button", { name: "Directions" }).tap()
   await expect(page.getByPlaceholder("Where to?")).toHaveValue("Kingsbury Hall")

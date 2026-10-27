@@ -126,7 +126,7 @@ export const courseOf = ({ subject, number }: Pick<Section, "subject" | "number"
 
 /** A section's page */
 export const sectionUrl = (term: string, crn: string) =>
-  `/map/?section=${term}:${crn}`
+  `/map/section/${term}/${crn}`
 
 /**
  * A section's own page in UNH's Course Search, which says what this leaves to it: its seats, and who it's restricted

@@ -1,143 +1,15 @@
-// The page the map's sheet shows over the home, each at a link of its own that can be shared and reopened: a section,
-// an instructor, a room, a course, a place, an event, parking near a place, a parking area, a program, a stop, a bus,
-// directions, a new event, you, and the buses. A page is one query parameter on /map/, as ?to= already is, never a
-// hash: /map/?section=202610:12496, ?person=, ?room=Kingsbury+N343, ?course=CS+518, ?place=Kingsbury+Hall, ?event=,
-// ?parking=Kingsbury+Hall, ?area=B, ?program=computer-science-minor, which may name a course to focus on,
-// &course=CS+518, or none, the list, ?stop=<id>, ?bus=<id>, ?directions, ?new=<place or nothing>, ?you and ?buses,
-// with ?pin=, as links to events were first made, read as ?event=. Parking's two carry the stay and what it's for
-// besides, as &arrive=2026-10-27T06:30&leave=2026-10-27T08:30&for=class on Durham's clock, never &to=, which plans a
-// trip. Opening one adds to the browser's history, so Back goes back through what was opened, to the search it was
-// opened from, or to the map from a page this visit didn't open. Each page says what it's called, for the Back that
-// returns to it, and the place it's at, which the map shows. Reactive values only, no DOM
+// The page the map's sheet shows over the home, at its link (src/map/link.mts). Opening one adds to the browser's
+// history, so Back goes back through what was opened, to the search it was opened from, or to the map from a page
+// this visit didn't open. Each page says what it's called, for the Back that returns to it, and the place it's at,
+// which the map shows. Reactive values only, no DOM
 
 import { r } from "bruh/reactive"
-import { parseKey } from "../../courses/saved.mts"
-import type { Purpose, Stay } from "../../parking/model.mts"
 import type { Place } from "../../places/search.mts"
-import { atClock, hhmm, localDay } from "../../shared/time.mts"
 import type { Own } from "../../shell/state.mts"
-
-export type Page =
-  | { kind: "section", term: string, crn: string }
-  | { kind: "person", id: string }
-  | { kind: "room", where: string }
-  | { kind: "course", code: string }
-  | { kind: "place", name: string }
-  | { kind: "event", id: string }
-  | { kind: "parking", place?: string } & Parking
-  | { kind: "area", id: string } & Parking
-  | { kind: "program", slug?: string, course?: string }
-  | { kind: "stop", id: string }
-  | { kind: "bus", id: string }
-  | { kind: "new", place?: string }
-  | { kind: "directions" }
-  | { kind: "you" }
-  | { kind: "buses" }
-
-/** What parking's pages are asked for besides: the stay, and what it's for, else now and for a visit */
-export type Parking = { stay?: Stay, purpose?: Purpose }
-
-/** The query parameter each kind of page is, in the order a link naming more than one is read */
-const PARAMS = ["section", "person", "room", "program", "course", "place", "event", "parking", "area", "stop", "bus", "new", "directions", "you", "buses"] as const
-
-/** The pages that are what they are with no value: the page is the parameter's being there */
-const BARE = ["directions", "you", "buses"] as const
-
-/** Parameters read as another, as links made before it was named so are */
-const ALIASES: Record<string, typeof PARAMS[number]> = { pin: "event" }
+import { type Page, isSameView, pageOf, urlOf, viewOf } from "../link.mts"
 
 /** Where a page is on the map, and its marker's label there, "Kingsbury Hall · 2:10 PM", with the page's view it's of */
 export type Focus = { place: Place, label: string, view: string }
-
-const PURPOSES: readonly string[] = ["class", "errand", "event", "visit"] satisfies Purpose[]
-
-/** An instant as a link and a datetime-local field hold it, on Durham's clock: "2026-10-27T06:30" */
-export const fieldOf = (ms: number) =>
-  `${localDay(ms)}T${hhmm(ms)}`
-
-/** An instant from a link or a datetime-local field, or none for anything else */
-export const fromField = (field: string | null) =>
-  field && /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(field) ? atClock(field.slice(0, 10), field.slice(11)) : undefined
-
-/** The stay and purpose a query asks parking for, each left out where it's missing or makes no sense */
-const parkingOf = (query: URLSearchParams): Parking => {
-  const [from, to] = [fromField(query.get("arrive")), fromField(query.get("leave"))]
-  const purpose = query.get("for")
-  return {
-    ...from !== undefined && to !== undefined && from < to && { stay: { from, to } },
-    ...purpose && PURPOSES.includes(purpose) && { purpose: purpose as Purpose }
-  }
-}
-
-/** The page a query names, or none: the first parameter it has of PARAMS, read as that page */
-export const pageOf = (search: string): Page | undefined => {
-  const query = new URLSearchParams(search)
-  for (const [alias, param] of Object.entries(ALIASES))
-    if (query.has(alias) && !query.has(param))
-      query.set(param, query.get(alias)!)
-  for (const param of PARAMS) {
-    const value = query.get(param)?.trim()
-    const key = param === "section" && value ? parseKey(value) : undefined
-    // Parking near nowhere in particular is parking anywhere, ranked without a walk
-    if (param === "parking" && query.has(param))
-      return { kind: "parking", ...value && { place: value }, ...parkingOf(query) }
-    // A program's page, with the course it's focused on; no program is the list of them, for a course those naming it
-    if (param === "program" && query.has(param)) {
-      const course = query.get("course")?.trim()
-      return { kind: "program", ...value && { slug: value }, ...course && { course } }
-    }
-    // A new event, at a place where one's named
-    if (param === "new" && query.has(param))
-      return { kind: "new", ...value && { place: value } }
-    if ((BARE as readonly string[]).includes(param) && query.has(param))
-      return { kind: param as typeof BARE[number] }
-    if (!value || (param === "section" && !key))
-      continue
-    return (
-      key                                    ? { kind: "section", ...key } :
-      param === "person" || param === "event" || param === "stop" || param === "bus" ? { kind: param, id: value } :
-      param === "room"                       ? { kind: "room", where: value } :
-      param === "course"                     ? { kind: "course", code: value } :
-      param === "area"                       ? { kind: "area", id: value, ...parkingOf(query) } :
-                                               { kind: "place", name: value }
-    )
-  }
-}
-
-/** A page's link, or the map's for none. The section's colon is left as it is, as a term and CRN read */
-export const urlOf = (page?: Page) => {
-  if (!page)
-    return "/map/"
-  const [param, value] =
-    page.kind === "section" ? ["section", `${page.term}:${page.crn}`] :
-    page.kind === "room"    ? ["room", page.where] :
-    page.kind === "course"  ? ["course", page.code] :
-    page.kind === "place"   ? ["place", page.name] :
-    page.kind === "parking" ? ["parking", page.place ?? ""] :
-    page.kind === "program" ? ["program", page.slug ?? ""] :
-    page.kind === "new"     ? ["new", page.place ?? ""] :
-    page.kind === "directions" || page.kind === "you" || page.kind === "buses" ? [page.kind, ""] :
-                              [page.kind, page.id]
-  const query = new URLSearchParams({ [param]: value })
-  if (page.kind === "program" && page.course)
-    query.set("course", page.course)
-  if ((page.kind === "parking" || page.kind === "area") && page.stay) {
-    query.set("arrive", fieldOf(page.stay.from))
-    query.set("leave", fieldOf(page.stay.to))
-  }
-  if ((page.kind === "parking" || page.kind === "area") && page.purpose)
-    query.set("for", page.purpose)
-  // A bare page's parameter stands alone, "?you", as its value says nothing
-  return `/map/?${query.toString().replaceAll("%3A", ":").replace(/^(directions|you|buses)=$/, "$1")}`
-}
-
-/** A page's link without what changes in place: parking's stay and purpose, which their fields set, and a program's course in focus */
-export const viewOf = (page?: Page) =>
-  !page ? urlOf() : urlOf(page.kind === "program" ? { ...page, course: undefined } : { ...page, stay: undefined, purpose: undefined } as Page)
-
-/** Whether two pages show the same thing, whatever parking's are asked for or a program's focused on, which change in place */
-export const isSameView = (a?: Page, b?: Page) =>
-  a === b || (a !== undefined && b !== undefined && viewOf(a) === viewOf(b))
 
 /**
  * What a page's entry in the history keeps: how many pages deep this visit has gone, so Back only goes back through
@@ -150,7 +22,7 @@ const entry = (): Partial<Entry> =>
 
 /** The page shown, from the address the map opened at, following Back and Forward. own is given what stops it */
 export const createPage = (own: Own) => {
-  const page = r(pageOf(globalThis.location.search))
+  const page = r(pageOf(globalThis.location.pathname, globalThis.location.search))
   /** What the page shown is called, as its Back says it, and where it is, which the map marks, as the page says them */
   const name = r<string>()
   const focus = r<Focus>()
@@ -210,7 +82,7 @@ export const createPage = (own: Own) => {
   }
 
   const following = new AbortController()
-  addEventListener("popstate", () => show(pageOf(globalThis.location.search)), { signal: following.signal })
+  addEventListener("popstate", () => show(pageOf(globalThis.location.pathname, globalThis.location.search)), { signal: following.signal })
   own(() => following.abort())
 
   return { page, name, focus, focusAt, backTo, searching, resumed, go, amend, back }

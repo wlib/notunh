@@ -83,7 +83,7 @@ test("searching an instructor's name answers with a row holding their next class
 
   // His page lists every section he teaches this week, Friday's room said to differ, and email last
   await row.getByRole("button", { name: /David Benedetto/ }).click()
-  await expect(page).toHaveURL(/\/map\/\?person=/)
+  await expect(page).toHaveURL(/\/map\/person\//)
   await expect(page.locator(".view-label", { hasText: "Next" })).toBeVisible()
   await expect(page.locator(".view .rows")).toContainText("IT 791 (01)")
   await expect(page.locator(".view .rows")).toContainText("Kingsbury N113 · different room")
@@ -95,7 +95,7 @@ test("searching an instructor's name answers with a row holding their next class
 test("a section's page, at its own link, leads with its next meeting, then Directions, Save and Share", async ({ page, fixture }) => {
   await page.clock.setFixedTime(tuesday("13:40"))
   await serveCourses(page)
-  await open(page, fixture.origin, "/map/?section=202610:12496")
+  await open(page, fixture.origin, "/map/section/202610/12496")
   const view = page.locator(".view")
   await expect(view.getByRole("heading", { name: "Introduction to Software Engineering" })).toBeVisible()
   await expect(view.locator(".view-label").first()).toHaveText("Next")
@@ -110,14 +110,14 @@ test("a section's page, at its own link, leads with its next meeting, then Direc
   await expect(page.getByPlaceholder("Where to?")).toHaveValue("Kingsbury Hall")
   await expect(page.getByRole("button", { name: "Arrive by" })).toHaveAttribute("aria-pressed", "true")
   await page.goBack()
-  await expect(page).toHaveURL(/section=202610:12496/)
+  await expect(page).toHaveURL(/\/map\/section\/202610\/12496$/)
   await expect(view.getByRole("heading", { name: "Introduction to Software Engineering" })).toBeVisible()
 })
 
 test("a section saved is your next class in Yours and in You's week, once whichever of a cross-listed pair is saved", async ({ page, fixture }) => {
   await page.clock.setFixedTime(tuesday("09:00"))
   await serveCourses(page)
-  await open(page, fixture.origin, "/map/?section=202610:12496")
+  await open(page, fixture.origin, "/map/section/202610/12496")
   await page.getByRole("button", { name: "Save", exact: true }).click()
   await expect(page.getByRole("button", { name: "Saved", exact: true })).toBeVisible()
   await page.getByRole("button", { name: "Back" }).click()

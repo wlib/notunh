@@ -105,10 +105,10 @@ test("a push of a shape this worker doesn't know shows a plain notification, and
 })
 
 test("tapping a notification brings up an open map as it is, or opens one on the reminder's trip", async () => {
-  const open = world({ windows: ["https://notunh.app/dining/", "https://notunh.app/map/?from=x"] })
+  const open = world({ windows: ["https://notunh.app/dining/", "https://notunh.app/map/place/Kingsbury+Hall"] })
   const notification = { tag: "reminder-r1", close: () => {} }
   await open.dispatch("notificationclick", { notification })
-  expect(open.focused).toEqual(["https://notunh.app/map/?from=x"])
+  expect(open.focused).toEqual(["https://notunh.app/map/place/Kingsbury+Hall"])
   expect(open.opened).toEqual([])
   const closed = world()
   await closed.dispatch("notificationclick", { notification })

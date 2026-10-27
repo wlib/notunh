@@ -79,7 +79,7 @@ export const startPush = (scope: PushScope, store: Store, now = () => Date.now()
     const target = new URL("/map/", scope.location.origin)
     const id = event.notification.tag.replace(/^reminder-/, "")
     event.waitUntil((async () => {
-      const map = (await scope.clients.matchAll({ type: "window" })).find(window => new URL(window.url).pathname === target.pathname)
+      const map = (await scope.clients.matchAll({ type: "window" })).find(window => new URL(window.url).pathname.startsWith(target.pathname))
       if (map)
         await map.focus()
       else

@@ -27,13 +27,13 @@ The result is `src/map/events.json`, a map data file like the timetable; a gener
 
 ## On the map
 
-`src/map/state/today.mts` joins the build's events with the public pins the Worker lists for today (`GET /api/pins?day=`). Each place with something on today is one marker (`events` in `src/map/render/layers.mts`), labelled by what's on: "Tennis · till 3:00 PM" filled while on, "Soccer · 3:00 PM" outlined before. A marker opens the place's page; a row opens the event's, `/map/?event=<id>` (`?pin=` reads as it), whose Directions plans getting there by its start (`planVisit` in `src/map/state/trip.mts`), and whose Remind and parking are the visit's. A pin whose time is still to pick says "To pick" and isn't drawn. The week's later days list the build's events only.
+`src/map/state/today.mts` joins the build's events with the public pins the Worker lists for today (`GET /api/pins?day=`). Each place with something on today is one marker (`events` in `src/map/render/layers.mts`), labelled by what's on: "Tennis · till 3:00 PM" filled while on, "Soccer · 3:00 PM" outlined before. A marker opens the place's page; a row opens the event's, `/map/event/<id>`, whose Directions plans getting there by its start (`planVisit` in `src/map/state/trip.mts`), and whose Remind and parking are the visit's. A pin whose time is still to pick says "To pick" and isn't drawn. The week's later days list the build's events only.
 
 ## Pins
 
-Made from **+ New event**, the last row of today on the home, or **+ New event here** on a place's page: `/map/?new=<place>` (`src/map/ui/NewEvent.tsx`). What, where (a place the map knows, searched as typed), where exactly, a day with start and end, up to two more times (**+ Another time**), details, **spots**, and Link only or Everyone. The device makes the pin's id, so a retry is the same pin. Posted, it opens as `/map/?event=<id>`, with Going, the times to mark or set, Share, and Delete or Report (`src/social/ui.tsx`, shared with `/p/`).
+Made from **+ New event**, the last row of today on the home, or **+ New event here** on a place's page: `/map/new/<place>` (`src/map/ui/NewEvent.tsx`). What, where (a place the map knows, searched as typed), where exactly, a day with start and end, up to two more times (**+ Another time**), details, **spots**, and Link only or Everyone. The device makes the pin's id, so a retry is the same pin. Posted, it opens as `/map/event/<id>`, with Going, the times to mark or set, Share, and Delete or Report (`src/social/ui.tsx`, shared with `/p/`).
 
-`/p/<id>` (`p/index.html.tsx`, `src/social/pin.tsx`) is the light page a shared link opens, with no account or install: place, time, **Directions**, **Going** (a count, never a list), **Share**, linking to the map's page. The Worker puts the pin's title and a line in its head for previews (`withPin` in `worker/social.mts`); the page fills in the rest from `GET /api/pins/:id`.
+`/p/<id>` (`p/index.html.tsx`, `src/social/pin.tsx`) is the light page a shared link opens, with no account or install: place, time, **Directions**, **Going** (a count, never a list), **Share**, linking to the map's page. The Worker puts the pin in its head for previews ([deploying.md](deploying.md#search-and-sharing)); the page fills in the rest from `GET /api/pins/:id`.
 
 Pins are **link-only** by default. **Everyone** (public, on everyone's map) takes a verified UNH address. A pin is kept until two hours after its end (`LINGER`), then pruned nightly with everything of its.
 
@@ -49,7 +49,7 @@ A mark asks for push permission the first time, from the tap, where the browser 
 
 ### Sharing
 
-**Share** draws a 1080×1920 story image on a canvas (`src/social/story.mts`): title, day and time ("Time to pick" until set), place, a QR code of the link, and the link in words, inside Instagram's safe area. The link goes on the clipboard, and the image through `navigator.share({ files })` where possible, else as a download. The QR encoder is our own (`src/social/qr.mts`, byte mode, level M, versions 1 to 10), checked against CoreImage's bit for bit when written, and by its invariants in tests. Link previews share one static 1200×630 image, `public/social/pin.png` (`scripts/pin-image.mts`), with the pin's own words.
+**Share** draws a 1080×1920 story image on a canvas (`src/social/story.mts`): title, day and time ("Time to pick" until set), place, a QR code of the link, and the link in words, inside Instagram's safe area. The link goes on the clipboard, and the image through `navigator.share({ files })` where possible, else as a download. The QR encoder is our own (`src/social/qr.mts`, byte mode, level M, versions 1 to 10), checked against CoreImage's bit for bit when written, and by its invariants in tests. A link to an event, `/p/<id>` or `/map/?event=`, previews with a card the Worker draws; the story stays on the phone, offline.
 
 ## Identity
 

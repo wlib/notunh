@@ -5,7 +5,7 @@
 // NOTUNH_SHOTS when it's set
 
 import { spawn, type ChildProcess } from "node:child_process"
-import { mkdirSync, readFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { test as base, expect, devices, type Browser, type Page } from "@playwright/test"
 import { type Fixture, startFixture } from "./fixture.mts"
@@ -100,9 +100,9 @@ const makePin = async (page: Page, title: string, { place = "Thompson Hall", mor
   await page.getByLabel("Spots").fill(spots)
   await shoot(page, more ? "new-event-times" : "new-event")
   await page.getByRole("button", { name: "Post it" }).click()
-  await expect(page).toHaveURL(/\/map\/\?event=[\w-]+$/)
+  await expect(page).toHaveURL(/\/map\/event\/[\w-]+$/)
   await expect(page.getByRole("heading", { name: title })).toBeVisible()
-  return pinPath(new URL(page.url()).searchParams.get("event")!)
+  return pinPath(decodeURIComponent(new URL(page.url()).pathname.split("/").at(-1)!))
 }
 
 /** Another phone, with no history, as someone the link was sent to */
@@ -119,7 +119,7 @@ test("today's list opens an event's page, whose Directions plans a trip to its p
   await expect(rows.first()).toBeVisible()
   await shoot(page, "today")
   await rows.nth(1).click()
-  await expect(page).toHaveURL(/\/map\/\?event=/)
+  await expect(page).toHaveURL(/\/map\/event\//)
   await expect(page.locator(".back")).toHaveText(/Map/)
   await page.getByRole("button", { name: "Directions" }).click()
   await expect(page.getByRole("button", { name: "Arrive by" })).toHaveAttribute("aria-pressed", "true")
@@ -171,7 +171,7 @@ test("an event made here opens for anyone with the link, who can say they're goi
   expect(html).toMatch(/<meta property="og:description" content="[^"]*Thompson Hall[^"]*1 going">/)
   // Directions is the event on the map, whose Directions plans the trip to it
   await guest.getByRole("link", { name: "Directions" }).click()
-  await expect(guest).toHaveURL(/\/map\/\?event=/)
+  await expect(guest).toHaveURL(/\/map\/event\//)
   await guest.getByRole("button", { name: "Directions" }).click()
   await expect(guest.getByPlaceholder("Where to?")).toHaveValue("Thompson Hall")
   await expect(guest.getByRole("button", { name: "Arrive by" })).toHaveAttribute("aria-pressed", "true")
@@ -191,6 +191,55 @@ test("an event made here opens for anyone with the link, who can say they're goi
   await page.getByRole("button", { name: "Delete this event" }).click()
   await expect(page.getByText("This event is gone.")).toBeVisible()
   expect((await fetch(fixture.origin + path)).status).toBe(404)
+})
+
+test("a link to an event's page on the map previews it with a card of its own, while the map kept for offline stays the map's, which opens any page offline", async ({ page, browser, fixture }) => {
+  test.slow()
+  await openMap(page, fixture.origin)
+  const id = decodeURIComponent((await makePin(page, "Bring your own board games", { place: "Dimond Library" })).slice("/p/".length))
+  const link = `/map/event/${id}`
+  const asset = readFileSync(join(process.env.NOTUNH_DIST!, "map/index.html"), "utf8")
+
+  // As a crawler asks: the map with the event in its head, and its card, and the map itself as built
+  const html = await (await fetch(fixture.origin + link)).text()
+  expect(html).toContain("<title>Bring your own board games · notunh</title>")
+  expect(html).toMatch(/<meta name="description" content="\w{3}, \w{3} \d{1,2} [^"]+ · Dimond Library · by the steps">/)
+  const image = html.match(/<meta property="og:image" content="([^"]+)">/)![1]
+  expect(image).toMatch(new RegExp(`^https://notunh\\.app/map/card/event/${id}\\?v=[0-9a-f]{12}$`))
+  const card = await fetch(fixture.origin + image.slice("https://notunh.app".length))
+  expect(card.headers.get("content-type")).toBe("image/png")
+  const png = new DataView(await card.arrayBuffer())
+  expect([png.getUint32(16), png.getUint32(20)]).toEqual([1200, 630])
+  if (SHOTS)
+    writeFileSync(join(SHOTS, `preview-${test.info().project.name}.png`), new Uint8Array(png.buffer))
+  expect(await (await fetch(`${fixture.origin}/map/`)).text()).toBe(asset)
+  expect(await (await fetch(`${fixture.origin}/map/event/nope`)).text()).toBe(asset)
+
+  // Someone opening the link: the map at the event, then again from the service worker's copy, which is the map's
+  const other = await stranger(browser)
+  const guest = await other.newPage()
+  await open(guest, fixture.origin, link)
+  await expect(guest.getByRole("heading", { name: "Bring your own board games" })).toBeVisible()
+  await guest.waitForFunction(() => navigator.serviceWorker.controller !== null)
+  const kept = () => guest.evaluate(async () => (await (await caches.open("app-v2")).match("/map/"))?.text())
+  await expect.poll(kept, { timeout: 10_000 }).toBeTruthy()
+  await guest.goto(fixture.origin + link)
+  await expect(guest.getByRole("heading", { name: "Bring your own board games" })).toBeVisible()
+  await guest.goto(`${fixture.origin}/map/place/Dimond+Library`)
+  await expect(guest.getByRole("heading", { name: "Dimond Library" })).toBeVisible()
+  const copy = (await kept())!
+  expect(copy).not.toContain("board games")
+  expect(copy).not.toContain("/map/card/")
+  expect(copy).toContain("<title>UNH Campus Map")
+  // Offline, a page's path opens from that copy, as the map at that page
+  await fixture.setOffline(true)
+  await guest.goto(fixture.origin + link)
+  await expect(guest).toHaveTitle(/^UNH Campus Map/)
+  await expect(guest.locator(".panel")).toBeVisible()
+  await guest.goto(`${fixture.origin}/map/place/Dimond+Library`)
+  await expect(guest.getByRole("heading", { name: "Dimond Library" })).toBeVisible()
+  await fixture.setOffline(false)
+  await other.close()
 })
 
 test("sharing makes a story image, 1080 by 1920, handed to the share sheet with the link copied", async ({ page, fixture }) => {
@@ -333,7 +382,7 @@ test("a permit set on one of two linked devices reaches the other, and comes bac
   // A dozen map pages over two devices, each drawn in software beside the other tests: past test.slow()'s 90 s on a
   // busy machine, though nothing waits on a clock
   test.setTimeout(180_000)
-  const parking = `${fixture.origin}/map/?parking=Kingsbury+Hall`
+  const parking = `${fixture.origin}/map/parking/Kingsbury+Hall`
   const permitOf = (on: Page) => on.locator(".view .parking-ask summary")
   /** The device's id, as its storage keeps it */
   const deviceOf = (on: Page) => on.evaluate(async () => (await (await (await caches.open("reminders-v1")).match("/reminders.json"))?.json())?.device?.id as string | undefined)
@@ -353,7 +402,7 @@ test("a permit set on one of two linked devices reaches the other, and comes bac
   await laptop.getByRole("button", { name: "Show a code on this device" }).click()
   const code = (await laptop.locator(".code").textContent())!
   // A link of its own, as the phone's camera opens it, rather than a fragment on the page it's on
-  await page.goto(`${fixture.origin}/map/?you#link=${code.replace("-", "")}`)
+  await page.goto(`${fixture.origin}/map/you#link=${code.replace("-", "")}`)
   await page.getByRole("button", { name: "Approve" }).click()
   await expect(page.getByText("Approved.")).toBeVisible()
 

@@ -9,10 +9,13 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    // Only the API, the laundry rooms' own addresses, and the pins' pages invoke the Worker. Every other page and
-    // asset, the laundry and pin pages themselves included, is served as a static asset, which is free and unlimited
-    "run_worker_first": ["/api/*", "/laundry/*", "!/laundry/", "/p/*", "!/p/"]
+    // Only the API, the laundry rooms' own addresses, and the pins' and the map's pages and their cards invoke the
+    // Worker (worker/preview.mts). Every other page and asset, the laundry, pin and map pages themselves included, is
+    // served as a static asset, which is free and unlimited
+    "run_worker_first": ["/api/*", "/laundry/*", "!/laundry/", "/p/*", "!/p/", "/map/*", "!/map/"]
   },
+  // Link previews' fonts, as bytes, beside the WebAssembly wrangler compiles by default (worker/card.mts)
+  "rules": [{ "type": "Data", "globs": ["**/*.woff"], "fallthrough": true }],
   "triggers": {
     // Work is split across triggers and minutes to keep each invocation small. worker/ matches these strings
     // exactly, so change them there too

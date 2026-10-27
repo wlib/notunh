@@ -10,7 +10,8 @@ import "../shell/page.css"
 import "./pin.css"
 
 import { r } from "bruh/reactive"
-import { type Pin, mapPath } from "./event.mts"
+import type { Pin } from "./event.mts"
+import { urlOf } from "../map/link.mts"
 import { isUnset } from "./marks.mts"
 import { askOf } from "./ask.mts"
 import * as api from "./browser/api.mts"
@@ -54,14 +55,14 @@ const Page = ({ pin }: { pin: Pin }) => {
     {isAsked && <p class="ask" role="status">{askOf(pin).title}</p>}
 
     <div class="pin-actions">
-      {!unset && <a class="button primary" href={mapPath(pin.id)}>Directions</a>}
+      {!unset && <a class="button primary" href={urlOf({ kind: "event", id: pin.id })}>Directions</a>}
       {!unset && <Going pin={pin} act={act} />}
       <button type="button" class="button" onclick={() => share(pin, location.origin).then(how => notice.value = SHARED[how], (error: Error) => error.name === "AbortError" ? undefined : notice.value = error.message)}>
         Share
       </button>
     </div>
 
-    {!unset && <p class="muted"><a href={mapPath(pin.id)}>Remind me to leave</a></p>}
+    {!unset && <p class="muted"><a href={urlOf({ kind: "event", id: pin.id })}>Remind me to leave</a></p>}
     {unset && <Times pin={pin} act={act} />}
 
     <p class="pin-foot muted">

@@ -5,7 +5,7 @@ import { distance } from "../../src/geo/projection.mts"
 import type { Vehicle } from "../../src/transit/observations/umo.mts"
 import { itineraryKey, wayKey } from "../../src/routing/plan.mts"
 import type { Place } from "../../src/places/search.mts"
-import type { Page } from "../../src/map/state/page.mts"
+import type { Page } from "../../src/map/link.mts"
 import type { Building } from "../../src/places/buildings.mts"
 import places from "../../src/map/places.json"
 import { localDay } from "../../src/shared/time.mts"
@@ -592,7 +592,7 @@ test("parking loads with the page, and your permit is kept on this device", asyn
 
 test("only the page shown marks where it is on the map, so a page left behind, still ticking, never moves the map", async () => {
   const state = await load()
-  const { viewOf } = await import("../../src/map/state/page.mts")
+  const { viewOf } = await import("../../src/map/link.mts")
   const pages: Page[] = [{ kind: "place", name: "Kingsbury Hall" }, { kind: "event", id: "25live:1" }, { kind: "stop", id: "156" }, { kind: "section", term: "202610", crn: "12496" }]
   const spot = (i: number) => ({ place: { lat: 43 + i / 1000, lon: -70.9, name: `Spot ${i}` }, label: `Spot ${i}` })
   fc.assert(fc.property(fc.array(fc.oneof(

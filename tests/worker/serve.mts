@@ -12,10 +12,10 @@ import type { AddressInfo } from "node:net"
 import type { Env } from "../../worker/env.mts"
 import type { Message } from "../../worker/mail.mts"
 import { d1 } from "./d1.mts"
-import { resolve } from "./json-hooks.mts"
+import { load, resolve } from "./hooks.mts"
 
-// The Worker imports JSON as bundlers allow, so Node is taught to before it's loaded
-registerHooks({ resolve })
+// The Worker imports JSON, WebAssembly and fonts as wrangler bundles them, so Node is taught to before it's loaded
+registerHooks({ resolve, load })
 const { app } = await import("../../worker/api.mts")
 
 const dist = process.argv[2]

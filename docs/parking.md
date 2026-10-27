@@ -25,12 +25,12 @@ Whether the stay fits, when it costs money, and whether it can be known are kept
 
 A ranked list and inspectable pages, with no map tinting and no chosen lot (`src/map/ui/Parking.tsx`, `src/map/state/parking.mts`).
 
-- **Parking near a place**, `/map/?parking=Kingsbury+Hall&arrive=2026-10-27T06:30&leave=2026-10-27T08:30&for=class` (times on Durham's clock; never `to=`, which plans a trip):
+- **Parking near a place**, `/map/parking/Kingsbury+Hall?arrive=2026-10-27T06:30&leave=2026-10-27T08:30&for=class` (Durham's clock; never `to=`, which plans a trip):
   - Arrive, Leave, Permit and For fold into one line ("Tue, Oct 27, 6:30 – 8:30 AM · no permit · a class · Change"), so the ranked areas lead the half-height sheet. Changing one changes the link in place.
   - The stay comes from a visit when there is one, from 30 minutes before it to 15 after its end, or two hours from its start; else now for two hours.
   - The best five areas, by whether the stay fits, then walk, then cost, each with the stay as a thin bar, the verdict in words, cost, walk, and Fits, No or Maybe. Below them at most one explanatory "No": the nearest area that doesn't fit, where nearer than one shown ("P Lot · Permit required from 7 AM · open from 6 PM · 2 min walk").
-  - Reached from a place's, section's or event's page, Directions for a visit, and searching "parking". `?parking=` with no place ranks every area without a walk.
-- **An area**, `/map/?area=B` with the same stay parameters: kind and spaces where known, your stay, the verdict with its reason and next change, and cost; "Winter ban may apply" on a winter night. Directions (never for a guessed area), Share, and "Pay · ParkMobile zone 98717", which opens ParkMobile's web app front page, where the zone is entered: no documented link fills it in (`/zone/start?zoneNumber=` didn't), so the number is on the button. The rules follow as lines in the order they bite (permit hours, paid hours, open or free hours, winter), then the areas within it.
+  - Reached from a place's, section's or event's page, Directions for a visit, and searching "parking". `/map/parking` with no place ranks every area without a walk.
+- **An area**, `/map/area/B` with the same stay parameters: kind and spaces where known, your stay, the verdict with its reason and next change, and cost; "Winter ban may apply" on a winter night. Directions (never for a guessed area), Share, and "Pay · ParkMobile zone 98717", which opens ParkMobile's web app front page, where the zone is entered: no documented link fills it in (`/zone/start?zoneNumber=` didn't), so the number is on the button. The rules follow as lines in the order they bite (permit hours, paid hours, open or free hours, winter), then the areas within it.
 - **Search**: a lot's name opens its area.
 - **Your permit** is the Permit field, kept as `parking-permit`, synced per person like your other things.
 

@@ -1,6 +1,6 @@
 /** @jsxImportSource bruh/browser */
 
-// The pages the sheet shows over the home, each at a link of its own (state/page.mts): a section, which leads with its
+// The pages the sheet shows over the home, each at a link of its own (link.mts): a section, which leads with its
 // next meeting; an instructor, with their next scheduled class and their week; a room, with what's scheduled there
 // today; a course, with what it needs and unlocks, the programs naming it, and its sections, the next term's too; a
 // place, with what's on there, the stop beside it and its own facts; an event, with Going for one made here; parking
@@ -12,8 +12,8 @@
 
 import type { BruhChild } from "bruh/browser"
 import { type DerivativeNode, type SourceNode, r } from "bruh/reactive"
-import type { Page } from "../state/page.mts"
-import { urlOf } from "../state/page.mts"
+import type { Page } from "../link.mts"
+import { urlOf } from "../link.mts"
 import { state } from "../state/map.mts"
 import { type CourseEvent, type Meeting, type Section, type Term, KINDS, codeOf, courseOf, registrarUrl, standing } from "../../courses/course.mts"
 import type { Courses } from "../../courses/browser/terms.mts"
@@ -22,7 +22,7 @@ import { roomKey } from "../../courses/rooms.mts"
 import { mailto } from "../../courses/email.mts"
 import { type Dated, datedFrom, daysOf, isSaved, keyOf, patternsOf } from "../../courses/saved.mts"
 import { reqsOf } from "../../programs/prereqs.mts"
-import { type Event, type Pin, type Source as EventSource, LINGER, placeOf, upcoming } from "../../social/event.mts"
+import { type Event, type Pin, type Source as EventSource, LINGER, placeOf, upcoming, whereOf } from "../../social/event.mts"
 import { isUnset } from "../../social/marks.mts"
 import { askOf } from "../../social/ask.mts"
 import * as social from "../../social/browser/api.mts"
@@ -502,10 +502,6 @@ const CourseView = ({ courses, code }: { courses: Courses, code: string }) => {
   )
 }
 
-/** Where an event is, its place and where in it, the place said once where the where already names it */
-const whereAt = ({ place, where }: Pick<Event, "place" | "where">) =>
-  (place && !where.startsWith(place) ? [place, where].filter(Boolean).join(" · ") : where || place) || "Place to be decided"
-
 /**
  * An event as a row: when, its day too where it isn't on the day the row's under, or that its time's still to pick,
  * what, and where, which opens its page
@@ -518,7 +514,7 @@ export const EventRow = ({ event, day = localDay(nowMs()), standing }: { event: 
                                       <><DayName day={localDay(event.start)} /><small><ClockTime at={new Date(event.start)} /></small></>
     }
     what={event.title}
-    sub={whereAt(event)}
+    sub={whereOf(event)}
     standing={standing}
     onclick={() => state.go({ kind: "event", id: event.id })}
   />
@@ -752,7 +748,7 @@ const EventView = ({ id }: { id: string }) => {
       <>
         <Head kind={pin && <>A UNH student{pin.spots !== undefined && <> · <Counted value={pin.spots} one="spot" other="spots" /></>}</>} title={event.title} />
         <p class="view-when">{unset ? "Time to pick" : <When {...event} />}</p>
-        <Facts where={whereAt(event)} place={event.place} />
+        <Facts where={whereOf(event)} place={event.place} />
         {isAsked && <p class="ask" role="status">{askOf(pin).title}</p>}
         {visit
           ? <VisitActions visit={visit} offset={offset} what={event.title}>{actions}</VisitActions>

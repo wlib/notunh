@@ -10,7 +10,7 @@ import { join } from "node:path"
 import { test as base, expect, devices, type Page } from "@playwright/test"
 import { type Fixture, startFixture } from "./fixture.mts"
 import { emptyIndex } from "../../src/courses/course.mts"
-import { fieldOf } from "../../src/map/state/page.mts"
+import { fieldOf, segmentOf } from "../../src/map/link.mts"
 import { type Day, addDays, atClock, localDay, weekday } from "../../src/shared/time.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
@@ -45,7 +45,7 @@ const january: Day = `${+today.slice(0, 4) + (today.slice(5) >= "01-15" ? 1 : 0)
 
 /** A parking page's link for a stay on a day, from and to times of Durham's clock */
 const stayOn = (day: Day, from: string, to: string) =>
-  `&arrive=${day}T${from}&leave=${to < from ? addDays(day, 1) : day}T${to}`
+  `?arrive=${day}T${from}&leave=${to < from ? addDays(day, 1) : day}T${to}`
 
 const open = async (page: Page, origin: string, path: string) => {
   // No holidays, so a weekday is a weekday whatever UNH's calendar says this year
@@ -57,7 +57,7 @@ const open = async (page: Page, origin: string, path: string) => {
 
 test("B Lot from 6:30 to 8:30 on a weekday says a permit is required from 7 AM, and the sheet near Kingsbury ranks it", async ({ page, fixture }) => {
   await page.clock.setFixedTime(new Date(atClock(addDays(tuesday, -1), "18:00")))
-  await open(page, fixture.origin, `/map/?area=B${stayOn(tuesday, "06:30", "08:30")}`)
+  await open(page, fixture.origin, `/map/area/B${stayOn(tuesday, "06:30", "08:30")}`)
   const view = page.locator(".view")
   await expect(view.getByRole("heading", { name: "B Lot" })).toBeVisible()
   // The page is the sheet's, with Back in place of the home
@@ -71,7 +71,7 @@ test("B Lot from 6:30 to 8:30 on a weekday says a permit is required from 7 AM, 
   await shoot(page, "parking-area")
 
   // The sheet for a class at Kingsbury: what's asked in a line, the best few areas, each in words with whether it fits
-  await page.goto(fixture.origin + `/map/?parking=Kingsbury+Hall${stayOn(tuesday, "06:30", "08:30")}&for=class`)
+  await page.goto(fixture.origin + `/map/parking/Kingsbury+Hall${stayOn(tuesday, "06:30", "08:30")}&for=class`)
   await expect(view.getByRole("heading", { name: "Parking near Kingsbury Hall" })).toBeVisible()
   const asked = view.locator(".parking-ask summary")
   await expect(asked).toContainText("6:30 – 8:30 AM")
@@ -93,23 +93,23 @@ test("B Lot from 6:30 to 8:30 on a weekday says a permit is required from 7 AM, 
   await view.getByLabel("Leave").dispatchEvent("change")
   await expect(page).toHaveURL(new RegExp(`leave=${tuesday}T09:30`))
   await rows.first().getByRole("button").click()
-  await expect(page).toHaveURL(new RegExp(`\\?area=.+leave=${tuesday}T09:30&for=class`))
+  await expect(page).toHaveURL(new RegExp(`/map/area/.+leave=${tuesday}T09:30&for=class`))
 })
 
 test("Thompson Hall refuses a class outright, in words, and takes an errand", async ({ page, fixture }) => {
   await page.clock.setFixedTime(new Date(atClock(tuesday, "11:50")))
-  await open(page, fixture.origin, `/map/?area=t-hall${stayOn(tuesday, "12:00", "12:30")}&for=class`)
+  await open(page, fixture.origin, `/map/area/t-hall${stayOn(tuesday, "12:00", "12:30")}&for=class`)
   const view = page.locator(".view")
   await expect(view.locator(".view-when")).toHaveText("Doesn't fit")
   await expect(view.locator(".verdict")).toContainText("Short errands only, not for class")
   await expect(view.getByRole("link", { name: "Pay · ParkMobile zone 98720" })).toHaveAttribute("href", "https://app.parkmobile.io/")
-  await page.goto(fixture.origin + `/map/?area=t-hall${stayOn(tuesday, "12:00", "12:30")}&for=errand`)
+  await page.goto(fixture.origin + `/map/area/t-hall${stayOn(tuesday, "12:00", "12:30")}&for=errand`)
   await expect(view.locator(".view-when")).toHaveText("Fits")
 })
 
 test("the permit chosen in the sheet's fields changes a verdict, and is kept on the device", async ({ page, fixture }) => {
   await page.clock.setFixedTime(new Date(atClock(addDays(tuesday, -1), "18:00")))
-  await open(page, fixture.origin, `/map/?parking=Kingsbury+Hall${stayOn(tuesday, "06:30", "08:30")}`)
+  await open(page, fixture.origin, `/map/parking/Kingsbury+Hall${stayOn(tuesday, "06:30", "08:30")}`)
   const view = page.locator(".view")
   const asked = view.locator(".parking-ask summary")
   await expect(asked).toContainText("no permit")
@@ -118,21 +118,21 @@ test("the permit chosen in the sheet's fields changes a verdict, and is kept on 
   await expect(asked).toContainText("faculty/staff")
   expect(await page.evaluate(() => localStorage.getItem("parking-permit"))).toBe(JSON.stringify("faculty"))
 
-  await page.goto(fixture.origin + `/map/?area=B${stayOn(tuesday, "06:30", "08:30")}`)
+  await page.goto(fixture.origin + `/map/area/B${stayOn(tuesday, "06:30", "08:30")}`)
   await expect(view.locator(".view-when")).toHaveText("Fits")
   await expect(view.locator(".verdict")).toContainText("Your permit")
 
-  await page.goto(fixture.origin + `/map/?parking=Kingsbury+Hall${stayOn(tuesday, "06:30", "08:30")}`)
+  await page.goto(fixture.origin + `/map/parking/Kingsbury+Hall${stayOn(tuesday, "06:30", "08:30")}`)
   await asked.click()
   await expect(view.getByLabel("Permit", { exact: true })).toHaveValue("faculty")
   await view.getByLabel("Permit", { exact: true }).selectOption("")
-  await page.goto(fixture.origin + `/map/?area=B${stayOn(tuesday, "06:30", "08:30")}`)
+  await page.goto(fixture.origin + `/map/area/B${stayOn(tuesday, "06:30", "08:30")}`)
   await expect(view.locator(".view-when")).toHaveText("Doesn't fit")
 })
 
 test("on a winter night, B Lot isn't said to fit or not, it links to UNH's rules, and E Lot keeps its own permit holders", async ({ page, fixture }) => {
   await page.clock.setFixedTime(new Date(atClock(addDays(january, -1), "20:00")))
-  await open(page, fixture.origin, `/map/?area=B${stayOn(january, "00:30", "05:30")}`)
+  await open(page, fixture.origin, `/map/area/B${stayOn(january, "00:30", "05:30")}`)
   const view = page.locator(".view")
   await expect(view.locator(".view-when")).toHaveText("Winter ban may apply")
   await expect(view.getByRole("link", { name: "UNH's winter rules ›" })).toHaveAttribute("href", "https://www.unh.edu/transportation/parking/information/winter-parking-ban")
@@ -140,7 +140,7 @@ test("on a winter night, B Lot isn't said to fit or not, it links to UNH's rules
   await shoot(page, "parking-winter")
 
   await page.evaluate(() => localStorage.setItem("parking-permit", JSON.stringify({ resident: "E" })))
-  await page.goto(fixture.origin + `/map/?area=E${stayOn(january, "00:30", "05:30")}`)
+  await page.goto(fixture.origin + `/map/area/E${stayOn(january, "00:30", "05:30")}`)
   await expect(view.locator(".view-when")).toHaveText("Fits")
   await expect(view.getByText("permit holders stay all night")).toBeVisible()
 })
@@ -153,14 +153,14 @@ test("searching a lot's name opens its page, and searching parking opens the she
   await to.fill("Sage Way")
   const found = page.getByRole("region", { name: "Parking" })
   await found.getByRole("button", { name: /Sage Way Visitor Lot/ }).click()
-  await expect(page).toHaveURL(/\?area=sage-way$/)
+  await expect(page).toHaveURL(/\/map\/area\/sage-way$/)
   await expect(page.locator(".view").getByRole("heading", { name: "Sage Way Visitor Lot" })).toBeVisible()
   // Back is to the search, as it was typed
   await page.getByRole("button", { name: "Back to Search" }).click()
   await expect(to).toHaveValue("Sage Way")
   await to.fill("parking")
   await found.getByRole("button", { name: /^Parking/ }).click()
-  await expect(page).toHaveURL(/\?parking=$/)
+  await expect(page).toHaveURL(/\/map\/parking$/)
   await expect(page.locator(".view").getByRole("heading", { name: "Parking", exact: true })).toBeVisible()
 })
 
@@ -172,13 +172,13 @@ test("Directions for an event offers where to park for it, for its whole stay, f
   // On campus, so there's a trip to show
   await page.context().grantPermissions(["geolocation"])
   await page.context().setGeolocation({ latitude: 43.137, longitude: -70.933 })
-  await open(page, fixture.origin, `/map/?event=${event.id}`)
+  await open(page, fixture.origin, `/map/event/${segmentOf(event.id)}`)
   await expect(page.locator(".view").getByRole("heading", { name: "Career Night" })).toBeVisible()
   await page.getByRole("button", { name: "Directions" }).click()
   await expect(page.getByPlaceholder("Where to?")).toHaveValue("Kingsbury Hall")
   await page.getByRole("button", { name: "Parking ›" }).click()
   // From half an hour before it to a quarter after it ends
-  await expect(page).toHaveURL(`${fixture.origin}/map/?parking=Kingsbury+Hall&arrive=${fieldOf(start - 30 * 60_000)}&leave=${fieldOf(event.end + 15 * 60_000)}&for=event`)
+  await expect(page).toHaveURL(`${fixture.origin}/map/parking/Kingsbury+Hall?arrive=${fieldOf(start - 30 * 60_000)}&leave=${fieldOf(event.end + 15 * 60_000)}&for=event`)
   await expect(page.locator(".view").getByRole("heading", { name: "Parking near Kingsbury Hall" })).toBeVisible()
 })
 

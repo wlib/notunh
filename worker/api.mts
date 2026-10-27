@@ -1,7 +1,7 @@
 // The few requests that reach the Worker: learning's and archiving's token-gated rows, models, timetables, and what
-// learning derives, public health, the laundry page's rooms, the laundry page under each room's own address, and
-// devices' reminders, each device's own by its secret, and the social routes and pin pages (social.mts). Every other
-// page and asset is served without it
+// learning derives, public health, the laundry page's rooms, the laundry page under each room's own address,
+// devices' reminders, each device's own by its secret, the social routes (social.mts), and the pages a shared link
+// opens, pins' and the map's, with their previews (preview.mts). Every other page and asset is served without it
 
 import { Hono } from "hono/tiny"
 import type { MiddlewareHandler } from "hono"
@@ -21,6 +21,7 @@ import { DERIVED, commit, derivedOf, putPart } from "./derived.mts"
 import { room, rooms } from "./laundry.mts"
 import { type Ask, Setting, vapidOf } from "./reminders.mts"
 import { social } from "./social.mts"
+import { previews } from "./preview.mts"
 
 type Worker = { Bindings: Env }
 
@@ -194,8 +195,11 @@ app.delete("/api/push/devices/:device", valid(v.object({ device: ID }), "param")
   return secret ? ask(c.env, c.req.valid("param").device, { kind: "forget", secret }) : c.text("No secret", 401)
 })
 
-// Pins, marks, device links, email verification, and each pin's page (social.mts)
+// Pins, marks, device links and email verification (social.mts)
 app.route("/", social)
+
+// The pages a shared link opens, with what they're of in their heads, and their cards (preview.mts)
+app.route("/", previews)
 
 // The laundry page, which opens the room its address names
 app.get("/laundry/:room/", c =>

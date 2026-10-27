@@ -1,9 +1,11 @@
+/// <reference types="vitest/config" />
 import { resolve } from "node:path"
 import { build, defineConfig, type Connect, type Rollup } from "vite"
 import bruh from "vite-plugin-bruh"
 import browserslist from "browserslist"
 import esbuildTargets from "browserslist-to-esbuild"
 import { browserslistToTargets } from "lightningcss"
+import { binaryModule } from "./tests/worker/hooks.mts"
 
 // The browsers in package.json, so JS and CSS are lowered only as far as the oldest of them needs
 const browsers = browserslist()
@@ -29,10 +31,12 @@ const packageChunk = (id: string, { getModuleInfo }: Rollup.ManualChunkMeta) => 
 // Where the pages are built, for the service worker to be built beside them
 let outDir = "dist"
 
-// A laundry room's own path, like /laundry/adams-tower/, which the Worker answers with the laundry page, and a pin's,
-// like /p/abc123, which it answers with the pin page
+// A laundry room's own path, like /laundry/adams-tower/, which the Worker answers with the laundry page, a pin's, like
+// /p/abc123, which it answers with the pin page, and one of the map's pages, like /map/place/Kingsbury+Hall, which it
+// answers with the map
 const ROOM = /^\/laundry\/[\w-]+\/$/
 const PIN = /^\/p\/[\w-]+$/
+const MAP_PAGE = /^\/map\/[^/]/
 
 /**
  * A page by its path alone, as bruh looks pages up by the whole URL, query and all, and each laundry room as the
@@ -44,6 +48,8 @@ const toPage: Connect.NextHandleFunction = (request, _, next) => {
     request.url = path.replace(ROOM, "/laundry/")
   else if (path && PIN.test(path))
     request.url = "/p/"
+  else if (path && MAP_PAGE.test(path))
+    request.url = "/map/"
   next()
 }
 
@@ -57,6 +63,13 @@ export default defineConfig({
         if (/\/node_modules\/bruh\/dist\/components\/intl\/(date-time|number|plural|list)\.mjs$/.test(id))
           return { code, map: null, moduleSideEffects: true }
       }
+    },
+    {
+      // The Worker's WebAssembly and fonts, for its tests, as wrangler bundles them (tests/worker/hooks.mts)
+      name: "worker-binaries",
+      apply: (_, { mode }) => mode === "test",
+      enforce: "pre",
+      load: id => binaryModule(id)
     },
     {
       // As the Worker does, so pages open with a query, and rooms by their paths, in development and preview too
@@ -156,5 +169,9 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ["bruh"]
+  },
+  // The Worker's WebAssembly and fonts are made modules above, rather than left to Node with the rest of node_modules
+  test: {
+    server: { deps: { inline: [/\.(wasm|woff)$/] } }
   }
 })

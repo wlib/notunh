@@ -13,10 +13,14 @@ export type CacheLike = Pick<Cache, "keys" | "match" | "put" | "delete">
 // carries and the worker's own fetches don't, so matches ignore Vary
 export const ANY = { ignoreVary: true }
 
-/** The page a path is served by: each laundry room's, like /laundry/adams-tower/, is the laundry page, and each pin's, like /p/abc, the pin page */
+/**
+ * The page a path is served by: each laundry room's, like /laundry/adams-tower/, is the laundry page, each pin's, like
+ * /p/abc, the pin page, and each of the map's pages, like /map/place/Kingsbury+Hall, the map
+ */
 export const pageOf = (pathname: string) =>
   pathname.startsWith("/laundry/") ? "/laundry/" :
   pathname.startsWith("/p/")       ? "/p/" :
+  pathname.startsWith("/map/")     ? "/map/" :
                                      pathname
 
 const isPage = (pathname: string) =>

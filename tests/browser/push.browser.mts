@@ -180,7 +180,7 @@ test("a reminder set from an itinerary asks the Worker only to watch the first b
   await page.clock.setFixedTime(ride.at.getTime() + 2 * 60_000)
   await page.goto(`${fixture.origin}/map/?reminder=${encodeURIComponent(id)}`)
   await expect(page.getByPlaceholder("Where to?")).toHaveValue(ride.to)
-  await expect(page).toHaveURL(`${fixture.origin}/map/?directions`)
+  await expect(page).toHaveURL(`${fixture.origin}/map/directions`)
   await expect(page.getByText("Reminder set")).toBeVisible()
   await page.waitForTimeout(2000)
   expect(puts()).toHaveLength(1)

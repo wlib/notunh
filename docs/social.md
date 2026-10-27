@@ -49,7 +49,7 @@ A mark asks for push permission the first time, from the tap, where the browser 
 
 ### Sharing
 
-**Share** draws a 1080×1920 story image on a canvas (`src/social/story.mts`): title, day and time ("Time to pick" until set), place, a QR code of the link, and the link in words, inside Instagram's safe area. The link goes on the clipboard, and the image through `navigator.share({ files })` where possible, else as a download. The QR encoder is our own (`src/social/qr.mts`, byte mode, level M, versions 1 to 10), checked against CoreImage's bit for bit when written, and by its invariants in tests. A link to an event, `/p/<id>` or `/map/?event=`, previews with a card the Worker draws; the story stays on the phone, offline.
+**Share** draws a 1080×1920 story image on a canvas (`src/social/story.mts`): title, day and time ("Time to pick" until set), place, a QR code of the link, and the link in words, inside Instagram's safe area. The link goes on the clipboard, and the image through `navigator.share({ files })` where possible, else as a download. The QR encoder is our own (`src/social/qr.mts`, byte mode, level M, versions 1 to 10), checked against CoreImage's bit for bit when written, and by its invariants in tests. A link to an event, `/p/<id>` or `/map/event/<id>`, previews with a card the Worker draws; the story stays on the phone, offline.
 
 ## Identity
 

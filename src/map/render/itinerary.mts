@@ -6,7 +6,7 @@ import type { GeoJSONSource, Map as MapLibre } from "maplibre-gl"
 import type { Feed } from "../../transit/feed.mts"
 import type { Itinerary } from "../../routing/plan.mts"
 import type { LegPath } from "../state/trip.mts"
-import type { Page } from "../state/page.mts"
+import type { Page } from "../link.mts"
 import { collection, line } from "./layers.mts"
 
 /** Draws the itinerary as its legs' paths have it, while directions are shown */

@@ -26,7 +26,7 @@ test("a side panel pads its side, and a panel off the map pads nothing extra", (
 )
 
 test("the camera moves once as a page opens with somewhere to show, again only for somewhere else, and never as what it shows blinks out and back", () =>
-  fc.assert(fc.property(fc.array(fc.record({ view: fc.constantFrom("/map/?place=A", "/map/?event=e", "/map/?directions", "/map/"), target: fc.option(fc.constantFrom("x", "y", "z"), { nil: undefined }) }), { maxLength: 40 }), aims => {
+  fc.assert(fc.property(fc.array(fc.record({ view: fc.constantFrom("/map/place/A", "/map/event/e", "/map/directions", "/map/"), target: fc.option(fc.constantFrom("x", "y", "z"), { nil: undefined }) }), { maxLength: 40 }), aims => {
     let held: Aim | undefined
     /** The page shown, and the last place or trip of it the camera went to */
     let view: string | undefined
@@ -48,9 +48,9 @@ test("the camera moves once as a page opens with somewhere to show, again only f
 )
 
 test("a page shown again after another moves the camera back to it, and the same aim twice moves it once", () => {
-  const first = aimed(undefined, { view: "/map/?place=A", target: "a" })
+  const first = aimed(undefined, { view: "/map/place/A", target: "a" })
   expect(first.move).toBe(true)
-  expect(aimed(first.held, { view: "/map/?place=A", target: "a" }).move).toBe(false)
-  const away = aimed(first.held, { view: "/map/?event=e", target: "e" })
-  expect(aimed(away.held, { view: "/map/?place=A", target: "a" }).move).toBe(true)
+  expect(aimed(first.held, { view: "/map/place/A", target: "a" }).move).toBe(false)
+  const away = aimed(first.held, { view: "/map/event/e", target: "e" })
+  expect(aimed(away.held, { view: "/map/place/A", target: "a" }).move).toBe(true)
 })

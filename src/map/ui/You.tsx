@@ -35,7 +35,17 @@ const asked = (() => {
   return address && code ? { kind: "verify" as const, address, code } : undefined
 })()
 
-void api.me().then(me => verified.value = me?.verified ?? null, () => {})
+/** Asks the Worker which address this device's person has verified */
+const refreshVerified = () =>
+  void api.me().then(me => verified.value = me?.verified ?? null, () => {})
+
+refreshVerified()
+
+/** Linking merges both devices' people, either way round, so either side takes the other's things and address */
+const takeMerged = () => {
+  void sync()
+  refreshVerified()
+}
 
 /** A code as a QR of its link, drawn as an SVG, and in letters */
 const Code = ({ code }: { code: string }) => {
@@ -82,8 +92,7 @@ const Devices = () => {
           code.value = undefined
           standing.value = "Linked."
           capture("device_linked")
-          void sync()
-          void api.me().then(me => verified.value = me?.verified ?? null, () => {})
+          takeMerged()
         }
         else if (!answer || Date.now() > expires) {
           stop()
@@ -105,6 +114,7 @@ const Devices = () => {
         standing.value = "Approved."
         typed.value = ""
         capture("device_approved")
+        takeMerged()
       },
       (error: Error) => standing.value = error.message
     )

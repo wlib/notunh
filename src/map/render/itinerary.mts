@@ -1,17 +1,19 @@
-// The itinerary drawn on the map: walks along the streets and paths, and rides along their route's shape. The camera
-// fits it from directions alone (followPage in map.mts)
+// The itinerary drawn on the map while directions are shown: walks along the streets and paths, and rides along their
+// route's shape. The camera fits it from directions alone (followPage in map.mts)
 
 import { watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, Map as MapLibre } from "maplibre-gl"
 import type { Feed } from "../../transit/feed.mts"
 import type { Itinerary } from "../../routing/plan.mts"
 import type { LegPath } from "../state/trip.mts"
+import type { Page } from "../state/page.mts"
 import { collection, line } from "./layers.mts"
 
-/** Draws the itinerary as its legs' paths have it */
+/** Draws the itinerary as its legs' paths have it, while directions are shown */
 export const drawItinerary = (
   map: MapLibre,
   state: {
+    page:      Reactive<Page | undefined>,
     feed:      Reactive<Feed>,
     itinerary: Reactive<Itinerary | undefined>,
     legPaths:  Reactive<LegPath[]>
@@ -19,7 +21,7 @@ export const drawItinerary = (
 ) => {
   // Walks follow the streets and paths, and rides the route's shape
   watch(() => {
-    const itinerary = state.itinerary.value
+    const itinerary = state.page.value?.kind === "directions" ? state.itinerary.value : undefined
     const paths = state.legPaths.value
     const source = map.getSource<GeoJSONSource>("itinerary")!
 

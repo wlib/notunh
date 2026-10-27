@@ -103,6 +103,13 @@ export default () =>
                 <a href="https://parkmobile.io">ParkMobile</a> zones, and lots from{" "}
                 <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>
               </dd>
+              <dt>Fraternities and sororities</dt>
+              <dd>
+                UNH's <a href="https://students.unh.edu/get-involved/fraternity-sorority-life/chapter-scorecards">chapter scorecards</a>{" "}
+                and <a href="https://unh.presence.io">Wildcat Link</a>, the chapters' own sites, and houses from the Town of{" "}
+                Durham's <a href="https://experience.arcgis.com/experience/a6fe1e98132c482fbff560ffedc7f14d">parcel map</a> and{" "}
+                <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>
+              </dd>
               <dt>Menus</dt>
               <dd>UNH Dining, through <a href="https://unh.nutrislice.com">Nutrislice</a></dd>
               <dt>Laundry</dt>

@@ -4,19 +4,21 @@
 // each. What's typed is searched among the places the map knows, and with Photon for addresses and anywhere else, the
 // places nearer the trip's other end, or you, first, as are those chosen often on this device, which an empty field
 // suggests. The home's and where to also find parking, instructors, sections, rooms, events and programs, each a
-// labelled group, and all that's local comes before anything Photon finds further off. A place found by the home's
-// search opens its page, a stop its own, and anywhere else, as an address, directions there
+// labelled group, as do the fraternities and sororities whose houses the map doesn't place, and all that's local
+// comes before anything Photon finds further off. A place found by the home's search opens its page, a stop its own,
+// and anywhere else, as an address, directions there
 
-import { r, watch } from "bruh/reactive"
-import type { Place } from "../../places/search.mts"
+import { type DerivativeNode, r, watch } from "bruh/reactive"
+import { type Place, createNameSearch } from "../../places/search.mts"
+import { CHAPTERS, aliasesOf, isPlaced } from "../../places/chapters.mts"
 import * as photon from "../../places/photon.mts"
 import { Icon } from "../../shell/ui.tsx"
 import { state } from "../state/map.mts"
 import { capture } from "../../shell/usage.tsx"
 import { remembered } from "../../shell/state.mts"
-import { CourseResults } from "./Courses.tsx"
+import { CourseResults, Group } from "./Courses.tsx"
 import { ParkingResults } from "./Parking.tsx"
-import { EventResults, placeNamed } from "./Pages.tsx"
+import { ChapterKind, EventResults, placeNamed } from "./Pages.tsx"
 import { ProgramResults } from "./Program.tsx"
 import { HOUR, hhmm, nextAt } from "../../shared/time.mts"
 
@@ -274,6 +276,31 @@ const Option = ({ option, i }: { option: Place | undefined, i: number }) =>
     {option ? option.name : <><Icon name="locate" /> Your location</>}
   </li>
 
+/** The chapters whose houses the map doesn't place, which search finds by any of their names as it does those it does */
+const UNPLACED = CHAPTERS.filter(chapter => !isPlaced(chapter))
+const searchUnplaced = createNameSearch(UNPLACED.map(chapter => [chapter.name, ...aliasesOf(chapter)]))
+
+/** Search's chapters not on the map, each saying so, with its house's address where that's known, and linking to UNH's page for it */
+const ChapterResults = ({ query }: { query: DerivativeNode<string> }) =>
+  r(() => {
+    const found = searchUnplaced(query.value).slice(0, 3).map(({ index }) => UNPLACED[index])
+    return found.length > 0 && (
+      <Group label="Fraternities and sororities">
+        {found.map(chapter =>
+          <li>
+            <a class="row" href={chapter.url} target="_blank" rel="noopener">
+              <span class="row-what">
+                <strong class="truncate">{chapter.name}</strong>
+                <span class="muted truncate"><ChapterKind chapter={chapter} /> · {chapter.house ? `${chapter.house.address}, not on the map` : "No house on the map"}</span>
+              </span>
+              <span class="row-state">›</span>
+            </a>
+          </li>
+        )}
+      </Group>
+    )
+  })
+
 /**
  * The places for what's typed, and for the home's search and where to, parking (Parking.tsx), the instructors,
  * sections and rooms (Courses.tsx), events (Pages.tsx) and programs (Program.tsx) too, all before the places Photon
@@ -285,7 +312,7 @@ export const Suggestions = () => {
     <ul class="suggestions" id="place-options" role="listbox">
       {r(() => options.value.map((option, i) => !isFar(option) && <Option option={option} i={i} />))}
     </ul>
-    {editing.peek() !== "from" && <><CourseResults query={query} /><ParkingResults query={query} /><EventResults query={query} /><ProgramResults query={query} /></>}
+    {editing.peek() !== "from" && <><CourseResults query={query} /><ParkingResults query={query} /><EventResults query={query} /><ProgramResults query={query} /><ChapterResults query={query} /></>}
     {r(() => elsewhere.value.length > 0 &&
       <ul class="suggestions" role="listbox" aria-label="Further off">
         {options.value.map((option, i) => isFar(option) && <Option option={option} i={i} />)}

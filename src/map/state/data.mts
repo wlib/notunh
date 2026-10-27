@@ -8,6 +8,7 @@ import { createWalks } from "../../routing/walks.mts"
 import { Places } from "../../places/buildings.mts"
 import { Gazetteer } from "../../places/gazetteer.mts"
 import { createPlaceSearch } from "../../places/search.mts"
+import { CHAPTERS, aliasesOf, isPlaced } from "../../places/chapters.mts"
 import { loadStyle } from "../basemap/style.mts"
 import { TilesManifest } from "../basemap/tiles.mts"
 import { EventsData } from "../../social/event.mts"
@@ -19,6 +20,9 @@ import { latest } from "../../shell/build.mts"
 
 /** The middle of campus, which search prefers the nearer of two places by one name to */
 const CAMPUS = { lat: 43.1365, lon: -70.9345 }
+
+/** The other names of the places that go by more than one: the chapters' houses, by their letters and nicknames */
+const ALIASES = new Map(CHAPTERS.filter(isPlaced).map(chapter => [chapter.name, aliasesOf(chapter)]))
 
 /**
  * The bundled data, loaded, each swapped for a newer build's as it comes, which everything derived from it follows.
@@ -55,7 +59,7 @@ export const loadMapData = async () => {
       ...buildings.value.map(({ lat, lon, name }) => ({ lat, lon, name })),
       ...feed.value.stops.filter((_, i) => boardable.has(i)).map(({ lat, lon, name }) => ({ lat, lon, name })),
       ...gazetteer.value.map(({ name, at: [lon, lat] }) => ({ lat, lon, name }))
-    ], CAMPUS)
+    ], CAMPUS, ALIASES)
   })
   return { feed, model, tiles, style, gazetteer, buildings, walks, searchPlaces, events, coursesIndex, prereqsIndex, parking, menus }
 }

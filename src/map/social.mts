@@ -69,6 +69,7 @@ map.on("load", () => {
   drawLayers(map, {
     feed:             r(feed),
     buildings:        r(places.buildings),
+    gazetteer:        r([]),
     todayPlaced:      r([]),
     now:              r(0),
     shownRoutes:      r(new Set([route.id])),

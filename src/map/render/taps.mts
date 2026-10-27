@@ -112,11 +112,12 @@ export const dropPins = (map: MapLibre, state: { page: Reactive<Page | undefined
 
 /**
  * Says what each tap is of: buses first, then stops, then the places with something on today, then laundry and
- * dining, then a building the gazetteer names by its outline, else the spot itself
+ * dining, then the fraternities' and sororities' houses, then a building the gazetteer names by its outline, else the
+ * spot itself
  */
 export const listenForTaps = (map: MapLibre, state: { buildings: Reactive<readonly Building[]>, gazetteer: Reactive<readonly GazetteerPlace[]> }, onTap: (tap: Tap) => void) => {
   map.on("mousemove", event => {
-    const isTappable = ["vehicles", "stops", "events", "buildings"].some(layer => nearestWithin(map, event.point, layer))
+    const isTappable = ["vehicles", "stops", "events", "buildings", "chapters"].some(layer => nearestWithin(map, event.point, layer))
     map.getCanvas().style.cursor = isTappable ? "pointer" : ""
   })
 
@@ -136,6 +137,10 @@ export const listenForTaps = (map: MapLibre, state: { buildings: Reactive<readon
     const building = nearestWithin(map, event.point, "buildings")
     if (building && state.buildings.peek()[building.id as number])
       return onTap({ kind: "place", name: state.buildings.peek()[building.id as number].name })
+
+    const house = nearestWithin(map, event.point, "chapters")
+    if (house)
+      return onTap({ kind: "place", name: house.properties.name })
 
     const { lng, lat } = event.lngLat
     const hints = hintsAt(map, event.point)

@@ -1,11 +1,15 @@
-// The bitmaps the map draws with: each route's bus and chevrons in its color, the laundry and dining buildings, and
-// the points of interest Liberty's sprite has no icon for
+// The bitmaps the map draws with: each route's bus and chevrons in its color, the laundry and dining buildings, the
+// fraternities' and sororities' houses, and the points of interest Liberty's sprite has no icon for
 
 import type { Building } from "../../places/buildings.mts"
+import type { Chapter } from "../../places/chapters.mts"
 import type { DRAWN_ICONS } from "../basemap/style.mts"
 
 // Laundry and dining buildings, muted to sit quietly beneath the buses
 export const QUIET: Record<Building["kind"], string> = { laundry: "#71839b", dining: "#a1825c" }
+
+// Fraternities' and sororities' houses, as muted, in colors of their own
+export const GREEK: Record<Chapter["kind"], string> = { fraternity: "#5a5f9e", sorority: "#9a527a" }
 
 // Bitmaps drawn at the screen's own density, and at least twice their size, so they're sharp wherever they're shown
 export const DENSITY = Math.max(2, Math.ceil(devicePixelRatio))
@@ -63,9 +67,10 @@ export const chevronIcon = (color: string) =>
     context.stroke()
   })
 
-// Glyphs on a 24 unit grid, after Tabler's wash machine, tools kitchen 2, and recycle, pared down to read at a dozen
-// pixels
-const GLYPHS: Record<Building["kind"] | typeof DRAWN_ICONS[number], string> = {
+// Glyphs on a 24 unit grid, after Tabler's wash machine, tools kitchen 2, building bank, and recycle, pared down to
+// read at a dozen pixels
+const GLYPHS: Record<Building["kind"] | "columns" | typeof DRAWN_ICONS[number], string> = {
+  columns:         "M4 9l8 -5l8 5z M4 20h16 M7 12v5 M12 12v5 M17 12v5",
   laundry:         "M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M16 14a4 4 0 1 1 -8 0a4 4 0 1 1 8 0 M8.5 6.5h.01 M11.5 6.5h.01",
   dining:          "M19 3v12h-5c-.02 -3.68 .18 -7.4 5 -12z M19 15v6 M8 3v18 M5 3v3a3 3 0 0 0 6 0v-3",
   bicycle_parking: "M9.5 15.5a3.5 3.5 0 1 1 -7 0a3.5 3.5 0 1 1 7 0 M21.5 15.5a3.5 3.5 0 1 1 -7 0a3.5 3.5 0 1 1 7 0 M6 15.5l4 -7h6.5l1.5 7 M6 15.5h6l4.5 -7 M10 8.5l2 7 M8.5 6.5h3 M16.5 8.5l-.75 -2.5h2",
@@ -115,6 +120,13 @@ const discIcon = (size: number, glyph: keyof typeof GLYPHS, { ring, disc, ink, r
 // for dining
 export const buildingIcon = (kind: Building["kind"]) =>
   discIcon(20, kind, { ring: "white", disc: QUIET[kind], ink: "white", ringWidth: 1.25, scale: 0.45, weight: 2.25, shadow: true })
+
+// A house's columns under a pediment, white in a disc of the fraternity's color, or in the sorority's color in a white
+// disc ringed with it, so the two differ by more than their colors
+export const chapterIcon = (kind: Chapter["kind"]) =>
+  discIcon(20, "columns", kind === "fraternity"
+    ? { ring: "white", disc: GREEK[kind], ink: "white", ringWidth: 1.25, scale: 0.45, weight: 2.25, shadow: true }
+    : { ring: GREEK[kind], disc: "white", ink: GREEK[kind], ringWidth: 1.75, scale: 0.45, weight: 2.25, shadow: true })
 
 // As Liberty's sprite draws points of interest, a colored glyph in a white disc ringed in grey, but for bicycle
 // parking, which is white on parking's blue

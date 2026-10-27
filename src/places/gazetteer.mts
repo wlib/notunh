@@ -9,6 +9,7 @@ import * as photon from "./photon.mts"
 import { arrayOf } from "../shared/json.mts"
 import { Made } from "../shared/made.mts"
 import { withAdded } from "./added.mts"
+import { withChapters } from "./chapters.mts"
 
 export type GazetteerPlace = {
   name: string,
@@ -24,10 +25,13 @@ export type GazetteerPlace = {
   entrances?: Coordinates[]
 }
 
-/** The gazetteer as the map's page loads it: every place, with those added.mts names that it doesn't yet, and where they came from */
+/**
+ * The gazetteer as the map's page loads it: every place, with those added.mts names that it doesn't yet, and the
+ * fraternities' and sororities' houses (chapters.mts), and where they came from
+ */
 export const Gazetteer = v.pipe(
   v.object({ made: Made, places: arrayOf<GazetteerPlace>() }),
-  v.transform(gazetteer => ({ ...gazetteer, places: withAdded(gazetteer.places) }))
+  v.transform(gazetteer => ({ ...gazetteer, places: withChapters(withAdded(gazetteer.places)) }))
 )
 export type Gazetteer = v.InferOutput<typeof Gazetteer>
 

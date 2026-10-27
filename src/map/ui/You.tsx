@@ -137,16 +137,22 @@ const Email = () => {
   const address = r(asked?.kind === "verify" ? asked.address : "")
   const code = r(asked?.kind === "verify" ? asked.code : "")
   const isSent = r(asked?.kind === "verify")
+  const isSending = r(false)
   const standing = r<string>()
 
+  // Sending takes the Worker a few seconds, so the button says so meanwhile rather than seeming to need another tap
   const send = () => {
+    if (isSending.peek())
+      return
+    isSending.value = true
+    standing.value = undefined
     api.sendCode(address.peek()).then(
       () => {
         isSent.value = true
         standing.value = `Code sent to ${address.peek()}. Check your inbox and spam.`
       },
       (error: Error) => standing.value = error.message
-    )
+    ).finally(() => isSending.value = false)
   }
 
   const confirm = () => {
@@ -173,7 +179,7 @@ const Email = () => {
             <p class="muted">To post events for everyone, or get your things back on a new device.</p>
             <div class="field-row">
               {addressInput}
-              <button type="button" class="button" onclick={send}>{r(() => isSent.value ? "Send again" : "Send code")}</button>
+              <button type="button" class="button" onclick={send} disabled={isSending}>{r(() => isSending.value ? "Sending…" : isSent.value ? "Send again" : "Send code")}</button>
             </div>
             {r(() => isSent.value &&
               <div class="field-row">

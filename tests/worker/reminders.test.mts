@@ -6,7 +6,7 @@ import { app } from "../../worker/api.mts"
 import { FORGET_MS, MAX_REMINDERS, Reminders, SITE_RETRY_MS, WINDOW_MS } from "../../worker/reminders.mts"
 import { samples } from "../../worker/schema.mts"
 import { inserts } from "../../worker/rows.mts"
-import { FURTHEST, GONE, LATEST, MAX_PUSHES, MAX_TRIES, MIN_CHECK, type Watch, Wake } from "../../src/reminders/watch.mts"
+import { FURTHEST, FURTHEST_FIXED, GONE, LATEST, MAX_PUSHES, MAX_TRIES, MIN_CHECK, type Watch, Wake } from "../../src/reminders/watch.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
 import { gzipJson } from "../../src/shared/json.mts"
 import type { Env } from "../../worker/env.mts"
@@ -363,6 +363,9 @@ test("only a push service's address is taken, and a watch must be a run still to
   expect(await bad(apple, { at: WATCH.at, run: { stop: "209", route: "3" }, lead: 600 })).toBe(400)
   expect(await bad(apple, { ...WATCH, at: NOW / 1000 - GONE - 1 })).toBe(400)
   expect(await bad(apple, { ...WATCH, at: NOW / 1000 + FURTHEST + 60 })).toBe(400)
+  // A watch on no run, as a class's next meeting after a break, may be further ahead, but not past its own horizon
+  expect(await bad(apple, { at: NOW / 1000 + FURTHEST_FIXED + 60, lead: 600 })).toBe(400)
+  expect(await bad(apple, { at: NOW / 1000 + FURTHEST + 3600, lead: 600 })).toBe(204)
   expect(await bad(apple, { ...WATCH, at: WATCH.at + 0.5 })).toBe(400)
   expect(await bad(apple, { lead: 600 })).toBe(400)
   expect(await bad(apple, { at: NOW / 1000 - GONE - 1, lead: 600 })).toBe(400)

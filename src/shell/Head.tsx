@@ -5,7 +5,7 @@ import { AUTHOR, IMAGE, NAME, PAGES, SITE, type Path, imageOf, scriptJson, struc
 
 // When this build was made, the same for every page of it. It orders releases, so a copy of a page from an edge not
 // yet caught up can be told from a newer one (manifest.mts' isOlder)
-const RELEASE = new Date().toISOString()
+export const RELEASE = new Date().toISOString()
 
 // The one origin that sends usage stats (usage.tsx). A copy served anywhere else, like in development, a Preview, or
 // the browser tests' server unless it stands in for this one, sends nothing

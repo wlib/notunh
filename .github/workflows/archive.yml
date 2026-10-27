@@ -2,12 +2,12 @@
 # that took them, losslessly (format in src/transit/observations/archive.mts). Each day is its own immutable release,
 # observations-<day>, holding observations-<day>.ndjson.zst and a manifest.json naming the file. Its manifest is then
 # merged into catalog.json on the observations release. The catalog is uploaded last, so a day is listed only once its
-# archive is whole.
+# archive is whole
 #
 # The Worker keeps a day's samples in D1 for RETAIN_ARCHIVED_DAYS (14) once the catalog lists it, and until then
 # however long that takes. Each run archives every settled day D1 still has that the catalog doesn't, the oldest
 # first, so a failed run, or weeks of them, is made up by the next. One can also be run by hand for a range:
-# `gh workflow run archive.yml -f from=2026-10-07 -f to=2026-10-13`.
+# `gh workflow run archive.yml -f from=2026-10-07 -f to=2026-10-13`
 #
 # Needs the production environment's secret BUILD_TOKEN, the same value as the Worker's (scripts/secrets.mts), to
 # read its rows. Asks nothing of Umo. GitHub pauses schedules after 60 days without a commit, so the Worker's nightly

@@ -5,6 +5,7 @@ import { distance } from "../../src/geo/projection.mts"
 import type { Vehicle } from "../../src/transit/observations/umo.mts"
 import { itineraryKey, wayKey } from "../../src/routing/plan.mts"
 import type { Place } from "../../src/places/search.mts"
+import type { Page } from "../../src/map/state/page.mts"
 import type { Building } from "../../src/places/buildings.mts"
 import places from "../../src/map/places.json"
 import { localDay } from "../../src/shared/time.mts"
@@ -32,8 +33,9 @@ const FEED: FeedData = {
 }
 
 // As the map's page names them in development
-const DATA = Object.fromEntries(["gtfs", "model", "walk", "gazetteer", "tiles", "style", "places"].map(name => [name, `/src/map/${name}.json`]))
+const DATA = { ...Object.fromEntries(["gtfs", "model", "walk", "gazetteer", "tiles", "style", "places", "events"].map(name => [name, `/src/map/${name}.json`])), courses: "/src/courses/courses.json", prereqs: "/src/programs/prereqs.json", parking: "/src/parking/parking.json", menus: "/src/dining/menus.json" }
 const BUILDINGS = places.buildings as Building[]
+const PARKING = { sources: { zones: NOON, parkMobile: NOON, osm: NOON }, built: NOON, areas: [{ id: "B", name: "B Lot", permits: ["faculty"], always: false, osm: [], at: [-70.93, 43.13] }] }
 
 const bus = (id: string, secsSinceReport = 0): Vehicle => ({
   id, ...CENTER, heading: 0, kph: 0, secsSinceReport, gpsTime: NOON - secsSinceReport * 1000,
@@ -80,6 +82,18 @@ const load = async ({ at = NOON, saved = {} as Record<string, unknown>, permissi
       return Response.json({ url: "/data/map/AAAAAAAAAAAAAAAA/style.json", folders: ["/data/map/AAAAAAAAAAAAAAAA/"] })
     if (url.includes("places.json"))
       return Response.json(places)
+    if (url.includes("events.json"))
+      return Response.json({ fetched: 0, events: [] })
+    if (url.includes("courses.json"))
+      return Response.json({ built: 0, calendar: { fetched: 0, noClass: [], swaps: {}, holidays: [], terms: {} }, terms: [], files: [] })
+    if (url.includes("parking.json"))
+      return Response.json(PARKING)
+    if (url.includes("prereqs.json"))
+      return Response.json({ fetched: 0, files: [] })
+    if (url.includes("menus.json"))
+      return Response.json({ fetched: 0, halls: [], hours: {}, diets: [], contains: [], days: {}, search: "", files: [] })
+    if (url.includes("/api/pins"))
+      return Response.json([])
     if (!url.endsWith("/vehicles"))
       return Response.json(FEED)
     if (!umo.vehicles)
@@ -469,15 +483,16 @@ test("a newer build's timetable swaps in live, keeping the trip, the itinerary c
       state.from.value = { ...CENTER, name: "Stop" }
       state.to.value = there
       state.selected.value = "walk"
-      state.selectedStop.value = chosen
+      state.page.value = { kind: "stop", id: ids[chosen] }
       await vi.advanceTimersByTimeAsync(0)
       const trip = state.storage.get("map-trip")
 
       state.receive(headOf({ ...DATA, gtfs: "/assets/gtfs-BBBBBBBB.json" }))
       await vi.advanceTimersByTimeAsync(0)
       expect(state.feed.peek().version).toBe("next")
+      // The page names the stop still, and finds it in the new timetable by its id, or nowhere
       expect(state.selectedStop.peek()).toBe(isKept ? next.stops.findIndex(stop => stop.id === ids[chosen]) : undefined)
-      expect(state.selectedStopId.peek()).toBe(isKept ? ids[chosen] : undefined)
+      expect(state.selectedStopId.peek()).toBe(ids[chosen])
       expect(state.from.peek()).toEqual({ ...CENTER, name: "Stop" })
       expect(state.to.peek()).toBe(there)
       expect(state.selected.peek()).toBe("walk")
@@ -560,4 +575,49 @@ test("newer code leaves the data as it is, for the reload that brings both in", 
   await vi.advanceTimersByTimeAsync(0)
   expect(state.feed.peek().version).toBe("test")
   expect(isNewBuild.peek()).toBe(true)
+})
+
+test("parking loads with the page, and your permit is kept on this device", async () => {
+  const state = await load({ saved: { "parking-permit": "faculty" } })
+  await vi.advanceTimersByTimeAsync(0)
+  expect(state.parking.value.areas.map(area => area.id)).toEqual(["B"])
+  expect(state.permit.value).toBe("faculty")
+  state.permit.value = { resident: "E" }
+  await vi.advanceTimersByTimeAsync(0)
+  expect(JSON.parse(state.storage.get("parking-permit")!)).toEqual({ resident: "E" })
+  state.permit.value = undefined
+  await vi.advanceTimersByTimeAsync(0)
+  expect(JSON.parse(state.storage.get("parking-permit")!)).toBeNull()
+})
+
+test("only the page shown marks where it is on the map, so a page left behind, still ticking, never moves the map", async () => {
+  const state = await load()
+  const { viewOf } = await import("../../src/map/state/page.mts")
+  const pages: Page[] = [{ kind: "place", name: "Kingsbury Hall" }, { kind: "event", id: "25live:1" }, { kind: "stop", id: "156" }, { kind: "section", term: "202610", crn: "12496" }]
+  const spot = (i: number) => ({ place: { lat: 43 + i / 1000, lon: -70.9, name: `Spot ${i}` }, label: `Spot ${i}` })
+  fc.assert(fc.property(fc.array(fc.oneof(
+    fc.record({ kind: fc.constant("show" as const), page: fc.nat(pages.length - 1) }),
+    fc.record({ kind: fc.constant("mark" as const), page: fc.nat(pages.length - 1), spot: fc.option(fc.nat(9), { nil: undefined }) })
+  ), { maxLength: 30 }), steps => {
+    state.amend(undefined)
+    let shown: number | undefined
+    let marked: ReturnType<typeof spot> | undefined
+    for (const step of steps) {
+      if (step.kind === "show") {
+        if (shown !== step.page)
+          marked = undefined
+        shown = step.page
+        state.amend(pages[step.page])
+      }
+      else {
+        state.focusAt(pages[step.page], step.spot === undefined ? undefined : spot(step.spot))
+        if (step.page === shown)
+          marked = step.spot === undefined ? undefined : spot(step.spot)
+      }
+      const focus = state.focus.peek()
+      expect(focus && { place: focus.place, label: focus.label }).toEqual(marked)
+      if (focus)
+        expect(focus.view).toBe(viewOf(pages[shown!]))
+    }
+  }))
 })

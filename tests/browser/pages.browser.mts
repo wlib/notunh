@@ -77,7 +77,7 @@ test("each page shows its header and what it does before any script runs, where 
   const shell = await (await browser.newContext({ javaScriptEnabled: false, proxy })).newPage()
   const app = await (await browser.newContext({ proxy })).newPage()
   await app.clock.setFixedTime(WITH_MENUS)
-  for (const [path, loaded] of [["/map/", ".routes"], ["/dining/", ".controls"], ["/laundry/", ".rooms-head"]]) {
+  for (const [path, loaded] of [["/map/", ".search-field"], ["/dining/", ".controls"], ["/laundry/", ".rooms-head"]]) {
     await shell.goto(fixture.origin + path)
     await expect(shell.locator("#app .shell")).toBeVisible()
     await app.goto(fixture.origin + path)

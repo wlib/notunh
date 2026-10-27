@@ -1,6 +1,7 @@
 // The few requests that reach the Worker: learning's and archiving's token-gated rows, models, timetables, and what
 // learning derives, public health, the laundry page's rooms, the laundry page under each room's own address, and
-// devices' reminders, each device's own by its secret. Every other page and asset is served without it
+// devices' reminders, each device's own by its secret, and the social routes and pin pages (social.mts). Every other
+// page and asset is served without it
 
 import { Hono } from "hono/tiny"
 import type { MiddlewareHandler } from "hono"
@@ -19,6 +20,7 @@ import { MODELS, acquireFeed, feedJson, feedList, latestModel, saveModel } from 
 import { DERIVED, commit, derivedOf, putPart } from "./derived.mts"
 import { room, rooms } from "./laundry.mts"
 import { type Ask, Setting, vapidOf } from "./reminders.mts"
+import { social } from "./social.mts"
 
 type Worker = { Bindings: Env }
 
@@ -29,8 +31,8 @@ const isBuild = bearerAuth<Worker>({
   verifyToken: async (token, c) => Boolean(c.env.BUILD_TOKEN) && timingSafeEqual(token, c.env.BUILD_TOKEN!)
 })
 
-// Every route under /api/ but health, laundry's, and reminders', which go by each device's own secret
-app.use("/api/*", (c, next) => /^\/api\/(health$|laundry\/|push\/|reminders\/)/.test(c.req.path) ? next() : isBuild(c, next))
+// Every route under /api/ but health, laundry's, reminders', and the social routes, which go by each device's own secret
+app.use("/api/*", (c, next) => /^\/api\/(health$|laundry\/|push\/|reminders\/|pins|link|email|me$|state$|session$)/.test(c.req.path) ? next() : isBuild(c, next))
 
 /** Part of a request as a schema makes it, its JSON body by default, or a 400 saying what's wrong with it */
 const valid = <S extends StandardSchemaV1, T extends "json" | "form" | "query" | "param" = "json">(schema: S, target = "json" as T) =>
@@ -191,6 +193,9 @@ app.delete("/api/push/devices/:device", valid(v.object({ device: ID }), "param")
   const secret = secretOf(c.req.header("authorization"))
   return secret ? ask(c.env, c.req.valid("param").device, { kind: "forget", secret }) : c.text("No secret", 401)
 })
+
+// Pins, marks, device links, email verification, and each pin's page (social.mts)
+app.route("/", social)
 
 // The laundry page, which opens the room its address names
 app.get("/laundry/:room/", c =>

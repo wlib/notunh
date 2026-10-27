@@ -7,7 +7,7 @@ import { passes, type FoodSummary } from "../menus.mts"
 import { spansOn } from "../hours.mts"
 import { index, hall, day, dayMeals, menu, query, filters, searchable, hasFailed, goToFood, hallName } from "../state.mts"
 import { today } from "../../shell/lifecycle.mts"
-import { Count, Plural } from "../../shell/intl.tsx"
+import { Count, Counted } from "../../shell/intl.tsx"
 import { FoodItem } from "./Food.tsx"
 import { DayName, mealName } from "./common.tsx"
 import { capture } from "../../shell/usage.tsx"
@@ -61,7 +61,7 @@ export const MenuView = () =>
         }
         {hidden > 0 &&
           <p class="muted footnote">
-            <Plural value={hidden} one="1 item hidden by your filters" other={<><Count value={hidden} /> items hidden by your filters</>} />
+            <Counted value={hidden} one="item hidden by your filters" other="items hidden by your filters" />
           </p>
         }
       </>
@@ -88,7 +88,7 @@ export const SearchView = () =>
         <p class="muted footnote">
           {found.length > MAX_RESULTS
             ? <>First <Count value={MAX_RESULTS} /> of <Count value={found.length} /> foods</>
-            : <Plural value={found.length} one="1 food" other={<><Count value={found.length} /> foods</>} />
+            : <Counted value={found.length} one="food" other="foods" />
           }
         </p>
         <ul class="results">

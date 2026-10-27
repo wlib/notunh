@@ -1,7 +1,7 @@
 import { test, expect, vi, beforeEach, afterEach } from "vitest"
 import fc from "fast-check"
 import { type Kept, STATES } from "../../src/reminders/reminder.mts"
-import { CACHE, device, deviceKept, forget, forgetAll, keep, reminderOf, reminders, transition } from "../../src/reminders/browser/store.mts"
+import { CACHE, amend, device, deviceKept, forget, forgetAll, keep, reminderOf, reminders, transition } from "../../src/reminders/browser/store.mts"
 import { browserStorage } from "./browser.mts"
 
 const NOW = 1_790_000_000
@@ -29,7 +29,7 @@ test("two tabs asking for the device at once, as when each sets its first remind
   expect(a.secret).toMatch(/^[\w-]{43}$/)
   expect(await device()).toEqual(a)
   expect([...storage.entriesOf(CACHE).keys()]).toEqual(["/reminders.json"])
-  expect(storage.entriesOf(CACHE).get("/reminders.json")).toEqual({ version: 2, device: a, reminders: [] })
+  expect(storage.entriesOf(CACHE).get("/reminders.json")).toEqual({ version: 3, device: a, reminders: [] })
 })
 
 test("whatever tabs do at once, what's kept is what the last word on each reminder says, and a reminder kept reads back whole", async () => {
@@ -108,4 +108,22 @@ test("a read that fails rejects the change, and nothing is written over what was
   storage.setFailing(false)
   expect(storage.entriesOf(CACHE).get("/reminders.json")).toEqual(before)
   expect(await reminders()).toEqual([kept("r1")])
+})
+
+test("what version 2 kept reads as version 3 without visits or queues, and is written back as 3 at the next change", async () => {
+  const made = { id: "AJikgiLS5iAldoCJ-ZWM2w", secret: "054QSc6VenuGjYvd9tuQB3PYiak9BNliRsV4Brc5YRM" }
+  await (await storage.caches.open(CACHE)).put("/reminders.json", new Response(JSON.stringify({ version: 2, device: made, reminders: [kept("r1"), kept("r2", "setting")] })))
+  expect(await reminders()).toEqual([kept("r1"), kept("r2", "setting")])
+  expect(await deviceKept()).toEqual(made)
+  await transition("r2", "setting", "set")
+  expect(storage.entriesOf(CACHE).get("/reminders.json")).toEqual({ version: 3, device: made, reminders: [kept("r1"), kept("r2")] })
+})
+
+test("an amend edits one reminder under the lock, and says whether it changed it", async () => {
+  await keep(kept("r1"))
+  await keep(kept("r2"))
+  expect(await amend("r1", reminder => reminder)).toBeUndefined()
+  expect(await amend("r3", reminder => ({ ...reminder, headsUp: 600 }))).toBeUndefined()
+  expect(await amend("r2", reminder => ({ ...reminder, headsUp: 600 }))).toEqual({ ...kept("r2"), headsUp: 600 })
+  expect(await reminders()).toEqual([kept("r1"), { ...kept("r2"), headsUp: 600 }])
 })

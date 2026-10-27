@@ -20,6 +20,8 @@ export const GONE = 120
 export const LATEST = 2 * 3600
 /** s ahead a run may be watched from: tomorrow's last bus, set tonight */
 export const FURTHEST = 36 * 3600
+/** s ahead a watch on no run may be set from, which costs the Worker one alarm: a class's next meeting after a week's break, as its queue goes on (queue.mts) */
+export const FURTHEST_FIXED = 15 * 86_400
 /** Times a push the service couldn't take is tried, each wait twice the last from MIN_CHECK, unless it says when */
 export const MAX_TRIES = 5
 /** The shape of a push, which a service worker that doesn't know shows a plain notification for */

@@ -3,7 +3,7 @@
 import { watch, type Reactive, type SourceNode } from "bruh/reactive"
 import { Marker, type Map as MapLibre, type MapGeoJSONFeature } from "maplibre-gl"
 import type { Place } from "../../places/search.mts"
-import { type GazetteerPlace, type MapHints, nameAt } from "../../places/gazetteer.mts"
+import { type GazetteerPlace, type MapHints, nameAt, placeAt } from "../../places/gazetteer.mts"
 import type { Building } from "../../places/buildings.mts"
 import { nearestOnLine, toLine } from "../../geo/lines.mts"
 import { outlineHolds } from "../../geo/boxes.mts"
@@ -18,11 +18,12 @@ const END = "#c8423b"
 // Further than this from a house, a street isn't the one it's on
 const MAX_STREET = 80 // m
 
+/** A bus, a stop, a place the map knows by name, as its marker or outline, or a spot it doesn't */
 export type Tap =
-  | { kind: "bus",      id: string }
-  | { kind: "stop",     stop: number }
-  | { kind: "building", place: Place }
-  | { kind: "place",    place: Place, hints: MapHints }
+  | { kind: "bus",   id: string }
+  | { kind: "stop",  stop: number }
+  | { kind: "place", name: string }
+  | { kind: "spot",  place: Place, hints: MapHints }
 
 type Pixel = { x: number, y: number }
 
@@ -107,10 +108,13 @@ export const dropPins = (map: MapLibre, state: { from: SourceNode<Place | undefi
   }
 }
 
-/** Says what each tap is of: buses first, then stops, then laundry and dining, else the spot itself */
-export const listenForTaps = (map: MapLibre, buildings: Reactive<readonly Building[]>, onTap: (tap: Tap) => void) => {
+/**
+ * Says what each tap is of: buses first, then stops, then the places with something on today, then laundry and
+ * dining, then a building the gazetteer names by its outline, else the spot itself
+ */
+export const listenForTaps = (map: MapLibre, state: { buildings: Reactive<readonly Building[]>, gazetteer: Reactive<readonly GazetteerPlace[]> }, onTap: (tap: Tap) => void) => {
   map.on("mousemove", event => {
-    const isTappable = ["vehicles", "stops", "buildings"].some(layer => nearestWithin(map, event.point, layer))
+    const isTappable = ["vehicles", "stops", "events", "buildings"].some(layer => nearestWithin(map, event.point, layer))
     map.getCanvas().style.cursor = isTappable ? "pointer" : ""
   })
 
@@ -123,13 +127,20 @@ export const listenForTaps = (map: MapLibre, buildings: Reactive<readonly Buildi
     if (stop)
       return onTap({ kind: "stop", stop: stop.id as number })
 
+    const marked = nearestWithin(map, event.point, "events")
+    if (marked)
+      return onTap({ kind: "place", name: marked.properties.place })
+
     const building = nearestWithin(map, event.point, "buildings")
-    if (building) {
-      const { lat, lon, name } = buildings.peek()[building.id as number]
-      return onTap({ kind: "building", place: { lat, lon, name } })
-    }
+    if (building && state.buildings.peek()[building.id as number])
+      return onTap({ kind: "place", name: state.buildings.peek()[building.id as number].name })
 
     const { lng, lat } = event.lngLat
-    onTap({ kind: "place", place: { lon: lng, lat, name: "Dropped pin" }, hints: hintsAt(map, event.point) })
+    const hints = hintsAt(map, event.point)
+    // A building whose middle is in the outline tapped, as the gazetteer names it
+    const outlined = hints.outline && placeAt(state.gazetteer.peek(), { lon: lng, lat }, hints.outline)
+    if (outlined?.kind === "building" && outlineHolds(hints.outline!, { lon: outlined.at[0], lat: outlined.at[1] }))
+      return onTap({ kind: "place", name: outlined.name })
+    onTap({ kind: "spot", place: { lon: lng, lat, name: "Dropped pin" }, hints })
   })
 }

@@ -69,6 +69,8 @@ map.on("load", () => {
   drawLayers(map, {
     feed:             r(feed),
     buildings:        r(places.buildings),
+    todayPlaced:      r([]),
+    now:              r(0),
     shownRoutes:      r(new Set([route.id])),
     highlightedRoute: r(undefined),
     itinerary:        r(undefined)

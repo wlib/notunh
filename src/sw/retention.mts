@@ -1,7 +1,8 @@
 // What the cache keeps: the closure of every generation still in use, and nothing else. A generation is in use if it
 // is a cached page's current or previous copy, or if an open window says it runs it. A data file can ask for more
-// than itself through the Retain shape (src/shell/manifest.mts): the map style requires its style.json, the dining
-// index lists its files, and the tiles and style name their folders. So the worker knows nothing of any of them
+// than itself through the Retain shape (src/shell/manifest.mts): the map style requires its style.json, the dining,
+// courses and prerequisites indexes list their files, and the tiles and style name their folders. So the worker knows
+// nothing of any of them
 
 import { type Build, type Generation, buildOf, isRetained, mergedRetain, retainOf } from "../shell/manifest.mts"
 
@@ -12,9 +13,11 @@ export type CacheLike = Pick<Cache, "keys" | "match" | "put" | "delete">
 // carries and the worker's own fetches don't, so matches ignore Vary
 export const ANY = { ignoreVary: true }
 
-/** The page a path is served by: each laundry room's, like /laundry/adams-tower/, is the laundry page */
+/** The page a path is served by: each laundry room's, like /laundry/adams-tower/, is the laundry page, and each pin's, like /p/abc, the pin page */
 export const pageOf = (pathname: string) =>
-  pathname.startsWith("/laundry/") ? "/laundry/" : pathname
+  pathname.startsWith("/laundry/") ? "/laundry/" :
+  pathname.startsWith("/p/")       ? "/p/" :
+                                     pathname
 
 const isPage = (pathname: string) =>
   pathname.endsWith("/")

@@ -3,6 +3,8 @@
 
 import { customType, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core"
 import type { Kind, Status, Machine } from "../src/laundry/infer.mts"
+import type { Time } from "../src/social/event.mts"
+import type { Subscription } from "./push.mts"
 
 /** Raw bytes, which D1 takes as they are */
 const bytes = customType<{ data: Uint8Array<ArrayBuffer>, driverData: Uint8Array<ArrayBuffer> }>({
@@ -120,3 +122,101 @@ export const roomSnapshots = sqliteTable("room_snapshots", {
   at:       integer().notNull(),
   machines: text({ mode: "json" }).$type<Machine[]>().notNull()
 })
+
+//#region Social (social.mts, docs/social.md)
+
+/**
+ * Each device that has asked anything social, by the id it made itself (src/reminders/browser/store.mts): the SHA-256
+ * of its secret, set by its first ask and checked by every one after, the person it belongs to, its own id until
+ * it's linked to another device's (links), and the push subscription its last mark came with, for asking it "Going?"
+ * when a time it marked is set, dropped once the push service says it's gone
+ */
+export const devices = sqliteTable("devices", {
+  id:      text().primaryKey(),
+  secret:  text().notNull(),
+  person:  text().notNull(),
+  push:    text({ mode: "json" }).$type<Subscription>(),
+  created: integer().notNull()
+}, table => [index("devices_person").on(table.person)])
+
+/**
+ * A handoff between devices: the code the new device shows, and which device it is. The old device approves it within
+ * its two minutes, which moves the new device to the old one's person. Dropped once expired
+ */
+export const links = sqliteTable("links", {
+  code:    text().primaryKey(),
+  device:  text().notNull(),
+  expires: integer().notNull(),
+  linked:  integer({ mode: "boolean" }).notNull().default(false)
+})
+
+/**
+ * Each UNH address someone has typed, lower-cased: who holds it verified, and since when, and the attempt under way,
+ * if any: who's trying, the SHA-256 of the six-digit code sent them, when it expires, and the tries so far. Kept
+ * until the person asks to be forgotten
+ */
+export const emails = sqliteTable("emails", {
+  address:  text().primaryKey(),
+  person:   text(),
+  verified: integer(),
+  pending:  text(),
+  code:     text(),
+  expires:  integer(),
+  tries:    integer().notNull().default(0)
+}, table => [index("emails_person").on(table.person)])
+
+/**
+ * Each pin as its host set it (src/social/event.mts): an event with a description, by the person who made it, under
+ * an id their device made, so making it again is the same pin. times are the candidates while its time is to pick,
+ * earliest first, and its window spans them, until the host sets one, chosen, which becomes its window. spots is how
+ * many may go, if limited. Dropped two hours after its end (LINGER)
+ */
+export const pins = sqliteTable("pins", {
+  id:          text().primaryKey(),
+  person:      text().notNull(),
+  title:       text().notNull(),
+  description: text().notNull(),
+  place:       text(),
+  where:       text().notNull(),
+  start:       integer().notNull(),
+  end:         integer().notNull(),
+  times:       text({ mode: "json" }).$type<Time[]>().notNull(),
+  chosen:      integer(),
+  spots:       integer(),
+  visibility:  text().$type<"link" | "public">().notNull(),
+  created:     integer().notNull()
+}, table => [index("pins_end").on(table.end), index("pins_person").on(table.person)])
+
+/**
+ * Your things kept for you as a person, beside each device's copy (src/shared/sync.mts): one row a key, its value as
+ * JSON, and when and by which device it was written, the newer of two writes winning. Moved with a device to the
+ * person it's linked to, or recovered as by a UNH address, keeping each key's newer row
+ */
+export const state = sqliteTable("state", {
+  person: text().notNull(),
+  key:    text().notNull(),
+  value:  text({ mode: "json" }).notNull(),
+  at:     integer().notNull(),
+  by:     text().notNull()
+}, table => [primaryKey({ columns: [table.person, table.key] })])
+
+/** Who's going to a pin with a time, by device: a count to everyone, never a list */
+export const going = sqliteTable("going", {
+  pin:    text().notNull(),
+  device: text().notNull()
+}, table => [primaryKey({ columns: [table.pin, table.device] })])
+
+/** Each time of a pin a device marked as working for it, by the time's index, once each (src/social/marks.mts) */
+export const marks = sqliteTable("marks", {
+  pin:    text().notNull(),
+  device: text().notNull(),
+  time:   integer().notNull()
+}, table => [primaryKey({ columns: [table.pin, table.device, table.time] })])
+
+/** Which devices reported a pin; two hide it */
+export const reports = sqliteTable("reports", {
+  pin:    text().notNull(),
+  device: text().notNull()
+}, table => [primaryKey({ columns: [table.pin, table.device] })])
+
+//#endregion

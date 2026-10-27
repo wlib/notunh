@@ -28,15 +28,15 @@ export type Page = {
 
 export const PAGES = {
   "/": {
-    title:       "notunh: UNH buses, dining menus, and laundry",
-    description: "An unofficial UNH app for getting around by bus or on foot, checking what's on at Holloway and Philbrook, and finding a free washer.",
+    title:       "notunh: UNH buses, classes, parking, events, dining, and laundry",
+    description: "An unofficial UNH app for getting around, finding a class or a professor, parking, today's events, what's on at Holloway and Philbrook, and a free washer.",
     label:       "Map, menus, laundry",
     shows:       "A map of central UNH around Thompson Hall with a Gables Connector bus on Main Street, beside phones showing a laundry room's machines and Philbrook's lunch. Marked unofficial.",
     category:    "LifestyleApplication"
   },
   "/map/": {
-    title:       "UNH Bus Map & Campus Directions · notunh",
-    description: "Get around UNH and Durham by bus or on foot, with every Wildcat Transit bus live on the map and when the next one reaches your stop.",
+    title:       "UNH Campus Map: Buses, Classes & Parking · notunh",
+    description: "Every Wildcat Transit bus live, directions by bus or on foot, where a class or professor is next, where to park, and what's on today.",
     label:       "Buses & directions",
     shows:       "A 3D map looking down Main Street at UNH over Thompson Hall's lawn, with a Gables Connector bus between the Whittemore Center and Thompson Hall stops. Marked unofficial.",
     category:    "TravelApplication"

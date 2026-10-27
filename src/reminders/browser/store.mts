@@ -18,20 +18,27 @@ export type Device = v.InferOutput<typeof Device>
 
 /**
  * Everything kept, as one document, whose version is bumped with any change of meaning: another's reads as empty,
- * but for the device, which the Worker still knows by its secret, so its watches go on and are forgotten with it. 2
- * keeps each reminder as its whole trip (reminder.mts); 1 kept the first bus alone
+ * but for the device, which the Worker still knows by its secret, so its watches go on and are forgotten with it. 3
+ * adds a reminder's visit and a class's queue (queue.mts), so 2's read as 3's without them; 2 keeps each reminder as
+ * its whole trip (reminder.mts); 1 kept the first bus alone
  */
-const Doc = v.object({ version: v.literal(2), device: v.optional(Device), reminders: v.array(Kept) })
+const Doc = v.object({ version: v.literal(3), device: v.optional(Device), reminders: v.array(Kept) })
 type Doc = v.InferOutput<typeof Doc>
+const Two = v.object({ ...Doc.entries, version: v.literal(2) })
 const Other = v.object({ device: v.optional(Device) })
 
 const empty = (device?: Device): Doc =>
-  ({ version: 2, ...device && { device }, reminders: [] })
+  ({ version: 3, ...device && { device }, reminders: [] })
 
 /** What's kept, or empty where nothing is or it's of another version, its device kept. Rejects where storage can't be read, so nothing is written over what it may still hold */
 const read = async (): Promise<Doc> => {
-  const doc: unknown = await (await (await caches.open(CACHE)).match(ENTRY))?.json()
-  return v.is(Doc, doc) ? doc : empty(v.is(Other, doc) ? doc.device : undefined)
+  // Opening the cache would make it, so a page that only looks, as every page does for its device, leaves none behind
+  const doc: unknown = await caches.has(CACHE) ? await (await (await caches.open(CACHE)).match(ENTRY))?.json() : undefined
+  return (
+    v.is(Doc, doc) ? doc :
+    v.is(Two, doc) ? { ...doc, version: 3 } :
+                     empty(v.is(Other, doc) ? doc.device : undefined)
+  )
 }
 
 const write = async (doc: Doc) =>
@@ -57,6 +64,22 @@ export const reminders = async () =>
 export const keep = (kept: Kept) =>
   change(doc => doc.reminders = [...doc.reminders.filter(({ id }) => id !== kept.id), kept])
 
+/**
+ * Edits a reminder kept here, as moving a class's on to its next visit (src/reminders/queue.mts) does
+ * @returns the reminder as edited, or nothing where it isn't kept or the edit left it as it was
+ */
+export const amend = (id: string, edit: (kept: Kept) => Kept) =>
+  change(doc => {
+    const kept = doc.reminders.find(reminder => reminder.id === id)
+    if (!kept)
+      return
+    const edited = edit(kept)
+    if (edited === kept)
+      return
+    doc.reminders = doc.reminders.map(reminder => reminder === kept ? edited : reminder)
+    return edited
+  })
+
 export const forget = (id: string) =>
   change(doc => doc.reminders = doc.reminders.filter(reminder => reminder.id !== id))
 
@@ -64,16 +87,27 @@ export const forget = (id: string) =>
 export const deviceKept = async () =>
   (await read()).device
 
-/** This device's id and secret, made the first time any tab asks */
-export const device = () =>
-  change(doc => doc.device ??= { id: randomBase64Url(16), secret: randomBase64Url(32) })
+/**
+ * This device's id and secret as the Worker's cookie keeps them (worker/session.mts), taken back where storage lost
+ * them; one kept meanwhile, as by another tab, stays. None where there's no cookie, or no Worker to ask
+ */
+export const recovered = async () => {
+  const session: unknown = await fetch("/api/session").then(response => response.ok ? response.json() : undefined).catch(() => undefined)
+  return v.is(Session, session) ? change(doc => doc.device ??= { id: session.device, secret: session.secret }) : undefined
+}
 
-/** Drops the device and every reminder, as when pushes no longer reach the phone */
+const Session = v.object({ device: v.string(), secret: v.string() })
+
+/** This device's id and secret: as kept, else as the Worker's cookie keeps them, else made, the first time any tab asks */
+export const device = async () =>
+  await deviceKept() ?? await recovered() ?? change(doc => doc.device ??= { id: randomBase64Url(16), secret: randomBase64Url(32) })
+
+/**
+ * Drops every reminder, as when pushes no longer reach the phone. The device's id and secret stay, as pins and votes
+ * are made as the same device (src/social/browser/api.mts), and a reminder set later sets the Worker's secret anew
+ */
 export const forgetAll = () =>
-  change(doc => {
-    delete doc.device
-    return doc.reminders = []
-  })
+  change(doc => doc.reminders = [])
 
 /**
  * Moves a reminder from one state to another, only if it's still in the first: one taken by the Worker is set only

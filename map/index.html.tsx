@@ -17,7 +17,12 @@ export default () =>
           gazetteer: "/src/map/gazetteer.json",
           tiles:     "/src/map/tiles.json",
           style:     "/src/map/style.json",
-          places:    "/src/map/places.json"
+          places:    "/src/map/places.json",
+          events:    "/src/map/events.json",
+          courses:   "/src/courses/courses.json",
+          prereqs:   "/src/programs/prereqs.json",
+          parking:   "/src/parking/parking.json",
+          menus:     "/src/dining/menus.json"
         }}
       />
       <body>

@@ -7,7 +7,10 @@ import { join, resolve } from "node:path"
 import { build } from "vite"
 
 export default async () => {
-  const dist = resolve(process.env.NOTUNH_DIST ?? mkdtempSync(join(tmpdir(), "notunh-browser-")))
+  // An empty NOTUNH_DIST is none, never the repository, which a build there would litter
+  const dist = resolve(process.env.NOTUNH_DIST || mkdtempSync(join(tmpdir(), "notunh-browser-")))
+  if (dist === process.cwd())
+    throw new Error("NOTUNH_DIST names the repository itself")
   process.env.NOTUNH_DIST = dist
   if (!existsSync(join(dist, "sw.js")))
     await build({ logLevel: "warn", build: { outDir: dist } })

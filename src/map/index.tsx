@@ -4,61 +4,62 @@ import "../shell/index.mts"
 import "./index.css"
 
 import { r, watch } from "bruh/reactive"
-import { Popup } from "maplibre-gl"
 import { createMap } from "./render/map.mts"
 import { startMap } from "./state/map.mts"
-import { AppTitle, Icon } from "../shell/ui.tsx"
-import { Planner, Suggestions, editing } from "./ui/Planner.tsx"
-import { Itineraries } from "./ui/Itineraries.tsx"
-import { open as openReminder } from "./ui/Remind.tsx"
-import { StopView } from "./ui/StopView.tsx"
-import { RouteList, Status } from "./ui/RouteList.tsx"
-import { PlaceCard } from "./ui/cards.tsx"
-import { BusView, RideSuggestion } from "./ui/BusView.tsx"
+import { AppTitle } from "../shell/ui.tsx"
+import { Home } from "./ui/Home.tsx"
+import { open as openReminder, topUpClasses } from "./ui/Remind.tsx"
+import { PageView } from "./ui/Pages.tsx"
+import { Status } from "./ui/Buses.tsx"
+import { isAsked } from "./ui/You.tsx"
+import { RideSuggestion } from "./ui/BusView.tsx"
 import { makeSheet, raise } from "./ui/sheet.mts"
 import { capture } from "../shell/usage.tsx"
 import { distinct } from "../shell/state.mts"
+import { isSameView } from "./state/page.mts"
+import { nameAt } from "../places/gazetteer.mts"
 import { coarseName } from "../places/coarse.mts"
 import { localDay, localHour, weekday } from "../shared/time.mts"
 import { type Kept, type Reminder, firstRide, replanned } from "../reminders/reminder.mts"
 import { kept, loadKept, replan } from "./state/reminders.mts"
 
 const state = await startMap()
-const { from, to, by, selected, itineraries, itinerary, buildings, feed, selectedStop, selectedBus, viewedBus, suggested, locationProblem, directTo, plansFor, walkingTo, located, heard } = state
+const { from, to, itineraries, itinerary, buildings, feed, suggested, locationProblem, plansFor, walkingTo, located, heard, page, backTo } = state
 
-const clearTrip = () => {
-  from.value = undefined
-  to.value = undefined
-  by.value = undefined
-  selected.value = undefined
-}
+// A trip kept from earlier today, or one a link plans, opens on its directions; a link asking you to approve or
+// confirm something opens You (ui/You.tsx)
+if (!page.peek() && isAsked)
+  state.amend({ kind: "you" })
+else if (!page.peek() && to.peek())
+  state.amend({ kind: "directions" })
 
 const grabber = <button type="button" class="grabber" /> as HTMLElement
 
+/** The page shown, the same one while parking's fields change what it's asked for, so they keep their focus */
+const shownPage = distinct(() => page.value, isSameView)
+const isPage = r(() => shownPage.value !== undefined)
+
+// The map's title and how live the buses are, which opens them, or with a page shown, Back to what it was opened
+// from, which the sheet lowered still shows
 const header =
   <header class="panel-header">
-    <AppTitle page="Map" />
-    <Status />
-    {r(() => (from.value || to.value) &&
-      <button type="button" class="close" aria-label="Clear trip" title="Clear trip" onclick={clearTrip}>
-        <Icon name="close" />
-      </button>
-    )}
+    <span class="panel-title" hidden={isPage}>
+      <AppTitle page="Map" />
+      <button type="button" class="status-button" onclick={() => state.go({ kind: "buses" })}><Status /> ›</button>
+    </span>
+    <button type="button" class="back" hidden={r(() => !isPage.value)} aria-label={r(() => `Back to ${backTo.value}`)} onclick={() => state.back()}>
+      <span aria-hidden="true">‹</span> {backTo}
+    </button>
   </header> as HTMLElement
 
+// The home stays put beneath a page, hidden, so the search and the week are as they were once Back returns to them
 const Panel = () =>
   <aside class="panel">
     {grabber}
     {header}
-    <Planner />
     <RideSuggestion />
-    {r(() =>
-      editing.value                    ? <Suggestions /> :
-      selectedStop.value !== undefined ? <StopView stop={selectedStop.value} /> :
-      viewedBus.value !== undefined    ? <BusView id={viewedBus.value} /> :
-      from.value && to.value           ? <Itineraries /> :
-                                         <RouteList />
-    )}
+    <div hidden={isPage}><Home /></div>
+    {r(() => shownPage.value && <PageView page={shownPage.value} />)}
   </aside>
 
 const mapElement = <div class="map" /> as HTMLElement
@@ -67,7 +68,7 @@ document.getElementById("app")!.replaceChildren(mapElement, panel)
 
 makeSheet(panel, grabber, header)
 // Something new to show brings the sheet back up
-watch([from, to, selectedStop, selectedBus], raise, { skipFirst: true })
+watch([from, to, page], raise, { skipFirst: true })
 // And so does a question or a problem for you
 watch(() => {
   if (suggested.value || locationProblem.value)
@@ -97,13 +98,17 @@ watch([ends], () => {
 })
 
 // A reminder's trip, planned again now: from where you are, where it was from there, its way if that's still
-// offered, else the best way now, or walking so as to be there by its time. One walked for now stays as it was
+// offered, else the best way now, or walking so as to be there by its time; a visit's, the best way by bus or on
+// foot (src/shared/visit.mts). One walked for now stays as it was
 const plannedAgain = (reminder: Kept): Reminder | undefined => {
   const here = from.peek()?.isYou ? from.peek() : undefined
   const start = reminder.from.isYou ? here : reminder.from
   if (!start || (!firstRide(reminder) && reminder.by === undefined))
     return
-  const options = firstRide(reminder) ? plansFor(start, reminder.to, reminder.by) : [walkingTo(start, reminder.to, reminder.by)]
+  const options =
+    reminder.visit && reminder.by !== undefined ? state.waysBy(start, reminder.to, reminder.by) :
+    firstRide(reminder)                         ? plansFor(start, reminder.to, reminder.by) :
+                                                  [walkingTo(start, reminder.to, reminder.by)]
   return replanned(feed.peek(), reminder, options, state.now.peek())
 }
 
@@ -117,10 +122,23 @@ const REPLAN_WAIT_MS = 20_000
 const link = new URLSearchParams(globalThis.location.search).get("reminder")
 if (link !== null)
   history.replaceState(history.state, "", globalThis.location.pathname)
+
+// Class reminders go on to their sections' next meetings from the courses, which load for one kept, and are topped
+// up from them as they load, so a room changed or a meeting dropped is what's queued (src/reminders/queue.mts)
+watch([kept], () => {
+  if ([...kept.value.values()].some(reminder => reminder.queue))
+    state.wantCourses()
+})
+watch([state.courses, state.later], () => {
+  if (state.courses.value)
+    void topUpClasses(state.resolveClass)
+})
 void loadKept().then(async () => {
   const reminder = link === null ? undefined : kept.peek().get(link)
-  if (reminder)
+  if (reminder) {
     await openReminder(reminder)
+    state.amend({ kind: "directions" })
+  }
   if (!kept.peek().size)
     return
   const isReady = await Promise.race([Promise.all([located, heard]).then(() => true), new Promise<false>(resolve => setTimeout(resolve, REPLAN_WAIT_MS, false))])
@@ -128,47 +146,33 @@ void loadKept().then(async () => {
     await replan(plannedAgain)
 })
 
-/** The one card open on the map; any tap closes it rather than doing something else */
-let card: Popup | undefined
-
-const openCard = (lngLat: [number, number], content: Node) => {
-  const popup = new Popup({ closeButton: false, closeOnClick: false, className: "map-card", offset: 16, maxWidth: "18rem" })
-  popup.on("close", () => {
-    if (card === popup)
-      card = undefined
-  })
-  card = popup
-  return popup.setLngLat(lngLat).setDOMContent(content).addTo(map)
-}
-
-const { map } = createMap(
+createMap(
   mapElement,
   panel,
   state,
   tap => {
-    if (card) {
-      card.remove()
-      return
+    // A place tapped opens its page, as its marker, its outline and a search for it all do; a stop or a bus its own
+    if (tap.kind === "place") {
+      const shown = page.peek()
+      if (shown?.kind !== "place" || shown.name !== tap.name)
+        state.go({ kind: "place", name: tap.name })
+      capture("place_opened")
     }
-
-    if (tap.kind === "stop") {
-      selectedStop.value = tap.stop
-      capture("stop_opened")
+    else if (tap.kind === "stop")
+      state.go({ kind: "stop", id: feed.peek().stops[tap.stop].id })
+    else if (tap.kind === "bus")
+      state.go({ kind: "bus", id: tap.id })
+    else {
+      // A spot tapped is where the trip's going, or where it's from while that's yet to be said in directions, named
+      // for what the map shows there once that's known
+      const end = page.peek()?.kind === "directions" && to.peek() && !from.peek() ? from : to
+      end.value = tap.place
+      nameAt(state.gazetteer.peek(), tap.place, tap.hints).then(name => {
+        if (name && end.peek() === tap.place)
+          end.value = { ...tap.place, name }
+      }, () => {})
+      if (page.peek()?.kind !== "directions")
+        state.go({ kind: "directions" })
     }
-    else if (tap.kind === "bus") {
-      selectedStop.value = undefined
-      selectedBus.value = tap.id
-      capture("bus_opened")
-    }
-    else if (tap.kind === "building") {
-      selectedStop.value = undefined
-      selectedBus.value = undefined
-      directTo(tap.place)
-    }
-    else
-      openCard(
-        [tap.place.lon, tap.place.lat],
-        <PlaceCard place={tap.place} hints={tap.hints} close={() => card?.remove()} />
-      )
   }
 )

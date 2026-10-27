@@ -1,7 +1,6 @@
 # Typechecks, tests, and builds every pull request. Needs no secrets: a pull request's code, a fork's included, is
 # whatever its author wrote, so it gets a read-only token and nothing else. It also runs offline (NOTUNH_OFFLINE):
-# the data comes from the fixtures (tests/fixtures/data/), so no pull request asks anything of the GTFS host,
-# Nutrislice, or the laundry vendor
+# the data comes from the fixtures (tests/fixtures/data/), so no pull request asks anything of any upstream source
 
 name: Check
 

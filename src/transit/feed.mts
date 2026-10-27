@@ -98,13 +98,6 @@ export const canAlight = (trip: Trip, position: number) =>
 export const boardableStops = (feed: FeedData) =>
   new Set(feed.trips.flatMap(trip => trip.stops.filter((_, position) => canBoard(trip, position))))
 
-/** A stop, by its index among some stops, as its index among others, found by its id, or undefined if it's gone */
-export const renumbered = (stop: number | undefined, before: readonly Stop[], after: readonly Stop[]) => {
-  const id = stop === undefined ? undefined : before[stop]?.id
-  const index = after.findIndex(other => other.id === id)
-  return index < 0 ? undefined : index
-}
-
 /**
  * GTFS times count from "noon minus 12h" so they stay correct across DST changes
  * @returns epoch milliseconds that the service day's times are relative to

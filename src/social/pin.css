@@ -1,0 +1,57 @@
+/* An event's page at its link: the event, its actions, and its times to pick, in the plain page's column */
+
+.pin-body {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.pin-head {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.pin-title {
+  margin: 0.5rem 0 0;
+  font-size: clamp(1.5rem, 7cqi, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.pin-when {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.pin-where,
+.pin-description {
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.pin-description {
+  margin-block-start: 0.5rem;
+  color: var(--text);
+  white-space: pre-line;
+}
+
+.pin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pin-actions .button {
+  flex: 1 1 8rem;
+  text-decoration: none;
+}
+
+.pin .notice {
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-s);
+  background: var(--surface-raised);
+}
+
+.pin-foot {
+  font-size: 0.85rem;
+}

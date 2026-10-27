@@ -10,6 +10,11 @@ import { Gazetteer } from "../../places/gazetteer.mts"
 import { createPlaceSearch } from "../../places/search.mts"
 import { loadStyle } from "../basemap/style.mts"
 import { TilesManifest } from "../basemap/tiles.mts"
+import { EventsData } from "../../social/event.mts"
+import { CoursesIndex, emptyIndex } from "../../courses/course.mts"
+import { NO_PREREQS, PrereqsIndex } from "../../programs/prereqs.mts"
+import { NO_PARKING, ParkingData } from "../../parking/sources.mts"
+import { MenusIndex } from "../../dining/menus.mts"
 import { latest } from "../../shell/build.mts"
 
 /** The middle of campus, which search prefers the nearer of two places by one name to */
@@ -17,17 +22,26 @@ const CAMPUS = { lat: 43.1365, lon: -70.9345 }
 
 /**
  * The bundled data, loaded, each swapped for a newer build's as it comes, which everything derived from it follows.
- * The map works without a model, so it starts with an empty one if its own can't load
+ * The map works without a model or today's events, so it starts with an empty one of either that can't load
  */
 export const loadMapData = async () => {
-  const [feed, model, network, gazetteerData, tiles, style, places] = await Promise.all([
+  const [feed, model, network, gazetteerData, tiles, style, places, events, coursesIndex, prereqsIndex, parking, menus] = await Promise.all([
     latest("gtfs", loadFeed),
     latest("model", Model, emptyModel),
     latest("walk", WalkData),
     latest("gazetteer", Gazetteer),
     latest("tiles", TilesManifest),
     latest("style", loadStyle),
-    latest("places", Places)
+    latest("places", Places),
+    // The map works without today's events, so it starts with none if they can't load
+    latest("events", EventsData, (): EventsData => ({ fetched: 0, events: [] })),
+    // The indexes alone, which name the term files and the prerequisites loaded once something asks (state/courses.mts),
+    // and the parking areas, which are as small
+    latest("courses", CoursesIndex, emptyIndex),
+    latest("prereqs", PrereqsIndex, () => NO_PREREQS),
+    latest("parking", ParkingData, () => NO_PARKING),
+    // The dining halls' hours, for their places' pages; the map works without them
+    latest("menus", MenusIndex, (): MenusIndex => ({ fetched: 0, halls: [], hours: {}, diets: [], contains: [], days: {}, search: "", files: [] }))
   ])
   const graph = r(() => loadGraph(network.value))
   const gazetteer = r(() => gazetteerData.value.places)
@@ -43,7 +57,7 @@ export const loadMapData = async () => {
       ...gazetteer.value.map(({ name, at: [lon, lat] }) => ({ lat, lon, name }))
     ], CAMPUS)
   })
-  return { feed, model, tiles, style, gazetteer, buildings, walks, searchPlaces }
+  return { feed, model, tiles, style, gazetteer, buildings, walks, searchPlaces, events, coursesIndex, prereqsIndex, parking, menus }
 }
 
 export type MapData = Awaited<ReturnType<typeof loadMapData>>

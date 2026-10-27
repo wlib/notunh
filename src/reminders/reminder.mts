@@ -3,18 +3,21 @@
 // (reminderOf). The phone works out when to leave, which is the itinerary's own start, and how long before the first
 // bus to be woken (leadTime), asks the Worker to watch that bus that far ahead, or to wake it at the leave time
 // where there's no bus (watchOf), and when the Worker pushes what it foretells, works out what that means for the
-// trip (meaningOf) and words it (textOf). Every push says something, as iOS requires
+// trip (meaningOf) and words it (textOf). Every push says something, as iOS requires. A reminder may be for a visit
+// (src/shared/visit.mts), as from an event's or a class's page, and a class's carries a queue of the visits after it
+// (queue.mts), which the phone moves on to as each is told of
 
 import * as v from "valibot"
 import { clockOf } from "../shared/time.mts"
 import { type Feed, routeLabel } from "../transit/feed.mts"
-import { type Itinerary, wayKey } from "../routing/plan.mts"
+import { type Itinerary, cost, wayKey } from "../routing/plan.mts"
 import { walkAllowance } from "../routing/walks.mts"
 import { slack } from "../transit/models/forecast.mts"
 import { type Watch, Wake } from "./watch.mts"
+import { Visit, thereBy } from "../shared/visit.mts"
 
 /** A place as planned from or to, and whether it was where you were, which a replan takes from where you are then */
-const Place = v.object({ lat: v.number(), lon: v.number(), name: v.string(), isYou: v.optional(v.literal(true)) })
+export const Place = v.object({ lat: v.number(), lon: v.number(), name: v.string(), isYou: v.optional(v.literal(true)) })
 
 /** A leg as kept: a walk, with s allowed for it and where it ends, or a ride, with the bus's run and stop by the timetable's ids and as the map shows them */
 export const Leg = v.variant("kind", [
@@ -54,7 +57,9 @@ export const Reminder = v.object({
    * s the first bus may run late before the rest of the trip no longer holds: the least of each change's slack, less
    * the next bus's own, and of what's left before `by`, or none with neither a change nor a `by`
    */
-  margin:  v.optional(v.number())
+  margin:  v.optional(v.number()),
+  /** The visit it's for, if it's for one rather than a trip planned on the map, whose way is then whichever's best when it's planned again */
+  visit:   v.optional(Visit)
 })
 export type Reminder = v.InferOutput<typeof Reminder>
 
@@ -62,8 +67,21 @@ export type Reminder = v.InferOutput<typeof Reminder>
 export const STATES = ["setting", "set", "cancelling"] as const
 export type State = typeof STATES[number]
 
-/** A reminder as kept on the phone: where it stands, and the last push shown for it, which a push older than it defers to */
-export const Kept = v.object({ ...Reminder.entries, state: v.picklist(STATES), last: v.optional(Wake) })
+/** A visit still to come in a class reminder's queue, with where it is as the map had it, which the service worker can't look up */
+export const Target = v.object({ visit: Visit, to: Place })
+export type Target = v.InferOutput<typeof Target>
+
+/**
+ * The visits a class reminder goes on to after the one it's for (queue.mts): the section they're of, by the id the
+ * courses give it, kept on the phone alone; the next ones, soonest first; whether those reach the section's last
+ * meeting, or more were left for a later top-up; s door to door as last planned, which a visit not yet planned is
+ * left that long before; and epoch seconds the current visit was moved on to, before which a push is of one before
+ */
+export const Queue = v.object({ section: v.string(), next: v.array(Target), complete: v.boolean(), travel: v.number(), since: v.number() })
+export type Queue = v.InferOutput<typeof Queue>
+
+/** A reminder as kept on the phone: where it stands, the last push shown for it, which a push older than it defers to, and for a class, its queue */
+export const Kept = v.object({ ...Reminder.entries, state: v.picklist(STATES), last: v.optional(Wake), queue: v.optional(Queue) })
 export type Kept = v.InferOutput<typeof Kept>
 
 /** s, the heads-up before you have to leave, as a reminder is by default, and the ones to choose from */
@@ -106,17 +124,31 @@ export const isTooSoon = ({ start, headsUp }: Pick<Reminder, "start" | "headsUp"
 export const isCurrent = ({ state, end }: Pick<Kept, "state" | "end">, now: number) =>
   state !== "cancelling" && end > now
 
+/** The best of some ways there, as `options` ranks them, which a visit's reminder takes as nobody picked one */
+export const bestOf = (options: Itinerary[], now: number, by: number | undefined) =>
+  options.toSorted((a, b) => cost(a, now, by) - cost(b, now, by))[0] as Itinerary | undefined
+
 /**
  * A kept trip planned again as of `now`, from the ways there now: its own way if that's still offered, else the
- * best. None where that doesn't get there by its time, as the ways fall back to leaving now when nothing makes it,
- * or is too soon to be reminded of, as the card would never offer
+ * best, or for a visit, whichever's best now. None where that doesn't get there by its time, as the ways fall back
+ * to leaving now when nothing makes it, or is too soon to be reminded of, as the card would never offer
  */
 export const replanned = (feed: Feed, reminder: Kept, options: Itinerary[], now: number): Reminder | undefined => {
-  const same = options.find(option => wayKey(option) === reminder.way) ?? options[0]
+  const same = reminder.visit ? bestOf(options, now, reminder.by) : options.find(option => wayKey(option) === reminder.way) ?? options[0]
   if (!same || (reminder.by !== undefined && same.end > reminder.by))
     return
-  const fresh = reminderOf(feed, same, reminder.id, now, { headsUp: reminder.headsUp, by: reminder.by })
+  const fresh = reminderOf(feed, same, reminder.id, now, { headsUp: reminder.headsUp, by: reminder.by, visit: reminder.visit })
   return isTooSoon(fresh, now) ? undefined : fresh
+}
+
+/**
+ * The reminder for a visit not planned yet, as one the service worker moves on to or one set before where you are
+ * is known: no legs, left `travel` s before the time to be there by, which is the last plan's length, until the map
+ * plans it from where you are
+ */
+export const unplanned = (id: string, from: Reminder["from"], { visit, to }: Target, travel: number, headsUp = HEADS_UP): Reminder => {
+  const by = Math.round(thereBy(visit) / 1000)
+  return { id, from, to, way: "", legs: [], start: by - Math.round(travel), end: by, by, headsUp, visit }
 }
 
 /**
@@ -126,7 +158,7 @@ export const replanned = (feed: Feed, reminder: Kept, options: Itinerary[], now:
  * when the planner counts on catching the next, which is its departure less the slack its time needs, and of
  * what's left before `by`
  */
-export const reminderOf = (feed: Feed, itinerary: Itinerary, id: string, now: number, { headsUp = HEADS_UP, by }: { headsUp?: number, by?: number } = {}): Reminder => {
+export const reminderOf = (feed: Feed, itinerary: Itinerary, id: string, now: number, { headsUp = HEADS_UP, by, visit }: { headsUp?: number, by?: number, visit?: Visit } = {}): Reminder => {
   const placeOf = ({ lat, lon, name, isYou }: v.InferOutput<typeof Place> & { isYou?: boolean }): v.InferOutput<typeof Place> => ({ lat, lon, name, ...isYou && { isYou: true as const } })
   const legs = itinerary.legs.map((leg): Leg => {
     if (leg.kind === "walk")
@@ -170,7 +202,8 @@ export const reminderOf = (feed: Feed, itinerary: Itinerary, id: string, now: nu
     end:     itinerary.end,
     ...by !== undefined && { by },
     headsUp,
-    ...slacks.length && { margin: Math.min(...slacks) }
+    ...slacks.length && { margin: Math.min(...slacks) },
+    ...visit && { visit }
   }
 }
 
@@ -221,12 +254,25 @@ const drift = (delay: number) => {
   return minutes <= -1 ? ` (${-minutes} min early)` : ""
 }
 
+/** What the last push a class reminder's queue holds says besides, when more were left for the phone to find */
+export const LAST_KNOWN = "That was the last one I knew; open notunh to keep going."
+
+/** Whether a kept reminder is the last its queue knows of, with more meetings still to come that the phone hasn't seen */
+const isLastKnown = ({ queue }: Pick<Kept, "queue">) =>
+  queue !== undefined && !queue.next.length && !queue.complete
+
 /**
  * What a push's notification says, or without the reminder kept here, as when it's been forgotten, only to look.
  * Terse: when to leave, the first bus and how it's running, the walk, and where the trip ends up and when, only
- * while the rest of it still holds, else to open notunh. Where it goes is said here alone, never by the Worker
+ * while the rest of it still holds, else to open notunh. Where it goes is said here alone, never by the Worker. The
+ * last of a class's queue says so, while more meetings may follow
  */
 export const textOf = (wake: Wake, reminder: Kept | undefined, now: number): { title: string, body: string } => {
+  const text = wordsOf(wake, reminder, now)
+  return reminder && isLastKnown(reminder) ? { ...text, body: `${text.body} ${LAST_KNOWN}` } : text
+}
+
+const wordsOf = (wake: Wake, reminder: Kept | undefined, now: number): { title: string, body: string } => {
   if (!reminder)
     return { title: "Time to head out", body: "Open notunh for your trip." }
   const { to: { name: to }, by } = reminder
@@ -241,10 +287,13 @@ export const textOf = (wake: Wake, reminder: Kept | undefined, now: number): { t
   if (meaning.kind === "missing")
     return ride
       ? { title: `${bus} may not be coming`, body: `notunh doesn't see the ${clockOf(ride.expected * 1000)} at ${ride.stopName}. ${another}` }
-      : { title: "Time to leave has passed", body: `Your ${clockOf(reminder.start * 1000)} walk to ${to} is past. ${another}` }
+      : { title: "Time to leave has passed", body: `Your ${clockOf(reminder.start * 1000)} ${reminder.legs.length ? "walk" : "trip"} to ${to} is past. ${another}` }
   const { kind, eta, band, isLive } = meaning
   const leave = leaveAt(reminder, eta, band)
   const { delay, holds } = delayOf(reminder, eta)
+  // A visit not planned yet goes by the last plan's length, so its way is the map's to say
+  if (!reminder.legs.length)
+    return { title: leaveIn(leave, now), body: `${reminder.end > reminder.start ? `About ${minutesOf(reminder.end - reminder.start)} min to ${to}, there` : `Be at ${to}`} by ${clockOf(reminder.end * 1000)}.` }
   const walk = `${minutesOf(walkOf(reminder))} min walk`
   if (!ride)
     return { title: leaveIn(leave, now), body: `${walk} to ${to}, there ${clockOf(reminder.end * 1000)}${by === undefined ? "" : `, before your ${clockOf(by * 1000)}`}.` }

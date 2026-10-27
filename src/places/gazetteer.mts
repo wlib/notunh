@@ -8,6 +8,7 @@ import { type Coordinates, type Point, distance } from "../geo/projection.mts"
 import * as photon from "./photon.mts"
 import { arrayOf } from "../shared/json.mts"
 import { Made } from "../shared/made.mts"
+import { withAdded } from "./added.mts"
 
 export type GazetteerPlace = {
   name: string,
@@ -23,8 +24,11 @@ export type GazetteerPlace = {
   entrances?: Coordinates[]
 }
 
-/** The gazetteer as the map's page loads it: every place, and where they came from */
-export const Gazetteer = v.object({ made: Made, places: arrayOf<GazetteerPlace>() })
+/** The gazetteer as the map's page loads it: every place, with those added.mts names that it doesn't yet, and where they came from */
+export const Gazetteer = v.pipe(
+  v.object({ made: Made, places: arrayOf<GazetteerPlace>() }),
+  v.transform(gazetteer => ({ ...gazetteer, places: withAdded(gazetteer.places) }))
+)
 export type Gazetteer = v.InferOutput<typeof Gazetteer>
 
 // The keys tagging the kinds of things people mean by a tap or a search, rather than the bench or path beside it,

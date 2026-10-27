@@ -13,7 +13,7 @@ import type { Run } from "../src/transit/models/forecast.mts"
 import { type ObservedRow, decode, observe } from "../src/transit/observations/raw.mts"
 import { NO_FORECAST, forecastOfSample } from "../src/transit/observations/predictions.mts"
 import { runsAt, scheduledOnly, scheduledRuns, seenOf } from "../src/reminders/forecast.mts"
-import { type Seen, type Wake, type Watched, FURTHEST, GONE, WAKE_VERSION, Watch, check, pushOf, replaced, retried } from "../src/reminders/watch.mts"
+import { type Seen, type Wake, type Watched, FURTHEST, FURTHEST_FIXED, GONE, WAKE_VERSION, Watch, check, pushOf, replaced, retried } from "../src/reminders/watch.mts"
 import { buildOf } from "../src/shell/manifest.mts"
 import { localDay } from "../src/shared/time.mts"
 import { getOrCreate } from "../src/shared/group.mts"
@@ -215,7 +215,7 @@ export class Reminders implements DurableObject {
         return new Response(`At most ${MAX_REMINDERS} reminders at once`, { status: 409 })
       if (ask.watch.at + GONE < now / 1000)
         return new Response("The time has gone", { status: 400 })
-      if (ask.watch.at > now / 1000 + FURTHEST)
+      if (ask.watch.at > now / 1000 + (ask.watch.run ? FURTHEST : FURTHEST_FIXED))
         return new Response("Too far ahead", { status: 400 })
       const { endpoint, keys } = ask.subscription
       this.ctx.storage.sql.exec(TABLES)

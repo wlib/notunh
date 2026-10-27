@@ -21,7 +21,7 @@ export type Build = {
 /**
  * What a data file asks the cache to keep beyond itself:
  * - required: files it can't work without, staged with it before its page is kept, like the map style's style.json
- * - files: files kept if they're cached, like the dining index's, which load as they're opened
+ * - files: files kept if they're cached, like the dining, courses and prerequisites indexes', which load as they're opened
  * - folders: whole folders by path prefix, like the tiles' and the style's
  */
 export const Retain = v.object({ required: v.optional(v.array(v.string())), files: v.optional(v.array(v.string())), folders: v.optional(v.array(v.string())) })

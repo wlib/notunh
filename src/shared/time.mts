@@ -75,6 +75,12 @@ export const addDays = (day: Day, days: number): Day =>
 export const daysBetween = (from: Day, to: Day) =>
   Math.round((noonOf(to) - noonOf(from)) / DAY)
 
+/** Epoch ms of a time of day, "HH:MM", as it next comes on Durham's clock after `now`: today's, or tomorrow's once that's past */
+export const nextAt = (time: string, now: number) => {
+  const today = atClock(localDay(now), time)
+  return today > now ? today : atClock(addDays(localDay(now), 1), time)
+}
+
 /** 0 for Monday through 6 for Sunday */
 export const weekday = (day: Day) =>
   (new Date(noonOf(day)).getUTCDay() + 6) % 7

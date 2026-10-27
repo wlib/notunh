@@ -1,19 +1,82 @@
 import "maplibre-gl/dist/maplibre-gl.css"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
-import { Map as MapLibre, AttributionControl, NavigationControl, addProtocol, setWorkerUrl } from "maplibre-gl"
+import { Map as MapLibre, AttributionControl, Marker, NavigationControl, addProtocol, setWorkerUrl } from "maplibre-gl"
 import { watch } from "bruh/reactive"
 import type { StyleSpecification } from "maplibre-gl"
 import type { Coordinates } from "../../geo/projection.mts"
 import type { MapState } from "../state/map.mts"
 import { DRAWN_ICONS, glyphsFrom, hostedAt, upstreamGlyphs } from "../basemap/style.mts"
 import { PROTOCOL, tileLoader } from "../basemap/tiles.mts"
-import { framing } from "./camera.mts"
+import { type Aim, type Show, aimed, framing } from "./camera.mts"
+import { viewOf } from "../state/page.mts"
+import type { Place } from "../../places/search.mts"
 import { DENSITY, poiIcon } from "./icons.mts"
 import { addLayers, drawLayers } from "./layers.mts"
 import { drawItinerary } from "./itinerary.mts"
 import { type Tap, dropPins, listenForTaps } from "./taps.mts"
 import { animateBuses } from "./buses.mts"
 import { showYou } from "./you.mts"
+
+/**
+ * The place of the page the sheet shows, marked with its label, and today's other labels hidden meanwhile, so it's
+ * the one place named
+ */
+const showFocus = (map: MapLibre, state: MapState) => {
+  const element = document.createElement("div")
+  element.className = "focus-marker"
+  const marker = new Marker({ element, anchor: "center" })
+  watch([state.page, state.focus], () => {
+    const focus = state.focus.value?.view === viewOf(state.page.value) ? state.focus.value : undefined
+    map.setLayoutProperty("event-labels", "visibility", focus ? "none" : "visible")
+    if (!focus)
+      return void marker.remove()
+    const { place: { lon, lat }, label } = focus
+    element.textContent = label
+    marker.setLngLat([lon, lat]).addTo(map)
+  })
+}
+
+/** Where a trip's end is, or "you" wherever you've got to */
+const endKey = (place: Place | undefined) =>
+  place?.isYou ? "you" : place && `${place.lat},${place.lon}`
+
+/**
+ * The camera follows the page shown and nothing else: its place, its stop, or for directions the whole trip. It
+ * moves once as a page opens, and again only when what that page shows is another place or trip (aimed in
+ * camera.mts), so a trip planned again with fresher times, a clock tick, or a page no longer shown never moves it
+ */
+const followPage = (map: MapLibre, state: MapState, show: Show) => {
+  let held: Aim | undefined
+  watch(() => {
+    const page = state.page.value
+    const view = viewOf(page)
+    const focus = state.focus.value?.view === view ? state.focus.value : undefined
+    const stop = page?.kind === "stop" ? state.feed.value.stops[state.selectedStop.value ?? -1] : undefined
+    const paths = page?.kind === "directions" && state.itinerary.value ? state.legPaths.value : []
+    const all = paths.flatMap(path => path.coordinates)
+    const spot = focus?.place ?? stop
+    const target =
+      spot       ? `${spot.lon},${spot.lat}` :
+      all.length ? `${endKey(state.from.value)} ${endKey(state.to.value)} ${state.selected.value}` :
+                   undefined
+    const { held: next, move } = aimed(held, { view, target })
+    held = next
+    if (!move)
+      return
+    if (spot)
+      show(padding => map.easeTo({ center: [spot.lon, spot.lat], zoom: Math.max(map.getZoom(), 16), padding }))
+    else {
+      const lons = all.map(([lon]) => lon)
+      const lats = all.map(([, lat]) => lat)
+      // maplibre fits bounds within the padding it was given and the map's own padding together, so the panel's
+      // is set as the map's alone
+      show(padding => {
+        map.setPadding(padding)
+        map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { maxZoom: 16.5 })
+      })
+    }
+  })
+}
 
 // maplibre finds its worker with a computed URL that vite can't see, so bundle it as a worker explicitly
 setWorkerUrl(workerUrl)
@@ -90,18 +153,11 @@ export const createMap = (
 
   map.on("load", () => {
     addLayers(map)
-    listenForTaps(map, state.buildings, onTap)
+    listenForTaps(map, state, onTap)
     drawLayers(map, state)
-    drawItinerary(map, state, show)
-
-    // Once for each stop selected, and not again as a newer timetable renumbers it
-    watch([state.selectedStopId], () => {
-      const stop = state.feed.peek().stops.find(stop => stop.id === state.selectedStopId.value)
-      if (!stop)
-        return
-      const zoom = Math.max(map.getZoom(), 16)
-      show(padding => map.easeTo({ center: [stop.lon, stop.lat], zoom, padding }))
-    })
+    drawItinerary(map, state)
+    showFocus(map, state)
+    followPage(map, state, show)
 
     busPosition = animateBuses(map, state.feed, state.drawn, state.focusedBuses)
     drawYou()

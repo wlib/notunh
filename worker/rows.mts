@@ -15,6 +15,7 @@ import { latest, polls, roomSnapshots, samples, transitions } from "./schema.mts
 import { MODELS, throughs } from "./models.mts"
 import { expired } from "./derived.mts"
 import type { Env } from "./env.mts"
+import { pruneSocial } from "./social.mts"
 
 export type Entry = {
   table:     SQLiteTable,
@@ -127,8 +128,9 @@ export const archivedSpans = (today: Day, archived: readonly Day[], window: numb
 /**
  * Drops laundry's transitions and polls older than RETAIN_DAYS, counting back from the day of today, the samples of
  * days the archive has older than RETAIN_ARCHIVED_DAYS, what's derived from days past keeping (derived.mts), and
- * laundry's records of rooms no longer listed and of machines no longer in their room's snapshot, where it has one.
- * A day's samples are never dropped before the archive has it, however long that takes
+ * laundry's records of rooms no longer listed and of machines no longer in their room's snapshot, where it has one,
+ * and pins long over and link codes expired (social.mts). A day's samples are never dropped before the archive has
+ * it, however long that takes
  */
 export const prune = (env: Env, today: Day, archived: readonly Day[] = []) => {
   const db = drizzle(env.DB)
@@ -148,7 +150,8 @@ export const prune = (env: Env, today: Day, archived: readonly Day[] = []) => {
         sql`not exists (${snapshot(latest.room)} and exists (select 1 from json_each(${roomSnapshots.machines}) where json_extract(value, '$.id') = ${latest.machine}))`
       )
     )),
-    db.delete(roomSnapshots).where(notInArray(roomSnapshots.room, rooms))
+    db.delete(roomSnapshots).where(notInArray(roomSnapshots.room, rooms)),
+    ...pruneSocial(db, Date.now())
   ])
 }
 

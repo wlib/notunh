@@ -4,7 +4,7 @@ import { r } from "bruh/reactive"
 import type { Counts, Kind, Machine } from "../infer.mts"
 import { roomName } from "../rooms.mts"
 import { favorites, hourOfWeek, toggleFavorite, usually } from "../state.mts"
-import { ClockTime, Count, Plural } from "../../shell/intl.tsx"
+import { ClockTime, Count, Counted } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 
 export const plural = (kind: Kind) =>
@@ -44,7 +44,7 @@ export const Free = ({ kind, counts, now }: { kind: Kind, counts: Counts, now: n
   <>
     <strong class={{ live: counts.free > 0 }}><Count value={counts.free} /></strong>
     {" of "}
-    <Plural value={counts.total} one={<><Count value={1} /> {kind}</>} other={<><Count value={counts.total} /> {plural(kind)}</>} />
+    <Counted value={counts.total} one={kind} other={plural(kind)} />
     {" free"}
     {counts.nextAt !== undefined && <>, <Next counts={counts} now={now} /></>}
   </>

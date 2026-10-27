@@ -1,4 +1,4 @@
-// Keeping the camera clear of the panel, and the screen's scale
+// Keeping the camera clear of the panel, following the page shown, and the screen's scale
 
 /** Meters a screen pixel spans at a latitude and zoom, for maplibre's 512 px tiles */
 export const metersPerPixel = (lat: number, zoom: number) =>
@@ -54,4 +54,23 @@ export const framing = (container: HTMLElement, panel: HTMLElement): Show => {
     // After this flush's DOM updates, so the panel has its new size
     queueMicrotask(frame)
   }
+}
+
+/**
+ * What the camera is aimed at: the view of the page shown, by its link, and what of it to show, by a key, or nothing
+ * yet, as while its place or its trip is still to come
+ */
+export type Aim = { view: string, target?: string }
+
+/**
+ * Where the camera's aim goes next, and whether it moves: only for the page shown, once when it opens with something
+ * to show, and again only when what it shows is another thing. Something gone for a moment, as a trip being planned
+ * again, is still what it was, so its coming back doesn't move the map
+ */
+export const aimed = (held: Aim | undefined, next: Aim): { held: Aim, move: boolean } => {
+  if (held?.view !== next.view)
+    return { held: next, move: next.target !== undefined }
+  if (next.target === undefined || next.target === held.target)
+    return { held, move: false }
+  return { held: next, move: true }
 }

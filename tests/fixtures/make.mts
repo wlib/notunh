@@ -2,9 +2,14 @@
 // They're small, real-shaped copies of every file upstream would give, laid out as the repository is. Offline builds
 // install them in place of the inputs and map data (scripts/inputs.mts). The timetable is cut to the campus
 // connectors, and the menus to each hall's first two days and each meal's first two stations. The models are empty, and the style is Liberty as the tests
-// have it, with no sprite or fonts. The walk, gazetteer, and rooms are whole
+// have it, with no sprite or fonts. The walk, gazetteer, and rooms are whole. The events, the courses, the
+// prerequisites, and the parking areas are made as the inputs make them, from the trimmed answers beside the data
+// (../events/, ../courses/ with its made-up addresses, ../programs/ and ../parking/), as of one fixed day, so they're
+// the same whenever they're made
 
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
+import * as v from "valibot"
 import { gunzipSync } from "node:zlib"
 import type { StyleSpecification } from "maplibre-gl"
 import type { FeedData } from "../../src/transit/feed.mts"
@@ -14,11 +19,29 @@ import { bundle as bundleUsual, emptyLearned } from "../../src/laundry/model.mts
 import { publish } from "../../scripts/dining/publish.mts"
 import { bundle } from "../../scripts/map/style.mts"
 import { FIXTURES } from "../../scripts/files.mts"
+import { Gazetteer } from "../../src/places/gazetteer.mts"
+import { placeMatcher } from "../../src/social/aliases.mts"
+import { EVENTS, from25Live, fromAthletics, fromDserec, fromPresence, merged } from "../../src/social/sources.mts"
+import { COURSES } from "../../src/courses/course.mts"
+import { fromLive25 } from "../../src/courses/calendar.mts"
+import { placeOfCode } from "../../src/courses/buildings.mts"
+import { Page, importTerm, pageRead } from "../../src/courses/registrar.mts"
+import { publish as publishCourses } from "../../scripts/map/courses.mts"
+import { prerequisitesOf } from "../../src/programs/catalog.mts"
+import { PREREQS } from "../../src/programs/prereqs.mts"
+import { publishPrereqs, readPages, readPrograms } from "../../scripts/programs/prereqs.mts"
+import { withTitles } from "../../src/programs/requirements.mts"
+import { PARKING } from "../../src/parking/sources.mts"
+import { cached, parkingOf } from "../../scripts/map/parking.mts"
 
 const REPO = new URL("../../", import.meta.url)
 const ROUTES = ["Gables", "WestEdge"]
 const DAYS = 2
 const STATIONS = 2
+/** The day the fixtures are as of, Saturday 24 October 2026 */
+const MADE = Date.UTC(2026, 9, 24)
+/** The registrar's terms the fixtures have answers for: Fall 2026, J-Term and Spring 2027 */
+const TERMS = ["202610", "202630", "202650"]
 
 const read = async <T,>(path: string): Promise<T> =>
   JSON.parse(await readFile(new URL(path, REPO), "utf8"))
@@ -90,7 +113,44 @@ await write("src/dining/menus.json", menus.index)
 for (const [name, json] of menus.files)
   await write(`public${DATA_PATH}${name}.json`, JSON.parse(json))
 
+const fixture = (path: string) =>
+  readFile(new URL(`../${path}`, FIXTURES), "utf8")
+
+// The events, read from the calendars' trimmed answers as the build reads the whole ones, placed as the build places
+// them, on the gazetteer with the places added to it
+const gazetteer = v.parse(Gazetteer, await read("src/map/gazetteer.json"))
+const names = gazetteer.places.map(place => place.name)
+const match = placeMatcher(names)
+const events = merged([fromPresence(JSON.parse(await fixture("events/presence.json")), match), from25Live(JSON.parse(await fixture("events/25live.json")), match), fromAthletics(await fixture("events/athletics.ics"), match), fromDserec(JSON.parse(await fixture("events/dserec.json")), match)], 0)
+await write(EVENTS, { fetched: MADE, events })
+
+// The courses, each term's answer read a hundred rows a page as the API gives them, published as of that day: Fall
+// live, J-Term and Spring to come
+const place = placeOfCode(new Set(names))
+const imported = await Promise.all(TERMS.map(async code => {
+  const page = v.parse(Page, JSON.parse(await fixture(`courses/courses-${code}.json`)))
+  const pages = Array.from({ length: Math.ceil(page.data.length / 100) }, (_, i) => pageRead({ ...page, data: page.data.slice(i * 100, i * 100 + 100) }, MADE))
+  return importTerm(code, pages, place)
+}))
+const courses = await publishCourses(imported, fromLive25(JSON.parse(await fixture("courses/25live.json")), MADE), MADE)
+await write(COURSES, courses.index)
+for (const [file, json] of courses.files)
+  await write(`public${file}`, JSON.parse(json))
+
+// The prerequisites of the subjects whose catalog pages are kept, and the programs whose pages are
+const { pages } = await readPages(fileURLToPath(new URL("../programs/", FIXTURES)))
+const { data: prereqsData } = prerequisitesOf(pages, MADE)
+const titles = new Map(pages.flatMap(page => page.courses.map(course => [course.code, course.title] as const)))
+const programs = withTitles(await readPrograms(fileURLToPath(new URL("../programs/programs/", FIXTURES))), prereqsData, titles)
+const prereqs = await publishPrereqs(prereqsData, programs)
+await write(PREREQS, prereqs.index)
+for (const [file, json] of prereqs.files)
+  await write(`public${file}`, JSON.parse(json))
+
+// The parking areas, checked against the copies of their sources kept
+await write(PARKING, (await parkingOf(await cached(), MADE)).data)
+
 await write("src/laundry/rooms.json", await read("src/laundry/rooms.json"))
 await write("src/laundry/usual.json", bundleUsual(emptyLearned()))
 
-console.log(`Fixtures in ${FIXTURES.pathname}: ${ROUTES.length} routes, and ${menus.files.size} dining files for ${DAYS} days a hall`)
+console.log(`Fixtures in ${FIXTURES.pathname}: ${ROUTES.length} routes, ${menus.files.size} dining files for ${DAYS} days a hall, ${events.length} events, ${courses.index.terms.length} terms, ${Object.keys(prereqsData.courses).length} courses' prerequisites, ${programs.length} programs`)

@@ -7,6 +7,14 @@ import { r, watch, type DerivativeNode } from "bruh/reactive"
 
 // In localStorage where the browser allows it. Storage can throw, as in private browsing or when full, and what
 // comes back may have been written by an older version of the app, so it's read as unknown
+//
+// What's yours of it (SYNCED in src/shared/sync.mts) is kept for you by the Worker too, with this as its cache:
+// read here, offline included, written here first, each write stamped with when and by which browser, and sent up by
+// sync.mts, which brings back what's newer from your other devices. Its stamps and what's still to send are one
+// entry beside the values, SYNC
+
+import { type Entries, type Key, type Stamp, SYNCED, isSynced } from "../shared/sync.mts"
+import { randomBase64Url } from "../shared/base64url.mts"
 
 /** A remembered value, or null if there's none or it can't be read */
 export const stored = (key: string): unknown => {
@@ -25,13 +33,97 @@ export const store = (key: string, value: unknown) => {
   catch {}
 }
 
+/** The entry with what's yours: who this browser is to its stamps, each key's stamp, and the keys still to send */
+const SYNC = "sync"
+
+type Sync = { by: string, stamps: Partial<Record<Key, Stamp>>, pending: Key[] }
+
+const isStamp = (value: unknown): value is Stamp => {
+  const { at, by }: { at?: unknown, by?: unknown } = Object(value)
+  return typeof at === "number" && typeof by === "string"
+}
+
+/**
+ * What's kept of the syncing. A browser that kept things before it did has them sent, stamped at 0, so anything
+ * written since on another device wins over them, and they reach a device that has none
+ */
+export const syncing = (): Sync => {
+  const found: { by?: unknown, stamps?: unknown, pending?: unknown } = Object(stored(SYNC))
+  if (typeof found.by === "string") {
+    const stamps = Object.fromEntries(Object.entries(Object(found.stamps)).filter(([key, stamp]) => isSynced(key) && isStamp(stamp)))
+    const pending = Array.isArray(found.pending) ? found.pending.filter(isSynced) : []
+    return { by: found.by, stamps, pending }
+  }
+  const by = randomBase64Url(12)
+  const kept = SYNCED.filter(key => stored(key) !== null)
+  const sync: Sync = { by, stamps: Object.fromEntries(kept.map(key => [key, { at: 0, by }])), pending: kept }
+  store(SYNC, sync)
+  return sync
+}
+
+/** What's yours to send: each key still pending, as kept, with its stamp */
+export const pendingEntries = (): Entries => {
+  const { stamps, pending } = syncing()
+  return Object.fromEntries(pending.flatMap(key => stamps[key] ? [[key, { ...stamps[key], value: stored(key) }]] : []))
+}
+
+/** What follows each synced key's value on this page, to show what's taken from another device */
+const followers = new Map<string, Set<(value: unknown) => void>>()
+
+/** What hears of a write of yours, to send it */
+const written = new Set<() => void>()
+export const onWritten = (heard: () => void) => {
+  written.add(heard)
+  return () => written.delete(heard)
+}
+
+/** Takes values newer than this browser's, as the Worker had them from your other devices, with their stamps */
+export const take = (entries: Entries, pending: readonly Key[]) => {
+  const sync = syncing()
+  for (const [key, entry] of Object.entries(entries) as [Key, NonNullable<Entries[Key]>][]) {
+    store(key, entry.value)
+    sync.stamps[key] = { at: entry.at, by: entry.by }
+    for (const follow of followers.get(key) ?? [])
+      follow(entry.value)
+  }
+  store(SYNC, { ...sync, pending })
+}
+
+/** Stamps a write of this browser's to a key that's yours, to be sent */
+const stampWrite = (key: Key) => {
+  const sync = syncing()
+  // Never earlier than what it replaces, so a clock set back can't lose a write to an older one
+  const at = Math.max(Date.now(), (sync.stamps[key]?.at ?? 0) + 1)
+  store(SYNC, { ...sync, stamps: { ...sync.stamps, [key]: { at, by: sync.by } }, pending: [...new Set([...sync.pending, key])] })
+  for (const heard of written)
+    heard()
+}
+
 /**
  * A value remembered between visits under a key. Stored values go through read, since they may be anything, and
- * values to store go through write when they aren't JSON as they are
+ * values to store go through write when they aren't JSON as they are. One that's yours is stamped as it's written,
+ * not as it's first read, and follows what's taken from your other devices
  */
 export const remembered = <T,>(key: string, read: (stored: unknown) => T, write: (value: T) => unknown = value => value) => {
   const value = r(read(stored(key)))
-  watch([value], () => store(key, write(value.value)))
+  let isFirst = true
+  watch([value], () => {
+    const json = write(value.value)
+    const isChange = !isFirst && JSON.stringify(json) !== JSON.stringify(stored(key))
+    isFirst = false
+    store(key, json)
+    if (isChange && isSynced(key))
+      stampWrite(key)
+  })
+  // What's taken is kept as this page reads it, so reading it isn't a write of its own
+  if (isSynced(key)) {
+    const follow = (taken: unknown) => {
+      const next = read(taken)
+      store(key, write(next))
+      value.value = next
+    }
+    followers.set(key, (followers.get(key) ?? new Set()).add(follow))
+  }
   return value
 }
 

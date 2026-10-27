@@ -4,13 +4,17 @@
 // as cancelling until the Worker hears, and whatever the Worker hasn't heard is asked again when the map loads or the
 // phone comes back online. iOS asks for permission only straight from a tap, so the service worker and the Worker's
 // key are made ready beforehand, and the tap subscribes at once
-// (https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers)
+// (https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers).
+// A reminder is the phone's own, for a trip or a visit, whatever's saved or marked going. A class's carries a queue of
+// the visits after it (src/reminders/queue.mts), moved on as each passes, and topped up from the courses as pages open
 
 import { r } from "bruh/reactive"
-import { type Kept, type Reminder, firstRide, watchOf } from "../../reminders/reminder.mts"
+import { type Kept, type Queue, type Reminder, firstRide } from "../../reminders/reminder.mts"
 import { SHIFT } from "../../reminders/watch.mts"
+import { type Locate, type Resolver, toppedUp } from "../../reminders/queue.mts"
 import * as api from "../../reminders/browser/api.mts"
 import * as store from "../../reminders/browser/store.mts"
+import { moveOn, setKept } from "../../reminders/browser/sync.mts"
 
 /** Whether this browser can be reminded: by push, once notunh is on the Home Screen, as iOS pushes only to web apps there (https://webkit.org/blog/13878/), or not at all */
 export const support = (): "push" | "install" | "none" => {
@@ -57,10 +61,9 @@ const isSubscribed = async () =>
 /** Tells the Worker what a kept reminder is waiting on, and keeps its answer, but for a refusal, which is the caller's to make good */
 const tell = async (reminder: Kept, device: store.Device, subscribed: PushSubscriptionJSON | undefined) => {
   if (reminder.state === "setting" && subscribed) {
-    const answer = await api.set(device, reminder.id, { subscription: subscribed, watch: watchOf(reminder) })
-    // One the Worker took that can't be kept as set stays setting, and is set again with the same id later
-    if (answer.kind === "done")
-      await store.transition(reminder.id, "setting", "set").then(show, () => {})
+    const { answer, reminders } = await setKept(reminder, device, subscribed)
+    if (reminders)
+      show(reminders)
     return answer
   }
   if (reminder.state === "cancelling" && (await api.cancel(device, reminder.id)).kind === "done")
@@ -68,11 +71,15 @@ const tell = async (reminder: Kept, device: store.Device, subscribed: PushSubscr
 }
 
 /**
- * Shows what's kept, less reminders of buses long gone, and catches the Worker up on what it hasn't heard. A device
- * the Worker may still know, which pushes no longer reach, is forgotten on both sides
+ * Shows what's kept, less reminders of buses long gone, and catches the Worker up on what it hasn't heard. A class
+ * reminder past its visit unheard goes on to its next first. Reminders pushes no longer reach are dropped on both
+ * sides, the Worker told while any are kept; the device itself stays, as it's also what pins and marks are made as
  */
 const catchUp = async () => {
   const now = Date.now() / 1000
+  for (const { id, queue } of await store.reminders())
+    if (queue)
+      await moveOn(id, now, undefined)
   for (const { id, start } of await store.reminders())
     if (start < now - KEPT)
       await store.forget(id)
@@ -81,7 +88,8 @@ const catchUp = async () => {
   if (!device)
     return
   if (!await isSubscribed()) {
-    await api.forget(device)
+    if (kept.peek().size)
+      await api.forget(device)
     show(await store.forgetAll())
     return
   }
@@ -102,12 +110,13 @@ window.addEventListener("online", () => {
 
 /**
  * Sets a reminder, given what's ready, which a tap's handler must call straight away for iOS to ask for permission:
- * kept here as setting first, then set with the Worker. Rejects only for one that can't be kept or the Worker refuses
+ * kept here as setting first, then set with the Worker. A class's comes with its queue (queueOf). Rejects only for
+ * one that can't be kept or the Worker refuses
  */
-export const remind = async ({ registration, key }: Ready, reminder: Reminder) => {
+export const remind = async ({ registration, key }: Ready, reminder: Reminder, queue?: Queue) => {
   const subscribed = (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })).toJSON()
   const device = await store.device()
-  const setting: Kept = { ...reminder, state: "setting" }
+  const setting: Kept = { ...reminder, state: "setting", ...queue && { queue } }
   show(await store.keep(setting))
   const answer = await tell(setting, device, subscribed)
   if (answer?.kind === "refused") {
@@ -130,9 +139,10 @@ export const isAhead = ({ start, by, last, state }: Kept, now: number) =>
   state !== "cancelling" && last === undefined && start > now && (by === undefined || by > now)
 
 /**
- * Plans each kept trip still ahead again, as given, and where its leave time has moved by SHIFT or its first bus has
- * changed, keeps the fresh plan under the same id and tells the Worker, which takes it as a replace. One the Worker
- * hasn't taken yet is told of as it is. One it refuses is kept as it was, as the Worker still holds that watch
+ * Plans each kept trip still ahead again, as given, and where it wasn't planned yet, its leave time has moved by
+ * SHIFT or its first bus has changed, keeps the fresh plan under the same id and tells the Worker, which takes it as
+ * a replace. One the Worker hasn't taken yet is told of as it is. One it refuses is kept as it was, as the Worker
+ * still holds that watch
  */
 export const replan = async (again: (kept: Kept) => Reminder | undefined) => {
   const device = await store.deviceKept()
@@ -144,12 +154,35 @@ export const replan = async (again: (kept: Kept) => Reminder | undefined) => {
     if (!isAhead(reminder, now))
       continue
     const fresh = again(reminder)
-    if (!fresh || (Math.abs(fresh.start - reminder.start) < SHIFT && busOf(fresh) === busOf(reminder)))
+    // One not planned yet, as a class's next visit, takes its plan whatever it moves
+    if (!fresh || (reminder.legs.length && Math.abs(fresh.start - reminder.start) < SHIFT && busOf(fresh) === busOf(reminder)))
       continue
-    const setting: Kept = { ...fresh, id: reminder.id, state: "setting" }
+    const setting: Kept = { ...fresh, id: reminder.id, state: "setting", ...reminder.queue && { queue: { ...reminder.queue, travel: fresh.end - fresh.start } } }
     show(await store.keep(setting))
     if ((await tell(setting, device, subscribed))?.kind === "refused")
       show(await store.keep(reminder))
+  }
+}
+
+/**
+ * Tops up every class reminder's queue from its section as the courses have it now, given where each visit is on
+ * the map, as a page that has them opens. A visit it's for that's changed, as for a room change, is replaced, and the
+ * Worker told under the same id, which it takes as a replace
+ */
+export const topUp = async (resolve: Resolver, locate: Locate) => {
+  await loadKept()
+  const device = await store.deviceKept()
+  const now = Date.now() / 1000
+  for (const { id, queue } of kept.peek().values()) {
+    if (!queue)
+      continue
+    const visits = resolve(queue.section)
+    const changed = visits && await store.amend(id, reminder => toppedUp(reminder, visits, locate, now))
+    if (!changed)
+      continue
+    show(await store.reminders())
+    if (changed.state === "setting" && device && (await tell(changed, device, await subscription()))?.kind === "refused")
+      show(await store.forget(id))
   }
 }
 

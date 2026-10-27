@@ -2,6 +2,10 @@
 // leave the map, about half the screen, or taller for long directions. It's also lifted above the on-screen keyboard,
 // which iOS draws over the page rather than making room for
 //
+// Each detent is a height of its own, whatever the page shown: what's in the sheet never sizes it, so going from a
+// long page to a short one, a field's suggestions coming and going, or a trip being planned leaves it where it was.
+// Only a drag, the grabber, or something new asking a lowered sheet up moves it
+//
 // It only ever moves by translate, which the compositor handles on its own. While dragged or sliding between detents,
 // its box is the taller of the heights involved, slid down to show the right amount. Once still, the box is swapped
 // for the detent's own height in a single frame, so no frame of the motion has to lay out or paint its content
@@ -37,14 +41,12 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   /** px the content is translated down by, to stay put on screen while the box around it grows or shrinks */
   let shift = 0
 
-  /** The tallest the panel may be at half and tall, in px */
+  /** The panel's height at half and tall, in px, tall never under half, as the keyboard leaves less room */
   const caps = () => {
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize)
     const room = app.clientHeight - keyboard - parseFloat(getComputedStyle(panel).getPropertyValue("--safe-top"))
-    return {
-      half: Math.min(app.clientHeight * 0.45, 40 * rem, room),
-      tall: room - MAP_LEFT * rem
-    }
+    const half = Math.min(app.clientHeight * 0.45, 40 * rem, room)
+    return { half, tall: Math.max(half, room - MAP_LEFT * rem) }
   }
 
   /** px of the panel that show when lowered: its header, and the padding below that clears the home indicator */
@@ -96,8 +98,8 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     set("--sheet-max", Math.max(from, cap))
     const height = box()
     const scroll = panel.scrollTop
-    // The box is as tall as either end of the slide, so the shorter end is the cap unless the content is shorter
-    const extent = to === "lowered" ? cap : Math.min(height, cap)
+    // The box is as tall as either end of the slide
+    const extent = Math.min(height, cap)
     set("--sheet-drop", height - from)
     shiftTo(scroll - scrolled)
     // Flushed, so the slide starts from here rather than from where the last one was headed
@@ -118,13 +120,20 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     grabber.setAttribute("aria-label", detent.value === "lowered" ? "Raise the panel" : "Lower the panel")
     move()
   })
-  // The sheet's own slides resize it too, and rest after them anyway
+  // The room it has changing sets it at its detent again, and what it shows changing size only says whether there's
+  // anything to scroll. The sheet's own slides resize it too, and rest after them anyway
   const resized = new ResizeObserver(() => {
     if (!drag && !panel.classList.contains("moving"))
       rest()
   })
   for (const element of [app, panel, header])
     resized.observe(element)
+  const observeShown = () => {
+    for (const child of panel.children)
+      resized.observe(child)
+  }
+  new MutationObserver(observeShown).observe(panel, { childList: true })
+  observeShown()
 
   // Anything taking focus in the sheet, like a field, needs it up
   panel.addEventListener("focusin", raise)
@@ -171,7 +180,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
       scrolled,
       content,
       lowered: loweredExtent(),
-      half: Math.min(content, half),
+      half,
       tall: height
     }
     show(from)
@@ -204,7 +213,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     let next = current
     if (event.type !== "pointercancel") {
       if (Math.abs(extent - from) >= SLOP) {
-        // The nearest height to where it's headed, with half winning when the content isn't long enough to be taller
+        // The nearest height to where it's headed
         const headed = extent + velocity * FLICK_MS
         const heights: [Detent, number][] = [["half", half], ["lowered", lowered], ["tall", tall]]
         next = heights.reduce((a, b) => Math.abs(b[1] - headed) < Math.abs(a[1] - headed) ? b : a)[0]

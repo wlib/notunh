@@ -1,6 +1,7 @@
 // The map's sheet on a phone holds still: searching lays its suggestions over the week without taking it away or
-// changing the sheet's size, the sheet keeps its height from page to page, Directions and Back included, unless it's
-// dragged, and the camera follows the page shown alone, never one left behind as the clock ticks on
+// changing the sheet's size, and the sheet keeps its height from page to page, Directions and Back included, unless
+// it's dragged. The camera following only the page shown is tested in tests/map/camera.test.mts and page.test.mts, as
+// the fixtures' map never loads, having no tiles
 
 import { test as base, expect, devices, type Page } from "@playwright/test"
 import { type Fixture, startFixture } from "./fixture.mts"
@@ -115,33 +116,4 @@ test("the sheet keeps its height through Directions and Back, from home and from
   await holds(page, tall)
   await back.tap()
   await holds(page, tall)
-})
-
-test("the camera stays on the page shown: a page left behind, ticking on, never takes the map back to its place", async ({ page, fixture }) => {
-  const start = Date.now()
-  await page.clock.install({ time: start })
-  await page.clock.resume()
-  await withEvent(page, start)
-  await open(page, fixture.origin, `/map/?event=${HONORS}`)
-  const marker = page.locator(".focus-marker")
-  await expect(marker).toHaveText(/^Huddleston Hall/)
-
-  // Back, then Kingsbury Hall from the search
-  await page.locator(".back").tap()
-  await page.getByPlaceholder("Search campus").tap()
-  await page.getByPlaceholder("Search campus").fill("Kingsbury Hall")
-  await page.getByRole("option", { name: "Kingsbury Hall", exact: true }).dispatchEvent("pointerup")
-  await expect(page.getByRole("heading", { name: "Kingsbury Hall" })).toBeVisible()
-  await expect(marker).toHaveText("Kingsbury Hall")
-  await page.waitForTimeout(1500)
-  const there = (await marker.boundingBox())!
-
-  // The event's page, left behind, runs on as the clock ticks, and the map stays where it is
-  for (let minute = 0; minute < 4; minute++) {
-    await page.clock.fastForward(60_000)
-    await page.waitForTimeout(300)
-    await expect(marker).toHaveText("Kingsbury Hall")
-    const now = (await marker.boundingBox())!
-    expect(Math.abs(now.x - there.x) + Math.abs(now.y - there.y)).toBeLessThan(2)
-  }
 })

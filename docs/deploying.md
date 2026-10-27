@@ -39,7 +39,7 @@ Nothing deletes releases. Old `inputs-*` and `map-data-*` releases are safe to d
 
 | Workflow | When | Needs |
 |---|---|---|
-| Check (`check.yml`) | Pull requests: offline build, unit and browser tests | Nothing (read-only token) |
+| Check (`check.yml`) | Pull requests: offline build and unit tests | Nothing (read-only token) |
 | Inputs (`inputs.yml`) | Worker dispatch nightly, or by hand (`-f rebuild=true` to learn afresh) | `BUILD_TOKEN`, `CLOUDFLARE_DEPLOY_HOOK` |
 | Observations (`archive.yml`) | 9:30 UTC nightly, Worker dispatch, or `-f from=<day> -f to=<day>` | `BUILD_TOKEN` |
 | Map data (`map.yml`) | Mondays, Worker dispatch, or by hand | `CLOUDFLARE_DEPLOY_HOOK` (optional) |

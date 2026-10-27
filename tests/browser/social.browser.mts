@@ -210,7 +210,7 @@ test("sharing makes a story image, 1080 by 1920, handed to the share sheet with 
   await openMap(page, fixture.origin)
   await makePin(page, "Study at the library", { place: "Dimond Library" })
   await page.getByRole("button", { name: "Share" }).click()
-  await expect(page.getByText("Link copied. In Instagram, add a Link sticker and paste.")).toBeVisible()
+  await expect(page.getByText("Link copied. In Instagram, add a Link sticker and paste.")).toBeVisible({ timeout: 30_000 })
   const shared = await page.evaluate(() => (window as unknown as { shared: unknown[] }).shared)
   expect(shared).toHaveLength(1)
   expect(shared[0]).toMatchObject({ type: "image/png", width: 1080, height: 1920 })

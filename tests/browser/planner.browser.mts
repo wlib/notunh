@@ -17,7 +17,7 @@ const { defaultBrowserType, ...phone } = devices["iPhone 13"]
 test.use({ ...phone, proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" } })
 
 test("a tap on a suggestion chooses it, a drag over one doesn't, and the trip's other end isn't suggested", async ({ page, fixture }) => {
-  await page.goto(`${fixture.origin}/map/?directions`)
+  await page.goto(`${fixture.origin}/map/directions`)
   await page.getByRole("button", { name: "No", exact: true }).click()
   const [from, to] = [page.getByPlaceholder("Search or tap the map"), page.getByPlaceholder("Where to?")]
   const options = page.getByRole("option")

@@ -1,7 +1,6 @@
-// The one link-preview image every pin's page names (p/index.html.tsx): a 1200 by 630 card saying what a pin is,
-// made by hand with `node scripts/pin-image.mts` and kept in public/social/ like the pages' own. One image for every
-// pin rather than one each, as nothing on the free plan rasterizes an image per request, and the words of the
-// preview, its title and line, come from the pin itself (worker/social.mts)
+// The link-preview image the pin page names as built (p/index.html.tsx): a 1200 by 630 card saying what a pin is,
+// made by hand with `node scripts/pin-image.mts` and kept in public/social/ like the pages' own. A pin's own page is
+// headed with a card of its own (worker/preview.mts), so this is only what the page says of no pin in particular
 
 import { writeFile } from "node:fs/promises"
 import sharp from "sharp"

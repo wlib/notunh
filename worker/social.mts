@@ -506,42 +506,9 @@ social.get("/api/me", async c => {
   return c.json({ person: who.person, verified: await verifiedOf(drizzle(c.env.DB), who.person, Date.now()) ?? null }, 200, { "cache-control": "no-store" })
 })
 
-//#region The pin page
-
-const escaped = (text: string) =>
-  text.replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[char]!)
-
-const clock = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit" })
-
-/** What a link preview says of a pin, like "Thu 7:00 PM · Memorial Union Building · 3 going" */
-export const describePin = (pin: Pin) =>
-  [isUnset(pin) ? "Time to pick" : clock.format(pin.start), pin.place ?? pin.where, pin.going ? `${pin.going} going` : ""].filter(Boolean).join(" · ")
-
-/** The pin page's HTML with a pin's title, description, and URL in its head, for link previews, which the app fills in */
-export const withPin = (html: string, pin: Pin) => {
-  const title = `${pin.title} · notunh`
-  const description = describePin(pin)
-  const named: Record<string, string> = {
-    "og:title": title, "twitter:title": title,
-    "og:description": description, "twitter:description": description,
-    "og:url": pin.url
-  }
-  return html
-    .replace(/<title>[^<]*<\/title>/, () => `<title>${escaped(title)}</title>`)
-    .replace(/<meta (name|property)="([^"]+)" content="[^"]*"/g, (tag, attribute: string, name: string) => name in named ? `<meta ${attribute}="${name}" content="${escaped(named[name])}"` : tag)
-}
-
-// A pin's own page: the built page, with the pin in its head for previews, and 404 for a pin gone or hidden
-social.get("/p/:id", async c => {
-  const id = c.req.param("id")
-  const pin = v.is(ID, id) ? await readPin(drizzle(c.env.DB), id, undefined) : undefined
-  const page = await c.env.ASSETS.fetch(new URL("/p/", c.req.url))
-  if (!pin || !page.ok)
-    return c.notFound()
-  return c.html(withPin(await page.text(), pin), 200, { "cache-control": "public, max-age=60" })
-})
-
-//#endregion
+/** A pin anyone may read by its id, or none for an id that isn't one, or a pin gone or hidden */
+export const publicPin = (db: D1Database, id: string) =>
+  v.is(ID, id) ? readPin(drizzle(db), id, undefined) : Promise.resolve(undefined)
 
 /** Drops pins long over, with everything of theirs, and codes expired, as the nightly prune */
 export const pruneSocial = (db: ReturnType<typeof drizzle>, now: number) =>

@@ -353,10 +353,12 @@ export const start = (scope: Scope) => {
       return
 
     // Pages: the cached copy right away, revalidated behind it. Without one, or without a cache that opens, the
-    // network's. A captive portal's page is skipped for the cached home page when there is one
+    // network's. A captive portal's page is skipped for the cached home page when there is one. The network's is the
+    // page itself, as a revalidation asks for it, never the address opened: a pin's, or one of the map's pages, is the
+    // page with that link's preview in its head (worker/preview.mts), which isn't the page to keep
     if (request.mode === "navigate") {
       const page = pageOf(url.pathname)
-      const fresh = fetchPage(url.href)
+      const fresh = fetchPage(new URL(page, url).href)
       event.waitUntil(serially(() => revalidate(page, fresh)).catch(() => {}))
       event.respondWith(
         open()

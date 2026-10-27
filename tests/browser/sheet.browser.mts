@@ -118,7 +118,7 @@ test("the sheet keeps its height through Directions and Back, from home and from
   await back.tap()
   await holds(page, half)
 
-  await page.goto(fixture.origin + "/map/?place=Kingsbury+Hall")
+  await page.goto(fixture.origin + "/map/place/Kingsbury+Hall")
   await holds(page, half)
   await page.locator(".view-actions").getByRole("button", { name: "Directions" }).tap()
   await expect(page.getByPlaceholder("Where to?")).toHaveValue("Kingsbury Hall")
@@ -223,7 +223,7 @@ test("Back, the sheet's or the browser's, returns to the week and to a place's e
 })
 
 test("a trip's ends are marked on the map only while its directions are shown, though Back keeps the trip", async ({ page, fixture }) => {
-  await open(page, fixture.origin, "/map/?place=Kingsbury+Hall")
+  await open(page, fixture.origin, "/map/place/Kingsbury+Hall")
   const ends = page.locator(".maplibregl-marker:not(.focus-marker)")
   await page.locator(".view-actions").getByRole("button", { name: "Directions" }).tap()
   await expect(page.getByPlaceholder("Where to?")).toHaveValue("Kingsbury Hall")

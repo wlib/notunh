@@ -3,7 +3,7 @@
 import { watch, type Reactive, type SourceNode } from "bruh/reactive"
 import { Marker, type Map as MapLibre, type MapGeoJSONFeature } from "maplibre-gl"
 import type { Place } from "../../places/search.mts"
-import type { Page } from "../state/page.mts"
+import type { Page } from "../link.mts"
 import { type GazetteerPlace, type MapHints, nameAt, placeAt } from "../../places/gazetteer.mts"
 import type { Building } from "../../places/buildings.mts"
 import { nearestOnLine, toLine } from "../../geo/lines.mts"

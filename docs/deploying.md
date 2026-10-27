@@ -1,10 +1,10 @@
 # Deploying
 
-The site and API are one Cloudflare Worker (`wrangler.jsonc`), on Workers Paid, serving the built pages as static assets, with D1 as its database. Workers Builds builds `main` on every push and whenever a workflow POSTs the Deploy Hook, running `npm run build` then `npm run deploy`; keep the steps in `package.json` so the dashboard never needs editing.
+The site and API are one Cloudflare Worker (`wrangler.jsonc`) on Workers Paid, serving the built pages as static assets, with D1. Workers Builds builds `main` on every push and Deploy Hook POST, running `npm run build` then `npm run deploy`; keep the steps in `package.json`, never the dashboard.
 
 ## The pipeline
 
-Each step makes one thing and the next takes it as made, pinned by version. What each keeps is in [storage.md](storage.md).
+Each step makes one thing the next takes as made, pinned by version; what each keeps is in [storage.md](storage.md).
 
 | Step | Runs | Makes |
 |---|---|---|
@@ -14,26 +14,26 @@ Each step makes one thing and the next takes it as made, pinned by version. What
 | Inputs | `inputs.yml`, nightly | `inputs-<version>` releases and their pointer, then the Deploy Hook |
 | Build | Workers Builds | The site and the Worker |
 
-**Inputs** is the site's nightly clock, started by the Worker's 4:17 AM cron. It acquires the timetable, style, events, courses, menus, laundry rooms, parking areas and prerequisites (`node scripts/data.mts acquire`), runs the tests, learns the bus and laundry models through the Worker (`learn --store`), builds the site to check it all, publishes the release, and POSTs the Deploy Hook.
+**Inputs** is the site's nightly clock, started by the Worker's 4:17 AM cron. It acquires the timetable, style, events, courses, menus, laundry rooms, parking areas and prerequisites (`node scripts/data.mts acquire`), runs the tests, learns the bus and laundry models through the Worker (`learn --store`), builds the site to check it, publishes, and POSTs the Deploy Hook.
 
-- If upstream is down, nothing is published and the site keeps its inputs.
-- If one learner stalls, the other still runs; compatible previous or empty outputs may be published, and the run fails afterward. A required model or asset missing blocks publication.
-- Installation validates the whole bundle before clearing the old sources, so fixtures never fill gaps in production inputs.
-- Rerunning a publication retries the Deploy Hook even if the pointer already moved.
+- Upstream down: nothing is published, and the site keeps its inputs.
+- One learner stalled: the other still runs; compatible previous or empty outputs may be published, then the run fails. A missing required model or asset blocks publication.
+- Installation validates the whole bundle before clearing the old sources, so fixtures never fill production gaps.
+- A rerun retries the Deploy Hook even if the pointer already moved.
 
-**Releases.** A generation is published only when its pointer doesn't already name it (`stage` in `scripts/release.mts`), so overlapping runs can't double-publish. It's immutable once its manifest is up (`.github/actions/publish`); one left without is filled in again. Pointers (`latest.json`) and `catalog.json` go up last. The catalog is only merged into, so the Worker never prunes a day whose archive isn't whole, and each Archive run takes every settled day D1 has that the catalog lacks, oldest first, catching up after failures.
+**Releases.** A generation is published only if its pointer doesn't name it (`stage` in `scripts/release.mts`), so overlapping runs can't both publish, and is immutable once its manifest is up (`.github/actions/publish`); one left without is filled in again. Pointers (`latest.json`) and `catalog.json` go up last. The catalog is only merged into, so the Worker never prunes a day whose archive isn't whole, and each Archive run takes every settled day D1 has that the catalog lacks, oldest first, catching up after failures.
 
-Nothing deletes releases. Old `inputs-*` and `map-data-*` releases are safe to delete by hand once no build pins them and you won't rebuild an old site with its own inputs.
+Nothing deletes releases. Old `inputs-*` and `map-data-*` ones may be deleted by hand once no build pins them and no old site will be rebuilt with its own.
 
 ## Build and deploy
 
-1. `prebuild` installs the inputs and map data the pointers name (`scripts/inputs.mts`), keeps what the site serves now beside them for open tabs, matches places, and runs the typecheck and tests. It needs no secrets and writes only its own folder, so any branch's build is safe.
+1. `prebuild` installs the inputs and map data the pointers name (`scripts/inputs.mts`), keeps what's served now beside them for open tabs, matches places, and runs the typecheck and tests. Needing no secrets and writing only its own folder, any branch's build is safe.
 2. `vite build`, then `postbuild` (`scripts/search.mts`) writes the sitemap and IndexNow's key file.
 3. `predeploy` applies D1 migrations (`npm run db:migrate`). A failed migration stops the deploy.
 4. `wrangler deploy` ships the Worker and site together.
 5. `postdeploy` (`scripts/indexnow.mts`) submits changed pages to IndexNow, on Workers Builds' deploys of `main` only.
 
-`/inputs.json` names the inputs and map data a site was built from. Migrations run while the previous Worker still serves ([worker.md](worker.md#schema-changes)).
+`/inputs.json` names a site's inputs and map data.
 
 ## Workflows and secrets
 
@@ -44,21 +44,21 @@ Nothing deletes releases. Old `inputs-*` and `map-data-*` releases are safe to d
 | Observations (`archive.yml`) | 9:30 UTC nightly, Worker dispatch, or `-f from=<day> -f to=<day>` | `BUILD_TOKEN` |
 | Map data (`map.yml`) | Mondays, Worker dispatch, or by hand | `CLOUDFLARE_DEPLOY_HOOK` (optional) |
 
-`node scripts/secrets.mts check` says whether each secret is set.
+`node scripts/secrets.mts check` says which secrets are set.
 
-- **Worker**: `BUILD_TOKEN`; `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`, which reminders are pushed with; and `GITHUB_TOKEN`, fine-grained with Actions read and write on this repository, for the nightly cron to start Observations, Inputs, and Map data on Mondays. Inputs has no schedule of its own, as GitHub pauses schedules after 60 days without a commit. Without `GITHUB_TOKEN` the site keeps its last inputs, map data goes stale, and samples pile up in D1 until archiving resumes.
-- **GitHub `production` environment** (`main` only): `BUILD_TOKEN`, and `CLOUDFLARE_DEPLOY_HOOK`, a Workers Builds deploy hook URL for `main`. Inputs and Map data record each run as a deployment of notunh.app.
+- **Worker**: `BUILD_TOKEN`; `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`, for reminders' pushes; and `GITHUB_TOKEN`, fine-grained with Actions read and write here, for the nightly cron to start Observations, Inputs, and Map data on Mondays. Inputs has no schedule of its own, as GitHub pauses schedules after 60 days without a commit. Without it the site keeps its last inputs, map data goes stale, and samples pile up in D1 till archiving resumes.
+- **GitHub `production` environment** (`main` only): `BUILD_TOKEN`, and `CLOUDFLARE_DEPLOY_HOOK`, a Workers Builds deploy hook for `main`. Inputs and Map data record each run as a deployment of notunh.app.
 
-`BUILD_TOKEN` is on both sides and in `.dev.vars`, so change it only with `node scripts/secrets.mts rotate`, which sets all three. `node scripts/secrets.mts vapid` makes push keys where missing: the Worker's pair, never shown and never replaced (a new pair cuts off every subscribed device), and another for `.dev.vars`.
+`BUILD_TOKEN` is on both sides and in `.dev.vars`; change it only with `node scripts/secrets.mts rotate`, which sets all three. `node scripts/secrets.mts vapid` makes push keys where missing: the Worker's pair, never shown or replaced (a new pair cuts off every subscribed device), and another for `.dev.vars`.
 
-**Email** needs no secret: codes go through Email Service's `send_email` binding once `notunh.app` is onboarded as a sending domain ([social.md](social.md#sending-the-code)); until then, sending a code answers 502.
+**Email** needs no secret: codes go through Email Service's `send_email` binding once `notunh.app` is onboarded for sending ([social.md](social.md#sending-the-code)); till then, sending one answers 502.
 
 ## Rolling back
 
-Clients never step back to a release older than theirs ([offline.md](offline.md)), so `wrangler rollback` only reaches new visitors. To go back for everyone, publish the old release again:
+Clients never step back to an older release ([offline.md](offline.md)), so `wrangler rollback` reaches only new visitors. To go back for everyone, publish the old release again:
 
 - rebuild its commit with the `NOTUNH_INPUTS` and `NOTUNH_MAP_DATA` its `/inputs.json` names, or
-- stamp a folder an old build wrote with `node scripts/republish.mts <folder>`, run `npm run db:migrate`, then `wrangler deploy --assets <folder>`.
+- stamp an old build's folder with `node scripts/republish.mts <folder>`, run `npm run db:migrate`, then `wrangler deploy --assets <folder>`.
 
 Worker versions don't roll D1 back.
 
@@ -68,11 +68,11 @@ Worker versions don't roll D1 back.
 
 ## Search and sharing
 
-- Each page's title, description and structured data are in `src/shell/pages.mts`; `src/shell/Head.tsx` makes the canonical URL, Open Graph and Twitter cards, and JSON-LD (`WebSite` on the home page, a `WebApplication` on each).
-- `/map/`, `/dining/` and `/laundry/` render their header and description on the server, and laundry every room as a link, so crawlers see more than an empty `#app`. `src/shell/ui.tsx` renders on either side: `#jsx` resolves to bruh's browser or server JSX (`imports` in `package.json`).
-- Laundry rooms (`/laundry/<room>/`) are the laundry page itself, canonical `/laundry/`, and not in the sitemap.
-- Link previews are `public/social/<page>.png`, made by hand with `npm run social` since Workers Builds has no browser: Playwright screenshots the dev server (the map staged by `src/map/social.mts`), and `scripts/social.mts` lays out each 1200×630 card from the page's `label` and `shows` in `pages.mts`. Events' `/p/` pages share `public/social/pin.png` (`scripts/pin-image.mts`).
-- A page's sitemap `lastmod` moves only when the page differs from the one served by more than its release.
-- Google reads the sitemap named in `robots.txt`; Cloudflare's managed robots.txt prepends its content signals to `public/robots.txt`.
+- Each page's title, description and structured data are in `src/shell/pages.mts`; `src/shell/Head.tsx` makes the canonical URL, Open Graph and Twitter cards, and JSON-LD (`WebSite` on the home, `WebApplication` on each).
+- `/map/`, `/dining/` and `/laundry/` render their header and description on the server, laundry every room as a link, so crawlers see more than an empty `#app`. `src/shell/ui.tsx` renders on either side: `#jsx` resolves to bruh's browser or server JSX (`imports` in `package.json`).
+- Laundry rooms (`/laundry/<room>/`) are the laundry page, canonical `/laundry/`, not in the sitemap.
+- Pages' link previews are `public/social/<page>.png`, made by hand with `npm run social` (no browser on Workers Builds): Playwright shoots the dev server (the map staged by `src/map/social.mts`), and `scripts/social.mts` lays out each 1200×630 card from `label` and `shows` in `pages.mts`.
+- Shared pages preview as what they're of: `/p/<id>` and the map's, `/map/event/<id>`, `place/`, `section/` and the rest (`worker/preview.mts`). From the data the map's head names (`worker/site.mts`), the Worker heads it with a title, line (`src/social/preview.mts`) and card, `/map/card/<page>?v=<hash of its words>`, drawn by bundled Satori and resvg in Inter (`worker/card.mts`), edge-cached by URL; bump `LOOK` for a new look. Else it's the page as built.
+- A page's sitemap `lastmod` moves only when it differs from the one served by more than release. Google reads the sitemap `robots.txt` names; Cloudflare prepends its content signals to `public/robots.txt`.
 
 Set up once, by hand: the `notunh.app` domain property in Google Search Console (TXT record in Cloudflare DNS, then submit `https://notunh.app/sitemap.xml`), and Bing Webmaster Tools imported from it.

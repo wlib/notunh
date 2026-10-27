@@ -3,8 +3,8 @@
 // over the top and bottom. Drawn on a canvas here on the phone, so nothing is rendered by a server, and shared as a
 // file where the browser can, else downloaded; the link is put on the clipboard either way, for the link sticker
 
-import { SURFACE } from "../shell/theme.mts"
-import { type Event, type Pin, pinPath } from "./event.mts"
+import { LIGHT, SURFACE } from "../shell/theme.mts"
+import { type Event, type Pin, pinPath, whereOf } from "./event.mts"
 import { isUnset } from "./marks.mts"
 import { encode } from "./qr.mts"
 import { TIME_ZONE } from "../shared/time.mts"
@@ -12,8 +12,7 @@ import { TIME_ZONE } from "../shared/time.mts"
 const STORY = { width: 1080, height: 1920 }
 /** What's covered by Instagram's own bars, top and bottom */
 const SAFE = 250
-const INK = "#23262e"
-const MUTED = "#6b7280"
+const { text: INK, muted: MUTED } = LIGHT
 
 const when = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, weekday: "long", month: "short", day: "numeric" })
 const clock = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, hour: "numeric", minute: "2-digit" })
@@ -93,7 +92,7 @@ const storyImage = async (event: Event | Pin, origin: string): Promise<Blob> => 
   y += 76
   context.fillStyle = MUTED
   font(500, 48)
-  for (const line of wrapped(context, [event.place, event.where].filter((part, i, parts) => part && parts.indexOf(part) === i).join(" · ") || "Place to be decided", width, 2)) {
+  for (const line of wrapped(context, whereOf(event), width, 2)) {
     context.fillText(line, margin, y)
     y += 62
   }

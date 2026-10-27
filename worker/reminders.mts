@@ -14,11 +14,11 @@ import { type ObservedRow, decode, observe } from "../src/transit/observations/r
 import { NO_FORECAST, forecastOfSample } from "../src/transit/observations/predictions.mts"
 import { runsAt, scheduledOnly, scheduledRuns, seenOf } from "../src/reminders/forecast.mts"
 import { type Seen, type Wake, type Watched, FURTHEST, FURTHEST_FIXED, GONE, WAKE_VERSION, Watch, check, pushOf, replaced, retried } from "../src/reminders/watch.mts"
-import { buildOf } from "../src/shell/manifest.mts"
 import { localDay } from "../src/shared/time.mts"
 import { getOrCreate } from "../src/shared/group.mts"
 import { type Vapid, Subscription, push } from "./push.mts"
 import type { Env } from "./env.mts"
+import { dataOf, siteBuild } from "./site.mts"
 
 /** ms a device is kept after its last reminder ends */
 export const FORGET_MS = 30 * 86_400_000
@@ -64,18 +64,15 @@ const sites = new Map<string, Promise<Site>>()
 
 /** The site's timetable and model, from the map page's head, which is the build's own manifest (src/shell/manifest.mts), parsed once a release */
 const siteOf = async (assets: Fetcher): Promise<Site> => {
-  const page = await assets.fetch("https://notunh.app/map/")
-  if (!page.ok)
-    throw new Error(`The map page is ${page.status}`)
-  const { release, data } = buildOf(await page.text())
+  const { release, data } = await siteBuild(assets)
   if (!data.gtfs || !data.model)
     throw new Error("The map page names no timetable or model")
   const key = `${release} ${data.gtfs} ${data.model}`
   if (!sites.has(key))
     sites.clear()
   const site = getOrCreate(sites, key, () => Promise.all([
-    assets.fetch(new URL(data.gtfs, "https://notunh.app").href).then(loadFeed),
-    assets.fetch(new URL(data.model, "https://notunh.app").href).then(response => response.json()).then(asModel)
+    dataOf(assets, data.gtfs, loadFeed),
+    dataOf(assets, data.model, response => response.json().then(asModel))
   ]).then(([feed, model]) => ({ release, feed, model, scheduled: new Map() })))
   site.catch(() => sites.delete(key))
   return site

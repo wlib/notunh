@@ -122,10 +122,11 @@ export const placeOf = (gazetteer: readonly GazetteerPlace[], name: string | und
 export const placeNames = (gazetteer: readonly GazetteerPlace[]) =>
   [...new Set(gazetteer.map(place => place.name))].sort((a, b) => a.localeCompare(b, "en"))
 
+/** Where an event is, its place and where in it, the place said once where the where already names it */
+export const whereOf = ({ place, where }: Pick<Event, "place" | "where">) =>
+  (place && !where.startsWith(place) ? [place, where].filter(Boolean).join(" · ") : where || place) || "Place to be decided"
+
 /** A pin's page */
 export const pinPath = (id: string) =>
   `/p/${encodeURIComponent(id)}`
 
-/** An event's page on the map, with Directions, Remind and parking for it (src/map/state/page.mts) */
-export const mapPath = (id: string) =>
-  `/map/?event=${encodeURIComponent(id)}`

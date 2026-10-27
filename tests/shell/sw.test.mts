@@ -58,17 +58,19 @@ test("pages taken in at once keep all they name, though one's pruning comes whil
   }))
 })
 
-test("a page we have comes from the cache at once, however long the network takes, which is checked behind it, past the browser's cache", async () => {
+test("a page we have comes from the cache at once, however long the network takes, which is checked behind it by its own path, past the browser's cache", async () => {
   let answer: (response: Response) => void = () => {}
   const inits: (RequestInit | undefined)[] = []
   const sw = worker((path, init) => {
-    if (path !== "/map/?to=dining/philbrook")
+    // The page itself, never the address opened, which may be the page with a link's preview in its head
+    expect(path).not.toContain("?")
+    if (path !== "/map/")
       return Promise.resolve(file(path))
     inits.push(init)
     return new Promise(resolve => answer = resolve)
   }, [window("/map/", ["/assets/old-AAAAAAAA.js"]), { path: "/" }, { path: "/laundry/adams-tower/" }])
   sw.entries.set("/map/", page(["/assets/old-AAAAAAAA.js"], { gtfs: "/assets/gtfs-AAAAAAAA.json" }))
-  const { response, done } = sw.navigate("/map/?to=dining/philbrook")
+  const { response, done } = sw.navigate("/map/place/Kingsbury+Hall")
   expect(await textOf(response)).toContain("old-AAAAAAAA")
   expect(inits).toEqual([{ cache: "no-cache", signal: expect.any(AbortSignal) }])
 
@@ -167,6 +169,8 @@ test("offline, a page is the copy we have, else the home page", async () => {
   expect(await textOf(sw.navigate("/map/").response)).toContain("home-AAAAAAAA")
   sw.entries.set("/map/", page(["/assets/map-AAAAAAAA.js"]))
   expect(await textOf(sw.navigate("/map/").response)).toContain("map-AAAAAAAA")
+  // Each of the map's pages is the map
+  expect(await textOf(sw.navigate("/map/section/202610/12496").response)).toContain("map-AAAAAAAA")
 })
 
 test("every laundry room is the laundry page, kept once, and offline from any room, even one there's no such room as", async () => {

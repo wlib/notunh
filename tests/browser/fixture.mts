@@ -1,9 +1,9 @@
 // A server that serves one release of the built site at a time, as the real origin does across deploys, with the
 // headers Cloudflare gives static assets: its own, and the build's _headers over them. It can be told to publish
 // another, to go offline, as a phone with no signal sees it, to answer a path with an error, or to send data files
-// slowly, as a phone on a poor signal gets them. Given a Worker's origin (tests/worker/serve.mts), it hands the API
-// and the pins' pages to it, as Cloudflare runs the Worker first for those; without one, the API is down. The
-// releases are made from one build. B renames the dining page's entry chunk and bumps the release, as newer code
+// slowly, as a phone on a poor signal gets them. Given a Worker's origin (tests/worker/serve.mts), it hands the API,
+// the pins' pages and the map's to it, as Cloudflare runs the Worker first for those; without one, the API is down.
+// The releases are made from one build. B renames the dining page's entry chunk and bumps the release, as newer code
 // would. C renames the dining index too and changes a hall's name in it, as newer data would. D is C with a service
 // worker of other bytes, as a release changing the worker itself would be. R is A published again after them all, as
 // rolling back to it is (scripts/republish.mts).
@@ -58,15 +58,19 @@ const headerRules = (dist: string) => {
   return (pathname: string) => Object.assign({}, ...rules.filter(({ path }) => path.test(pathname)).map(({ headers }) => headers))
 }
 
-/** The page a path is served by, as the Worker serves them: each laundry room's is the laundry page */
+/** The page a path is served by, as the Worker serves them: each laundry room's is the laundry page, each of the map's pages the map */
 const pageFileOf = (pathname: string) => {
-  const page = pathname.startsWith("/laundry/") ? "/laundry/" : pathname
+  const page = pathname.startsWith("/laundry/") ? "/laundry/" : pathname.startsWith("/map/") ? "/map/" : pathname
   return page.endsWith("/") ? `${page}index.html` : undefined
 }
 
-/** Whether the Worker answers a path before the assets: the API, and each pin's page, but not the pin page itself */
-const isWorkerFirst = (pathname: string) =>
-  pathname.startsWith("/api/") || /^\/p\/.+/.test(pathname)
+/**
+ * Whether the Worker answers a path before the assets: the API, each pin's page and each of the map's, but not the pin
+ * page or the map itself (run_worker_first in wrangler.jsonc). Without a Worker, a map's page is the map, as the Worker
+ * answers one it can't preview
+ */
+const isWorkerFirst = (pathname: string, hasWorker: boolean) =>
+  pathname.startsWith("/api/") || /^\/p\/.+/.test(pathname) || hasWorker && /^\/map\/.+/.test(pathname)
 
 type Release = { pages: Map<string, string>, files: Map<string, Buffer> }
 
@@ -141,7 +145,7 @@ export const startFixture = async (dist: string, { isUsageOrigin = false, worker
       return request.socket.destroy()
     if (statuses.has(pathname))
       return response.writeHead(statuses.get(pathname)!).end()
-    if (isWorkerFirst(pathname)) {
+    if (isWorkerFirst(pathname, worker !== undefined)) {
       if (!worker)
         return response.writeHead(503).end()
       const chunks: Buffer[] = []

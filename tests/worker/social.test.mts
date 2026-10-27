@@ -8,7 +8,7 @@ import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
 import { app } from "../../worker/api.mts"
 import type { Env } from "../../worker/env.mts"
-import { HIDE, MAX_PINS_A_DAY, describePin, withPin } from "../../worker/social.mts"
+import { HIDE, MAX_PINS_A_DAY } from "../../worker/social.mts"
 import type { Message } from "../../worker/mail.mts"
 import type { Pin, Time } from "../../src/social/event.mts"
 import { type Ask, askOf } from "../../src/social/ask.mts"
@@ -329,32 +329,6 @@ test("a six-digit code sent to a UNH address verifies the person who typed it ba
   const [, last] = sent
   expect((await ana.ask("POST", "/api/email/verify", { address: "ana.b@wildcats.unh.edu", code: last.subject.slice(0, 6) })).status).toBe(404)
 })
-
-test("a pin's page carries its title and a line about it for link previews, escaped", async () => {
-  const { device, anyone } = worker()
-  const pin = await made(device("ana"), { title: "Tea & <cake>", place: "Memorial Union Building" })
-  const page = await anyone(`/p/${pin.id}`)
-  expect(page.status).toBe(200)
-  const html = await page.text()
-  expect(html).toContain("<title>Tea &amp; &lt;cake&gt; · notunh</title>")
-  expect(html).toContain(`<meta property="og:url" content="https://notunh.app/p/${pin.id}">`)
-  expect(html).toContain(`<meta property="og:description" content="${describePin(pin)}">`)
-  expect(describePin(pin)).toMatch(/^\w{3} \d{1,2}:\d\d [AP]M · Memorial Union Building$/)
-  expect((await anyone("/p/nope")).status).toBe(404)
-})
-
-test("whatever a pin says, its page's head stays well-formed, a title of dollar signs included", () =>
-  fc.assert(fc.property(fc.oneof(fc.string({ maxLength: 80 }), fc.constant("$& $1 $' $$")), fc.string({ maxLength: 80 }), fc.nat(50), (title, place, going) => {
-    const pin: Pin = { id: "a".repeat(16), title, start: 0, end: 1, place, where: place, source: "pin", url: "https://notunh.app/p/" + "a".repeat(16), description: "", visibility: "link", times: [], marks: [], going }
-    const html = withPin(PAGE, pin)
-    const metas = [...html.matchAll(/<meta (?:name|property)="[^"]+" content="([^"]*)">/g)]
-    expect(metas).toHaveLength(4)
-    for (const [, content] of metas)
-      expect(content).not.toMatch(/[<>"]/)
-    expect(html.match(/<title>([^<]*)<\/title>/)![1]).not.toMatch(/[<>]/)
-    expect(html).toContain(`<title>${title.replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[char]!)} · notunh</title>`)
-  }))
-)
 
 test("each kill switch answers 503 for its feature and nothing else", async () => {
   const { device } = worker({ SOCIAL_OFF: "pins link" })

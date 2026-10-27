@@ -30,10 +30,10 @@ Instructors' addresses are hidden at build time (`email.mts`), shifted and rever
 ## On the map
 
 - **Search** (`search.mts`), in the home's search and Directions' To: a code in any spelling, a CRN or a pasted schedule, a room with or without its building, titles fuzzily, and people's names, in labelled groups. An instructor's row already says their next class, time, room and Directions.
-- **Pages** (`src/map/ui/Pages.tsx`, `src/map/state/page.mts`): `/map/?section=202610:12496`, `?person=`, `?room=Kingsbury+N343`, `?course=CS+518`. Directions and Remind are for the meeting the page leads with; Remind on a section goes on meeting after meeting, with nothing saved. A place's page lists its rooms with a class under way, never a count of people.
-- **Save** (`saved.mts`, `courses-saved`, synced per person): your next class is a row of Yours on the home, and My courses in You (`/map/?you`) has the week, saved sections, a calendar file and a pasted schedule. Cross-listed sections meet together, so either saved is the one class. Classes never make markers or rows in the week.
+- **Pages** (`src/map/ui/Pages.tsx`, `src/map/state/page.mts`): `/map/section/202610/12496`, `person/<id>`, `room/Kingsbury+N343`, `course/CS+518`. Directions and Remind are for the meeting the page leads with; Remind on a section goes on meeting after meeting, with nothing saved. A place's page lists its rooms with a class under way, never a count of people.
+- **Save** (`saved.mts`, `courses-saved`, synced per person): your next class is a row of Yours on the home, and My courses in You (`/map/you`) has the week, saved sections, a calendar file and a pasted schedule. Cross-listed sections meet together, so either saved is the one class. Classes never make markers or rows in the week.
 - **The calendar file** (`ics.mts`) is a snapshot: one VEVENT per pattern with a weekly rule, EXDATEs for days it won't meet and RDATEs for swap days, local times under a VTIMEZONE, UNTIL in UTC, DTSTAMP, lines folded by octet. It says it won't follow a room change.
-- **Programs**: a course's page names the programs listing it ("In 6 programs"), each opening its graph focused on the course, `/map/?program=<slug>&course=<code>`; `?program=` alone lists them ([programs.md](programs.md)).
+- **Programs**: a course's page names the programs listing it ("In 6 programs"), each opening its graph focused on the course, `/map/program/<slug>?course=<code>`; `/map/program` lists them ([programs.md](programs.md)).
 
 ## Settled
 

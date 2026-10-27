@@ -31,14 +31,14 @@ Each program is its own file (`Program` in `src/programs/program.mts`, 1 to 3 KB
 
 ## The view
 
-`src/map/ui/Program.tsx`, at `/map/?program=<slug>`, `&course=<code>` for the course in focus, changing in place. One markup, laid out by container queries (`src/map/index.css`):
+`src/map/ui/Program.tsx`, at `/map/program/<slug>`, `?course=<code>` for the course in focus, changing in place. One markup, laid out by container queries (`src/map/index.css`):
 
 - **Phone**: the sheet goes tall; lanes stack, each a wrapping grid of courses, a pool across the row; only the focused chain's edges are drawn.
 - **Wide**: the panel widens to the screen; lanes are columns sharing the width, every edge faint and the focused chain's bold, scrolling sideways once columns can't fit.
 - **Tapping a course** focuses it, dimming the rest; a card says how it's listed and under which heading and note, what it needs, what it unlocks here, and terms with sections, opening its course page. On a phone the card follows the course in its lane; wide, it sits at the top. Back returns to the graph as it was.
 - **Tapping a pool** opens it to its courses, each a node with its edges; a course opened from its page opens its pool.
 - **By term** uses the sample plan where there is one; **As listed** shows the rows as the catalog lays them out. Notes with nothing under them ("Select three additional CS courses numbered 690-799") are listed below as "Also listed".
-- `?program=` with no slug is the list, searched by title; given a course, it leads with those naming it. Search finds programs by title too.
+- `/map/program` alone is the list, searched by title; given a course, it leads with those naming it. Search finds programs by title too.
 
 ## Left open
 

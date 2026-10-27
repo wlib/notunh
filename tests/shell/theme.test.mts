@@ -1,7 +1,7 @@
 import { test, expect } from "vitest"
 import { readFileSync } from "node:fs"
 import { ColorSpace, parse, serialize, sRGB, to, OKLCH } from "colorjs.io/fn"
-import { SURFACE } from "../../src/shell/theme.mts"
+import { LIGHT, SURFACE } from "../../src/shell/theme.mts"
 
 ColorSpace.register(sRGB)
 ColorSpace.register(OKLCH)
@@ -16,4 +16,10 @@ test("the browser's bars and the manifest match the page background, light and d
   expect(SURFACE).toEqual({ light, dark })
   expect(manifest.background_color).toBe(light)
   expect(manifest.theme_color).toBe(light)
+})
+
+test("what's drawn off the page has the light theme's colors", () => {
+  const light = css.slice(0, css.indexOf("@media"))
+  for (const [name, value] of Object.entries(LIGHT))
+    expect(value, name).toBe(hex(light.match(`--${name}:\\s*([^;]+);`)![1]))
 })

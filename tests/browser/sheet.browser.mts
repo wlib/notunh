@@ -1,8 +1,8 @@
 // The map's sheet on a phone holds still: searching lays its suggestions over the week without taking it away or
 // changing the sheet's size, and the sheet keeps its height from page to page, Directions and Back included, unless
-// it's dragged. A page opens at once, and Back, the sheet's or the browser's, returns to the list it was opened from
-// scrolled as it was. The camera following only the page shown is tested in tests/map/camera.test.mts and
-// page.test.mts, as the fixtures' map never loads, having no tiles
+// it's dragged. A trip's ends are marked only on its directions. A page opens at once, and Back, the sheet's or the
+// browser's, returns to the list it was opened from scrolled as it was. The camera following only the page shown is
+// tested in tests/map/camera.test.mts and page.test.mts, as the fixtures' map never loads, having no tiles
 
 import { test as base, expect, devices, type Page } from "@playwright/test"
 import { type Fixture, startFixture } from "./fixture.mts"
@@ -220,4 +220,23 @@ test("Back, the sheet's or the browser's, returns to the week and to a place's e
     await expect(page.getByRole("heading", { name: "Huddleston Hall" })).toBeVisible()
     expect(await scrollOf(page)).toBe(scrolled)
   }
+})
+
+test("a trip's ends are marked on the map only while its directions are shown, though Back keeps the trip", async ({ page, fixture }) => {
+  await open(page, fixture.origin, "/map/?place=Kingsbury+Hall")
+  const ends = page.locator(".maplibregl-marker:not(.focus-marker)")
+  await page.locator(".view-actions").getByRole("button", { name: "Directions" }).tap()
+  await expect(page.getByPlaceholder("Where to?")).toHaveValue("Kingsbury Hall")
+  await expect(ends).toHaveCount(1)
+
+  await page.locator(".back").tap()
+  await expect(page.getByRole("heading", { name: "Kingsbury Hall" })).toBeVisible()
+  await expect(ends).toHaveCount(0)
+  await page.locator(".back").tap()
+  await expect(ends).toHaveCount(0)
+
+  // Directions again still has the trip, marked again
+  await page.getByRole("button", { name: "Directions", exact: true }).tap()
+  await expect(page.getByPlaceholder("Where to?")).toHaveValue("Kingsbury Hall")
+  await expect(ends).toHaveCount(1)
 })

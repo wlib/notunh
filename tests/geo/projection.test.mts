@@ -46,8 +46,9 @@ test("a frame around an origin measures what distance does for some kilometers a
 test("projecting some meters along a bearing lands that far away, that way", () =>
   fc.assert(fc.property(point, fc.double({ min: 0, max: 360, noNaN: true }), fc.double({ min: 1, max: 5000, noNaN: true }), ({ lat, lon }, degrees, meters) => {
     const there = project([lon, lat], degrees, meters)
-    // Measured flat from the start rather than from halfway, a hair short over kilometers
-    expect(Math.abs(segmentMeters([lon, lat], there) - meters)).toBeLessThanOrEqual(meters * 1e-4 + 0.01)
+    // Measured flat from the start rather than from halfway, short by the square of the distance: up to 0.71 m over
+    // 5 km at the Seacoast's north edge on a diagonal bearing
+    expect(Math.abs(segmentMeters([lon, lat], there) - meters)).toBeLessThanOrEqual(meters ** 2 * 4e-8 + 0.01)
     const turned = (bearing([lon, lat], there) - degrees + 540) % 360 - 180
     expect(Math.abs(turned)).toBeLessThan(0.01)
   }))

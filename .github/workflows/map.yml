@@ -1,8 +1,8 @@
 # Makes the map's OpenStreetMap data each week from Geofabrik's latest New Hampshire extract (scripts/map/osm.mts):
-# the walking network, the gazetteer, and our tiles, made with Planetiler. Each generation is published whole as its
-# own immutable release, map-data-<version>. Then the pointer every build reads, latest.json on the map-data release,
-# is moved to it (scripts/release.mts), so a build gets all of a generation or none. Run it by hand with
-# `gh workflow run map.yml`.
+# the walking network, the gazetteer, the parking areas, and our tiles, made with Planetiler. Each generation is
+# published whole as its own immutable release, map-data-<version>, then the pointer every build reads, latest.json
+# on the map-data release, moves to it (scripts/release.mts), so a build gets all of a generation or none. Run it by
+# hand with `gh workflow run map.yml`
 #
 # Needs no secrets beyond the job's own token, plus the production environment's optional CLOUDFLARE_DEPLOY_HOOK to
 # rebuild the site with the new generation. GitHub pauses schedules after 60 days without a commit, so the Worker's

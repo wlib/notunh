@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { coveredPadding } from "../../src/map/render/camera.mts"
+import { type Aim, aimed, coveredPadding } from "../../src/map/render/camera.mts"
 
 const rect = (left: number, top: number, width: number, height: number) =>
   ({ left, top, width, height, right: left + width, bottom: top + height })
@@ -24,3 +24,33 @@ test("a side panel pads its side, and a panel off the map pads nothing extra", (
       .toEqual({ top: 48, bottom: 48, left: 48, right: 48 })
   }))
 )
+
+test("the camera moves once as a page opens with somewhere to show, again only for somewhere else, and never as what it shows blinks out and back", () =>
+  fc.assert(fc.property(fc.array(fc.record({ view: fc.constantFrom("/map/?place=A", "/map/?event=e", "/map/?directions", "/map/"), target: fc.option(fc.constantFrom("x", "y", "z"), { nil: undefined }) }), { maxLength: 40 }), aims => {
+    let held: Aim | undefined
+    /** The page shown, and the last place or trip of it the camera went to */
+    let view: string | undefined
+    let shown: string | undefined
+    for (const next of aims) {
+      const step = aimed(held, next)
+      held = step.held
+      if (next.view !== view) {
+        view = next.view
+        shown = undefined
+      }
+      const shouldMove = next.target !== undefined && next.target !== shown
+      expect(step.move).toBe(shouldMove)
+      if (shouldMove)
+        shown = next.target
+      expect(held.view).toBe(next.view)
+    }
+  }))
+)
+
+test("a page shown again after another moves the camera back to it, and the same aim twice moves it once", () => {
+  const first = aimed(undefined, { view: "/map/?place=A", target: "a" })
+  expect(first.move).toBe(true)
+  expect(aimed(first.held, { view: "/map/?place=A", target: "a" }).move).toBe(false)
+  const away = aimed(first.held, { view: "/map/?event=e", target: "e" })
+  expect(aimed(away.held, { view: "/map/?place=A", target: "a" }).move).toBe(true)
+})

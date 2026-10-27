@@ -1,7 +1,8 @@
 // A server that serves one release of the built site at a time, as the real origin does across deploys, with the
 // headers Cloudflare gives static assets: its own, and the build's _headers over them. It can be told to publish
 // another, to go offline, as a phone with no signal sees it, to answer a path with an error, or to send data files
-// slowly, as a phone on a poor signal gets them. The
+// slowly, as a phone on a poor signal gets them. Given a Worker's origin (tests/worker/serve.mts), it hands the API
+// and the pins' pages to it, as Cloudflare runs the Worker first for those; without one, the API is down. The
 // releases are made from one build. B renames the dining page's entry chunk and bumps the release, as newer code
 // would. C renames the dining index too and changes a hall's name in it, as newer data would. D is C with a service
 // worker of other bytes, as a release changing the worker itself would be. R is A published again after them all, as
@@ -63,6 +64,10 @@ const pageFileOf = (pathname: string) => {
   return page.endsWith("/") ? `${page}index.html` : undefined
 }
 
+/** Whether the Worker answers a path before the assets: the API, and each pin's page, but not the pin page itself */
+const isWorkerFirst = (pathname: string) =>
+  pathname.startsWith("/api/") || /^\/p\/.+/.test(pathname)
+
 type Release = { pages: Map<string, string>, files: Map<string, Buffer> }
 
 const releaseAt = (name: ReleaseName) =>
@@ -103,7 +108,7 @@ const deriveReleases = (dist: string): Record<ReleaseName, Release> => {
 }
 
 /** Serves the build, standing in for notunh.app if asked, as the origin usage stats are sent from (src/shell/Head.tsx) */
-export const startFixture = async (dist: string, { isUsageOrigin = false } = {}) => {
+export const startFixture = async (dist: string, { isUsageOrigin = false, worker }: { isUsageOrigin?: boolean, worker?: string } = {}) => {
   const releases = deriveReleases(dist)
   const headersOf = headerRules(dist)
   let published: ReleaseName = "A"
@@ -114,7 +119,7 @@ export const startFixture = async (dist: string, { isUsageOrigin = false } = {})
   /** Every path asked for, in order */
   const requests: string[] = []
 
-  const server = createServer((request, response) => {
+  const server = createServer(async (request, response) => {
     const { pathname } = new URL(request.url!, "http://localhost")
     const control = pathname.match(/^\/__(publish|offline|online|status|delay)(?:\/(.*))?$/)
     if (control) {
@@ -136,13 +141,26 @@ export const startFixture = async (dist: string, { isUsageOrigin = false } = {})
       return request.socket.destroy()
     if (statuses.has(pathname))
       return response.writeHead(statuses.get(pathname)!).end()
-    if (pathname.startsWith("/api/"))
-      return response.writeHead(503).end()
+    if (isWorkerFirst(pathname)) {
+      if (!worker)
+        return response.writeHead(503).end()
+      const chunks: Buffer[] = []
+      for await (const chunk of request)
+        chunks.push(chunk as Buffer)
+      const answer = await fetch(worker + request.url, {
+        method: request.method,
+        headers: Object.fromEntries(Object.entries(request.headers).filter(([name, value]) => typeof value === "string" && name !== "host") as [string, string][]),
+        body: chunks.length ? Buffer.concat(chunks) : undefined
+      })
+      response.writeHead(answer.status, Object.fromEntries([...answer.headers].filter(([name]) => !["content-encoding", "transfer-encoding", "content-length"].includes(name))))
+      return response.end(Buffer.from(await answer.arrayBuffer()))
+    }
 
     const release = releases[published]
     const file = pageFileOf(pathname)
     const headers = { "content-type": TYPES[extname(file ?? pathname)] ?? "application/octet-stream", "cache-control": file || pathname === "/sw.js" ? "no-cache" : CACHE_CONTROL, ...file ? {} : headersOf(pathname) }
-    const path = join(dist, file ?? pathname)
+    // A file's path as it's named on disk, as a URL escapes its spaces, like the style's "Noto Sans Regular" fonts
+    const path = join(dist, file ?? decodeURIComponent(pathname))
     const found = file && release.pages.get(file) || release.files.get(pathname) || (existsSync(path) && path.startsWith(dist) ? readFileSync(path) : undefined)
     const body = file && found && isUsageOrigin ? found.toString().replace(USAGE_ORIGIN, `$1${origin}"`) : found
     if (body === undefined)

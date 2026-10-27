@@ -379,8 +379,8 @@ export const start = (scope: Scope) => {
           })
           .catch(async () => (await (await open()).match(request, ANY))!)
       )
-    // Hashed files (code, data, the map's style and tiles, the dining files): cache first, filled on first use.
-    // Nothing else on the origin is kept, so the cache stays bounded by what's published
+    // Hashed files (code, data, the map's style and tiles, the dining, course and prerequisites files): cache first,
+    // filled on first use. Nothing else on the origin is kept, so the cache stays bounded by what's published
     else if (isHashed(url.pathname)) {
       const answer = cachedFirst(event)
       event.respondWith(answer)

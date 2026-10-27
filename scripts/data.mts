@@ -1,18 +1,20 @@
 // Makes the inputs a build pins (scripts/inputs.mts) in inputs/, laid out as the repository is, as the Inputs
 // workflow does each night (.github/workflows/inputs.yml):
 //
-//   node scripts/data.mts acquire    the timetable, style, menus, and laundry rooms, from upstream
+//   node scripts/data.mts acquire    the timetable, style, events, courses, menus, laundry rooms, parking areas, and
+//                                    prerequisites, from upstream
 //   node scripts/data.mts learn      the bus and laundry models, through the Worker (scripts/learn.mts), with
 //                                    --store to learn and store, --rebuild, and --local
 //
 // and with neither, both, and then the site built from them (`npm run fresh`), so the whole sequence runs locally.
-// Acquiring starts inputs/ afresh
+// Acquiring starts inputs/ afresh, with the map data the pointer names installed first, as the events and courses are
+// placed on its gazetteer and parking is checked against its parking areas
 
 import { rm } from "node:fs/promises"
 import { STAGED, run } from "./files.mts"
 
 const STAGES = {
-  acquire: ["map/gtfs", "map/style", "dining/menus", "laundry/rooms"],
+  acquire: ["map/gtfs", "map/style", "map/events", "map/courses", "dining/menus", "laundry/rooms", "map/parking", "programs/prereqs"],
   learn:   ["map/model", "laundry/model"]
 }
 
@@ -32,8 +34,10 @@ if (import.meta.main) {
 
   for (const stage of Object.keys(STAGES) as (keyof typeof STAGES)[])
     if (isWhole || args.includes(stage)) {
-      if (stage === "acquire")
+      if (stage === "acquire") {
         await rm(STAGED, { recursive: true, force: true })
+        await run(process.execPath, [new URL("inputs.mts", import.meta.url).pathname, "map-data"])
+      }
       if (stage === "learn") {
         if (await runStage(STAGES.learn, flags)) process.exitCode = 1
       }

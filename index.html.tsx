@@ -14,23 +14,23 @@ export default () =>
         <main class="page">
           <header class="intro">
             <h1 class="wordmark"><span>not</span>unh</h1>
-            <p>An unofficial guide to UNH buses, dining, and laundry.</p>
+            <p>An unofficial guide to UNH.</p>
           </header>
 
           <nav class="sections" aria-label="Sections">
             <a href="/map/">
-              <strong>Buses &amp; directions</strong>
-              <span>Track Wildcat Transit and find your way by bus or on foot.</span>
+              <strong>Map</strong>
+              <span>Live buses, directions, classes, parking, and what's on today.</span>
               <span class="icon icon-forward" aria-hidden="true" />
             </a>
             <a href="/dining/">
               <strong>Dining menus</strong>
-              <span>Every meal at Holloway and Philbrook, with ingredients and allergens.</span>
+              <span>Holloway and Philbrook, with ingredients and allergens.</span>
               <span class="icon icon-forward" aria-hidden="true" />
             </a>
             <a href="/laundry/">
               <strong>Laundry</strong>
-              <span>Which washers and dryers are free in every residence hall, and when they usually aren't.</span>
+              <span>Free washers and dryers in every residence hall.</span>
               <span class="icon icon-forward" aria-hidden="true" />
             </a>
           </nav>
@@ -71,29 +71,6 @@ export default () =>
             </p>
           </details>
 
-          <details id="reminders">
-            <summary>Reminders</summary>
-            <p>
-              When you ask notunh to remind you when to leave, your phone plans the trip and keeps the plan. notunh's
-              server is told only when to wake your phone: for a trip by bus, the first bus you want to catch (the
-              route, its scheduled time at the stop, and the stop) and how far ahead, which is your walk to the stop
-              plus the heads-up you choose, so it can tell about how far you walk; for a walk, just the time to leave
-              and the heads-up. It's also given the address your phone's maker (like Apple or Google) uses for sending
-              it notifications.
-            </p>
-            <p>
-              The server forecasts that bus from the bus locations it already records and wakes your phone when it's
-              that close, sending when it expects the bus and how sure it is. Your phone works out the rest and what to
-              tell you, and plans the trip again whenever you open the map. The server never learns where you're going
-              or where you're coming from.
-            </p>
-            <p>
-              A reminder is deleted once its time has gone or you cancel it. Your phone's notification address is
-              deleted 30 days after your last reminder, or the next time you plan a trip after turning notifications
-              off.
-            </p>
-          </details>
-
           <details>
             <summary>Data sources &amp; credits</summary>
             <dl class="credits">
@@ -107,8 +84,24 @@ export default () =>
               <dd><a href="https://photon.komoot.io">Photon</a>, by Komoot</dd>
               <dt>Map</dt>
               <dd>
-                <a href="https://maplibre.org">MapLibre</a>, with tiles from <a href="https://openfreemap.org">OpenFreeMap</a>,
+                <a href="https://maplibre.org">MapLibre</a>, with tiles from <a href="https://openfreemap.org">OpenFreeMap</a>,{" "}
                 <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>
+              </dd>
+              <dt>Events</dt>
+              <dd>
+                <a href="https://unh.presence.io">Wildcat Link</a>, the <a href="https://www.unh.edu/calendar">UNH Events Calendar</a>,{" "}
+                <a href="https://unhwildcats.com">UNH Athletics</a>, and <a href="https://unh.dserec.com/online/clubsports">Club Sports</a>
+              </dd>
+              <dt>Classes</dt>
+              <dd>
+                UNH's <a href="https://courses.unh.edu">Course Search</a> and academic calendar; prerequisites and programs from{" "}
+                the <a href="https://catalog.unh.edu">UNH Catalog</a>
+              </dd>
+              <dt>Parking</dt>
+              <dd>
+                <a href="https://www.unh.edu/transportation/parking">UNH Transportation</a>,{" "}
+                <a href="https://parkmobile.io">ParkMobile</a> zones, and lots from{" "}
+                <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>
               </dd>
               <dt>Menus</dt>
               <dd>UNH Dining, through <a href="https://unh.nutrislice.com">Nutrislice</a></dd>
@@ -116,7 +109,7 @@ export default () =>
               <dd>The machines' own status, from <a href="https://laundryconnectlive.com">LaundryConnect</a> by Automatic Laundry</dd>
             </dl>
             <p class="muted">
-              Menus and schedules are checked nightly. Built with <a href="https://github.com/Technical-Source/bruh">bruh</a> and <a href="https://vite.dev">Vite</a>,
+              Everything is checked nightly. Built with <a href="https://github.com/Technical-Source/bruh">bruh</a> and <a href="https://vite.dev">Vite</a>,
               and hosted on <a href="https://workers.cloudflare.com">Cloudflare</a>.
             </p>
           </details>

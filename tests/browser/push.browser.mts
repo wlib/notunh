@@ -129,6 +129,9 @@ const setUp = async (page: Page, context: BrowserContext, fixture: Fixture, at: 
   const push = async (data: string) =>
     cdp.send("ServiceWorker.deliverPushMessage", { origin: fixture.origin, registrationId: await registration, data })
   const plan = async (from: string, to: string) => {
+    // From the home, directions is its button; from directions, as after Back, it's already there
+    if (!await page.getByPlaceholder("Where to?").isVisible())
+      await page.getByRole("button", { name: "Directions", exact: true }).click()
     for (const [field, place] of [["Search or tap the map", from], ["Where to?", to]]) {
       await page.getByPlaceholder(field).click()
       await page.getByPlaceholder(field).fill(place)
@@ -143,6 +146,8 @@ const idOf = ({ url }: Sent) =>
   decodeURIComponent(new URL(url).pathname.split("/").at(-1)!.split("?")[0])
 
 test("a reminder set from an itinerary asks the Worker only to watch the first bus, a tap on its notification opens the trip again without a watch to replace, its push shows when to leave, and once told or past it's not planned again", async ({ page, context, fixture }) => {
+  // Four loads of the map, each planning the trip again, with the waits between
+  test.slow()
   const ride = rideOf(process.env.NOTUNH_DIST!)
   const { sent, puts, kept, record, push, plan } = await setUp(page, context, fixture, ride.at)
   await plan(ride.from, ride.to)
@@ -175,7 +180,7 @@ test("a reminder set from an itinerary asks the Worker only to watch the first b
   await page.clock.setFixedTime(ride.at.getTime() + 2 * 60_000)
   await page.goto(`${fixture.origin}/map/?reminder=${encodeURIComponent(id)}`)
   await expect(page.getByPlaceholder("Where to?")).toHaveValue(ride.to)
-  await expect(page).toHaveURL(`${fixture.origin}/map/`)
+  await expect(page).toHaveURL(`${fixture.origin}/map/?directions`)
   await expect(page.getByText("Reminder set")).toBeVisible()
   await page.waitForTimeout(2000)
   expect(puts()).toHaveLength(1)
@@ -263,57 +268,57 @@ test("a trip to be there by a time leaves as late as makes it, its reminder keep
   expect(reminder.end).toBeLessThanOrEqual(reminder.by!)
   expect(reminder.margin).toBeLessThanOrEqual(reminder.by! - reminder.end)
 
-  // Saved as a goal, which is offered once the trip is cleared, and opens the same trip by the same time
+  // Saved as a goal, a row of Yours on the home, which opens the same trip by the same time
   await page.getByRole("button", { name: "Save trip", exact: true }).click()
   await expect(page.getByRole("button", { name: "Save trip", exact: true })).toHaveCount(0)
-  await page.getByRole("button", { name: "Clear trip" }).click()
-  const goal = page.getByRole("list", { name: "Saved trips" }).getByRole("button", { name: `${ride.to} · ` })
+  await page.getByRole("button", { name: "Back to Map" }).click()
+  const goal = page.getByRole("list", { name: "Yours" }).getByRole("button", { name: ride.to }).filter({ hasText: "Saved trip" })
   await expect(goal).toBeVisible()
   await goal.click()
   await expect(page.getByPlaceholder("Where to?")).toHaveValue(ride.to)
   await expect(page.getByRole("button", { name: "Arrive by" })).toHaveAttribute("aria-pressed", "true")
   await expect(page.getByLabel("Arrive by")).toHaveValue(by)
-  await expect(goal).toHaveCount(0)
+  await expect(goal).toBeHidden()
   expect(await page.evaluate(() => localStorage.getItem("map-goals"))).toContain(`"by":"${by}"`)
 })
 
-test("a reminder set is listed atop the planner, trip open or closed, where a tap opens its trip again and × cancels it, while saving a trip sets no reminder", async ({ page, context, fixture }) => {
+test("a reminder set is a row of Yours on the home, where a tap opens its trip again and × cancels it, while saving a trip sets no reminder", async ({ page, context, fixture }) => {
   const ride = rideOf(process.env.NOTUNH_DIST!)
   const { sent, puts, kept, plan } = await setUp(page, context, fixture, ride.at)
-  const reminders = page.getByRole("list", { name: "Reminders" })
-  const listed = reminders.getByRole("button", { name: new RegExp(`^${RegExp.escape(ride.to)} · leave `) })
+  const yours = page.getByRole("list", { name: "Yours" })
+  const listed = yours.getByRole("button", { name: ride.to }).filter({ hasText: "Reminder" })
+  const back = () => page.getByRole("button", { name: "Back to Map" }).click()
   await plan(ride.from, ride.to)
-  await expect(reminders).toHaveCount(0)
+  await expect(listed).toHaveCount(0)
   await page.locator(".itinerary-summary").first().click()
   await page.getByRole("button", { name: "Remind me" }).click()
   await expect(page.getByText("Reminder set")).toBeVisible()
-  await expect(listed).toBeVisible()
   expect(puts()).toHaveLength(1)
 
-  // Listed still once the trip is cleared, and opening it from there brings the trip back, its reminder shown set
-  await page.getByRole("button", { name: "Clear trip" }).click()
-  await expect(page.getByPlaceholder("Where to?")).toHaveValue("")
+  // Listed on the home, where opening it brings the trip back, its reminder shown set
+  await back()
+  await expect(page.getByPlaceholder("Where to?")).toBeHidden()
   await expect(listed).toBeVisible()
   await listed.click()
   await expect(page.getByPlaceholder("Where to?")).toHaveValue(ride.to)
   await expect(page.getByText("Reminder set")).toBeVisible()
 
   // Cancelled from the list, it's gone from it and from the trip, and the Worker is told
-  await page.getByRole("button", { name: "Clear trip" }).click()
-  await reminders.getByRole("button", { name: `Cancel reminder for ${ride.to}` }).click()
-  await expect(reminders).toHaveCount(0)
+  await back()
+  await yours.getByRole("button", { name: `Cancel reminder for ${ride.to}` }).click()
+  await expect(listed).toHaveCount(0)
   await expect.poll(() => sent.filter(({ body }) => !body?.watch).length).toBe(1)
   await expect.poll(kept).toEqual([])
 
-  // Saving a trip keeps a place and a time here alone: nothing is listed, nothing kept, and the Worker hears nothing
+  // Saving a trip sets no reminder: a row of Yours, no reminder kept, and no watch for the Worker
   await plan(ride.from, ride.to)
   await page.getByRole("button", { name: "Arrive by" }).click()
   await page.getByLabel("Arrive by").fill(hhmm(ride.arrives + 15 * 60_000))
   await page.getByLabel("Arrive by").dispatchEvent("change")
   await page.getByRole("button", { name: "Save trip", exact: true }).click()
-  await page.getByRole("button", { name: "Clear trip" }).click()
-  await expect(page.getByRole("list", { name: "Saved trips" })).toBeVisible()
-  await expect(reminders).toHaveCount(0)
+  await back()
+  await expect(yours.getByRole("button", { name: ride.to }).filter({ hasText: "Saved trip" })).toBeVisible()
+  await expect(listed).toHaveCount(0)
   expect(await kept()).toEqual([])
   expect(puts()).toHaveLength(1)
 })

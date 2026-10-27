@@ -24,7 +24,10 @@ const LAYERS: Record<string, string[]> = {
   "src/transit/models":       ["src/shared", "src/geo", "src/transit", "src/transit/observations", "src/transit/inference"],
   "src/routing":              ["src/shared", "src/geo", "src/places", "src/transit", "src/transit/observations", "src/transit/inference", "src/transit/models"],
   "src/reminders":            ["src/shared", "src/geo", "src/transit", "src/transit/observations", "src/transit/inference", "src/transit/models", "src/routing"],
-  "src/reminders/browser":    ["src/shared", "src/reminders"]
+  "src/reminders/browser":    ["src/shared", "src/reminders"],
+  "src/programs":             ["src/shared"],
+  "src/courses":              ["src/shared", "src/social"],
+  "src/parking":              ["src/shared", "src/geo", "src/routing"]
 }
 
 /**

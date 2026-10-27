@@ -1,19 +1,23 @@
 // The map's own sources and layers, drawn over the base map, and what fills them as the data changes: the routes in
-// lanes side by side where they share a street, the stops, the laundry and dining buildings, and which routes and
-// buses stand out
+// lanes side by side where they share a street, the stops, the laundry and dining buildings, today's events, and
+// which routes and buses stand out
 
 import { r, watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, Map as MapLibre } from "maplibre-gl"
 import type { Feed } from "../../transit/feed.mts"
 import type { Itinerary } from "../../routing/plan.mts"
 import type { Building } from "../../places/buildings.mts"
+import type { Placed } from "../state/today.mts"
+import { clockOf } from "../../shared/time.mts"
+import { groupBy } from "../../shared/group.mts"
 import type { Coordinates } from "../../geo/projection.mts"
 import { laneSlots, lanePieces, measureCorridors } from "./corridors.mts"
 import { DENSITY, QUIET, buildingIcon, busIcon, chevronIcon } from "./icons.mts"
 
 const FONT = ["Noto Sans Bold"]
-// The page's ink
+// The page's ink, and the accent today's events are drawn in
 const INK = "#23262e"
+const EVENT = "#2f4f9e"
 
 export const collection = (features: GeoJSON.Feature[]): GeoJSON.FeatureCollection => ({
   type: "FeatureCollection",
@@ -99,12 +103,30 @@ const buildingFeatures = (buildings: readonly Building[]) =>
     geometry: { type: "Point", coordinates: [lon, lat] }
   }))
 
+/**
+ * A marker for each place with something on today, which a tap opens, labelled in words by what's on there now,
+ * "Tennis · till 3:00 PM", filled, else by what's next, "Soccer · 3:00 PM", outlined. Today's list is soonest first,
+ * so the first at a place still to end is the one it's labelled by
+ */
+export const eventFeatures = (placed: readonly Placed[], now: number) =>
+  [...groupBy(placed.filter(({ event }) => event.end > now), ({ place }) => place.name).values()].map(([{ event, place }], i): GeoJSON.Feature => ({
+    type: "Feature",
+    id: i,
+    properties: {
+      place: place.name,
+      on:    event.start <= now,
+      label: event.start <= now ? `${event.title} · till ${clockOf(event.end)}` : `${event.title} · ${clockOf(event.start)}`
+    },
+    geometry: { type: "Point", coordinates: [place.lon, place.lat] }
+  }))
+
 /** Adds the map's own images, sources, and layers, all empty until drawn */
 export const addLayers = (map: MapLibre) => {
   for (const kind of ["laundry", "dining"] as const)
     map.addImage(`building-${kind}`, buildingIcon(kind), { pixelRatio: DENSITY })
 
   map.addSource("buildings", { type: "geojson", data: collection([]) })
+  map.addSource("events",    { type: "geojson", data: collection([]) })
   map.addSource("routes",    { type: "geojson", data: collection([]) })
   map.addSource("stops",     { type: "geojson", data: collection([]) })
   map.addSource("itinerary", { type: "geojson", data: collection([]) })
@@ -138,6 +160,40 @@ export const addLayers = (map: MapLibre) => {
       "text-color": ["get", "color"],
       "text-halo-color": "white",
       "text-halo-width": 1.25
+    }
+  })
+
+  // The places with something on today, filled while it's on and outlined till then, labelled once the campus is close
+  map.addLayer({
+    id: "events",
+    type: "circle",
+    source: "events",
+    minzoom: 13,
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 4, 17, 9],
+      "circle-color": ["case", ["get", "on"], EVENT, "white"],
+      "circle-stroke-color": ["case", ["get", "on"], "white", EVENT],
+      "circle-stroke-width": 2
+    }
+  })
+  map.addLayer({
+    id: "event-labels",
+    type: "symbol",
+    source: "events",
+    minzoom: 15.5,
+    layout: {
+      "text-field": ["get", "label"],
+      "text-font": FONT,
+      "text-size": 11,
+      "text-offset": [0, 1],
+      "text-anchor": "top",
+      "text-max-width": 9,
+      "text-optional": true
+    },
+    paint: {
+      "text-color": EVENT,
+      "text-halo-color": "white",
+      "text-halo-width": 1.5
     }
   })
 
@@ -248,12 +304,14 @@ export const addLayers = (map: MapLibre) => {
   })
 }
 
-/** Draws the routes, stops, and buildings as the timetable and the buildings have them, and which stand out */
+/** Draws the routes, stops, buildings, and today's events as the data has them, and which stand out */
 export const drawLayers = (
   map: MapLibre,
   state: {
     feed:             Reactive<Feed>,
     buildings:        Reactive<readonly Building[]>,
+    todayPlaced:      Reactive<readonly Placed[]>,
+    now:              Reactive<number>,
     shownRoutes:      Reactive<ReadonlySet<string>>,
     highlightedRoute: Reactive<string | undefined>,
     itinerary:        Reactive<Itinerary | undefined>
@@ -261,6 +319,11 @@ export const drawLayers = (
 ) => {
   watch(() => {
     map.getSource<GeoJSONSource>("buildings")!.setData(collection(buildingFeatures(state.buildings.value)))
+  })
+  // Again each minute, as what's on at a place changes
+  const minute = r(() => Math.floor(state.now.value / 60))
+  watch([state.todayPlaced, minute], () => {
+    map.getSource<GeoJSONSource>("events")!.setData(collection(eventFeatures(state.todayPlaced.value, minute.value * 60_000)))
   })
 
   // Each route's bus and chevrons in its color, and the stops, as the timetable has them

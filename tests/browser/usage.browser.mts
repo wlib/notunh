@@ -126,6 +126,7 @@ test("on notunh.app, PostHog's code is kept with the page, so a page opened offl
 test("on notunh.app, a trip planned after a yes is counted by its ends' places and the hour, linked to nothing", async ({ page, usageOrigin, posthog }) => {
   await page.goto(`${usageOrigin.origin}/map/`)
   await page.getByRole("button", { name: "Ok", exact: true }).click()
+  await page.getByRole("button", { name: "Directions", exact: true }).click()
   for (const [field, place] of [["Search or tap the map", "Holloway"], ["Where to?", "Kingsbury"]]) {
     await page.getByPlaceholder(field).click()
     await page.getByPlaceholder(field).fill(place)

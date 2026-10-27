@@ -30,7 +30,7 @@ export const browserStorage = () => {
     }
   }
   return {
-    caches:     { open: async (name: string) => cacheOf(getOrCreate(caches, name, () => new Map())) },
+    caches:     { open: async (name: string) => cacheOf(getOrCreate(caches, name, () => new Map())), has: async (name: string) => caches.has(name) },
     locks,
     setFailing: (failing: boolean) => isFailing = failing,
     /** What a cache holds, parsed, by key */

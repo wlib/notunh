@@ -29,8 +29,10 @@ const packageChunk = (id: string, { getModuleInfo }: Rollup.ManualChunkMeta) => 
 // Where the pages are built, for the service worker to be built beside them
 let outDir = "dist"
 
-// A laundry room's own path, like /laundry/adams-tower/, which the Worker answers with the laundry page
+// A laundry room's own path, like /laundry/adams-tower/, which the Worker answers with the laundry page, and a pin's,
+// like /p/abc123, which it answers with the pin page
 const ROOM = /^\/laundry\/[\w-]+\/$/
+const PIN = /^\/p\/[\w-]+$/
 
 /**
  * A page by its path alone, as bruh looks pages up by the whole URL, query and all, and each laundry room as the
@@ -40,6 +42,8 @@ const toPage: Connect.NextHandleFunction = (request, _, next) => {
   const path = request.url?.split("?")[0]
   if (path?.endsWith("/"))
     request.url = path.replace(ROOM, "/laundry/")
+  else if (path && PIN.test(path))
+    request.url = "/p/"
   next()
 }
 

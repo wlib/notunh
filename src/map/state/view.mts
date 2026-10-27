@@ -1,41 +1,32 @@
-// What the map shows and the panel is about: the stop or bus selected, the routes shown, and which are picked
-// out. Reactive values only, no DOM
+// What the map shows and the panel is about: the stop or bus whose page is shown, the routes shown, and which are
+// picked out. Reactive values only, no DOM
 
-import { r, watch } from "bruh/reactive"
-import { renumbered } from "../../transit/feed.mts"
+import { r } from "bruh/reactive"
 import type { MapData } from "./data.mts"
 import type { createLive } from "./live.mts"
 import type { createRiding } from "./riding.mts"
 import type { createTrip } from "./trip.mts"
-import { type Own, distinct, isSameSet } from "../../shell/state.mts"
+import type { createPage } from "./page.mts"
+import { distinct, isSameSet } from "../../shell/state.mts"
 
 const SOON = 3600 // s
 
-/** What the map shows and the panel is about, as the timetable, the buses, and your trip change. own is given what stops it */
+/** What the map shows and the panel is about, as the timetable, the buses, and your trip change */
 export const createView = (
-  { feed, liveCounts, now, runningToday, runs, vehicles, riding, itinerary }:
-    MapData & ReturnType<typeof createLive> & ReturnType<typeof createRiding> & ReturnType<typeof createTrip>,
-  own: Own
+  { feed, liveCounts, now, runningToday, runs, vehicles, riding, itinerary, page }:
+    MapData & ReturnType<typeof createLive> & ReturnType<typeof createRiding> & ReturnType<typeof createTrip> & ReturnType<typeof createPage>
 ) => {
-  const selectedStop = r<number>()
-
-  // A newer timetable may number its stops otherwise, so the selected stop is found again in it by its id
-  let stopsBefore = feed.peek().stops
-  own(watch([feed], () => {
-    if (feed.value.stops === stopsBefore)
-      return
-    selectedStop.value = renumbered(selectedStop.peek(), stopsBefore, feed.value.stops)
-    stopsBefore = feed.value.stops
-  }))
-
-  /** The selected stop's id, reaching what depends on it only when another stop is selected, not as it's renumbered */
-  const selectedStopId = distinct(() => {
-    const stop = selectedStop.value
-    return stop === undefined ? undefined : feed.peek().stops[stop]?.id
+  /** The id of the stop whose page is shown */
+  const selectedStopId = r(() => page.value?.kind === "stop" ? page.value.id : undefined)
+  /** Its index in the timetable, found again by its id as a newer timetable renumbers its stops */
+  const selectedStop = r(() => {
+    const id = selectedStopId.value
+    const index = id === undefined ? -1 : feed.value.stops.findIndex(stop => stop.id === id)
+    return index < 0 ? undefined : index
   })
-  /** The id of the bus tapped to see its stops */
-  const selectedBus = r<string>()
-  /** The bus whose stops the panel shows: one tapped, else the one you're on */
+  /** The id of the bus whose page is shown */
+  const selectedBus = r(() => page.value?.kind === "bus" ? page.value.id : undefined)
+  /** The bus the panel is about: the one whose page is shown, else the one you're on */
   const viewedBus = r(() => selectedBus.value ?? riding.value)
 
   /** The route picked from the list to highlight */

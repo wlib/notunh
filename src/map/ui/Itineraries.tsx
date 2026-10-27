@@ -1,16 +1,18 @@
 /** @jsxImportSource bruh/browser */
 
-// The ways to get there by bus, and walking the whole way
+// The ways to get there by bus, and walking the whole way, and for a visit, where to park for it instead
 
 import { r } from "bruh/reactive"
 import { lateness, slack } from "../../transit/models/forecast.mts"
 import { type Itinerary, type Leg, type RideLeg, wayKey } from "../../routing/plan.mts"
-import { ClockRange, Distance, Minutes, Plural } from "../../shell/intl.tsx"
+import { ClockRange, Counted, Distance, List, Minutes } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import { RouteBadge, StopLink, Time, minutes, route } from "./common.tsx"
 import { state } from "../state/map.mts"
 import { capture } from "../../shell/usage.tsx"
 import { Remind } from "./Remind.tsx"
+import { parkingFor } from "./Parking.tsx"
+import { LinkLine } from "./Pages.tsx"
 import { othersOf } from "../state/ways.mts"
 import { clockOf } from "../../shared/time.mts"
 
@@ -73,7 +75,7 @@ const Steps = ({ itinerary }: { itinerary: Itinerary }) =>
               <strong><Time seconds={leg.start} /></strong> Board at <StopLink stop={run.trip.stops[fromPosition]} />
             </div>
             <div class="muted">
-              Toward {run.trip.headsign} · <Plural value={stops} one="1 stop" other={`${stops} stops`} /> ·{" "}
+              Toward {run.trip.headsign} · <Counted value={stops} one="stop" other="stops" /> ·{" "}
               {run.isLive
                 ? <span class="live">Live, <Delay seconds={lateness(run, fromPosition)} /></span>
                 : "Scheduled"}
@@ -148,23 +150,21 @@ const WayCard = ({ departures }: { departures: Itinerary[] }) => {
       {departures.length > 1 &&
         <div class="also" role="group" aria-label="Other departures">
           Also{" "}
-          {r(() => othersOf(departures, shown.value).map((other, i) =>
-            <>
-              {i > 0 && ", "}
-              <button
-                type="button"
-                class="also-time"
-                aria-label={`Leave at ${clockOf(other.start * 1000)}`}
-                onclick={() => {
-                  choose(other)
-                  // The button tapped is now the card's own departure, so focus goes there
-                  summary.focus()
-                }}
-              >
-                <Time seconds={other.start} />
-              </button>
-            </>
-          ))}
+          {r(() => <List type="unit" items={othersOf(departures, shown.value).map(other =>
+            <button
+              type="button"
+              class="also-time"
+              // An accessible name is text, never elements, so its time is formatted here
+              aria-label={`Leave at ${clockOf(other.start * 1000)}`}
+              onclick={() => {
+                choose(other)
+                // The button tapped is now the card's own departure, so focus goes there
+                summary.focus()
+              }}
+            >
+              <Time seconds={other.start} />
+            </button>
+          )} />)}
         </div>
       }
       {r(() => isSelected.value && <Steps itinerary={shown.value} />)}
@@ -213,4 +213,5 @@ export const Itineraries = () =>
         : <p class="muted">No bus gets there in the next few hours.</p>
     )}
     <WalkOption first={false} />
+    {r(() => state.visiting.value && <div class="lines"><LinkLine to={parkingFor(state.visiting.value)}>Parking</LinkLine></div>)}
   </section>

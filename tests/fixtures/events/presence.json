@@ -1,0 +1,146 @@
+[
+ {
+  "uri": "take-back-the-night-4",
+  "eventName": "Take Back The Night",
+  "organizationName": "SHARPP",
+  "location": "Thompson Hall Lawn",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-10-16T00:00:11Z",
+  "endDateTimeUtc": "2026-10-16T01:30:00Z",
+  "tags": [
+   "Activism, Advocacy & Political",
+   "Social",
+   "Wellness"
+  ]
+ },
+ {
+  "uri": "take-back-the-night-5",
+  "eventName": "Take Back The Night",
+  "organizationName": "SHARPP",
+  "location": "Thompson Hall Lawn",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-10-16T00:00:00Z",
+  "endDateTimeUtc": "2026-10-16T01:30:00Z",
+  "tags": [
+   "Activism, Advocacy & Political",
+   "Culture & Identity",
+   "Social",
+   "Wellness"
+  ]
+ },
+ {
+  "uri": "ocean-discovery-day-4",
+  "eventName": "Ocean Discovery Day",
+  "organizationName": "School of Marine Science and Ocean Engineering",
+  "location": "Chase Ocean Engineering Laboratory",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-10-23T12:30:00Z",
+  "endDateTimeUtc": "2026-10-24T19:00:00Z",
+  "tags": [
+   "Social"
+  ]
+ },
+ {
+  "uri": "walk-for-apraxia",
+  "eventName": "Walk for Apraxia",
+  "organizationName": "NSSLHA ~ National Student Speech Language Hearing Association",
+  "location": "The Fishbowl",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-10-25T14:00:00Z",
+  "endDateTimeUtc": "2026-10-25T16:00:00Z",
+  "tags": [
+   "Social"
+  ]
+ },
+ {
+  "uri": "diy-flower-bouquets-vases",
+  "eventName": "DIY Flower Bouquets & Vases",
+  "organizationName": "Student Engagement & Belonging",
+  "location": "MurklandCourtyard",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-09-24T16:30:00Z",
+  "endDateTimeUtc": "2026-09-24T18:00:00Z",
+  "tags": []
+ },
+ {
+  "uri": "neon-night",
+  "eventName": "Neon Night",
+  "organizationName": "Student Engagement & Belonging",
+  "location": "T Hall Lawn",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-10-02T22:00:00Z",
+  "endDateTimeUtc": "2026-10-03T01:00:00Z",
+  "tags": []
+ },
+ {
+  "uri": "lonza-career-day",
+  "eventName": "Lonza Career Day",
+  "organizationName": "Career and Professional Success (CaPS)",
+  "location": "Across Campus",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-09-30T12:00:00Z",
+  "endDateTimeUtc": "2026-09-30T22:00:00Z",
+  "tags": [
+   "Academic & Career"
+  ]
+ },
+ {
+  "uri": "panhellenic-x-interlinked",
+  "eventName": "Panhellenic x Interlinked:",
+  "organizationName": "Panhellenic Council",
+  "location": "Thompson Hall Lawn",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-10-01T16:00:00Z",
+  "endDateTimeUtc": "2026-10-01T21:00:00Z",
+  "tags": []
+ },
+ {
+  "uri": "scope-fall-concert",
+  "eventName": "SCOPE Presents: Off the Rails",
+  "organizationName": "Student Committee on Popular Entertainment (SCOPE)",
+  "location": "A-Lot",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-10-25T20:00:00Z",
+  "endDateTimeUtc": "2026-10-26T01:00:00Z",
+  "tags": [
+   "Arts & Music"
+  ]
+ },
+ {
+  "uri": "author-shannon-garvey-visiting-june-baby-discussion",
+  "eventName": "Author Shannon Garvey Visiting & June Baby Discussion",
+  "organizationName": "Little Library Club",
+  "location": "MUB 164",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-09-30T22:00:00Z",
+  "endDateTimeUtc": "2026-09-30T23:00:00Z",
+  "tags": [
+   "General Org Meeting"
+  ]
+ },
+ {
+  "uri": "lonza-career-day",
+  "eventName": "Lonza Career Day",
+  "organizationName": "Career and Professional Success (CaPS)",
+  "location": "Across Campus",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-09-30T12:00:00Z",
+  "endDateTimeUtc": "2026-09-30T22:00:00Z",
+  "tags": [
+   "Academic & Career"
+  ]
+ },
+ {
+  "uri": "nhmea-fall-conference",
+  "eventName": "NHMEA Fall Conference",
+  "organizationName": "National Association for Music Education",
+  "location": "Grappone Conference Center, 70 Constitution Ave, Concord, NH 03301",
+  "isVirtualEventLink": false,
+  "startDateTimeUtc": "2026-10-22T12:00:00Z",
+  "endDateTimeUtc": "2026-10-22T20:00:00Z",
+  "tags": [
+   "Academic & Career",
+   "Arts & Music"
+  ]
+ }
+]

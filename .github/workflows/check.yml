@@ -1,7 +1,7 @@
-# Typechecks, tests, and builds every pull request. Needs no secrets: a pull request's code, a fork's included, is
-# whatever its author wrote, so it gets a read-only token and nothing else. It also runs offline (NOTUNH_OFFLINE):
-# the data comes from the fixtures (tests/fixtures/data/), so no pull request asks anything of the GTFS host,
-# Nutrislice, or the laundry vendor
+# Typechecks, unit tests, and builds every pull request; the browser tests are run locally (docs/development.md). It
+# needs no secrets: a pull request's code, a fork's included, is whatever its author wrote, so it gets a read-only
+# token and nothing else. It also runs offline (NOTUNH_OFFLINE): the data comes from the fixtures
+# (tests/fixtures/data/), so no pull request asks anything of any upstream source
 
 name: Check
 
@@ -27,6 +27,3 @@ jobs:
       - run: npm run build
         env:
           NOTUNH_OFFLINE: 1
-      # The service worker through real browsers, against the build just made
-      - run: npx playwright install --with-deps chromium webkit
-      - run: NOTUNH_DIST=dist npm run test:browser

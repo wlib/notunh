@@ -24,5 +24,11 @@ export type Env = {
   /** Who push services can reach about our pushes, a mailto: or https: URL */
   VAPID_SUBJECT?:         string,
   /** How many reminders may be set from one address a minute (api.mts), a Rate Limiting binding, or none to not bound it */
-  RATE_LIMIT?:            RateLimit
+  RATE_LIMIT?:            RateLimit,
+  /** The social features switched off (social.mts), by name, like "pins email", a var */
+  SOCIAL_OFF?:            string,
+  /** Cloudflare Email Service, which sends verification codes (mail.mts); without it, as in Previews, they're logged */
+  EMAIL?:                 SendEmail,
+  /** The address codes are sent from, on a domain onboarded to Email Service, a var */
+  MAIL_FROM?:             string
 }

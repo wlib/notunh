@@ -1,0 +1,138 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//SIDEARM Sports//NONSGML SIDEARM//EN
+X-WR-CALNAME:University of New Hampshire Athletics
+X-PUBLISHED-TTL:PT120M
+BEGIN:VEVENT
+UID:vcal_9584-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20260925T190000Z
+DTEND:20260925T220000Z
+LOCATION:St. Paul\, Minn., Lee & Penny Anderson Arena
+SUMMARY:[L] University of New Hampshire Women's Ice Hockey at St. Thomas
+DESCRIPTION:[L] University of New Hampshire Women's Ice Hockey at St. Thomas\nL 2-7\nStreaming Video: https://www.bigtenplus.com/en-int/livestream/new-hampshire-at-st-thomas/2211618\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9584&amp;sport_id=14
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9484-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20260926T160000Z
+DTEND:20260926T190000Z
+LOCATION:Fairfield\, Conn.
+SUMMARY:[L] University of New Hampshire Football at Sacred Heart
+DESCRIPTION:[L] University of New Hampshire Football at Sacred Heart\nL 13-20\nTV: FloSports Channel on Prime Video\nStreaming Video: https://flosports.link/4h3mpuw\nStreaming Audio: https://thevarsitynetwork.com/audioapplink/source/oas-1064/content/unh:allaccess-Live-793\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9484&amp;sport_id=3
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9653-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20260927T160000Z
+DTEND:20260927T190000Z
+LOCATION:Durham\, N.H., Memorial Field
+SUMMARY:POSTPONED University of New Hampshire Field Hockey vs Holy Cross - POSTPONED
+DESCRIPTION:POSTPONED University of New Hampshire Field Hockey vs Holy Cross - POSTPONED\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9653&amp;sport_id=2
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9637-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20260927T170000Z
+DTEND:20260927T190000Z
+LOCATION:Durham\, N.H., Lundholm Gymnasium
+SUMMARY:[W] University of New Hampshire Women's Volleyball vs Binghamton
+DESCRIPTION:[W] University of New Hampshire Women's Volleyball vs Binghamton\nW 3-0\nStreaming Video: https://www.espn.com/watch/player/_/eventCalendarId/401884189?gameId=401884189&sourceLang=en&om-navmethod=espn:globalsearch:results\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9637&amp;sport_id=20
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9695-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20260929T220000Z
+DTEND:20260930T000000Z
+LOCATION:Durham\, N.H., Wildcat Stadium
+SUMMARY:[T] University of New Hampshire Men's Soccer vs Dartmouth - Spread Respect | Stratham Park & Rec & Barrington Storm Youth Night
+DESCRIPTION:[T] University of New Hampshire Men's Soccer vs Dartmouth - Spread Respect | Stratham Park & Rec & Barrington Storm Youth Night\nT 0-0\nTV: ESPN+\nStreaming Video: https://www.espn.com/watch/player/_/eventCalendarId/401898102?gameId=401898102&sourceLang=en&om-navmethod=espn:globalsearch:results\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9695&amp;sport_id=8
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9624-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20260930T220000Z
+DTEND:20261001T000000Z
+LOCATION:Durham\, N.H., Lundholm Gymnasium
+SUMMARY:[W] University of New Hampshire Women's Volleyball vs Stonehill
+DESCRIPTION:[W] University of New Hampshire Women's Volleyball vs Stonehill\nW 3-0\nStreaming Video: https://www.espn.com/watch/player/_/eventCalendarId/401903250?gameId=401903250&sourceLang=en&om-navmethod=espn:globalsearch:results\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9624&amp;sport_id=20
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9676-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20261001T220000Z
+DTEND:20261002T000000Z
+LOCATION:Durham\, N.H., Wildcat Stadium
+SUMMARY:[L] University of New Hampshire Women's Soccer vs Bryant - Stratham Parks & Rec Soccer Youth Night
+DESCRIPTION:[L] University of New Hampshire Women's Soccer vs Bryant - Stratham Parks & Rec Soccer Youth Night\nL 0-2\nTV: ESPN+\nStreaming Video: https://www.espn.com/watch/player/_/eventCalendarId/401887257?gameId=401887257&sourceLang=en&om-navmethod=espn:globalsearch:results\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9676&amp;sport_id=17
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9654-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20261002T190000Z
+DTEND:20261002T220000Z
+LOCATION:Durham\, N.H., Memorial Field
+SUMMARY:[W] University of New Hampshire Field Hockey vs Vermont
+DESCRIPTION:[W] University of New Hampshire Field Hockey vs Vermont\nW 1-0\nTV: AE.tv\nStreaming Video: https://americaeast.com/watch/default.aspx?Live=18403&path=new_hampshire\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9654&amp;sport_id=2
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9485-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20261003T170000Z
+DTEND:20261003T200000Z
+LOCATION:Durham\, N.H., Wildcat Stadium
+SUMMARY:[W] University of New Hampshire Football vs Elon - Homecoming • Hall of Fame Weekend
+DESCRIPTION:[W] University of New Hampshire Football vs Elon - Homecoming • Hall of Fame Weekend\nW 30-23\nTV: FloCollege\nStreaming Video: https://flosports.link/4h3mpuw\nStreaming Audio: https://thevarsitynetwork.com/audioapplink/source/oas-1064/content/unh:allaccess-Live-794\nTickets: https://usnh.evenue.net/event/NFB26/FB03\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9485&amp;sport_id=3
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9696-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20261003T230000Z
+DTEND:20261004T010000Z
+LOCATION:Durham\, N.H., Wildcat Stadium
+SUMMARY:[T] University of New Hampshire Men's Soccer vs Binghamton - Alumni Night | ORYA Fest
+DESCRIPTION:[T] University of New Hampshire Men's Soccer vs Binghamton - Alumni Night | ORYA Fest\nT 1-1\nTV: ESPN+\nStreaming Video: https://www.espn.com/watch/player/_/eventCalendarId/401892239?gameId=401892239&sourceLang=en&om-navmethod=espn:globalsearch:results\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9696&amp;sport_id=8
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9655-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20261004T160000Z
+DTEND:20261004T190000Z
+LOCATION:Durham\, N.H., Memorial Field
+SUMMARY:[L] University of New Hampshire Field Hockey vs Miami (Ohio)
+DESCRIPTION:[L] University of New Hampshire Field Hockey vs Miami (Ohio)\nL 0-5\nTV: AE.tv\nStreaming Video: https://americaeast.com/watch/default.aspx?Live=18403&path=new_hampshire\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9655&amp;sport_id=2
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9588-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20261009T220000Z
+DTEND:20261010T010000Z
+LOCATION:Durham\, N.H., Whittemore Center at Key Auto Group Complex
+SUMMARY:[T] University of New Hampshire Women's Ice Hockey vs Boston University - Home Opener
+DESCRIPTION:[T] University of New Hampshire Women's Ice Hockey vs Boston University - Home Opener\nT 4-4 (OT) - BU Wins Shootout, 3-2\nStreaming Video: https://www.espn.com/watch/player/_/id/95a4e334-f942-4bce-ba71-befd8c2a8ebb\nTickets: https://usnh.evenue.net/event/NWH27/WH01\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9588&amp;sport_id=14
+PRIORITY:3
+END:VEVENT
+END:VCALENDAR

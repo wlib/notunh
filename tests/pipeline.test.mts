@@ -47,6 +47,19 @@ test("a bundle missing a model fails before installation can use an old fixture"
   finally { await rm(folder, { recursive: true, force: true }) }
 })
 
+test("a generation may lack what came later, but what it has must name only files it has", async () => {
+  const folder = await mkdtemp(join(tmpdir(), "bundle-test-"))
+  try {
+    await cp("tests/fixtures/data", folder, { recursive: true })
+    const courses = JSON.parse(await readFile(join(folder, "src/courses/courses.json"), "utf8"))
+    await rm(join(folder, "public", courses.files[0]))
+    await expect(validateInputs(folder)).rejects.toThrow(courses.files[0])
+    for (const path of ["src/courses/courses.json", "src/programs/prereqs.json", "src/parking/parking.json", "src/map/events.json"])
+      await rm(join(folder, path))
+    await validateInputs(folder)
+  }
+  finally { await rm(folder, { recursive: true, force: true }) }
+})
 
 test("archive enumeration failure stops before publishing or cataloging", async () => {
   let published = false

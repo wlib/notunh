@@ -4,9 +4,11 @@
 
 import { test, expect, vi, beforeEach, afterEach } from "vitest"
 import { flush } from "bruh/reactive"
-import type { Reminder } from "../../src/reminders/reminder.mts"
+import { type Reminder, unplanned, watchOf } from "../../src/reminders/reminder.mts"
 import { SHIFT, WAKE_VERSION, pushOf } from "../../src/reminders/watch.mts"
-import { type PushScope, startPush } from "../../src/sw/push.mts"
+import { type Locate, queueOf } from "../../src/reminders/queue.mts"
+import type { Visit } from "../../src/shared/visit.mts"
+import { type MoveOn, type PushScope, startPush } from "../../src/sw/push.mts"
 import { browserStorage } from "./browser.mts"
 
 // Now, as the page drops reminders of buses long gone
@@ -19,7 +21,7 @@ const REMINDER: Reminder = {
 }
 
 type Tab = typeof import("../../src/map/state/reminders.mts")
-type Asked = { method: string, path: string, device?: string, secret?: string, watch?: unknown }
+type Asked = { method: string, path: string, device?: string, secret?: string, watch?: unknown, body?: string }
 
 let storage: ReturnType<typeof browserStorage>
 /** What the Worker was asked, and how it answers: taking everything, unreachable, or refusing */
@@ -46,8 +48,11 @@ beforeEach(() => {
     const url = new URL(input, "https://notunh.app")
     if (url.pathname === "/api/push/key")
       return Response.json({ key: KEY })
+    // No cookie keeps a device here, so a device is made
+    if (url.pathname === "/api/session")
+      return new Response("No device here", { status: 401 })
     const body = init.body ? JSON.parse(init.body as string) as { device: string, watch: unknown } : undefined
-    asked.push({ method: init.method!, path: url.pathname + url.search, device: body?.device, secret: new Headers(init.headers).get("authorization") ?? undefined, watch: body?.watch })
+    asked.push({ method: init.method ?? "GET", path: url.pathname + url.search, device: body?.device, secret: new Headers(init.headers).get("authorization") ?? undefined, watch: body?.watch, body: init.body as string | undefined })
     if (worker === "down")
       throw new TypeError("Failed to fetch")
     answered?.()
@@ -75,20 +80,28 @@ const tab = async (): Promise<Tab> => {
 const states = (page: Tab) =>
   [...page.kept.peek().values()].map(({ id, state }) => `${id} ${state}`)
 
-/** A service worker over the same storage, and the notifications it's shown */
+/** A service worker over the same storage, and the notifications it's shown, which moves class reminders on as the phone's does */
 const serviceWorker = async () => {
   const store = await import("../../src/reminders/browser/store.mts")
+  const { moveOn } = await import("../../src/reminders/browser/sync.mts")
+  const subscription = { endpoint: "https://fcm.googleapis.com/fcm/send/stub", keys: { p256dh: "BCVxsr7N", auth: "BTBZMqHH" } }
   const shown: string[] = []
+  const shownBodies: string[] = []
   let onPush: ((event: { data: { json(): unknown }, waitUntil(promise: Promise<unknown>): void }) => void) | undefined
   const scope = {
     addEventListener: (type: string, listener: unknown) => void (type === "push" && (onPush = listener as typeof onPush)),
-    registration: { showNotification: async (title: string) => void shown.push(title), getNotifications: async () => [] },
+    registration: {
+      showNotification: async (title: string, { body }: NotificationOptions) => void (shown.push(title), shownBodies.push(body ?? "")),
+      getNotifications: async () => []
+    },
     clients: { matchAll: async () => [], openWindow: async () => {} },
     location: { origin: "https://notunh.app" }
   } as unknown as PushScope
-  startPush(scope, store, () => NOW)
+  const moving: MoveOn = (id, wake) => moveOn(id, NOW, isSubscribed ? subscription : undefined, wake)
+  startPush(scope, store, () => NOW, moving)
   return {
     shown,
+    shownBodies,
     push: async (data: string) => {
       const waits: Promise<unknown>[] = []
       onPush!({ data: { json: () => JSON.parse(data) }, waitUntil: promise => void waits.push(promise) })
@@ -157,7 +170,7 @@ test("a reminder cancelled offline is kept as cancelling, a push arriving meanwh
   expect(asked.filter(({ method }) => method === "DELETE")).toHaveLength(2)
 })
 
-test("a device pushes no longer reach is forgotten on both sides when the map loads, reminders and all", async () => {
+test("reminders pushes no longer reach are dropped on both sides when the map loads, and the device itself stays", async () => {
   const page = await tab()
   await page.remind(page.ready.peek()!, REMINDER)
   isSubscribed = false
@@ -165,7 +178,11 @@ test("a device pushes no longer reach is forgotten on both sides when the map lo
   expect(states(later)).toEqual([])
   expect(asked.at(-1)).toMatchObject({ method: "DELETE", path: `/api/push/devices/${asked[0].device}` })
   const store = await import("../../src/reminders/browser/store.mts")
-  expect(await store.deviceKept()).toBeUndefined()
+  expect((await store.deviceKept())?.id).toBe(asked[0].device)
+  // With nothing kept, there's nothing to tell the Worker when the map loads again
+  const told = asked.length
+  await tab()
+  expect(asked).toHaveLength(told)
 })
 
 test("a reminder's trip is planned again when the map loads, and its watch replaced with the same id only when its leave time moved by SHIFT or its first bus changed", async () => {
@@ -230,4 +247,108 @@ test("only a trip still ahead, untold, is planned again: not one left for, past 
   online.at(-1)!()
   await vi.waitFor(() => expect(states(page)).toContain("r1 set"))
   expect(puts()).toHaveLength(8)
+})
+
+/** A class's meetings, a day apart from tomorrow, in a room, as the courses would resolve its section */
+const meetings = (where: string, count = 12): Visit[] =>
+  Array.from({ length: count }, (_, i) => ({
+    destination: { place: "Kingsbury Hall", where },
+    arriveBy:    (NOW + (i + 1) * 86_400) * 1000,
+    offset:      300_000,
+    occurrence:  { id: `cs518-01:${i}`, title: "CS 518" }
+  }))
+const SECTION = "202610:12496"
+const locate: Locate = () => ({ lat: 43.1361, lon: -70.9353, name: "Kingsbury Hall" })
+const HERE = { ...REMINDER.from, isYou: true as const }
+
+/** A class reminder for the first of some meetings, not planned yet, and its queue, set ten minutes ago */
+const classReminder = (visits: Visit[]) => {
+  const reminder = unplanned("c1", HERE, { visit: visits[0], to: locate(visits[0])! }, 900)
+  return { reminder, queue: queueOf(reminder, SECTION, visits, locate, NOW - 600) }
+}
+
+/** What the Worker must never be told of a class: what it is, its section, or where */
+const COURSE = /CS 518|202610:12496|N343|N113|Kingsbury/
+
+test("a visit's reminder needs nothing saved or going, the Worker is asked what a trip's would ask, and never what the class is or where", async () => {
+  const page = await tab()
+  const visit = meetings("N343")[0]
+  const forVisit: Reminder = { ...REMINDER, id: "v1", visit, by: REMINDER.end }
+  await page.remind(page.ready.peek()!, forVisit)
+  const { reminder, queue } = classReminder(meetings("N343"))
+  await page.remind(page.ready.peek()!, reminder, queue)
+  await page.remind(page.ready.peek()!, REMINDER)
+  const [visited, queued, trip] = asked
+  // The same watch as the trip's, and only a device, a subscription and a watch besides
+  expect(visited.watch).toEqual(trip.watch)
+  expect(visited.watch).toEqual(watchOf(REMINDER))
+  expect(queued.watch).toEqual({ at: Math.round(visit.arriveBy / 1000 - 300) - 900, lead: 300 })
+  for (const { body } of asked) {
+    expect(Object.keys(JSON.parse(body!))).toEqual(["device", "subscription", "watch"])
+    expect(body).not.toMatch(COURSE)
+  }
+  expect(states(page)).toEqual(["v1 set", "c1 set", "r1 set"])
+})
+
+test("un-going leaves the reminder: it's the phone's own, for the visit", async () => {
+  const page = await tab()
+  await page.remind(page.ready.peek()!, { ...REMINDER, visit: { ...meetings("MUB 330")[0], occurrence: { id: "pin1", title: "Board games" } } })
+  const before = asked.length
+  const social = await import("../../src/social/browser/api.mts")
+  await social.setGoing("pin1", true).catch(() => {})
+  await social.setGoing("pin1", false).catch(() => {})
+  expect(asked.slice(before).every(({ path }) => path.startsWith("/api/pins/pin1"))).toBe(true)
+  expect(asked.length).toBeGreaterThan(before)
+  expect(states(await tab())).toEqual(["r1 set"])
+})
+
+test("a class reminder goes on to its next meeting once a push of the current one is shown, set with the Worker under the same id, the same push again moving it no further", async () => {
+  const page = await tab()
+  const visits = meetings("N343")
+  const { reminder, queue } = classReminder(visits)
+  await page.remind(page.ready.peek()!, reminder, queue)
+  const sw = await serviceWorker()
+  const due = pushOf({ v: WAKE_VERSION, reminder: "c1", kind: "due", seen: { time: reminder.start, band: 0, isLive: false, status: "coming" }, at: NOW - 5 })
+  await sw.push(due)
+  await sw.push(due)
+  const puts = asked.filter(({ method }) => method === "PUT")
+  expect(puts.map(({ path }) => path)).toEqual(["/api/reminders/c1", "/api/reminders/c1"])
+  expect(puts[1].watch).toEqual({ at: Math.round(visits[1].arriveBy / 1000 - 300) - 900, lead: 300 })
+  expect(puts[1].body).not.toMatch(COURSE)
+  // The same push again is of a meeting gone by, which only says to look
+  expect(sw.shown).toEqual([expect.stringMatching(/^Leave in/), "Time to head out"])
+  const store = await import("../../src/reminders/browser/store.mts")
+  expect(await store.reminderOf("c1")).toMatchObject({ state: "set", visit: visits[1], queue: { next: visits.slice(2, 10).map(visit => ({ visit, to: locate(visit) })) } })
+})
+
+test("opening a page tops a class reminder up from the courses, and a room change replaces its queue and its visit, with the same id given to the Worker", async () => {
+  const page = await tab()
+  const { reminder, queue } = classReminder(meetings("N343"))
+  await page.remind(page.ready.peek()!, reminder, queue)
+  // Nothing's changed: nothing to tell
+  await page.topUp(() => meetings("N343"), locate)
+  expect(asked).toHaveLength(1)
+  // The section moved rooms
+  const moved = meetings("N113")
+  await page.topUp(section => section === SECTION ? moved : [], locate)
+  expect(asked.map(({ method, path }) => `${method} ${path}`)).toEqual(["PUT /api/reminders/c1", "PUT /api/reminders/c1"])
+  const store = await import("../../src/reminders/browser/store.mts")
+  const kept = await store.reminderOf("c1")
+  expect(kept).toMatchObject({ state: "set", visit: moved[0] })
+  expect([kept!.visit, ...kept!.queue!.next.map(({ visit }) => visit)]).toEqual(moved.slice(0, 10))
+})
+
+test("a class reminder past its meeting unheard, as with the phone off, goes on to the next still to come when the map loads", async () => {
+  const page = await tab()
+  const visits = meetings("N343").map((visit, i) => ({ ...visit, arriveBy: visit.arriveBy - 3 * 86_400_000 + (i > 1 ? 0 : -3600_000) }))
+  const { reminder, queue } = classReminder(visits.slice(2))
+  const missed = { ...reminder, ...unplanned("c1", HERE, { visit: visits[0], to: locate(visits[0])! }, 900) }
+  const store = await import("../../src/reminders/browser/store.mts")
+  await store.device()
+  await store.keep({ ...missed, state: "set", queue: { ...queue, since: NOW - 4 * 86_400 } })
+  await tab()
+  // The first two queued are still behind, so it goes on to the first ahead
+  const ahead = visits.slice(2).find(visit => visit.arriveBy - visit.offset > NOW * 1000)!
+  expect(await store.reminderOf("c1")).toMatchObject({ visit: ahead, state: "set" })
+  expect(asked.map(({ method, path }) => `${method} ${path}`)).toEqual(["PUT /api/reminders/c1"])
 })

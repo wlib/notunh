@@ -360,7 +360,7 @@ test("storage says how big the database is, in bytes and rows a table", async ()
   await derived("visits", SUNDAY, {}, async () => [1, 2, 3])
   const { bytes, rows } = await storage()
   expect(bytes).toBeGreaterThan(4096)
-  expect(rows).toEqual({ samples: 0, derived: 1, chunks: 1, feeds: 0, models: 0, transitions: 0, latest: 0, polls: 0, room_snapshots: 0 })
+  expect(rows).toEqual({ samples: 0, derived: 1, chunks: 1, feeds: 0, models: 0, transitions: 0, latest: 0, polls: 0, room_snapshots: 0, devices: 0, links: 0, emails: 0, pins: 0, going: 0, marks: 0, reports: 0, state: 0 })
 })
 
 test("health says when each table's rows start and end, in its own unit, and the day each model runs through", async () => {

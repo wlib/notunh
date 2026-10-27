@@ -3,9 +3,12 @@
 import { r, watch } from "bruh/reactive"
 import { ridePath } from "../../transit/shapes.mts"
 import { type Progress, type Walk, type Walks, isOffPath, walkOn, walkSeconds } from "../../routing/walks.mts"
-import { type Itinerary, type WalkLeg, STICKINESS, cost, isSameItinerary, isWalkOffered, plan, planBy, walkBy, walkOnly, wayKey } from "../../routing/plan.mts"
+import { type Itinerary, type WalkLeg, HORIZON, STICKINESS, cost, isSameItinerary, isWalkOffered, plan, planBy, walkBy, walkOnly, wayKey } from "../../routing/plan.mts"
 import type { Place } from "../../places/search.mts"
 import { buildingAt } from "../../places/buildings.mts"
+import { placeOf } from "../../social/event.mts"
+import { type Visit, queryOf } from "../../shared/visit.mts"
+import { bestOf } from "../../reminders/reminder.mts"
 import { type Line, sliceLine, toLine } from "../../geo/lines.mts"
 import { distance } from "../../geo/projection.mts"
 import type { MapData } from "./data.mts"
@@ -13,13 +16,23 @@ import type { createLocation } from "./location.mts"
 import type { createLive } from "./live.mts"
 import type { createRiding } from "./riding.mts"
 import { today } from "../../shell/lifecycle.mts"
-import { type Own, distinct, store, stored } from "../../shell/state.mts"
+import { type Own, distinct, remembered, store, stored } from "../../shell/state.mts"
 import { byPattern } from "./ways.mts"
+import { hhmm, nextAt } from "../../shared/time.mts"
 
 const isPlace = (value: unknown): value is Place => {
   const { lat, lon, name }: { lat?: unknown, lon?: unknown, name?: unknown } = Object(value)
   return typeof lat === "number" && typeof lon === "number" && typeof name === "string"
 }
+
+/** A trip saved, as a goal: a place, and a time of day on Durham's clock to be there by, synced (src/shell/sync.mts) */
+export type Goal = Place & { by: string }
+
+const isGoal = (value: unknown): value is Goal =>
+  isPlace(value) && /^\d\d:\d\d$/.test(String((value as { by?: unknown }).by))
+
+/** Where the trips saved here are kept */
+const GOALS = "map-goals"
 
 // The trip being planned is kept for the rest of the day, so the page reloading, as it does after a while away,
 // picks it back up
@@ -34,7 +47,7 @@ export type LegPath = Pick<Walk, "coordinates" | "via">
  * to a building in the page's address plans a trip there. own is given what stops it
  */
 export const createTrip = (
-  { feed, walks, buildings, now, runs, riding, location, currentLocation, locationProblem }:
+  { feed, walks, buildings, gazetteer, now, runs, riding, location, currentLocation, locationProblem }:
     MapData & ReturnType<typeof createLocation> & ReturnType<typeof createLive> & ReturnType<typeof createRiding>,
   own: Own
 ) => {
@@ -199,8 +212,37 @@ export const createTrip = (
     }
   }
 
+  /** The visit the trip was planned for, while it's still to that visit's place, as parking for it asks */
+  const visiting = r<Visit>()
+
+  /** The trips saved, each a place and a time of day to be there by */
+  const goals = remembered<Goal[]>(GOALS, stored => Array.isArray(stored) ? stored.filter(isGoal) : [])
+
+  /** Whether the trip planned, to somewhere by a time, is saved */
+  const isGoalSaved = r(() => to.value !== undefined && by.value !== undefined && goals.value.some(goal => goal.name === to.value!.name && goal.by === hhmm(by.value! * 1000)))
+
+  /** Saves the trip planned, to where by its time of day, once */
+  const saveGoal = () => {
+    const place = to.peek()
+    if (!place || by.peek() === undefined)
+      return
+    const saved: Goal = { lat: place.lat, lon: place.lon, name: place.name, by: hhmm(by.peek()! * 1000) }
+    goals.value = [saved, ...goals.peek().filter(goal => !(goal.name === saved.name && goal.by === saved.by))]
+  }
+
+  const forgetGoal = (goal: Goal) =>
+    goals.value = goals.peek().filter(other => other !== goal)
+
+  /** Plans a saved trip again: from where you are, there by its time as it next comes */
+  const openGoal = (goal: Goal) => {
+    from.value = undefined
+    by.value = nextAt(goal.by, Date.now()) / 1000
+    void directTo({ lat: goal.lat, lon: goal.lon, name: goal.name })
+  }
+
   /** Directions to a place, from where you are unless the trip already starts somewhere */
   const directTo = async (place: Place) => {
+    visiting.value = undefined
     to.value = place
     selected.value = undefined
     if (from.peek())
@@ -209,6 +251,44 @@ export const createTrip = (
     // Unless you've picked somewhere while waiting
     if (here && !from.peek())
       from.value = here
+  }
+
+  /** Where a visit (src/shared/visit.mts) is on the map, or nowhere it knows */
+  const placeOfVisit = (visit: Visit) =>
+    placeOf(gazetteer.peek(), visit.destination.place)
+
+  /**
+   * Directions for a visit: to its place, so as to be there by its time less its offset, from where you are, in
+   * place of any trip planned; one whose time has come is planned to leave now. Nothing, for a place the map doesn't
+   * know
+   */
+  const planVisit = (visit: Visit) => {
+    const place = placeOfVisit(visit)
+    if (!place)
+      return false
+    from.value = undefined
+    by.value = queryOf(visit, now.peek() * 1000).by
+    void directTo(place)
+    visiting.value = visit
+    return true
+  }
+
+  /**
+   * Every way there by a time, for a visit's reminder to take the best of: the buses that make it, while the time's
+   * within the planner's horizon, as stepping through days of no buses is slow and they're planned again nearer
+   * the time, and walking
+   */
+  const waysBy = (from: Place, to: Place, by: number) => [
+    ...by - now.peek() <= HORIZON ? planBy(feed.peek(), walks.peek(), runs.peek(), from, to, by, now.peek()) : [],
+    walkBy(walks.peek(), from, to, by)
+  ]
+
+  /** The way a visit's reminder is set for: the best there by its time from where you are, or none while that's unknown or the time has come */
+  const wayToVisit = (visit: Visit) => {
+    const place = placeOfVisit(visit)
+    const here = you.peek()
+    const { by } = queryOf(visit, now.peek() * 1000)
+    return place && here && by !== undefined ? bestOf(waysBy(here, place, by), now.peek(), by) : undefined
   }
 
   // A link from the laundry or dining pages, like /map/?to=laundry/stoke-hall-g05, gives directions from where you are
@@ -223,6 +303,12 @@ export const createTrip = (
       directTo({ lat: building.lat, lon: building.lon, name: building.name })
     }
   }
+
+  // A trip to elsewhere is no longer for the visit
+  own(watch([to], () => {
+    if (visiting.peek() && to.value?.name !== visiting.peek()!.destination.place)
+      visiting.value = undefined
+  }))
 
   // Start from the current location if the user already allowed it. Otherwise don't keep a trip from or to where you
   // were, as there's no following you from there. Browsers without the permissions API keep it until you next locate
@@ -244,5 +330,5 @@ export const createTrip = (
     })
     .catch(() => {})
 
-  return { from, to, by, selected, itineraries, ways, makesIt, walk, itinerary, progress, legPaths, isLocating, located, useCurrentLocation, directTo, plansFor, walkingTo }
+  return { from, to, by, visiting, selected, itineraries, ways, makesIt, walk, itinerary, progress, legPaths, isLocating, located, useCurrentLocation, directTo, planVisit, placeOfVisit, wayToVisit, waysBy, plansFor, walkingTo, goals, isGoalSaved, saveGoal, forgetGoal, openGoal }
 }

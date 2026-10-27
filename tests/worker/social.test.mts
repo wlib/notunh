@@ -25,7 +25,7 @@ const worker = (vars: Partial<Env> = {}) => {
   const env = {
     DB: d1(),
     ASSETS: { fetch: async (input: RequestInfo | URL) => new URL(input instanceof Request ? input.url : input).pathname === "/p/" ? new Response(PAGE, { headers: { "content-type": "text/html" } }) : new Response("", { status: 404 }) },
-    EMAIL: { send: async ({ to, subject, text }: Message) => void sent.push({ to, subject, text }) },
+    EMAIL: { send: async ({ to, subject, text }: Message) => (sent.push({ to, subject, text }), { messageId: `test-${sent.length}` }) },
     ...vars
   } as unknown as Env
   /** A device: an id and a secret, asking the Worker as itself */

@@ -30,7 +30,7 @@ const env = {
         .then(body => new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } }), () => new Response("", { status: 404 }))
     }
   },
-  EMAIL: { send: async ({ to, subject, text }: Message) => void (last = { to, subject, text }) }
+  EMAIL: { send: async ({ to, subject, text }: Message) => (last = { to, subject, text }, { messageId: "test" }) }
 } as unknown as Env
 
 const server = createServer(async (request, response) => {

@@ -37,6 +37,7 @@ import { walkSeconds } from "../../routing/walks.mts"
 import { type Occurrence, type Visit, thereBy, visitOf } from "../../shared/visit.mts"
 import { clockOf, daysBetween, localDay, localMinutes, nextAt } from "../../shared/time.mts"
 import type { Place } from "../../places/search.mts"
+import { type Chapter, chapterNamed } from "../../places/chapters.mts"
 import { ClockRange, ClockTime, Count, Counted, Day, DayRange, List, Minutes, Weekdays, relativeDay } from "../../shell/intl.tsx"
 import { capture } from "../../shell/usage.tsx"
 import { minutes, nowMs, walkTo } from "./common.tsx"
@@ -628,6 +629,20 @@ const NearestStop = ({ place }: { place: Place }) =>
     )
   })
 
+/** A chapter's letters and whether it's a fraternity or sorority, as its page's head says over its name */
+export const ChapterKind = ({ chapter }: { chapter: Chapter }) =>
+  <><span lang="el">{chapter.letters}</span> · {chapter.kind === "fraternity" ? "Fraternity" : "Sorority"}</>
+
+/** A chapter's own facts: its house's address, its chapter, and its council */
+const ChapterFacts = ({ chapter }: { chapter: Chapter }) =>
+  <p class="view-facts">
+    <List type="unit" items={[
+      ...chapter.house ? [chapter.house.address] : [],
+      ...chapter.designation ? [`${chapter.designation} chapter`] : [],
+      chapter.council
+    ]} />
+  </p>
+
 /**
  * A place's page: its facts, Directions, what's on there today and this week, with a new event as the last row,
  * the stop beside it and what it offers itself, the classes under way, a reminder to leave to be there by a time,
@@ -638,11 +653,13 @@ const PlaceView = ({ name }: { name: string }) => {
   if (!place)
     return <Missing what={name} why="Nowhere the map knows." />
   focusOn({ kind: "place", name }, name)
+  const chapter = chapterNamed(name)
   const by = r<number>()
   const time: HTMLInputElement = <input type="time" aria-label="Be there by" onchange={() => by.value = time.value ? nextAt(time.value, nowMs()) : undefined} />
   return (
     <>
-      <Head title={name} />
+      <Head kind={chapter && <ChapterKind chapter={chapter} />} title={name} />
+      {chapter && <ChapterFacts chapter={chapter} />}
       {r(() => {
         const walk = walkTo(place)
         const hall = hallOf(name)
@@ -670,6 +687,7 @@ const PlaceView = ({ name }: { name: string }) => {
       <NearestStop place={place} />
       <ScheduledNow name={name} />
       <div class="lines">
+        {chapter && <LinkLine href={chapter.url}>UNH chapter page</LinkLine>}
         <Building name={name} />
         <div class="line remind-line place-by">
           <label>Remind me to leave for here by</label>

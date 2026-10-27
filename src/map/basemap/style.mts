@@ -35,8 +35,11 @@ export const loadStyle = async (response: Response, init: RequestInit): Promise<
 export const BASE = "openmaptiles"
 export const CAMPUS = "campus"
 
-/** The glyph ranges kept here: Latin, the rest of Latin, and punctuation like ’ and –, all that Durham's names use */
-export const GLYPH_RANGES = ["0-255", "256-511", "8192-8447"]
+/**
+ * The glyph ranges kept here: Latin, the rest of Latin, Greek, for the fraternities' and sororities' letters, and
+ * punctuation like ’ and –, all that Durham's names use
+ */
+export const GLYPH_RANGES = ["0-255", "256-511", "768-1023", "8192-8447"]
 
 /** What a TileJSON says of its tiles */
 export type TileJson = {

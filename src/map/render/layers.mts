@@ -1,18 +1,20 @@
 // The map's own sources and layers, drawn over the base map, and what fills them as the data changes: the routes in
-// lanes side by side where they share a street, the stops, the laundry and dining buildings, today's events, and
-// which routes and buses stand out
+// lanes side by side where they share a street, the stops, the laundry and dining buildings, the fraternities' and
+// sororities' houses, today's events, and which routes and buses stand out
 
 import { r, watch, type Reactive } from "bruh/reactive"
 import type { GeoJSONSource, Map as MapLibre } from "maplibre-gl"
 import type { Feed } from "../../transit/feed.mts"
 import type { Itinerary } from "../../routing/plan.mts"
 import type { Building } from "../../places/buildings.mts"
+import type { GazetteerPlace } from "../../places/gazetteer.mts"
+import { chapterNamed } from "../../places/chapters.mts"
 import type { Placed } from "../state/today.mts"
 import { clockOf } from "../../shared/time.mts"
 import { groupBy } from "../../shared/group.mts"
 import type { Coordinates } from "../../geo/projection.mts"
 import { laneSlots, lanePieces, measureCorridors } from "./corridors.mts"
-import { DENSITY, QUIET, buildingIcon, busIcon, chevronIcon } from "./icons.mts"
+import { DENSITY, GREEK, QUIET, buildingIcon, busIcon, chapterIcon, chevronIcon } from "./icons.mts"
 
 const FONT = ["Noto Sans Bold"]
 // The page's ink, and the accent today's events are drawn in
@@ -103,6 +105,17 @@ const buildingFeatures = (buildings: readonly Building[]) =>
     geometry: { type: "Point", coordinates: [lon, lat] }
   }))
 
+/** Each fraternity's and sorority's house the gazetteer places as a feature, by its name, which taps give back */
+export const chapterFeatures = (places: readonly GazetteerPlace[]) =>
+  places.flatMap(({ name, at }): GeoJSON.Feature[] => {
+    const chapter = chapterNamed(name)
+    return chapter ? [{
+      type: "Feature",
+      properties: { name, kind: chapter.kind, letters: chapter.letters, color: GREEK[chapter.kind] },
+      geometry: { type: "Point", coordinates: at }
+    }] : []
+  })
+
 /**
  * A marker for each place with something on today, which a tap opens, labelled in words by what's on there now,
  * "Tennis · till 3:00 PM", filled, else by what's next, "Soccer · 3:00 PM", outlined. Today's list is soonest first,
@@ -124,8 +137,11 @@ export const eventFeatures = (placed: readonly Placed[], now: number) =>
 export const addLayers = (map: MapLibre) => {
   for (const kind of ["laundry", "dining"] as const)
     map.addImage(`building-${kind}`, buildingIcon(kind), { pixelRatio: DENSITY })
+  for (const kind of ["fraternity", "sorority"] as const)
+    map.addImage(`chapter-${kind}`, chapterIcon(kind), { pixelRatio: DENSITY })
 
   map.addSource("buildings", { type: "geojson", data: collection([]) })
+  map.addSource("chapters",  { type: "geojson", data: collection([]) })
   map.addSource("events",    { type: "geojson", data: collection([]) })
   map.addSource("routes",    { type: "geojson", data: collection([]) })
   map.addSource("stops",     { type: "geojson", data: collection([]) })
@@ -157,6 +173,33 @@ export const addLayers = (map: MapLibre) => {
     },
     paint: {
       "icon-opacity": ["interpolate", ["linear"], ["zoom"], 13.5, 0, 14.5, 0.85],
+      "text-color": ["get", "color"],
+      "text-halo-color": "white",
+      "text-halo-width": 1.25
+    }
+  })
+
+  // The fraternities' and sororities' houses, as quiet as the buildings and faded in with them, labelled by their
+  // letters once the houses are far enough apart to read. They take their place from the base map's labels, so a
+  // house is named once, by its letters, rather than again by whatever OpenStreetMap calls it
+  map.addLayer({
+    id: "chapters",
+    type: "symbol",
+    source: "chapters",
+    minzoom: 14,
+    layout: {
+      "icon-image": ["concat", "chapter-", ["get", "kind"]],
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 14, 0.75, 17, 1],
+      "icon-allow-overlap": true,
+      "text-field": ["step", ["zoom"], "", 15.5, ["get", "letters"]],
+      "text-font": FONT,
+      "text-size": ["interpolate", ["linear"], ["zoom"], 15.5, 10, 18, 12],
+      "text-offset": [0, 1.1],
+      "text-anchor": "top",
+      "text-optional": true
+    },
+    paint: {
+      "icon-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 15, 0.9],
       "text-color": ["get", "color"],
       "text-halo-color": "white",
       "text-halo-width": 1.25
@@ -304,12 +347,13 @@ export const addLayers = (map: MapLibre) => {
   })
 }
 
-/** Draws the routes, stops, buildings, and today's events as the data has them, and which stand out */
+/** Draws the routes, stops, buildings, chapters' houses, and today's events as the data has them, and which stand out */
 export const drawLayers = (
   map: MapLibre,
   state: {
     feed:             Reactive<Feed>,
     buildings:        Reactive<readonly Building[]>,
+    gazetteer:        Reactive<readonly GazetteerPlace[]>,
     todayPlaced:      Reactive<readonly Placed[]>,
     now:              Reactive<number>,
     shownRoutes:      Reactive<ReadonlySet<string>>,
@@ -319,6 +363,9 @@ export const drawLayers = (
 ) => {
   watch(() => {
     map.getSource<GeoJSONSource>("buildings")!.setData(collection(buildingFeatures(state.buildings.value)))
+  })
+  watch(() => {
+    map.getSource<GeoJSONSource>("chapters")!.setData(collection(chapterFeatures(state.gazetteer.value)))
   })
   // Again each minute, as what's on at a place changes
   const minute = r(() => Math.floor(state.now.value / 60))

@@ -66,7 +66,11 @@ const mapElement = <div class="map" /> as HTMLElement
 const panel = <Panel /> as HTMLElement
 document.getElementById("app")!.replaceChildren(mapElement, panel)
 
-makeSheet(panel, grabber, header)
+const sheet = makeSheet(panel, grabber, header)
+// How far down the page shown is, for the history to keep as another opens over it
+panel.addEventListener("scroll", () => state.scrolled.value = sheet.scrolled(), { passive: true })
+// A page opened starts at its top, and one returned to is where it was left, once the views swapped in have rendered
+watch([state.scrollTo], () => queueMicrotask(() => sheet.scrollTo(state.scrollTo.peek().top)))
 // Something new to show brings the sheet back up
 watch([from, to, page], raise, { skipFirst: true })
 // And so does a question or a problem for you

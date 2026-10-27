@@ -65,9 +65,9 @@ const pinOf = (id: string) => {
   return pins.get(id)!
 }
 
-/** An event by its id: one of the build's or on today's list as they are, else a pin as the Worker has it, or none */
-const eventOf = async (id: string): Promise<Event | Pin | undefined> =>
-  [...state.todayList.peek(), ...state.events.peek().events].find(event => event.id === id) ?? pinOf(id)
+/** An event by its id, if it's one of the build's or on today's list, as it is there, so its page shows at once */
+const listedEvent = (id: string): Event | Pin | undefined =>
+  [...state.todayList.peek(), ...state.events.peek().events].find(event => event.id === id)
 
 /** Minutes after midnight on Durham's clock as a range, "2:10 – 3:30 PM", as the registrar's patterns are */
 export const Hours = ({ start, end }: Pick<Meeting, "start" | "end">) =>
@@ -723,9 +723,11 @@ const SOURCES: Record<Exclude<EventSource, "pin" | "course">, string> = { presen
  * for UNH's, where it's from, as a line in the foot
  */
 const EventView = ({ id }: { id: string }) => {
-  const found = r<Event | Pin | null>()
+  const found = r<Event | Pin | null | undefined>(listedEvent(id))
   const offset = r(0)
-  eventOf(id).then(event => found.value = event ?? null)
+  // Any other, a pin as the Worker has it, or none
+  if (!found.peek())
+    void pinOf(id).then(event => found.value = event ?? null)
   const act: Act = f => () => {
     notice.value = undefined
     f().then(result => result && (found.value = result), (error: Error) => notice.value = error.message)

@@ -1,6 +1,6 @@
-import { test, expect } from "vitest"
+import { test, expect, vi } from "vitest"
 import fc from "fast-check"
-import { type Page, fieldOf, fromField, isSameView, pageOf, urlOf } from "../../src/map/state/page.mts"
+import { type Page, createPage, fieldOf, fromField, isSameView, pageOf, urlOf } from "../../src/map/state/page.mts"
 import type { Purpose, Stay } from "../../src/parking/model.mts"
 import { sectionUrl } from "../../src/courses/course.mts"
 import { mapPath } from "../../src/social/event.mts"
@@ -83,5 +83,91 @@ test("the links the courses and events make for themselves, below the map, open 
   fc.assert(fc.property(fc.stringMatching(/^\d{4}[1357]0$/), fc.stringMatching(/^\d{5}$/), aText, (term, crn, id) => {
     expect(sectionUrl(term, crn)).toBe(urlOf({ kind: "section", term, crn }))
     expect(pageOf(new URL(mapPath(id), "https://notunh.app").search)).toEqual({ kind: "event", id })
+  }))
+)
+
+/**
+ * The browser's history for one visit, as the page sees it: its entries, the one it's at, and Back and Forward, which
+ * say so to popstate's listener as they arrive
+ */
+const historyOf = () => {
+  const entries: { state: unknown, url: string }[] = [{ state: null, url: "/map/" }]
+  let at = 0
+  let popped = () => {}
+  const arrive = (to: number) => {
+    at = to
+    vi.stubGlobal("location", { search: new URL(entries[at].url, "https://notunh.app").search })
+    popped()
+  }
+  vi.stubGlobal("location", { search: "" })
+  vi.stubGlobal("addEventListener", (type: string, listener: () => void) => type === "popstate" && (popped = listener))
+  vi.stubGlobal("history", {
+    get state() { return entries[at].state },
+    pushState: (state: unknown, _: string, url: string) => {
+      entries.splice(at + 1, Infinity, { state, url })
+      arrive(at + 1)
+    },
+    replaceState: (state: unknown, _: string, url = entries[at].url) => entries[at] = { state, url },
+    back: () => at > 0 && arrive(at - 1),
+    forward: () => at < entries.length - 1 && arrive(at + 1)
+  })
+  return { canGoBack: () => at > 0, canGoForward: () => at < entries.length - 1, forward: () => history.forward() }
+}
+
+type Step =
+  | { kind: "open", page: Page }
+  | { kind: "scroll", top: number }
+  | { kind: "back" | "browser back" | "forward" }
+
+const aStep: fc.Arbitrary<Step> = fc.oneof(
+  fc.record({ kind: fc.constant("open" as const), page: aPage }),
+  fc.record({ kind: fc.constant("scroll" as const), top: fc.integer({ min: 0, max: 5000 }) }),
+  fc.record({ kind: fc.constantFrom("back" as const, "browser back" as const, "forward" as const) })
+)
+
+test("a page opened starts at its top, and one Back or Forward returns to is scrolled where it was left", () =>
+  fc.assert(fc.property(fc.array(aStep, { maxLength: 40 }), steps => {
+    const browser = historyOf()
+    const pages = createPage(() => {})
+    // Where each entry was left, by its place in the history, and where the one shown is
+    const left: (number | undefined)[] = [undefined]
+    let at = 0
+    let scrolled = 0
+    const arrive = (to: number) => {
+      left[at] = scrolled
+      at = to
+      expect(pages.scrollTo.peek().top).toBe(left[at] ?? 0)
+      scrolled = pages.scrollTo.peek().top
+      pages.scrolled.value = scrolled
+    }
+    for (const step of steps) {
+      if (step.kind === "open") {
+        pages.go(step.page)
+        left.splice(at + 1, Infinity, undefined)
+        arrive(at + 1)
+      }
+      else if (step.kind === "scroll")
+        pages.scrolled.value = scrolled = step.top
+      else if (step.kind === "forward") {
+        if (browser.canGoForward()) {
+          browser.forward()
+          arrive(at + 1)
+        }
+      }
+      else if (browser.canGoBack()) {
+        if (step.kind === "back")
+          pages.back()
+        else
+          history.back()
+        arrive(at - 1)
+      }
+      // Back from the page a visit opened at goes to the map, at its top
+      else if (step.kind === "back") {
+        pages.back()
+        expect(pages.scrollTo.peek().top).toBe(0)
+        pages.scrolled.value = scrolled = 0
+      }
+    }
+    vi.unstubAllGlobals()
   }))
 )

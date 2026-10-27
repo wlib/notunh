@@ -7,7 +7,22 @@ import "bruh/components/intl/number"
 import "bruh/components/intl/plural"
 import "bruh/components/intl/list"
 import type { BruhChild } from "bruh/browser"
+import { currentUrl } from "bruh/utils/browser"
 import { TIME_ZONE, type Day as CalendarDay } from "../shared/time.mts"
+
+// bruh 2.0.0-beta.5's elements read the reader's languages from the address, which it sets anew on every navigation,
+// so each element on the page, hundreds in the map's week, makes a new formatter and renders again as a page opens.
+// The address only reaches them when what they read of it changes; drop this once bruh compares what it reads
+const LOCALE_PARAMS = ["locale", "language", "region"]
+const askedOf = (url: URL) => LOCALE_PARAMS.map(param => url.searchParams.getAll(param).join(" ")).join("\n")
+const reflected = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(currentUrl), "value")!
+Object.defineProperty(currentUrl, "value", {
+  get: reflected.get,
+  set(url: URL) {
+    if (askedOf(url) !== askedOf(currentUrl.peek()))
+      reflected.set!.call(currentUrl, url)
+  }
+})
 
 // The reader's own English first, like en-GB for its 24-hour clock, but always English. A plural or unit in another
 // language would read wrong among English words: "1 stop" for 8 under Russian's rules, or "15 мин"

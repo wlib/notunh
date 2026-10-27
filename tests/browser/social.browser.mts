@@ -350,6 +350,34 @@ test("a code shown on one device, typed on another, links them as one person", a
   await other.close()
 })
 
+test("approving a code shown by a verified device shows its address on the approving one, without a reload", async ({ page, browser, fixture }) => {
+  // Two devices' map pages, drawn in software beside the other tests
+  test.slow()
+  // The laptop verifies an address, then shows a code
+  const other = await stranger(browser)
+  const laptop = await other.newPage()
+  await openMap(laptop, fixture.origin)
+  await laptop.getByRole("button", { name: "You", exact: true }).click()
+  await laptop.getByLabel("UNH email").fill("bo@unh.edu")
+  await laptop.getByRole("button", { name: "Send code" }).click()
+  await expect(laptop.getByText("Code sent to bo@unh.edu")).toBeVisible()
+  const mail = await (await fetch(`${worker!.origin}/__mail`)).json() as { subject: string }
+  await laptop.getByLabel("Code from the email").fill(mail.subject.slice(0, 6))
+  await laptop.getByRole("button", { name: "Confirm" }).click()
+  await expect(laptop.getByText("Verified as")).toBeVisible()
+  await laptop.getByRole("button", { name: "Show a code on this device" }).click()
+  const code = (await laptop.locator(".code").textContent())!
+
+  // The phone, verified as nobody, approves it, and is bo@unh.edu at once
+  await openMap(page, fixture.origin)
+  await page.getByRole("button", { name: "You", exact: true }).click()
+  await page.getByLabel("Code from another device").fill(code)
+  await page.getByRole("button", { name: "Approve" }).click()
+  await expect(page.getByText("Approved.")).toBeVisible()
+  await expect(page.getByText("Verified as")).toContainText("bo@unh.edu")
+  await other.close()
+})
+
 test("a code emailed to a UNH address verifies this device once typed back, which lets it list a pin on the map", async ({ page, fixture }) => {
   await openMap(page, fixture.origin)
   await page.getByRole("button", { name: "You", exact: true }).click()

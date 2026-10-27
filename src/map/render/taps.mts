@@ -3,6 +3,7 @@
 import { watch, type Reactive, type SourceNode } from "bruh/reactive"
 import { Marker, type Map as MapLibre, type MapGeoJSONFeature } from "maplibre-gl"
 import type { Place } from "../../places/search.mts"
+import type { Page } from "../state/page.mts"
 import { type GazetteerPlace, type MapHints, nameAt, placeAt } from "../../places/gazetteer.mts"
 import type { Building } from "../../places/buildings.mts"
 import { nearestOnLine, toLine } from "../../geo/lines.mts"
@@ -88,7 +89,7 @@ const addressIn = (map: MapLibre, rings: Coordinates[][]) => {
  * A pin at each end of the trip, dropped elsewhere by dragging it, and named for where it's dropped. An end that's
  * you has your dot instead, as a pin would only catch up with you every so often
  */
-export const dropPins = (map: MapLibre, state: { from: SourceNode<Place | undefined>, to: SourceNode<Place | undefined>, gazetteer: Reactive<readonly GazetteerPlace[]> }) => {
+export const dropPins = (map: MapLibre, state: { page: Reactive<Page | undefined>, from: SourceNode<Place | undefined>, to: SourceNode<Place | undefined>, gazetteer: Reactive<readonly GazetteerPlace[]> }) => {
   for (const [color, place] of [[START, state.from], [END, state.to]] as const) {
     const marker = new Marker({ color, draggable: true })
     marker.on("dragend", async () => {
@@ -99,8 +100,9 @@ export const dropPins = (map: MapLibre, state: { from: SourceNode<Place | undefi
       if (name && place.peek() === dropped)
         place.value = { ...dropped, name }
     })
+    // Only while directions are shown: the trip is kept for Back to return to, but its ends aren't marked elsewhere
     watch(() => {
-      if (place.value && !place.value.isYou)
+      if (state.page.value?.kind === "directions" && place.value && !place.value.isYou)
         marker.setLngLat([place.value.lon, place.value.lat]).addTo(map)
       else
         marker.remove()

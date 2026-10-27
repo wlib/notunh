@@ -4,7 +4,7 @@ import { Head } from "./src/shell/Head.tsx"
 
 const REPO = "https://github.com/wlib/notunh"
 // Backward, so address harvesters reading the page or this source skip it; page.mts turns it into a link
-const EMAIL_BACKWARD = "ude.hnu@egdirhtE.leinaD"
+const EMAIL_BACKWARD = "ppa.hnuton@leinad"
 
 export default () =>
   new MetaDocument(

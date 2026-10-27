@@ -17,5 +17,7 @@ const FROM = "codes@notunh.app"
 export const send = async (env: Pick<Env, "EMAIL" | "MAIL_FROM">, message: Message) => {
   if (!env.EMAIL)
     return void console.log(`[mail] to ${message.to}: ${message.subject}\n${message.text}`)
-  await env.EMAIL.send({ from: { email: env.MAIL_FROM || FROM, name: "notunh" }, ...message })
+  const { messageId } = await env.EMAIL.send({ from: { email: env.MAIL_FROM || FROM, name: "notunh" }, ...message })
+  // Email Service's id for the message, to find it in the dashboard's activity, and never the address it went to
+  console.log(`[mail] sent ${messageId}`)
 }

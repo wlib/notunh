@@ -9,6 +9,9 @@
 // It only ever moves by translate, which the compositor handles on its own. While dragged or sliding between detents,
 // its box is the taller of the heights involved, slid down to show the right amount. Once still, the box is swapped
 // for the detent's own height in a single frame, so no frame of the motion has to lay out or paint its content
+//
+// What it shows can be scrolled to a position before it's long enough to be there, as a page returned to loads what it
+// lists, and is scrolled there as it grows, unless it's touched first
 
 import { r, watch } from "bruh/reactive"
 
@@ -28,6 +31,8 @@ const FLICK_MS = 150
 const SLOP = 6
 // rem of the map always left above a tall sheet
 const MAP_LEFT = 4
+// How long a scroll position asked for waits for the content to grow long enough to reach it
+const REACH_MS = 3000
 
 const px = (value: number) => `${value}px`
 
@@ -115,6 +120,29 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   /** Fits the sheet to new room: a slide in flight is retargeted, and at rest it's instant */
   const settle = () => panel.classList.contains("moving") ? move() : rest()
 
+  /** px the content is scrolled down, mid-slide too */
+  const scrolled = () => panel.scrollTop - shift
+
+  /** A scroll position asked for, until the content's scrolled there or it's given up on */
+  let wanted: { top: number, until: number } | undefined
+  const reach = () => {
+    if (wanted && performance.now() > wanted.until)
+      wanted = undefined
+    if (!wanted)
+      return
+    panel.scrollTop = wanted.top + shift
+    // A fraction of a px short is there
+    if (scrolled() > wanted.top - 1)
+      wanted = undefined
+  }
+  /** Scrolls the content to a position, now if it's long enough, else as it grows */
+  const scrollTo = (top: number) => {
+    wanted = { top, until: performance.now() + REACH_MS }
+    reach()
+  }
+  for (const type of ["pointerdown", "wheel", "keydown"])
+    panel.addEventListener(type, () => wanted = undefined, { passive: true })
+
   watch([detent], () => {
     panel.classList.toggle("lowered", detent.value === "lowered")
     grabber.setAttribute("aria-label", detent.value === "lowered" ? "Raise the panel" : "Lower the panel")
@@ -125,6 +153,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   const resized = new ResizeObserver(() => {
     if (!drag && !panel.classList.contains("moving"))
       rest()
+    reach()
   })
   for (const element of [app, panel, header])
     resized.observe(element)
@@ -257,4 +286,6 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     document.addEventListener("focusin", liftLater)
     document.addEventListener("focusout", liftLater)
   }
+
+  return { scrolled, scrollTo }
 }

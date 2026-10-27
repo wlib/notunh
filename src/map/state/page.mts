@@ -1,7 +1,7 @@
 // The page the map's sheet shows over the home, at its link (src/map/link.mts). Opening one adds to the browser's
 // history, so Back goes back through what was opened, to the search it was opened from, or to the map from a page
-// this visit didn't open. Each page says what it's called, for the Back that returns to it, and the place it's at,
-// which the map shows. Reactive values only, no DOM
+// this visit didn't open, scrolled as it was left. Each page says what it's called, for the Back that returns to it,
+// and the place it's at, which the map shows. Reactive values only, no DOM
 
 import { r } from "bruh/reactive"
 import type { Place } from "../../places/search.mts"
@@ -32,8 +32,19 @@ export const createPage = (own: Own) => {
   const searching = r<string>()
   /** What was typed in the search a page was opened from, once Back has returned to it, for search to take up again */
   const resumed = r<string>()
+  /** How far down the page shown is scrolled, as the sheet says */
+  const scrolled = r(0)
+  /** Where the sheet scrolls the page just shown to: the top of one opened, or where one returned to was left */
+  const scrollTo = r({ top: 0 })
 
   const depth = () => entry().depth ?? 0
+  /**
+   * How far down each page in the history was as it was last left, by depth. Back and Forward only reach a page that's
+   * been left since it opened, so one opened over another's place in the history never reads what that one left
+   */
+  const scrolls: number[] = []
+  /** The depth of the page shown, as history.state has already moved on by the time Back or Forward says so */
+  let shownDepth = depth()
 
   /**
    * Marks where a page is, or that it's nowhere, only while that page is the one shown. A view taken off the sheet can
@@ -45,12 +56,18 @@ export const createPage = (own: Own) => {
       focus.value = at && { ...at, view: viewOf(of) }
   }
 
-  const show = (next: Page | undefined) => {
+  /** Shows a page, and for one opened or returned to, where to scroll it to, keeping where the one shown was left */
+  const show = (next: Page | undefined, top?: number) => {
     if (!isSameView(next, page.peek())) {
       name.value = undefined
       focus.value = undefined
     }
     backTo.value = entry().back ?? "Map"
+    if (top !== undefined) {
+      scrolls[shownDepth] = scrolled.peek()
+      shownDepth = depth()
+      scrollTo.value = { top }
+    }
     page.value = next
   }
 
@@ -59,7 +76,7 @@ export const createPage = (own: Own) => {
     const search = next && searching.peek()
     const back = search ? "Search" : page.peek() ? name.peek() ?? "Back" : "Map"
     history.pushState({ depth: depth() + 1, back, ...search && { search } } satisfies Entry, "", urlOf(next))
-    show(next)
+    show(next, 0)
   }
 
   /** Changes the page shown in place, its link with it, as parking's fields do, without an entry in the history */
@@ -75,15 +92,15 @@ export const createPage = (own: Own) => {
       history.back()
     else {
       history.replaceState(null, "", urlOf())
-      show(undefined)
+      show(undefined, 0)
     }
     if (search !== undefined)
       resumed.value = search
   }
 
   const following = new AbortController()
-  addEventListener("popstate", () => show(pageOf(globalThis.location.pathname, globalThis.location.search)), { signal: following.signal })
+  addEventListener("popstate", () => show(pageOf(globalThis.location.pathname, globalThis.location.search), scrolls[depth()] ?? 0), { signal: following.signal })
   own(() => following.abort())
 
-  return { page, name, focus, focusAt, backTo, searching, resumed, go, amend, back }
+  return { page, name, focus, focusAt, backTo, searching, resumed, scrolled, scrollTo, go, amend, back }
 }

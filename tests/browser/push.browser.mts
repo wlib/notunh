@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { test as base, expect, type BrowserContext, type Page } from "@playwright/test"
-import { type Fixture, startFixture } from "./fixture.mts"
+import { type Fixture, open, startFixture } from "./fixture.mts"
 import { WAKE_VERSION, pushOf } from "../../src/reminders/watch.mts"
 import type { Kept } from "../../src/reminders/reminder.mts"
 import { type FeedData, arrivalTime, isServiceActive, serviceDayStart } from "../../src/transit/feed.mts"
@@ -111,8 +111,7 @@ const setUp = async (page: Page, context: BrowserContext, fixture: Fixture, at: 
         resolve(ours.registrationId)
     })
   )
-  await page.goto(`${fixture.origin}/map/`)
-  await page.getByRole("button", { name: "No", exact: true }).click()
+  await open(page, fixture.origin)
 
   const kept = async () => ((await page.evaluate(async () => (await (await caches.open("reminders-v1")).match("/reminders.json"))!.json())) as { reminders: Kept[] }).reminders
   /** Records the notifications the service worker shows, as headless Chromium shows none */
@@ -141,6 +140,10 @@ const setUp = async (page: Page, context: BrowserContext, fixture: Fixture, at: 
   const puts = () => sent.filter(({ body }) => body?.watch)
   return { sent, puts, kept, record, push, plan }
 }
+
+/** The map's first ask of Umo for the live buses, which is out of reach, after which the trip is planned again */
+const liveAsked = (page: Page) =>
+  page.waitForEvent("requestfailed", { predicate: request => request.url().includes("umoiq") })
 
 const idOf = ({ url }: Sent) =>
   decodeURIComponent(new URL(url).pathname.split("/").at(-1)!.split("?")[0])
@@ -178,11 +181,12 @@ test("a reminder set from an itinerary asks the Worker only to watch the first b
   // Tapped a couple of minutes on, as a notification is, the map opens on the trip, plans it again once the live
   // buses have been asked for, and finds the same bus, so the Worker isn't told again
   await page.clock.setFixedTime(ride.at.getTime() + 2 * 60_000)
+  let asked = liveAsked(page)
   await page.goto(`${fixture.origin}/map/?reminder=${encodeURIComponent(id)}`)
   await expect(page.getByPlaceholder("Where to?")).toHaveValue(ride.to)
   await expect(page).toHaveURL(`${fixture.origin}/map/directions`)
+  await asked
   await expect(page.getByText("Reminder set")).toBeVisible()
-  await page.waitForTimeout(2000)
   expect(puts()).toHaveLength(1)
 
   // The Worker wakes the phone with what it foretells of the bus, and the service worker words it from the reminder it
@@ -199,9 +203,10 @@ test("a reminder set from an itinerary asks the Worker only to watch the first b
   // Opened two hours on, for the way back, the trip is past and the phone was told of it, so it isn't planned again
   // as a later bus's: the Worker hears nothing, and the reminder is kept as it was
   await page.clock.setFixedTime(ride.at.getTime() + 2 * 3600_000)
+  asked = liveAsked(page)
   await page.goto(`${fixture.origin}/map/`)
   await expect(page.getByPlaceholder("Where to?")).toHaveValue(ride.to)
-  await page.waitForTimeout(2000)
+  await asked
   expect(puts()).toHaveLength(1)
   const [told] = await kept()
   expect(told).toMatchObject({ id, start: reminder.start, last: { kind: "due" } })
@@ -209,9 +214,10 @@ test("a reminder set from an itinerary asks the Worker only to watch the first b
 
   // Back at the trip's time, the reminder shows on its way, told, so again not planned anew
   await page.clock.setFixedTime(ride.at.getTime() + 2 * 60_000)
+  asked = liveAsked(page)
   await page.reload()
+  await asked
   await expect(page.getByText("Reminder set")).toBeVisible()
-  await page.waitForTimeout(2000)
   expect(puts()).toHaveLength(1)
 
   // Cancelling it tells the Worker, by the device's secret, and the phone keeps nothing of it once the Worker's heard

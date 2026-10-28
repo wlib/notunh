@@ -24,42 +24,51 @@ const BUILDINGS = { inputs: "", buildings: [{ id: "dining/holloway-commons", kin
 const json = (path: string) =>
   readFile(new URL(path, FIXTURES), "utf8").then(JSON.parse)
 
+// Each file read and checked once, as the Worker and the build keep theirs, since resolving every page asks for the
+// same few files thousands of times over
+const files = new Map<string, Promise<unknown>>()
+const once = <T,>(key: string, read: () => Promise<T>) =>
+  (files.get(key) ?? files.set(key, read()).get(key)!) as Promise<T>
+
 const site: Site = {
-  named: async <T,>(name: string, schema: StandardSchemaV1<unknown, T>) =>
-    checked(schema, name === "places" ? BUILDINGS : await json(SOURCES[name]), name),
-  file: async <T,>(path: string, schema: StandardSchemaV1<unknown, T>) =>
-    checked(schema, await json(`public${path}`), path)
+  named: <T,>(name: string, schema: StandardSchemaV1<unknown, T>) =>
+    once(`named:${name}`, async () => checked(schema, name === "places" ? BUILDINGS : await json(SOURCES[name]), name)),
+  file: <T,>(path: string, schema: StandardSchemaV1<unknown, T>) =>
+    once(`file:${path}`, async () => checked(schema, await json(`public${path}`), path))
 }
 
 const { events } = await site.named("events", EventsData)
 const [first, last] = [Math.min(...events.map(({ start }) => start)), Math.max(...events.map(({ end }) => end))]
 const instant = fc.integer({ min: first - 86_400_000, max: last + 86_400_000 })
 
-test("every page listed is its own address, of something there is, never an instructor's, and no event over", () =>
+test("every page listed is its own address, never an instructor's, each kind is among them, and the events are exactly those not over", () =>
   fc.assert(fc.asyncProperty(instant, async now => {
     const pages = await listedPages(site, now)
     const urls = pages.map(page => urlOf(page))
     expect(new Set(urls).size).toBe(urls.length)
-    for (const page of pages) {
-      const url = urlOf(page)
-      expect(UNLISTED.includes(page.kind), url).toBe(false)
-      expect(viewOf(pageOf(new URL(url, "https://notunh.app").pathname)), url).toBe(url)
-      expect(await resolve(site, page, now), url).toBeDefined()
-      if (page.kind === "event")
-        expect(events.find(({ id }) => id === page.id)!.end, url).toBeGreaterThan(now)
+    for (const [i, page] of pages.entries()) {
+      expect(UNLISTED.includes(page.kind), urls[i]).toBe(false)
+      expect(viewOf(pageOf(new URL(urls[i], "https://notunh.app").pathname)), urls[i]).toBe(urls[i])
     }
     const kinds = new Set(pages.map(({ kind }) => kind))
     for (const kind of ["place", "stop", "course", "section", "room", "program", "parking", "area"])
       expect(kinds, kind).toContain(kind)
-    expect(pages.filter(({ kind }) => kind === "event")).toHaveLength(events.filter(({ end }) => end > now).length)
-  }), { numRuns: 8 })
+    const listed = pages.flatMap(page => page.kind === "event" ? [page.id] : [])
+    expect(listed.toSorted()).toEqual(events.filter(({ end }) => end > now).map(({ id }) => id).toSorted())
+  }), { numRuns: 25 })
 )
 
-test("a place listed has something useful: something on, classes, a hall, or a chapter", async () => {
-  const pages = await listedPages(site, first)
-  for (const page of pages.filter(({ kind }) => kind === "place")) {
-    const found = (await resolve(site, page, first))!
-    const said = found.parts.filter(({ heading, items }) => heading !== "What's on" || items?.length)
-    expect(said.length, urlOf(page)).toBeGreaterThan(0)
+// Resolving every page reads nothing new, but there are over a thousand, so at the instants the listing turns on:
+// before the first event, within them, and once the last is over
+test.each([["before the events", first - 1], ["among the events", Math.floor((first + last) / 2)], ["after the events", last + 1]])(
+  "every page listed %s is of something there is, and a place listed has something to say: something on, classes, a hall, or a chapter",
+  async (_, now) => {
+    const pages = await listedPages(site, now)
+    for (const page of pages) {
+      const found = await resolve(site, page, now)
+      expect(found, urlOf(page)).toBeDefined()
+      if (page.kind === "place")
+        expect(found!.parts.filter(({ heading, items }) => heading !== "What's on" || items?.length).length, urlOf(page)).toBeGreaterThan(0)
+    }
   }
-})
+)

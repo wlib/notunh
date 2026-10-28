@@ -7,9 +7,12 @@ import { createPeople } from "../../src/courses/people.mts"
 import { hide, reveal } from "../../src/courses/email.mts"
 import { DAY, HOUR, addDays, dayStart, localDay } from "../../src/shared/time.mts"
 
+// A Wednesday in term, with no clock change for weeks either side, so a time of day is so many hours from midnight
+const TODAY = "2026-10-07"
+
 /** A moment some days either side of today, at a time of day */
 const momentOf = (days: number, ms: number) =>
-  dayStart(addDays(localDay(Date.now()), days)) + ms
+  dayStart(addDays(TODAY, days)) + ms
 
 const event = (start: number, end: number, overrides: Partial<Event> = {}): Event =>
   ({ id: "e", title: "Honors Drop In Advising", start, end, place: "Huddleston Hall", where: "Room 201", source: "25live", url: "", ...overrides })

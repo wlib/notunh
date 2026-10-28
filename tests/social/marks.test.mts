@@ -4,7 +4,7 @@ import type { Pin, Time } from "../../src/social/event.mts"
 import { goingWords, isFull, isUnset, sortedTimes, spanOf } from "../../src/social/marks.mts"
 import { askOf, askTag, askedId, askUrl, showAsk } from "../../src/social/ask.mts"
 
-const NOW = Date.now()
+const NOW = Date.UTC(2026, 9, 7, 16)
 
 const times = fc.array(fc.record({ start: fc.integer({ min: NOW, max: NOW + 60 * 86_400_000 }), length: fc.integer({ min: 1, max: 6 * 3_600_000 }) })
   .map(({ start, length }): Time => ({ start, end: start + length })), { minLength: 1, maxLength: 3 })

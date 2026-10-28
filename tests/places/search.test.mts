@@ -35,12 +35,19 @@ const gazetteer = fc.uniqueArray(fc.array(word, { minLength: 1, maxLength: 3 }).
   comparator: (a, b) => a.toLowerCase() === b.toLowerCase()
 })
 
-test("every place is found first by its own name, in any case", () =>
-  fc.assert(fc.property(gazetteer, fc.boolean(), (all, isLower) => {
-    const search = searchOf(all.map(name => place(name)))
+// Each alias a made-up word of its own, unlike any name, which the first place may go by
+const aliases = fc.uniqueArray(word.map(word => word + "x"), { maxLength: 3, comparator: (a, b) => a.toLowerCase() === b.toLowerCase() })
+
+// A search of a dozen names costs a millisecond or two, so fewer runs than usual
+test("every place is found first by its own name or any of its aliases, in any case", () =>
+  fc.assert(fc.property(gazetteer, aliases, fc.boolean(), (all, aliases, isLower) => {
+    const search = createPlaceSearch(all.map(name => place(name)), CENTER, new Map([[all[0], aliases]]))
+    const typed = (name: string) => isLower ? name.toLowerCase() : name.toUpperCase()
     for (const name of all)
-      expect(names(search(isLower ? name.toLowerCase() : name.toUpperCase()))[0]).toBe(name)
-  }))
+      expect(names(search(typed(name)))[0]).toBe(name)
+    for (const alias of aliases)
+      expect(names(search(typed(alias)))[0]).toBe(all[0])
+  }), { numRuns: 40 })
 )
 
 test("a place is found by the start of its name with a typo in it", () =>
@@ -94,23 +101,6 @@ test("a place named exactly as searched comes first however far or seldom chosen
   ))
 )
 
-test("a place with aliases is found first by any of them, in any case, and its others by their own names still", () =>
-  fc.assert(fc.property(
-    gazetteer.chain(all => fc.record({
-      all:     fc.constant(all),
-      // Each alias a made-up word of its own, unlike any name, given to the first place
-      aliases: fc.uniqueArray(word.map(word => word + "x"), { minLength: 1, maxLength: 3, comparator: (a, b) => a.toLowerCase() === b.toLowerCase() }),
-      isLower: fc.boolean()
-    })),
-    ({ all, aliases, isLower }) => {
-      const search = createPlaceSearch(all.map(name => place(name)), CENTER, new Map([[all[0], aliases]]))
-      for (const alias of aliases)
-        expect(names(search(isLower ? alias.toLowerCase() : alias.toUpperCase()))[0]).toBe(all[0])
-      for (const name of all)
-        expect(names(search(name))[0]).toBe(name)
-    }
-  ), { numRuns: 40 })
-)
 
 test("a place is found once however many of its names match", () => {
   const search = createPlaceSearch([place("Sigma Chi"), place("Sigma Beta")], CENTER, new Map([["Sigma Chi", ["ΣΧ", "Sig Chi"]]]))

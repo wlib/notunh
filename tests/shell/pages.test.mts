@@ -134,11 +134,10 @@ test("the dining page's shell lists each hall's menus on the day it's built, by 
 
 test("the map's shell lists the bus routes and the events of today and the week, each linking to its page", async () => {
   const { events: all } = v.parse(EventsData, events)
-  const next = all.toSorted((a, b) => a.start - b.start).find(({ start }) => localDay(start) === localDay(start - HOUR))
-  const body = (await renderedAt("/map/", next ? next.start - HOUR : Date.now())).split("<body>")[1]
+  // The fixtures' first event not starting in the first hour of its day, an hour before it
+  const next = all.toSorted((a, b) => a.start - b.start).find(({ start }) => localDay(start) === localDay(start - HOUR))!
+  const body = (await renderedAt("/map/", next.start - HOUR)).split("<body>")[1]
   expect(body).toContain("Live on every Wildcat Transit route:")
-  if (next) {
-    expect(body).toContain("<h2>UNH events today</h2>")
-    expect(body).toContain(`<a href="${urlOf({ kind: "event", id: next.id }).replaceAll("&", "&amp;")}">`)
-  }
+  expect(body).toContain("<h2>UNH events today</h2>")
+  expect(body).toContain(`<a href="${urlOf({ kind: "event", id: next.id }).replaceAll("&", "&amp;")}">`)
 })

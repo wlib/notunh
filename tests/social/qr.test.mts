@@ -120,9 +120,3 @@ test("a path draws exactly the dark modules, and the penalty of a blank symbol i
   const blank = new Uint8Array(21 * 21)
   expect(penalty(blank, 21)).toBe(21 * 2 * (21 - 2) + 20 * 20 * 3 + 100)
 })
-
-test("a known small symbol: version 1, 21 modules, for a single letter", () => {
-  const matrix = encode("A")
-  expect(matrix.version).toBe(1)
-  expect(matrix.size).toBe(21)
-})

@@ -5,7 +5,7 @@
 // tested in tests/map/camera.test.mts and page.test.mts, as the fixtures' map never loads, having no tiles
 
 import { test as base, expect, devices, type Page } from "@playwright/test"
-import { type Fixture, startFixture } from "./fixture.mts"
+import { type Fixture, open, startFixture } from "./fixture.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
   fixture: async ({}, use) => {
@@ -38,12 +38,6 @@ const withWeeks = (page: Page, now: number) =>
     }))
   } }))
 
-const open = async (page: Page, origin: string, path: string) => {
-  await page.goto(origin + path)
-  const no = page.getByRole("button", { name: "No", exact: true })
-  await no.waitFor({ timeout: 3000 }).then(() => no.click(), () => {})
-}
-
 /** How much of the screen the sheet covers, once it's still */
 const sheetHeight = async (page: Page) => {
   await page.waitForFunction(() => !document.querySelector(".panel")!.classList.contains("moving"))
@@ -56,17 +50,20 @@ const scrollOf = async (page: Page) => {
   return page.evaluate(() => Math.round(document.querySelector(".panel")!.scrollTop))
 }
 
+/** Two frames on, by when the sheet has heard of anything that moved it or its content, as it hears of a finger */
+const framesOn = (page: Page) =>
+  page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+
 /** Scrolls the sheet's content so the row given is in its middle, and says how far down that is */
 const scrollToRow = async (page: Page, row: ReturnType<Page["locator"]>) => {
   await row.evaluate(element => element.scrollIntoView({ block: "center" }))
-  // The sheet hears of it a frame later, as it does a finger's
-  await page.waitForTimeout(100)
+  await framesOn(page)
   return scrollOf(page)
 }
 
-/** That the sheet stays the height given, a moment after something might have moved it */
+/** That the sheet is still the height given once it has heard of whatever might have moved it */
 const holds = async (page: Page, height: number) => {
-  await page.waitForTimeout(400)
+  await framesOn(page)
   expect(await sheetHeight(page)).toBe(height)
 }
 
@@ -143,38 +140,42 @@ test("the sheet keeps its height through Directions and Back, from home and from
   await holds(page, tall)
 })
 
-test("an event's row opens its page at once, the week beneath it left as it was", async ({ page, fixture, browserName }) => {
+test("an event's row opens its page at once: never loading, the week beneath it untouched, and only the page's own dates made", async ({ page, fixture }) => {
   await withWeeks(page, Date.now())
   await open(page, fixture.origin, "/map/")
   const row = page.locator(".agenda").getByRole("button", { name: /Event 30\b/ }).first()
   await expect(row).toBeVisible()
   await row.scrollIntoViewIfNeeded()
-  // A phone's slower than a laptop, so Chromium runs at a sixth of its speed, as Playwright can't slow WebKit
-  if (browserName === "chromium")
-    await (await page.context().newCDPSession(page)).send("Emulation.setCPUThrottlingRate", { rate: 6 })
 
-  // From the tap to the frame after the page's heading is in, and anything that changed in the week meanwhile
-  type Timed = { ms: number, loading: boolean, weekChanged: number }
-  await page.evaluate(() => void Object.assign(window, { timed: new Promise<Timed>(resolve => {
-    let tapped = 0
+  // What the page costs, from the tap to the frame after its heading is in: whether the view ever said it was loading
+  // the event it was opened from, what changed in the week, and the dates made anywhere in the sheet. Once, a page
+  // waited on "Loading the event…" while the week's rows and their hundred and more dates were all made again
+  type Watched = { loading: boolean, weekChanged: number, datesMade: number }
+  await page.evaluate(() => void Object.assign(window, { watched: new Promise<Watched>(resolve => {
     let loading = false
     let weekChanged = 0
-    addEventListener("click", event => tapped = event.timeStamp, { capture: true, once: true })
+    let datesMade = 0
     new MutationObserver(records => weekChanged += records.length).observe(document.querySelector(".agenda")!, { childList: true, subtree: true, characterData: true })
-    const shown = new MutationObserver(() => {
+    const shown = new MutationObserver(records => {
+      for (const { addedNodes } of records)
+        for (const node of addedNodes)
+          if (node instanceof Element)
+            datesMade += node.querySelectorAll("bruh-date-time").length + (node.matches("bruh-date-time") ? 1 : 0)
       loading ||= document.querySelector(".view")?.textContent?.includes("Loading") ?? false
       if (document.querySelector(".view h1")?.textContent === "Event 30") {
         shown.disconnect()
-        requestAnimationFrame(() => resolve({ ms: performance.now() - tapped, loading, weekChanged }))
+        requestAnimationFrame(() => resolve({ loading, weekChanged, datesMade }))
       }
     })
     shown.observe(document.querySelector(".panel")!, { childList: true, subtree: true })
   }) }))
   await row.tap()
-  const { ms, loading, weekChanged } = await page.evaluate(() => (window as unknown as { timed: Promise<Timed> }).timed)
-  expect.soft(loading).toBe(false)
-  expect.soft(weekChanged).toBe(0)
-  expect.soft(ms).toBeLessThan(150)
+  const { loading, weekChanged, datesMade } = await page.evaluate(() => (window as unknown as { watched: Promise<Watched> }).watched)
+  expect(loading).toBe(false)
+  expect(weekChanged).toBe(0)
+  // The page says when the event is, in a date or two of its own
+  expect(datesMade).toBeGreaterThan(0)
+  expect(datesMade).toBeLessThan(10)
   await expect(page.getByRole("heading", { name: "Event 30" })).toBeVisible()
 })
 

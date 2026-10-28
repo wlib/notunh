@@ -1,20 +1,12 @@
 import { test, expect } from "vitest"
-import { readFileSync } from "node:fs"
-import { gunzipSync } from "node:zlib"
-import { type FeedData, withIndexes } from "../../src/transit/feed.mts"
-import { type RawFix, type RawPrediction, unpackFixes, unpackPredictions } from "../../src/transit/observations/raw.mts"
+import { withIndexes } from "../../src/transit/feed.mts"
 import { NO_FORECAST, forecastFrom, forecastOfSample } from "../../src/transit/observations/predictions.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
 import { runOf, runsAt, scheduledOnly, scheduledRuns, seenOf } from "../../src/reminders/forecast.mts"
 import { type Watch, GONE } from "../../src/reminders/watch.mts"
+import { recordedData as data, recordedFeed as feed, recordedFixes as fixes, recordedPredictions as sampled } from "../map/fixtures/recording.mts"
 
-// Half an hour of the Worker's samples on a Wednesday afternoon (tests/map/replay.test.mts), with a route 3 bus on
-// its way to Thompson Hall (stop 209), due there at 18:31 UTC and leaving at 18:40
-const { feed: data, rows }: { feed: FeedData, rows: { source: string, at: number, body: unknown[] }[] } =
-  JSON.parse(gunzipSync(readFileSync(new URL("../map/fixtures/buses.json.gz", import.meta.url))).toString())
-const feed = withIndexes(data)
-const fixes = rows.filter(row => row.source === "buses").flatMap(row => unpackFixes(row.at, { version: 0, samples: row.body as RawFix[], polls: null }))
-const sampled = rows.filter(row => row.source === "predictions").map(row => ({ at: row.at, predictions: unpackPredictions(row.at, { version: 0, samples: row.body as RawPrediction[], polls: null }) }))
+// The recording's route 3 bus on its way to Thompson Hall, due there at 18:31 UTC and leaving at 18:40
 const RUN = { stop: "209", route: "3", trip: "3B FULL_T04" }
 const WATCH: Watch = { at: 1791397860, lead: 600, run: RUN }
 const LEFT = 1791398421

@@ -10,7 +10,7 @@ import { clockOf } from "../../src/shared/time.mts"
 vi.stubGlobal("devicePixelRatio", 1)
 const { eventFeatures } = await import("../../src/map/render/layers.mts")
 
-const NOW = Date.now()
+const NOW = Date.UTC(2026, 9, 7, 16)
 const PLACES = ["Kingsbury Hall", "Memorial Union Building", "Bremner Field"].map((name, i) => ({ name, lat: 43.13 + i / 1000, lon: -70.93 }))
 
 const aPlaced: fc.Arbitrary<Placed> = fc.record({

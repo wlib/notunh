@@ -4,12 +4,14 @@
 // 25Live's academic calendar over the year, all imported here as scripts/map/courses.mts imports them
 
 import { readFile } from "node:fs/promises"
+import fc from "fast-check"
 import * as v from "valibot"
 import { fromLive25 } from "../../src/courses/calendar.mts"
-import { type Term, termSpan } from "../../src/courses/course.mts"
+import { type Term, clock, termSpan } from "../../src/courses/course.mts"
 import { placeOfCode } from "../../src/courses/buildings.mts"
 import { Page, importTerm, pageRead } from "../../src/courses/registrar.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
+import { addDays } from "../../src/shared/time.mts"
 
 const read = async (path: string) =>
   JSON.parse(await readFile(new URL(`../fixtures/${path}`, import.meta.url), "utf8")) as unknown
@@ -35,4 +37,8 @@ export const fall   = await termOf("202610")
 export const jterm  = await termOf("202630")
 export const spring = await termOf("202650")
 export const rawRows = rawPages["202610"].data
+
+/** A day from just before the fall term to just after it, and a time of day */
+export const aDay = fc.integer({ min: -10, max: 130 }).map(offset => addDays(fall.from, offset))
+export const aClock = fc.integer({ min: 0, max: 1439 }).map(clock)
 

@@ -5,6 +5,9 @@ import { type Event, LINGER, isOn, pinPath, placeNames, placeOf, today, upcoming
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { DAY, addDays, dayStart, localDay } from "../../src/shared/time.mts"
 
+// A Wednesday in term, from which the moments here range years either way
+const TODAY = "2026-10-07"
+
 const { places: gazetteer }: Gazetteer = JSON.parse(await readFile(new URL("../fixtures/data/src/map/gazetteer.json", import.meta.url), "utf8"))
 
 const event = (start: number, end: number, id = "x"): Event =>
@@ -16,7 +19,7 @@ test("today's list has what's on the day and not long over, soonest first, whate
     fc.integer({ min: -1000, max: 1000 }), fc.integer({ min: 0, max: DAY - 1 }),
     fc.array(fc.record({ offset: fc.integer({ min: -3 * DAY, max: 3 * DAY }), length: fc.integer({ min: 0, max: 6 * 3_600_000 }) }), { maxLength: 12 }),
     (days, ms, items) => {
-      const now = dayStart(localDay(Date.now())) + days * DAY + ms
+      const now = dayStart(TODAY) + days * DAY + ms
       const day = localDay(now)
       const events = items.map(({ offset, length }, i) => event(now + offset, now + offset + length, `e${i}`))
       const list = today(events, now)
@@ -35,7 +38,7 @@ test("today's list has what's on the day and not long over, soonest first, whate
 
 test("an event over by more than the linger is off the list, one just over stays, and one later today is on it", () => {
   // Noon today, whenever today is, so what's an hour or two either side is still today
-  const day = localDay(Date.now())
+  const day = TODAY
   const now = dayStart(day) + 12 * 3_600_000
   expect(isOn(event(now - 3 * 3_600_000, now - LINGER - 1), day, now)).toBe(false)
   expect(isOn(event(now - 3 * 3_600_000, now - LINGER + 60_000), day, now)).toBe(true)
@@ -65,7 +68,7 @@ test("the days to come list each day after today that has something on, in order
     fc.integer({ min: -1000, max: 1000 }), fc.integer({ min: 0, max: DAY - 1 }), fc.integer({ min: 0, max: 21 }),
     fc.array(fc.record({ offset: fc.integer({ min: -3 * DAY, max: 25 * DAY }), length: fc.integer({ min: 0, max: 30 * 3_600_000 }) }), { maxLength: 16 }),
     (days, ms, ahead, items) => {
-      const now = dayStart(localDay(Date.now())) + days * DAY + ms
+      const now = dayStart(TODAY) + days * DAY + ms
       const day = localDay(now)
       const events = items.map(({ offset, length }, i) => event(now + offset, now + offset + length, `e${i}`))
       const list = upcoming(events, now, ahead)

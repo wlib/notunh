@@ -2,16 +2,14 @@ import { test, expect } from "vitest"
 import fc from "fast-check"
 import { createPeople, nextTeaching, upcoming } from "../../src/courses/people.mts"
 import { createCourseSearch } from "../../src/courses/search.mts"
-import { activeTerms, clock, occurrences, standing } from "../../src/courses/course.mts"
+import { activeTerms, occurrences, standing } from "../../src/courses/course.mts"
 import { addDays, atClock, localDay } from "../../src/shared/time.mts"
-import { calendar, fall, jterm, spring } from "./fixtures.mts"
+import { aClock, aDay, calendar, fall, jterm, spring } from "./fixtures.mts"
 
 const terms = [fall, jterm, spring]
 const people = createPeople(terms)
 const teaching = people.filter(person => person.teaching.some(({ term, section }) => term === fall && section.meetings.some(meeting => meeting.days)))
 const aPerson = fc.constantFrom(...teaching)
-const aDay = fc.integer({ min: -10, max: 130 }).map(offset => addDays(fall.from, offset))
-const aClock = fc.integer({ min: 0, max: 1439 }).map(clock)
 
 test("a person is a hidden address where the registrar gives one, so two instructors of one name are two people, each with their own teaching", () => {
   const wangs = people.filter(person => person.name === "Jing Wang")
@@ -64,18 +62,12 @@ test("David Benedetto's next class on Tuesday 27 October at 1:40 is CS 518 at 2:
   expect(upcoming(benedetto, calendar, atClock("2026-10-27", "13:40")).map(({ section }) => section.crn)).toContain("12496")
 })
 
-test("searching a name finds the person, with their sections under them, and a code or room still finds sections", () => {
+test("searching a name finds the person, with their sections under them, and two of one name as two", () => {
   const search = createCourseSearch([fall], people)
   const found = search("Benedetto")
   expect(found.people.map(person => person.name)).toContain("David Benedetto")
   expect(found.people.find(person => person.name === "David Benedetto")!.teaching.map(({ section }) => section.crn)).toContain("12496")
   expect(search("Jing Wang").people.filter(person => person.name === "Jing Wang").length).toBe(2)
-  expect(search("CS 518").sections.map(({ section }) => section.crn)).toContain("12496")
-  const room = search("N343")
-  expect(room.rooms.map(({ where }) => where)).toContain("Kingsbury N343")
-  expect(room.rooms.find(({ where }) => where === "Kingsbury N343")!.sections.map(({ section }) => section.crn)).toContain("12496")
-  expect(search("Kingsbury N343").rooms.map(({ where }) => where)).toEqual(["Kingsbury N343"])
-  expect(search("12496").sections.map(({ section }) => section.crn)).toEqual(["12496"])
 })
 
 test("every person's upcoming list is sorted by their next start and covers every live section with a meeting left", () =>

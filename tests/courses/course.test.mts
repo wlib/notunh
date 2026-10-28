@@ -1,15 +1,13 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { LETTERS, letterOf } from "../../src/courses/calendar.mts"
-import { type Section, activeTerms, clock, meetingKeys, occurrences, onDay, standing, termOf } from "../../src/courses/course.mts"
+import { letterOf } from "../../src/courses/calendar.mts"
+import { type Section, activeTerms, meetingKeys, occurrences, onDay, standing, termOf } from "../../src/courses/course.mts"
 import { createSchedule, dedupe } from "../../src/courses/rooms.mts"
 import { addDays, atClock, localDay, localMinutes, weekday } from "../../src/shared/time.mts"
-import { calendar, fall, jterm, rawRows, spring } from "./fixtures.mts"
+import { aClock, aDay, calendar, fall, jterm, rawRows, spring } from "./fixtures.mts"
 
 const timed = fall.sections.filter(section => section.meetings.some(meeting => meeting.days))
 const aSection = fc.constantFrom(...timed)
-const aDay = fc.integer({ min: -10, max: 130 }).map(offset => addDays(fall.from, offset))
-const aClock = fc.integer({ min: 0, max: 1439 }).map(clock)
 /** A section with its meetings in some other order, as the source may list them tomorrow */
 const shuffled = (section: Section, order: number[]): Section =>
   ({ ...section, meetings: order.map(i => section.meetings[i]) })
@@ -80,8 +78,9 @@ test("no classes on Thanksgiving, Labor Day or Veterans Day, and classes on ever
   expect(weekdays).toBeGreaterThan(65)
 })
 
+const schedule = createSchedule([fall], calendar)
+
 test("what's scheduled at a place now is the brute-force answer with each physical class once", () => {
-  const schedule = createSchedule([fall], calendar)
   const places = [...new Set(fall.sections.flatMap(section => section.meetings.flatMap(meeting => meeting.place ?? [])))]
   fc.assert(fc.property(fc.constantFrom(...places), aDay, aClock, (place, day, time) => {
     const now = atClock(day, time)
@@ -101,7 +100,6 @@ test("what's scheduled at a place now is the brute-force answer with each physic
 
 test("a place's day is every class there that day once, soonest first, and its rooms are those ever scheduled there", () =>
   fc.assert(fc.property(aDay, day => {
-    const schedule = createSchedule([fall], calendar)
     const list = schedule.on({ place: "Kingsbury Hall" }, day)
     for (let i = 1; i < list.length; i++)
       expect(list[i].event.start).toBeGreaterThanOrEqual(list[i - 1].event.start)
@@ -188,14 +186,7 @@ test("a term joins its index entry and its file only when they agree", () => {
   expect(() => termOf({ built }, { ...entry, sections: 1, file: "/data/courses/x.json" }, { code: "202610", sections })).toThrow(/isn't the term/)
 })
 
-test("expanding a whole day of a term takes milliseconds", () => {
-  const started = performance.now()
-  expect(onDay(fall, calendar, "2026-10-14").length).toBeGreaterThan(100)
-  expect(performance.now() - started).toBeLessThan(100)
-})
-
-test("letters stand for weekdays Monday first, as the registrar writes them", () => {
-  expect(LETTERS.join("")).toBe("MTWRFSU")
+test("R is Thursday, as the registrar writes the weekdays", () => {
   const section: Section = { ...timed[0], meetings: [{ days: "R", start: 600, end: 660, from: fall.from, to: fall.to, where: "x" }] }
   const thursday = "2026-10-15"
   expect(weekday(thursday)).toBe(3)

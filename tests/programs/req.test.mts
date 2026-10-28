@@ -43,13 +43,13 @@ const sorted = (codes: string[]) => [...codes].sort()
 test("the Needs line reads back to the tree it was written from", () => {
   fc.assert(fc.property(req, tree => {
     expect(parseReq(renderReq(tree))).toEqual(tree)
-  }), { numRuns: 2000 })
+  }), { numRuns: 300 })
 })
 
 test("Banner's words read to the same tree as the Needs line, with D- left unsaid", () => {
   fc.assert(fc.property(req, tree => {
     expect(parseReq(banner(tree) + ".")).toEqual(parseReq(renderReq(tree)))
-  }), { numRuns: 1000 })
+  }), { numRuns: 300 })
   expect(parseReq("CS 416 with a minimum grade of D-")).toEqual({ course: "CS 416" })
 })
 

@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { type Entry, type Listed, contentOf, entriesOf, fingerprintsOf, lastmodsOf, sitemapOf, sitemapsOf } from "../scripts/search.mts"
+import { type Entry, type Listed, contentOf, entriesOf, fingerprintsOf, sitemapOf, sitemapsOf } from "../scripts/search.mts"
 import { BATCH, ENDPOINT, changedOf, submit } from "../scripts/indexnow.mts"
 import { INDEXNOW_KEY, SITE } from "../src/shell/pages.mts"
 
@@ -8,6 +8,10 @@ const pageAt = (release: string, body = "<p>Menus</p>") =>
   `<!doctype html><html><head><meta name="release" content="${release}"></head><body>${body}</body></html>`
 
 const instant = fc.date({ min: new Date("2026-01-01"), max: new Date("2030-01-01"), noInvalidDate: true }).map(date => date.toISOString())
+
+/** Each page's address in a sitemap, with its lastmod */
+const lastmodsOf = (sitemap: string) =>
+  new Map([...sitemap.matchAll(/<loc>([^<]*)<\/loc><lastmod>([^<]*)<\/lastmod>/g)].map(([, loc, lastmod]) => [loc, lastmod]))
 
 /** Pages of the site, each once, with fingerprints */
 const listed = fc.uniqueArray(fc.record({ loc: fc.webPath().map(path => SITE + path), fingerprint: fc.string({ minLength: 1, maxLength: 4 }) }), { selector: ({ loc }) => loc, maxLength: 30 })
@@ -30,17 +34,19 @@ test("a page republished, as in a rollback, reads as it did", () => {
   expect(contentOf(pageAt("2026-10-03T00:00:00.000Z", "<p>Other menus</p>"))).not.toBe(contentOf(republished))
 })
 
-test("a sitemap reads back as it was written, escaped as XML", () =>
-  fc.assert(fc.asyncProperty(listed, instant, async (pages, release) => {
+test("a sitemap reads back as it was written, escaped as XML, in the protocol's namespace", () =>
+  fc.assert(fc.property(listed, instant, (pages, release) => {
     const entries = entriesOf(pages, {}, release)
-    expect(lastmodsOf((await sitemapOf(entries)).replaceAll("&amp;", "&"))).toEqual(new Map(entries.map(({ loc, lastmod }) => [loc, lastmod])))
+    const sitemap = sitemapOf(entries)
+    expect(sitemap).toMatch(/^<\?xml version="1.0" encoding="UTF-8"\?>\n<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">(<url><loc>[^<]*<\/loc><lastmod>[^<]*<\/lastmod><\/url>)*<\/urlset>\n$/)
+    expect(lastmodsOf(sitemap.replaceAll("&amp;", "&"))).toEqual(new Map(entries.map(({ loc, lastmod }) => [loc, lastmod])))
   }))
 )
 
 test("past the limit, the sitemap is an index of sitemaps, each within it, listing every page once, and changed when its latest page did", () =>
-  fc.assert(fc.asyncProperty(listed, fc.integer({ min: 1, max: 8 }), fc.array(instant, { minLength: 30, maxLength: 30 }), async (pages, limit, lastmods) => {
+  fc.assert(fc.property(listed, fc.integer({ min: 1, max: 8 }), fc.array(instant, { minLength: 30, maxLength: 30 }), (pages, limit, lastmods) => {
     const entries: Entry[] = pages.map(({ loc }, index) => ({ loc, lastmod: lastmods[index] }))
-    const files = await sitemapsOf(entries, limit)
+    const files = sitemapsOf(entries, limit)
     if (entries.length <= limit) {
       expect(Object.keys(files)).toEqual(["/sitemap.xml"])
       return

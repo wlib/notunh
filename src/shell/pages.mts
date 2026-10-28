@@ -1,9 +1,6 @@
-// The site's pages as search engines and link previews see them: each one's title, description, and structured data,
-// read by every page's head (Head.tsx), the social images, the sitemap (scripts/search.mts), and IndexNow
-// (scripts/indexnow.mts), so they can't disagree
-
-import type { Thing, WithContext } from "schema-dts"
-import { breadcrumbsOf, siteDataOf } from "./structured.mts"
+// The site's pages as search engines and link previews see them: its one origin and name, and each page's title,
+// description and name, read by every page's head (Head.tsx), its structured data (structured.mts), the social images,
+// the sitemap (scripts/search.mts), and IndexNow (scripts/indexnow.mts), so they can't disagree
 
 /** The one canonical origin, which every page's links for search engines and previews name */
 export const SITE = "https://notunh.app"
@@ -76,22 +73,6 @@ export const imageOf = (path: Path) =>
   `/social/${path === "/" ? "home" : path.slice(1, -1)}.png`
 
 export const IMAGE = { width: 1200, height: 630 }
-
-/** The trail to a page under one of these, by its own name and address, as breadcrumbs say it */
-export const trailTo = (path: Path, name?: string, url?: string) => [
-  { name: NAME, url: SITE + "/" },
-  ...path === "/" ? [] : [{ name: PAGES[path].name, url: SITE + path }],
-  ...name === undefined ? [] : [{ name, url }]
-]
-
-/**
- * A page's structured data: the home page names the site, which Google takes its name and logo from, and the rest
- * their place under it
- */
-export const structuredDataOf = (path: Path): WithContext<Thing>[] =>
-  path === "/"
-    ? siteDataOf({ name: NAME, alternateNames: ALTERNATE_NAMES, url: SITE + "/", logo: `${SITE}/icon-512.png`, sameAs: [REPO], founder: AUTHOR })
-    : [breadcrumbsOf(trailTo(path))]
 
 /**
  * JSON for inside a <script>, where only a "<" could end it early or open a comment. Escaped here as JSON's \u003c,

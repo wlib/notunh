@@ -4,7 +4,7 @@ import { Head } from "../src/shell/Head.tsx"
 import { AppTitle } from "../src/shell/ui.tsx"
 import { PAGES } from "../src/shell/pages.mts"
 import * as v from "valibot"
-import { type Event, EventsData, today, upcoming, whereOf } from "../src/social/event.mts"
+import { type Event, EventsData, WEEK, today, upcoming, whereOf } from "../src/social/event.mts"
 import { whenOf } from "../src/social/preview.mts"
 import { urlOf } from "../src/map/link.mts"
 import events from "../src/map/events.json" with { type: "json" }
@@ -12,9 +12,6 @@ import gtfs from "../src/map/gtfs.json" with { type: "json" }
 
 /** How many events each list shows, so the shell stays light */
 const SHOWN = 40
-
-/** Days after today that "Later this week" lists */
-const LATER_DAYS = 6
 
 const Events = ({ list }: { list: readonly Event[] }) =>
   <ul>
@@ -31,7 +28,7 @@ const Events = ({ list }: { list: readonly Event[] }) =>
 const Week = ({ now }: { now: number }) => {
   const { events: all } = v.parse(EventsData, events)
   const on = today(all, now).filter(event => event.end > now)
-  const later = upcoming(all, now, LATER_DAYS).flatMap(({ events }) => events)
+  const later = upcoming(all, now, WEEK).flatMap(({ events }) => events)
   return <>
     <p>Live on every Wildcat Transit route: {gtfs.routes.map(({ name, long }) => name === long ? name : `${name} ${long}`).join(", ")}.</p>
     {on.length > 0 && <><h2>UNH events today</h2><Events list={on} /></>}

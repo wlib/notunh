@@ -1,12 +1,13 @@
-// The map's pages worth finding (src/map/site.mts), from the fixtures' data at any instant across their events: each
-// is its own address back through pageOf, of something there is, and never an instructor's or an event over
-// (scripts/search.mts lists them in the sitemap)
+// The map's pages worth finding (src/map/listed.mts), from the fixtures' data at any instant across their events: each
+// is its own address back through pageOf, of something there is (src/map/site.mts), and never an instructor's or an
+// event over (scripts/search.mts lists them in the sitemap)
 
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { readFile } from "node:fs/promises"
 import type { StandardSchemaV1 } from "@standard-schema/spec"
-import { type Site, UNLISTED, listedPages, resolve } from "../../src/map/site.mts"
+import { type Site, UNLISTED, resolve } from "../../src/map/site.mts"
+import { listedPages } from "../../src/map/listed.mts"
 import { pageOf, urlOf, viewOf } from "../../src/map/link.mts"
 import { EventsData } from "../../src/social/event.mts"
 import { checked } from "../../src/shared/json.mts"

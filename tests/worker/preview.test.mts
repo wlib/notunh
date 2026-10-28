@@ -9,7 +9,9 @@ import { test, expect, vi, beforeAll, afterAll } from "vitest"
 import fc from "fast-check"
 import { app } from "../../worker/api.mts"
 import type { Env } from "../../worker/env.mts"
-import { type Head, headOf, versionOf, withHead } from "../../worker/preview.mts"
+import { jsx } from "bruh/server"
+import { versionOf } from "../../worker/preview.mts"
+import { type Head, headOf, withHead } from "../../src/shell/served.tsx"
 import { cardOf, drawable } from "../../worker/card.mts"
 import type { Section } from "../../src/courses/course.mts"
 import { emptyCalendar } from "../../src/courses/calendar.mts"
@@ -17,7 +19,6 @@ import { hide, reveal } from "../../src/courses/email.mts"
 import { HOUR, addDays, dayStart, localDay } from "../../src/shared/time.mts"
 import { segmentOf } from "../../src/map/link.mts"
 import { ROOMS, pathOf } from "../../src/laundry/rooms.mts"
-import { escaped as escape } from "../../src/shell/summary.mts"
 import { d1 } from "./d1.mts"
 
 // Nine in the morning today, whenever today is, so what's on at 1:30 is today's
@@ -100,14 +101,18 @@ afterAll(() => {
   vi.useRealTimers()
 })
 
-/** Each meta's content in a page's head, and its title */
+/** Words as bruh escaped them, read back */
+const unescaped = (text: string) =>
+  text.replaceAll("&lt;", "<").replaceAll("&quot;", "\"").replaceAll("&amp;", "&")
+
+/** Each meta's content in a page's head, and its title, as they read */
 const headIn = async (response: Response) => {
   const html = await response.text()
   const [head] = html.split("</head>")
   return {
     html,
-    title: head.match(/<title>([^<]*)<\/title>/)![1],
-    meta:  Object.fromEntries([...head.matchAll(/<meta (?:name|property)="([^"]+)" content="([^"]*)">/g)].map(([, name, content]) => [name, content]))
+    title: unescaped(head.match(/<title>([^<]*)<\/title>/)![1]),
+    meta:  Object.fromEntries([...head.matchAll(/<meta (?:name|property)="([^"]+)" content="([^"]*)">/g)].map(([, name, content]) => [name, unescaped(content)]))
   }
 }
 
@@ -260,7 +265,7 @@ test("an event made here previews at its own page and on the map, and one gone o
     const response = await get(path)
     expect(response.headers.get("x-robots-tag"), path).toBe("noindex")
     const { html, title, meta } = await headIn(response)
-    expect(title, path).toBe("Tea &amp; &lt;cake&gt; · UNH event · notunh")
+    expect(title, path).toBe("Tea & <cake> · UNH event · notunh")
     expect(html, path).not.toContain(`"@type":"Event"`)
     expect(meta["description"], path).toBe(`${DATED} 4:00 – 5:00 PM · Memorial Union Building`)
     expect(meta["og:image"], path).toMatch(new RegExp(`/map/card/event/${id}\\?v=`))
@@ -278,12 +283,12 @@ test("a laundry room's own address is the laundry page as the room: its own titl
   const response = await get(path)
   expect(response.status).toBe(200)
   const { html, title, meta } = await headIn(response)
-  expect(title).toBe(escape(`${room.name} laundry: free washers & dryers · notunh`))
+  expect(title).toBe(`${room.name} laundry: free washers & dryers · notunh`)
   expect(meta["og:url"]).toBe(`https://notunh.app${path}`)
   expect(meta["og:image"]).toBe("https://notunh.app/social/laundry.png")
   const [before, body] = html.split("</head>")
   expect(before).toContain(`<link rel="canonical" href="https://notunh.app${path}">`)
-  expect(body).toContain(`<h1>${escape(room.name)} laundry</h1>`)
+  expect(body).toContain(`${jsx("h1", { children: `${room.name} laundry` })}`)
   expect(body.match(/<h1/g)).toHaveLength(1)
   expect(body).toContain(`<ul class="rooms">`)
   expect((await get("/laundry/nowhere-hall/")).status).toBe(404)
@@ -335,13 +340,14 @@ test("whatever a preview says, the head stays well-formed, a title of dollar sig
     const html = withHead(MAP, head)
     const [before, after] = html.split("</head>")
     expect(after).toBe(MAP.split("</head>")[1])
-    const metas = [...before.matchAll(/<meta (?:name|property)="[^"]+" content="([^"]*)">/g)]
+    // bruh writes an empty content as the attribute alone, which reads the same
+    const metas = [...before.matchAll(/<meta (?:name|property)="[^"]+" content(?:="([^"]*)")?>/g)]
     expect(metas).toHaveLength(13)
     expect(before).toContain(`<link rel="canonical" href="https://notunh.app/map/event/a">`)
-    for (const [, content] of metas)
-      expect(content).not.toMatch(/[<>"]/)
-    expect(before).toContain(`<title>${escape(head.title)}</title>`)
-    expect(before).toContain(`<meta name="description" content="${escape(head.description)}">`)
+    for (const [, content = ""] of metas)
+      expect(content).not.toMatch(/"/)
+    expect(before).toContain(`${jsx("title", { children: head.title })}`)
+    expect(before).toContain(`${jsx("meta", { name: "description", content: head.description })}`)
   }))
 )
 

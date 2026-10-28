@@ -11,8 +11,8 @@ import { test as base, expect, devices, type Browser, type Page } from "@playwri
 import { type Fixture, startFixture } from "./fixture.mts"
 import { pinPath } from "../../src/social/event.mts"
 import { atClock, hhmm, localDay } from "../../src/shared/time.mts"
+import { jsx } from "bruh/server"
 import { PAGES } from "../../src/shell/pages.mts"
-import { escaped } from "../../src/shell/summary.mts"
 
 
 /** The Worker's app, started once for every test this process runs of this file, for each browser in turn */
@@ -234,7 +234,7 @@ test("a link to an event's page on the map previews it with a card of its own, w
   const copy = (await kept())!
   expect(copy).not.toContain("board games")
   expect(copy).not.toContain("/map/card/")
-  expect(copy).toContain(`<title>${escaped(PAGES["/map/"].title)}</title>`)
+  expect(copy).toContain(`${jsx("title", { children: PAGES["/map/"].title })}`)
   // Offline, a page's path opens from that copy, as the map at that page
   await fixture.setOffline(true)
   await guest.goto(fixture.origin + link)

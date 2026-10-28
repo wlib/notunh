@@ -369,7 +369,7 @@ a {
 }
 
 /* What a page says before its app replaces it: what it does (each page's index.html.tsx), or what it's of, as the
-   Worker writes it (src/shell/summary.mts) */
+   Worker writes it (src/shell/served.tsx) */
 .shell {
   display: grid;
   gap: 0.5rem;

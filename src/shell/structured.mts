@@ -4,17 +4,28 @@
 // Nothing is said that isn't known: an event is described only at a place the map knows in Durham, its organizer only
 // where its calendar says who that is, and never what it costs
 
-import type { BreadcrumbList, Event as EventThing, Organization, WebSite, WithContext } from "schema-dts"
-import type { Event, Source } from "../social/event.mts"
+import type { BreadcrumbList, Event as EventThing, Organization, Thing, WebSite, WithContext } from "schema-dts"
+import { type Event, calendarOf } from "../social/event.mts"
 import type { GazetteerPlace } from "../places/gazetteer.mts"
 import { chapterNamed } from "../places/chapters.mts"
-import { distance } from "../geo/projection.mts"
+import { ADDRESS, isInDurham } from "../places/durham.mts"
 import { isoOf } from "../shared/time.mts"
+import { ALTERNATE_NAMES, AUTHOR, NAME, PAGES, type Path, REPO, SITE } from "./pages.mts"
 
 const CONTEXT = "https://schema.org"
 
+/** The site's logo, as Google shows it beside its name */
+const LOGO = "/icon-512.png"
+
 /** A step of the trail to a page: its name, and its address, which the page itself needn't give */
 export type Crumb = { name: string, url?: string }
+
+/** The trail to a page under one of the site's, by its own name and address, as breadcrumbs say it */
+export const trailTo = (path: Path, name?: string, url?: string): Crumb[] => [
+  { name: NAME, url: SITE + "/" },
+  ...path === "/" ? [] : [{ name: PAGES[path].name, url: SITE + path }],
+  ...name === undefined ? [] : [{ name, url }]
+]
 
 export const breadcrumbsOf = (trail: readonly Crumb[]): WithContext<BreadcrumbList> => ({
   "@context":      CONTEXT,
@@ -22,32 +33,15 @@ export const breadcrumbsOf = (trail: readonly Crumb[]): WithContext<BreadcrumbLi
   itemListElement: trail.map(({ name, url }, index) => ({ "@type": "ListItem", position: index + 1, name, ...url && { item: url } }))
 })
 
-/** The site, by the names people type for it, and who makes it, with its logo */
-export const siteDataOf = ({ name, alternateNames, url, logo, sameAs, founder }: {
-  name:           string,
-  alternateNames: string[],
-  url:            string,
-  logo:           string,
-  sameAs:         string[],
-  founder:        { name: string, url: string }
-}): [WithContext<WebSite>, WithContext<Organization>] => [
-  { "@context": CONTEXT, "@type": "WebSite", name, alternateName: alternateNames, url },
-  { "@context": CONTEXT, "@type": "Organization", name, alternateName: alternateNames, url, logo, sameAs, founder: { "@type": "Person", ...founder, sameAs: founder.url } }
+/** The site, by the names people type for it, and who makes it, with its logo, which the home page says */
+const SITE_DATA: [WithContext<WebSite>, WithContext<Organization>] = [
+  { "@context": CONTEXT, "@type": "WebSite", name: NAME, alternateName: ALTERNATE_NAMES, url: SITE + "/" },
+  { "@context": CONTEXT, "@type": "Organization", name: NAME, alternateName: ALTERNATE_NAMES, url: SITE + "/", logo: SITE + LOGO, sameAs: [REPO], founder: { "@type": "Person", ...AUTHOR, sameAs: AUTHOR.url } }
 ]
 
-/** Who runs the events of a calendar where that's one body; a club's own on Wildcat Link isn't named in it */
-const ORGANIZERS: Partial<Record<Source, { name: string, url: string }>> = {
-  "athletics": { name: "UNH Athletics", url: "https://unhwildcats.com" },
-  "25live":    { name: "University of New Hampshire", url: "https://www.unh.edu" },
-  "dserec":    { name: "UNH Club Sports", url: "https://unh.dserec.com/online/clubsports" }
-}
-
-/** The middle of campus, and how far from it a place is still in Durham, whose address it's given */
-const CAMPUS = { lat: 43.1365, lon: -70.9345 }
-const DURHAM_METERS = 5000
-
-/** Where Durham's places are, by the town's own post office */
-const DURHAM = { addressLocality: "Durham", addressRegion: "NH", postalCode: "03824", addressCountry: "US" }
+/** A built page's structured data: the home page names the site, which Google takes its name and logo from, and the rest their place under it */
+export const structuredDataOf = (path: Path): WithContext<Thing>[] =>
+  path === "/" ? SITE_DATA : [breadcrumbsOf(trailTo(path))]
 
 /**
  * An official event's structured data, at its place, as its page and card are at their addresses, or none for one the
@@ -60,10 +54,10 @@ export const eventDataOf = ({ event, place, url, image, description }: {
   image:       string,
   description: string
 }): WithContext<EventThing> | undefined => {
-  if (!place || event.source === "pin" || event.source === "course" || distance({ lon: place.at[0], lat: place.at[1] }, CAMPUS) > DURHAM_METERS)
+  const organizer = calendarOf(event)?.organizer
+  if (!place || event.source === "pin" || event.source === "course" || !isInDurham({ lon: place.at[0], lat: place.at[1] }))
     return
   const street = chapterNamed(place.name)?.house?.address
-  const organizer = ORGANIZERS[event.source]
   return {
     "@context":          CONTEXT,
     "@type":             "Event",
@@ -72,7 +66,7 @@ export const eventDataOf = ({ event, place, url, image, description }: {
     ...event.end > event.start && { endDate: isoOf(event.end) },
     eventStatus:         "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    location:            { "@type": "Place", name: place.name, address: { "@type": "PostalAddress", ...street && { streetAddress: street }, ...DURHAM } },
+    location:            { "@type": "Place", name: place.name, address: { "@type": "PostalAddress", ...street && { streetAddress: street }, ...ADDRESS } },
     description,
     image:               [image],
     url,

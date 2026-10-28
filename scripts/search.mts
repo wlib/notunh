@@ -1,6 +1,6 @@
 // What a build adds beside its pages for search engines (npm's postbuild): IndexNow's key file, and the sitemap of every
 // page worth finding: the home, map, dining and laundry pages, each laundry room's, and the map's pages that
-// src/map/site.mts lists, as of the build. A page's lastmod is when what it says last changed. Each page has a
+// src/map/listed.mts lists, as of the build. A page's lastmod is when what it says last changed. Each page has a
 // fingerprint, a hash of what it says: a static page's HTML without when it was built, what a map page's head and
 // card say, a room's name. /sitemap.json keeps each page's fingerprint and lastmod beside the sitemap, and a page keeps
 // the lastmod the site serves for it while its fingerprint is the same, else takes this build's release. So a nightly
@@ -14,7 +14,8 @@ import * as v from "valibot"
 import { jsx } from "bruh/server"
 import { buildOf } from "../src/shell/manifest.mts"
 import { INDEXNOW_KEY, PATHS, SITE } from "../src/shell/pages.mts"
-import { type Site, listedPages, resolve } from "../src/map/site.mts"
+import { type Site, resolve } from "../src/map/site.mts"
+import { listedPages } from "../src/map/listed.mts"
 import { urlOf } from "../src/map/link.mts"
 import { ROOMS, pathOf } from "../src/laundry/rooms.mts"
 import { contentHash } from "../src/shared/hash.mts"
@@ -25,12 +26,8 @@ import { ORIGIN, served } from "./site.mts"
 
 export const DIST = new URL("../dist/", import.meta.url)
 
-/** How many pages a sitemap may list */
+/** How many pages a sitemap may list (https://www.sitemaps.org/protocol.html) */
 export const SITEMAP_LIMIT = 50_000
-
-/** A page as it reads, without when it was built or republished, which change with every build */
-export const contentOf = (html: string) =>
-  html.replace(/<meta name="(release|published)" content="[^"]*">/g, "")
 
 /** A page listed, by its address, with a hash of what it says */
 export type Listed = { loc: string, fingerprint: string }
@@ -42,6 +39,14 @@ export type Entry = { loc: string, lastmod: string }
 export const Fingerprints = v.record(v.string(), v.tuple([v.string(), v.string()]))
 export type Fingerprints = v.InferOutput<typeof Fingerprints>
 
+/** A page as it reads, without when it was built or republished, which change with every build */
+export const contentOf = (html: string) =>
+  html.replace(/<meta name="(release|published)" content="[^"]*">/g, "")
+
+/** A hash of what something says */
+export const fingerprint = (said: unknown) =>
+  contentHash(typeof said === "string" ? said : JSON.stringify(said), "base64url").then(hash => hash.slice(0, 16))
+
 /** When each page listed last changed: when the site says, while it says the same, else at this build's release */
 export const entriesOf = (listed: readonly Listed[], served: Fingerprints, release: string): Entry[] =>
   listed.map(({ loc, fingerprint }) => ({ loc, lastmod: served[loc]?.[0] === fingerprint ? served[loc][1] : release }))
@@ -50,38 +55,42 @@ export const entriesOf = (listed: readonly Listed[], served: Fingerprints, relea
 export const fingerprintsOf = (listed: readonly Listed[], entries: readonly Entry[]): Fingerprints =>
   Object.fromEntries(listed.map(({ loc, fingerprint }, index) => [loc, [fingerprint, entries[index].lastmod]]))
 
-const SITEMAP_NS = { xmlns: "http://www.sitemaps.org/schemas/sitemap/0.9" }
+//#region The sitemap's XML
 
-// bruh types the attributes of HTML, SVG, and MathML alone, so the sitemap's namespace goes untyped
-const xml = async (root: string, children: unknown[]) =>
-  `<?xml version="1.0" encoding="UTF-8"?>\n${await jsx(root, { ...SITEMAP_NS as {}, children: children as never }).toStringPromise()}\n`
+const PROLOG = `<?xml version="1.0" encoding="UTF-8"?>`
+const NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9"
+
+/**
+ * A sitemap document of a root element's children, rendered and escaped by bruh as its HTML is, which is XML's too.
+ * bruh types the attributes of HTML, SVG and MathML alone, so the sitemap's elements and namespace go untyped
+ */
+const sitemapXml = (root: string, children: unknown[]) =>
+  `${PROLOG}\n${jsx(root, { ...{ xmlns: NAMESPACE } as {}, children: children as never })}\n`
+
+/** A page's or a sitemap's entry: its address, and when it last changed */
+const entry = (element: string, { loc, lastmod }: Entry) =>
+  jsx(element, { children: [jsx("loc", { children: loc }), jsx("lastmod", { children: lastmod })] })
 
 /** A sitemap of pages and when each last changed */
 export const sitemapOf = (entries: readonly Entry[]) =>
-  xml("urlset", entries.map(({ loc, lastmod }) => jsx("url", { children: [jsx("loc", { children: loc }), jsx("lastmod", { children: lastmod })] })))
+  sitemapXml("urlset", entries.map(page => entry("url", page)))
 
 /**
  * The files a sitemap of pages is, by their paths: /sitemap.xml alone up to the limit, else an index of sitemaps at
  * /sitemaps/<n>.xml, each changed when the latest of its pages did
  */
-export const sitemapsOf = async (entries: readonly Entry[], limit = SITEMAP_LIMIT): Promise<Record<string, string>> => {
+export const sitemapsOf = (entries: readonly Entry[], limit = SITEMAP_LIMIT): Record<string, string> => {
   if (entries.length <= limit)
-    return { "/sitemap.xml": await sitemapOf(entries) }
+    return { "/sitemap.xml": sitemapOf(entries) }
   const parts = Array.from({ length: Math.ceil(entries.length / limit) }, (_, index) => entries.slice(index * limit, (index + 1) * limit))
-  const files = Object.fromEntries(await Promise.all(parts.map(async (part, index) => [`/sitemaps/${index + 1}.xml`, await sitemapOf(part)])))
-  const index = await xml("sitemapindex", parts.map((part, index) =>
-    jsx("sitemap", { children: [jsx("loc", { children: `${SITE}/sitemaps/${index + 1}.xml` }), jsx("lastmod", { children: part.map(({ lastmod }) => lastmod).sort().at(-1)! })] })
-  ))
-  return { "/sitemap.xml": index, ...files }
+  const partPath = (index: number) => `/sitemaps/${index + 1}.xml`
+  return {
+    "/sitemap.xml": sitemapXml("sitemapindex", parts.map((part, index) => entry("sitemap", { loc: SITE + partPath(index), lastmod: part.map(({ lastmod }) => lastmod).sort().at(-1)! }))),
+    ...Object.fromEntries(parts.map((part, index) => [partPath(index), sitemapOf(part)]))
+  }
 }
 
-/** Each page's address in a sitemap, with its lastmod */
-export const lastmodsOf = (sitemap: string) =>
-  new Map([...sitemap.matchAll(/<loc>([^<]*)<\/loc><lastmod>([^<]*)<\/lastmod>/g)].map(([, loc, lastmod]) => [loc, lastmod]))
-
-/** A hash of what something says */
-export const fingerprint = (said: unknown) =>
-  contentHash(typeof said === "string" ? said : JSON.stringify(said), "base64url").then(hash => hash.slice(0, 16))
+//#endregion
 
 /** The site's data as a build in a folder has it, each file read once */
 export const siteIn = async (dist: URL): Promise<Site> => {
@@ -124,7 +133,7 @@ if (import.meta.main) {
   const listed = await listedIn(DIST, Date.now())
   const kept = isOffline ? undefined : await served("/sitemap.json", Fingerprints)
   const entries = entriesOf(listed, kept ?? {}, release)
-  for (const [path, file] of Object.entries(await sitemapsOf(entries)))
+  for (const [path, file] of Object.entries(sitemapsOf(entries)))
     await write(path, file)
   await write("/sitemap.json", JSON.stringify(fingerprintsOf(listed, entries)))
   await write(`/${INDEXNOW_KEY}.txt`, INDEXNOW_KEY)

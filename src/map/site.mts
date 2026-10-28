@@ -1,27 +1,25 @@
 // What each of the map's pages is of, from the site's own data files, which the Worker reads from its assets and the
-// build from its folder (a Site): its preview, which heads it and draws its card (src/social/preview.mts), and its
-// summary's parts, which say in its body what the app will show (src/shell/summary.mts). Also every page worth a search
-// engine's while, for the sitemap (scripts/search.mts): the official events not over, the places with something on,
-// classes, a laundry room, a dining hall or a chapter, every stop a bus picks up at, the courses, sections and rooms
-// of the terms not over, the programs, and parking. Never an instructor's, which are people. No DOM
+// build from its folder (a Site): its summary, whose preview heads it and draws its card (src/social/preview.mts) and
+// whose parts say in its body what the app will show (src/shell/served.tsx), and for an event, the event and its
+// place, for its structured data. Never more than the page itself shows anyone. No DOM
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { type Page, urlOf } from "./link.mts"
-import { type Preview, plain, areaPreview, coursePreview, eventPreview, meetingWhen, parkingPreview, personPreview, placePreview, programPreview, programsPreview, roomPreview, roomsOf, sectionPreview, stopPreview, weeklyOf, whenOf } from "../social/preview.mts"
-import { type Event, type Pin, EventsData, placeOf, whereOf } from "../social/event.mts"
+import { plain, areaPreview, coursePreview, eventPreview, meetingWhen, parkingPreview, personPreview, placePreview, programPreview, programsPreview, roomPreview, roomsOf, sectionPreview, stopPreview, weeklyOf, whenOf } from "../social/preview.mts"
+import { type Event, type Pin, EventsData, calendarOf, gazetteerPlaceOf, whereOf } from "../social/event.mts"
 import { type GazetteerPlace, Gazetteer } from "../places/gazetteer.mts"
 import { Places } from "../places/buildings.mts"
-import { CHAPTERS, chapterNamed, isPlaced } from "../places/chapters.mts"
+import { chapterNamed } from "../places/chapters.mts"
 import { type Term, type TermEntry, CoursesIndex, KINDS, TermFile, activeTerms, codeOf, courseOf, termOf } from "../courses/course.mts"
 import { createPeople } from "../courses/people.mts"
 import { roomKey } from "../courses/rooms.mts"
 import { PrereqsIndex } from "../programs/prereqs.mts"
 import { Program, Programs } from "../programs/program.mts"
 import { ParkingData } from "../parking/sources.mts"
-import { FeedData, boardableStops, scheduledFrom } from "../transit/feed.mts"
-import { roomAtSlug } from "../laundry/rooms.mts"
+import { FeedData, scheduledFrom } from "../transit/feed.mts"
+import { pathOf, roomAtSlug } from "../laundry/rooms.mts"
 import { HOUR, clockOf, localDay } from "../shared/time.mts"
-import type { Part } from "../shell/summary.mts"
+import type { Part, Summary } from "../shell/served.tsx"
 
 /** The site's data files: those the map page names, by name, and the rest by their own paths, as a schema makes them */
 export type Site = {
@@ -29,14 +27,20 @@ export type Site = {
   file:  <T,>(path: string, schema: StandardSchemaV1<unknown, T>) => Promise<T>
 }
 
-/** A page as it's of something: its preview, the parts of its body, and the event and place it's of, where it is */
-export type Resolved = { preview: Preview, parts: Part[], event?: Event | Pin, place?: GazetteerPlace }
+/** A page as it's of something: its summary, and the event and place it's of, where it is */
+export type Resolved = Summary & { event?: Event | Pin, place?: GazetteerPlace }
 
 /** The kinds of page that are of something, which a link to previews as, and which may be of nothing there is */
 export const OF_SOMETHING: readonly Page["kind"][] = ["event", "place", "section", "course", "person", "room", "program", "parking", "area", "stop"]
 
 /** The kinds whose pages are kept out of search: instructors, who are people */
 export const UNLISTED: readonly Page["kind"][] = ["person"]
+
+/** What a page's title adds to say it's of UNH, by its kind, unless the title says so already */
+export const CONTEXTS: Partial<Record<Page["kind"], string>> = {
+  event: "UNH event", place: "UNH map", section: "UNH class", course: "UNH course", person: "UNH", room: "UNH classroom",
+  program: "UNH catalog", parking: "UNH parking", area: "UNH parking", stop: "UNH bus stop"
+}
 
 /** How far ahead a stop's body lists the timetable's buses, and how many of each route it says */
 const SCHEDULE_HOURS = 4
@@ -45,36 +49,22 @@ const TIMES_SHOWN = 4
 /** How many of what's on a place's body lists */
 const ON_SHOWN = 10
 
-/** What each calendar is called, where an event links to it */
-const SOURCE_NAMES: Partial<Record<Event["source"], string>> = {
-  "presence":  "Wildcat Link",
-  "25live":    "UNH Events Calendar",
-  "athletics": "UNH Athletics",
-  "dserec":    "UNH Club Sports"
-}
-
 /** The terms whose files are worth reading, with their sections */
-const termsOf = async (site: Site, which: (entries: readonly TermEntry[]) => readonly TermEntry[]) => {
+export const termsOf = async (site: Site, which: (entries: readonly TermEntry[]) => readonly TermEntry[]) => {
   const index = await site.named("courses", CoursesIndex)
   return Promise.all(which(index.terms).map(async entry => termOf(index, entry, await site.file(entry.file, TermFile))))
 }
 
 /** The terms not over by an instant, which have pages worth finding */
-const notOver = (now: number) =>
+export const notOver = (now: number) =>
   (entries: readonly TermEntry[]) => entries.filter(({ to }) => to >= localDay(now))
-
-/** The place of a name nearest the middle of campus, as the map takes a name to be (placeOf) */
-const placeNamed = (places: readonly GazetteerPlace[], name: string | undefined) => {
-  const nearest = placeOf(places, name)
-  return nearest && places.find(place => place.name === nearest.name && place.at[0] === nearest.lon && place.at[1] === nearest.lat)
-}
 
 const sectionUrl = (term: Pick<Term, "code">, crn: string) =>
   urlOf({ kind: "section", term: term.code, crn })
 
 /** An event's, at its place where the map knows it */
 export const eventResolved = (event: Event | Pin, place?: GazetteerPlace): Resolved => {
-  const source = SOURCE_NAMES[event.source]
+  const calendar = calendarOf(event)
   return {
     preview: eventPreview(event),
     parts:   [
@@ -82,7 +72,7 @@ export const eventResolved = (event: Event | Pin, place?: GazetteerPlace): Resol
         ? { heading: "Where", items: [{ text: place.name, href: urlOf({ kind: "place", name: place.name }), ...event.where && event.where !== place.name && { detail: event.where } }] }
         : { heading: "Where", lines: [whereOf(event)] },
       ...("description" in event && event.description ? [{ heading: "About", lines: [event.description] }] : []),
-      ...source ? [{ heading: "Listed on", items: [{ text: source, href: event.url }] }] : []
+      ...calendar ? [{ heading: "Listed on", items: [{ text: calendar.name, href: event.url }] }] : []
     ],
     event,
     place
@@ -103,7 +93,7 @@ const placeResolved = async (site: Site, name: string, now: number): Promise<Res
   const [{ places }, { events }, { buildings }, terms] = await Promise.all([
     site.named("gazetteer", Gazetteer), site.named("events", EventsData), site.named("places", Places), termsOf(site, entries => activeTerms(entries, now))
   ])
-  const place = placeNamed(places, name)
+  const place = gazetteerPlaceOf(places, name)
   if (!place)
     return
   const on = events.filter(event => event.place === name && event.end > now).sort((a, b) => a.start - b.start)
@@ -115,7 +105,7 @@ const placeResolved = async (site: Site, name: string, now: number): Promise<Res
           const room = rooms.get(roomKey(meeting.where)) ?? rooms.set(roomKey(meeting.where), { where: meeting.where, classes: new Set() }).get(roomKey(meeting.where))!
           room.classes.add(courseOf(section))
         }
-  const laundry = buildings.filter(building => building.kind === "laundry" && building.name === name).flatMap(({ rooms = [] }) => rooms)
+  const laundry = buildings.filter(building => building.kind === "laundry" && building.name === name).flatMap(({ rooms = [] }) => rooms).flatMap(slug => roomAtSlug(slug) ?? [])
   const isDining = buildings.some(building => building.kind === "dining" && building.name === name)
   return {
     preview: placePreview(place, events, now),
@@ -125,7 +115,7 @@ const placeResolved = async (site: Site, name: string, now: number): Promise<Res
         ? { heading: "What's on", items: on.slice(0, ON_SHOWN).map(event => ({ text: event.title, href: urlOf({ kind: "event", id: event.id }), detail: whenOf(event) })) }
         : { heading: "What's on", lines: ["Nothing listed this week"] },
       ...isDining ? [{ heading: "Dining", items: [{ text: "Holloway & Philbrook menus today", href: "/dining/" }] }] : [],
-      ...laundry.length ? [{ heading: "Laundry", items: laundry.map(slug => ({ text: `${roomAtSlug(slug)?.name ?? slug} laundry room`, href: `/laundry/${slug}/` })) }] : [],
+      ...laundry.length ? [{ heading: "Laundry", items: laundry.map(room => ({ text: `${room.name} laundry room`, href: pathOf(room.id) })) }] : [],
       ...rooms.size ? [{
         heading: "Classrooms",
         items:   [...rooms.values()].sort((a, b) => a.where.localeCompare(b.where, "en", { numeric: true }))
@@ -157,7 +147,7 @@ const stopResolved = async (site: Site, id: string, now: number): Promise<Resolv
   }
 }
 
-/** A page's preview and parts from the site's data at an instant, or none for a page naming nothing there is */
+/** A page's summary from the site's data at an instant, or none for a page naming nothing there is */
 export const resolve = async (site: Site, page: Page, now: number): Promise<Resolved | undefined> => {
   switch (page.kind) {
     case "event": {
@@ -166,7 +156,7 @@ export const resolve = async (site: Site, page: Page, now: number): Promise<Reso
       if (!event)
         return
       const { places } = await site.named("gazetteer", Gazetteer)
-      return eventResolved(event, placeNamed(places, event.place))
+      return eventResolved(event, gazetteerPlaceOf(places, event.place))
     }
     case "place":
       return placeResolved(site, page.name, now)
@@ -259,37 +249,4 @@ export const resolve = async (site: Site, page: Page, now: number): Promise<Reso
     default:
       return
   }
-}
-
-/** Every page of the map worth a search engine's while at an instant, as the sitemap lists them */
-export const listedPages = async (site: Site, now: number): Promise<Page[]> => {
-  const [{ events }, { places }, { buildings }, feed, prereqs, { areas }, terms] = await Promise.all([
-    site.named("events", EventsData), site.named("gazetteer", Gazetteer), site.named("places", Places), site.named("gtfs", FeedData),
-    site.named("prereqs", PrereqsIndex), site.named("parking", ParkingData), termsOf(site, notOver(now))
-  ])
-  const active = new Set(activeTerms(terms, now))
-  const upcoming = events.filter(event => event.end > now)
-  const named = new Set(places.map(({ name }) => name))
-  const meetings = [...active].flatMap(term => term.sections.flatMap(section => section.meetings))
-  const useful = new Set([
-    ...upcoming.map(event => event.place),
-    ...meetings.map(meeting => meeting.place),
-    ...buildings.map(building => building.name),
-    ...CHAPTERS.filter(isPlaced).map(chapter => chapter.name)
-  ].filter(name => name !== undefined && named.has(name)) as string[])
-  const rooms = new Map(meetings.filter(meeting => meeting.place).map(meeting => [roomKey(meeting.where), meeting.where]))
-  const programs = prereqs.programs ? (await site.file(prereqs.programs, Programs)).programs : []
-  const stops = boardableStops(feed)
-  return [
-    ...upcoming.map(({ id }): Page => ({ kind: "event", id })),
-    ...[...useful].map((name): Page => ({ kind: "place", name })),
-    ...feed.stops.filter((_, index) => stops.has(index)).map(({ id }): Page => ({ kind: "stop", id })),
-    ...[...new Set(terms.flatMap(term => term.sections.map(courseOf)))].map((code): Page => ({ kind: "course", code })),
-    ...terms.flatMap(term => term.sections.map(({ crn }): Page => ({ kind: "section", term: term.code, crn }))),
-    ...[...rooms.values()].map((where): Page => ({ kind: "room", where })),
-    ...prereqs.programs ? [{ kind: "program" } as Page] : [],
-    ...programs.map(({ slug }): Page => ({ kind: "program", slug })),
-    { kind: "parking" },
-    ...areas.map(({ id }): Page => ({ kind: "area", id }))
-  ]
 }

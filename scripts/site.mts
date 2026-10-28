@@ -4,9 +4,10 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { buildOf } from "../src/shell/manifest.mts"
+import { SITE } from "../src/shell/pages.mts"
 import { getJson } from "../src/shared/json.mts"
 
-export const ORIGIN = process.argv.includes("--local") ? "http://localhost:8787" : process.env.WORKER_ORIGIN ?? "https://notunh.app"
+export const ORIGIN = process.argv.includes("--local") ? "http://localhost:8787" : process.env.WORKER_ORIGIN ?? SITE
 
 /**
  * A JSON file the site serves, parsed by its schema. Undefined, with a warning, when it can't be read or doesn't

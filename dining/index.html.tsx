@@ -6,16 +6,17 @@ import { Head } from "../src/shell/Head.tsx"
 import { AppTitle } from "../src/shell/ui.tsx"
 import { PAGES } from "../src/shell/pages.mts"
 import { type Meal, MEALS, MenusIndex, fileUrl } from "../src/dining/menus.mts"
-import { spansOn } from "../src/dining/hours.mts"
+import { MINUTES_A_DAY, spansOn, wallDate } from "../src/dining/hours.mts"
+import { plain } from "../src/social/preview.mts"
 import { localDay } from "../src/shared/time.mts"
 import menus from "../src/dining/menus.json" with { type: "json" }
 
 const dated = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long", month: "long", day: "numeric" })
 const clock = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", hour: "numeric", minute: "2-digit" })
 
-/** Minutes after a day's midnight as Durham's clock reads them, "7:15 AM" */
-const wall = (minutes: number) =>
-  clock.format(minutes * 60_000).replace(/[\u202f\u2009]/g, " ")
+/** Minutes after a day's midnight as Durham's clock reads them, "7:15 AM", in plain spaces for every crawler */
+const wall = (day: string, minute: number) =>
+  plain(clock.format(wallDate({ day, minute })))
 
 /**
  * Each hall's menus on the day this is built, which a nightly build makes the day it's served, as text for search
@@ -35,7 +36,7 @@ const Today = ({ day }: { day: string }) => {
     <h2>Holloway &amp; Philbrook menus for {dated.format(Date.parse(`${day}T12:00:00Z`))}</h2>
     {halls.map(({ hall, hours, meals }) => <>
       <h3>{hall.name}</h3>
-      {hours.length > 0 && <p class="muted">Open {hours.map(([open, close]) => `${wall(open)} – ${wall(close % 1440)}`).join(", ")}</p>}
+      {hours.length > 0 && <p class="muted">Open {hours.map(([open, close]) => `${wall(day, open)} – ${wall(day, close % MINUTES_A_DAY)}`).join(", ")}</p>}
       {meals.map(({ meal, stations }) => <>
         <h4>{meal[0].toUpperCase() + meal.slice(1)}</h4>
         <dl>

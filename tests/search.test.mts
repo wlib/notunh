@@ -14,7 +14,7 @@ const lastmodsOf = (sitemap: string) =>
   new Map([...sitemap.matchAll(/<loc>([^<]*)<\/loc><lastmod>([^<]*)<\/lastmod>/g)].map(([, loc, lastmod]) => [loc, lastmod]))
 
 /** Pages of the site, each once, with fingerprints */
-const listed = fc.uniqueArray(fc.record({ loc: fc.webPath().map(path => SITE + path), fingerprint: fc.string({ minLength: 1, maxLength: 4 }) }), { selector: ({ loc }) => loc, maxLength: 30 })
+const listed = fc.uniqueArray(fc.record({ loc: fc.webPath().map(path => SITE + path), group: fc.constantFrom("pages", "events", "sections"), fingerprint: fc.string({ minLength: 1, maxLength: 4 }) }), { selector: ({ loc }) => loc, maxLength: 30 })
 
 test("a page that says what it said keeps the lastmod served for it, and one that says something else, or is new, gets this build's", () => {
   fc.assert(fc.property(listed, fc.func(fc.boolean()), instant, instant, (pages, isSame, lastmod, release) => {
@@ -43,31 +43,31 @@ test("a sitemap reads back as it was written, escaped as XML, in the protocol's 
   }))
 )
 
-test("past the limit, the sitemap is an index of sitemaps, each within it, listing every page once, and changed when its latest page did", () =>
+test("the sitemap is an index of a sitemap per group, each split within the limit, listing every page once, and changed when its latest page did", () =>
   fc.assert(fc.property(listed, fc.integer({ min: 1, max: 8 }), fc.array(instant, { minLength: 30, maxLength: 30 }), (pages, limit, lastmods) => {
-    const entries: Entry[] = pages.map(({ loc }, index) => ({ loc, lastmod: lastmods[index] }))
+    const entries: Entry[] = pages.map(({ loc, group }, index) => ({ loc, group, lastmod: lastmods[index] }))
     const files = sitemapsOf(entries, limit)
-    if (entries.length <= limit) {
-      expect(Object.keys(files)).toEqual(["/sitemap.xml"])
-      return
-    }
     const parts = Object.keys(files).filter(path => path !== "/sitemap.xml")
-    expect(parts).toHaveLength(Math.ceil(entries.length / limit))
     const index = lastmodsOf(files["/sitemap.xml"].replaceAll(/<\/?sitemap>/g, ""))
     expect([...index.keys()]).toEqual(parts.map(path => SITE + path))
+    const groupOf = new Map(entries.map(({ loc, group }) => [loc, group]))
     const listedIn = parts.map(path => lastmodsOf(files[path].replaceAll("&amp;", "&")))
     for (const [i, part] of listedIn.entries()) {
       expect(part.size).toBeLessThanOrEqual(limit)
       expect(index.get(SITE + parts[i])).toBe([...part.values()].sort().at(-1))
+      // One group to a file, named for it
+      const groups = new Set([...part.keys()].map(loc => groupOf.get(loc)))
+      expect(groups.size).toBe(1)
+      expect(parts[i]).toMatch(new RegExp(`^/sitemaps/${[...groups][0]}(-\\d+)?\\.xml$`))
     }
-    expect(listedIn.flatMap(part => [...part])).toEqual(entries.map(({ loc, lastmod }) => [loc, lastmod]))
+    expect(new Map(listedIn.flatMap(part => [...part]))).toEqual(new Map(entries.map(({ loc, lastmod }) => [loc, lastmod])))
   }))
 )
 
 test("a deploy submits exactly the pages whose lastmod is its release", () =>
   fc.assert(fc.property(listed, instant, fc.func(fc.boolean()), (pages, release, isChanged) => {
-    const entries = pages.map(({ loc }) => ({ loc, lastmod: isChanged(loc) ? release : "2025-01-01T00:00:00.000Z" }))
-    expect(changedOf(fingerprintsOf(pages as Listed[], entries), release)).toEqual(pages.filter(({ loc }) => isChanged(loc)).map(({ loc }) => loc))
+    const entries = pages.map(({ loc, group }) => ({ loc, group, lastmod: isChanged(loc) ? release : "2025-01-01T00:00:00.000Z" }))
+    expect(changedOf(fingerprintsOf(pages, entries), release)).toEqual(pages.filter(({ loc }) => isChanged(loc)).map(({ loc }) => loc))
   }))
 )
 

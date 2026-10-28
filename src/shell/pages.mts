@@ -2,8 +2,7 @@
 // description and name, read by every page's head (Head.tsx), its structured data (structured.mts), the social images,
 // the sitemap (scripts/search.mts), and IndexNow (scripts/indexnow.mts), so they can't disagree
 
-/** The one canonical origin, which every page's links for search engines and previews name */
-export const SITE = "https://notunh.app"
+export { SITE } from "../shared/site.mts"
 
 export const NAME = "notunh"
 

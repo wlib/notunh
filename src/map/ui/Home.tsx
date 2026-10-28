@@ -8,7 +8,7 @@
 // them, scrolled and opened as it was, and the sheet the size it was
 
 import { r } from "bruh/reactive"
-import { type DayList, type Event, type Pin, upcoming } from "../../social/event.mts"
+import { type DayList, type Event, type Pin, WEEK, upcoming } from "../../social/event.mts"
 import { codeOf, courseOf } from "../../courses/course.mts"
 import { daysBetween, localDay, nextAt } from "../../shared/time.mts"
 import { ClockTime, Day, relativeDay } from "../../shell/intl.tsx"
@@ -19,9 +19,6 @@ import { nowMs, walkTo } from "./common.tsx"
 import { DayName, EventRow, Row, placeNamed, sectionPage } from "./Pages.tsx"
 import { Reminders, currentReminders } from "./Remind.tsx"
 import { Suggestions, SearchRow, isSearching } from "./Search.tsx"
-
-/** How many days ahead the list shows at first, and by how many more each Later shows */
-const WEEK = 7
 
 /** Your next saved class, as a row: when, what and where, and when to leave for it */
 const NextClass = () =>

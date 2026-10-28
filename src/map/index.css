@@ -1044,7 +1044,7 @@ body {
   gap: 0.15rem;
 }
 
-.view-head h2 {
+.view-head h1 {
   font-size: clamp(1.2rem, 5.5cqi, 1.4rem);
   line-height: 1.15;
   text-wrap: balance;

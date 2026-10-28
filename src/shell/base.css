@@ -368,8 +368,43 @@ a {
   text-underline-offset: 0.2em;
 }
 
-/* What a page says it does before its app replaces it (each page's index.html.tsx) */
+/* What a page says before its app replaces it: what it does (each page's index.html.tsx), or what it's of, as the
+   Worker writes it (src/shell/served.tsx) */
 .shell {
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
   margin-block: 0.75rem 0;
   text-wrap: pretty;
+}
+
+.shell :is(h1, h2, h3, h4, p, ul, dl, dd) {
+  margin: 0;
+}
+
+.shell h1 {
+  font-size: 1.35rem;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.shell :is(h2:not(.eyebrow), h3, h4) {
+  margin-block-start: 0.5rem;
+  font-size: 1rem;
+}
+
+.shell ul {
+  display: grid;
+  gap: 0.25rem;
+  padding-inline-start: 1.1rem;
+}
+
+.shell dt {
+  font-weight: 600;
+}
+
+.summary-kind,
+.summary-facts {
+  font-size: 0.875rem;
+  color: var(--muted);
 }

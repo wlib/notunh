@@ -22,7 +22,7 @@ import { roomKey } from "../../courses/rooms.mts"
 import { mailto } from "../../courses/email.mts"
 import { type Dated, datedFrom, daysOf, isSaved, keyOf, patternsOf } from "../../courses/saved.mts"
 import { reqsOf } from "../../programs/prereqs.mts"
-import { type Event, type Pin, type Source as EventSource, LINGER, placeOf, upcoming, whereOf } from "../../social/event.mts"
+import { type Event, type Pin, LINGER, WEEK, calendarOf, placeOf, upcoming, whereOf } from "../../social/event.mts"
 import { isUnset } from "../../social/marks.mts"
 import { askOf } from "../../social/ask.mts"
 import * as social from "../../social/browser/api.mts"
@@ -126,13 +126,13 @@ export const share = (title: string) => {
   ;(navigator.share?.({ title, url }) ?? navigator.clipboard?.writeText(url).then(() => notice.value = "Link copied."))?.catch(() => {})
 }
 
-/** A page's head: its name, which a Back to it says, short where the title's long, over what kind of thing it is where the title alone doesn't say */
+/** A page's head, whose title is the page's heading while the map's own is hidden: its name, which a Back to it says, short where the title's long, over what kind of thing it is where the title alone doesn't say */
 export const Head = ({ kind, title, name }: { kind?: BruhChild, title: string, name?: string }) => {
   state.name.value = name ?? title
   return (
     <header class="view-head">
       {kind && <p class="view-kind">{kind}</p>}
-      <h2>{title}</h2>
+      <h1>{title}</h1>
     </header>
   )
 }
@@ -538,9 +538,6 @@ export const EventResults = ({ query }: { query: DerivativeNode<string> }) =>
     return found.length > 0 && <Group label="Events">{found.map(event => <EventRow event={event} />)}</Group>
   })
 
-/** How many days ahead a place's week looks */
-const WEEK = 7
-
 /** The dining hall a place is, by name, with its hours, where the menus know it */
 const hallOf = (name: string) => {
   const menus = state.menus.value
@@ -728,9 +725,6 @@ const ScheduledNow = ({ name }: { name: string }) =>
     )
   })
 
-/** Where an event's source is, in its own name, for its page's foot */
-const SOURCES: Record<Exclude<EventSource, "pin" | "course">, string> = { presence: "Wildcat Link", "25live": "UNH Events Calendar", athletics: "UNH Athletics", dserec: "Campus Rec sport clubs" }
-
 /**
  * An event: when and where, Directions and Remind for getting there by its start, and for one made here, its
  * description, Going, the times to pick while its time is unset, its story to share, and deleting or reporting it;
@@ -778,7 +772,7 @@ const EventView = ({ id }: { id: string }) => {
         <div class="lines">
           {event.place && <LinkLine to={{ kind: "place", name: event.place }}>{event.place}</LinkLine>}
           {visit && <LinkLine to={parkingFor(visit)}>Parking</LinkLine>}
-          {!pin && <LinkLine href={event.url}>{SOURCES[event.source as keyof typeof SOURCES] ?? "Source"}</LinkLine>}
+          {!pin && <LinkLine href={event.url}>{calendarOf(event)?.name ?? "Source"}</LinkLine>}
         </div>
         {pin && <p class="view-foot muted"><Moderate pin={pin} act={act} onGone={() => found.value = null} onReported={hidden => notice.value = hidden ? "Reported, and hidden." : "Reported."} /></p>}
       </>

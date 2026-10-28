@@ -158,7 +158,7 @@ test.describe("on a wide screen", () => {
     expect(await graph.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
     await expect(view.locator(".edge").first()).toBeVisible()
     await view.locator('.node[data-code="CS 619"]').click()
-    expect(await view.locator(".edge.on").count()).toBeGreaterThan(1)
+    await expect.poll(() => view.locator(".edge.on").count()).toBeGreaterThan(1)
     const focus = view.locator(".focus-top .program-focus")
     await expect(focus).toBeVisible()
     await expect(view.locator(".focus-inline")).toBeHidden()

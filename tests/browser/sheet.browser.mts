@@ -163,7 +163,7 @@ test("an event's row opens its page at once, the week beneath it left as it was"
     new MutationObserver(records => weekChanged += records.length).observe(document.querySelector(".agenda")!, { childList: true, subtree: true, characterData: true })
     const shown = new MutationObserver(() => {
       loading ||= document.querySelector(".view")?.textContent?.includes("Loading") ?? false
-      if (document.querySelector(".view h2")?.textContent === "Event 30") {
+      if (document.querySelector(".view h1")?.textContent === "Event 30") {
         shown.disconnect()
         requestAnimationFrame(() => resolve({ ms: performance.now() - tapped, loading, weekChanged }))
       }

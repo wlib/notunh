@@ -9,11 +9,9 @@
 import { type Calendar, LETTERS, letterOf } from "./calendar.mts"
 import { type Meeting, type Section, type Term, KINDS, clock, codeOf, courseOf, meetingKeys, sectionUrl } from "./course.mts"
 import { type Day, TIME_ZONE, addDays, atClock, weekday } from "../shared/time.mts"
+import { SITE } from "../shared/site.mts"
 
 const BYDAY = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-
-/** Where a VEVENT's URL points, wherever the file was made */
-const ORIGIN = "https://notunh.app"
 
 /** Octets a content line may hold, the leading space of a continuation line included */
 export const LINE = 75
@@ -93,7 +91,7 @@ const vevent = (term: Pick<Term, "code">, section: Section, meeting: Meeting, ke
     `SUMMARY:${escape(`${courseOf(section)} ${KINDS[section.kind] ?? section.kind}`)}`,
     `DESCRIPTION:${escape(`${codeOf(section)} ${section.title}${section.instructors.length ? ` · ${section.instructors.map(({ name }) => name).join(", ")}` : ""}`)}`,
     `LOCATION:${escape(meeting.where)}`,
-    `URL:${ORIGIN}${sectionUrl(term.code, section.crn)}`,
+    `URL:${SITE}${sectionUrl(term.code, section.crn)}`,
     "END:VEVENT"
   ]
 }

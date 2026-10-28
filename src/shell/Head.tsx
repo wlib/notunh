@@ -1,15 +1,16 @@
 /** @jsxImportSource bruh/server */
 
 import { SURFACE } from "./theme.mts"
-import { AUTHOR, IMAGE, NAME, PAGES, SITE, type Path, imageOf, scriptJson, structuredDataOf } from "./pages.mts"
+import { AUTHOR, IMAGE, NAME, PAGES, SITE, type Path, imageOf, scriptJson } from "./pages.mts"
+import { structuredDataOf } from "./structured.mts"
 
 // When this build was made, the same for every page of it. It orders releases, so a copy of a page from an edge not
 // yet caught up can be told from a newer one (manifest.mts' isOlder)
 export const RELEASE = new Date().toISOString()
 
-// The one origin that sends usage stats (usage.tsx). A copy served anywhere else, like in development, a Preview, or
-// the browser tests' server unless it stands in for this one, sends nothing
-const USAGE_ORIGIN = "https://notunh.app"
+// The one origin that sends usage stats (usage.tsx): the site's own. A copy served anywhere else, like in development,
+// a Preview, or the browser tests' server unless it stands in for this one, sends nothing
+const USAGE_ORIGIN = SITE
 
 /**
  * Fetches the data files the head's links name as it's parsed, alongside the code, keeping each response on its link

@@ -38,7 +38,7 @@ test("a chapter's nickname finds its house, whose page says its letters, chapter
   await expect(view.locator(".view-facts").first()).toContainText("Lambda Sigma chapter")
   await expect(view.locator(".view-facts").first()).toContainText("Interfraternity Council")
   await expect(view.getByRole("link", { name: /UNH chapter page/ })).toHaveAttribute("href", /chapter-scorecards\/sigma-chi$/)
-  await expect(page).toHaveURL(/[?&]place=Sigma\+Chi/)
+  await expect(page).toHaveURL(/\/map\/place\/Sigma\+Chi$/)
 })
 
 test("a chapter's letters and nickname find it, and one the map doesn't place is found by its nickname, saying so", async ({ page, fixture }) => {

@@ -5,7 +5,7 @@
 import { r } from "bruh/reactive"
 import { index, hall, day, now, hallStatus, hallName } from "../state.mts"
 import type { Span } from "../menus.mts"
-import { spansOn, wallDate, type WallTime } from "../hours.mts"
+import { MINUTES_A_DAY, spansOn, wallDate, type WallTime } from "../hours.mts"
 import { addDays, type Day as CalendarDay } from "../../shared/time.mts"
 import { slug } from "../../shared/slug.mts"
 import { ClockRange, ClockTime, Day, relativeDay } from "../../shell/intl.tsx"
@@ -30,7 +30,7 @@ const Time = ({ at }: { at: WallTime }) =>
 
 /** Like "7:15 AM – 9:00 PM", with a range running past midnight as two times, since together they'd get dates */
 const Range = ({ day, span: [open, close] }: { day: CalendarDay, span: Span }) =>
-  close > 1440
+  close > MINUTES_A_DAY
     ? <><Time at={{ day, minute: open }} /> – <Time at={{ day, minute: close }} /></>
     : <ClockRange from={wallDate({ day, minute: open })} to={wallDate({ day, minute: close })} timeZone="UTC" />
 

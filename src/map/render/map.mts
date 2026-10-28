@@ -16,6 +16,7 @@ import { drawItinerary } from "./itinerary.mts"
 import { type Tap, dropPins, listenForTaps } from "./taps.mts"
 import { animateBuses } from "./buses.mts"
 import { showYou } from "./you.mts"
+import { CAMPUS } from "../../places/durham.mts"
 
 /**
  * The place of the page the sheet shows, marked with its label, and today's other labels hidden meanwhile, so it's
@@ -81,7 +82,8 @@ const followPage = (map: MapLibre, state: MapState, show: Show) => {
 // maplibre finds its worker with a computed URL that vite can't see, so bundle it as a worker explicitly
 setWorkerUrl(workerUrl)
 
-const DURHAM: Coordinates = [-70.9345, 43.1365]
+/** Where the map opens, on campus */
+const OPENING: Coordinates = [CAMPUS.lon, CAMPUS.lat]
 
 /**
  * Draws the map, following the data as newer builds swap it in: the timetable's stops and routes, the model the
@@ -101,7 +103,7 @@ export const createMap = (
   let upstream: string | undefined
   const map = new MapLibre({
     container,
-    center: DURHAM,
+    center: OPENING,
     zoom: 14.5,
     attributionControl: false,
     transformRequest: (url, type) => type === "Glyphs" ? { url: glyphsFrom(url, upstream) } : undefined
@@ -148,7 +150,7 @@ export const createMap = (
   const drawYou = showYou(map, panel, state, id => busPosition(id))
 
   const show = framing(container, panel)
-  show(padding => map.jumpTo({ center: DURHAM, padding }))
+  show(padding => map.jumpTo({ center: OPENING, padding }))
   dropPins(map, state)
 
   map.on("load", () => {

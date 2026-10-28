@@ -32,7 +32,7 @@ const date = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, weekday: "s
 const hours = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", hour: "numeric", minute: "2-digit" })
 
 /** Intl's thin and narrow spaces as plain ones, as every font has those and every crawler shows them */
-const plain = (text: string) =>
+export const plain = (text: string) =>
   text.replace(/[  ]/g, " ")
 
 /**
@@ -73,16 +73,18 @@ export const placePreview = (place: Pick<GazetteerPlace, "name" | "kind">, event
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
+/** A meeting's days and hours: "Tue Thu 2:10 – 3:30 PM", or "Arranged" for one without days */
+export const meetingWhen = ({ days, start, end }: Pick<Section["meetings"][number], "days" | "start" | "end">) =>
+  days ? plain(`${daysOf(days).map(day => WEEKDAYS[day]).join(" ")} ${hours.formatRange(start * 60_000, end * 60_000)}`) : "Arranged"
+
 /** A section's weekly patterns: "Tue Thu 2:10 – 3:30 PM · Fri 9:10 – 10:00 AM", or "Arranged" */
-const weeklyOf = (section: Section) => {
+export const weeklyOf = (section: Section) => {
   const patterns = patternsOf(section)
-  return patterns.length
-    ? plain(patterns.map(({ days, start, end }) => `${daysOf(days).map(day => WEEKDAYS[day]).join(" ")} ${hours.formatRange(start * 60_000, end * 60_000)}`).join(" · "))
-    : "Arranged"
+  return patterns.length ? patterns.map(meetingWhen).join(" · ") : "Arranged"
 }
 
 /** Where a section meets: each room once, "Kingsbury N343 · Kingsbury N113" */
-const roomsOf = (section: Section) =>
+export const roomsOf = (section: Section) =>
   [...new Set((patternsOf(section).length ? patternsOf(section) : section.meetings).map(({ where }) => where))].join(" · ")
 
 /** A section's: its code, kind and term, title, when it meets each week, and where */
@@ -138,6 +140,13 @@ export const programPreview = (program: Pick<Listed, "title" | "kind">, courses:
   kind:  `${PROGRAMS[program.kind]} · Catalog ${year}`,
   title: program.title,
   lines: [`${count(courses, "course")}, what each needs, and where they meet`]
+})
+
+/** The list of programs, from a catalog's year */
+export const programsPreview = (count: number, year: string): Preview => ({
+  kind:  year ? `Catalog ${year}` : "Catalog",
+  title: "UNH majors, minors and programs",
+  lines: [`${count} programs, the courses each names, and where they meet`]
 })
 
 /** Parking near a place, or anywhere */

@@ -3,7 +3,8 @@
 import type { Hours, Span } from "./menus.mts"
 import { addDays, weekday, type Day } from "../shared/time.mts"
 
-const DAY = 1440
+/** Minutes in a day, past which a closing time runs into the next */
+export const MINUTES_A_DAY = 1440
 
 /** A time on Durham's wall clock: a day, and minutes after its midnight */
 export type WallTime = { day: Day, minute: number }
@@ -24,14 +25,14 @@ export const status = (hours: Hours, now: WallTime): Status => {
   for (let offset = -1; offset <= 7; offset++)
     for (const [open, close] of spansOn(hours, addDays(now.day, offset)).toSorted((a, b) => a[0] - b[0])) {
       const last = spans.at(-1)
-      if (last && open + offset * DAY <= last[1])
-        last[1] = Math.max(last[1], close + offset * DAY)
+      if (last && open + offset * MINUTES_A_DAY <= last[1])
+        last[1] = Math.max(last[1], close + offset * MINUTES_A_DAY)
       else
-        spans.push([open + offset * DAY, close + offset * DAY])
+        spans.push([open + offset * MINUTES_A_DAY, close + offset * MINUTES_A_DAY])
     }
 
   const at = (minutes: number): WallTime =>
-    ({ day: addDays(now.day, Math.floor(minutes / DAY)), minute: ((minutes % DAY) + DAY) % DAY })
+    ({ day: addDays(now.day, Math.floor(minutes / MINUTES_A_DAY)), minute: ((minutes % MINUTES_A_DAY) + MINUTES_A_DAY) % MINUTES_A_DAY })
 
   const current = spans.find(([open, close]) => open <= now.minute && now.minute < close)
   if (current)

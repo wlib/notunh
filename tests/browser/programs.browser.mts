@@ -5,10 +5,8 @@
 // searched by title; a program whose lists can't be read for sure lists its courses instead; and on a wide screen the
 // lanes sit side by side with every edge drawn and the card at the top. Screenshots go to NOTUNH_SHOTS when it's set
 
-import { mkdirSync } from "node:fs"
-import { join } from "node:path"
-import { test as base, expect, devices, type Page } from "@playwright/test"
-import { type Fixture, startFixture } from "./fixture.mts"
+import { test as base, expect, devices } from "@playwright/test"
+import { type Fixture, open, shoot, startFixture } from "./fixture.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
   fixture: async ({}, use) => {
@@ -21,17 +19,6 @@ const test = base.extend<{ fixture: Fixture }>({
 const { defaultBrowserType, ...phone } = devices["iPhone 13"]
 test.use({ ...phone, proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" }, timezoneId: "America/New_York", serviceWorkers: "block" })
 
-const SHOTS = process.env.NOTUNH_SHOTS
-if (SHOTS)
-  mkdirSync(SHOTS, { recursive: true })
-const shoot = (page: Page, name: string) =>
-  SHOTS ? page.screenshot({ path: join(SHOTS, `${name}-${test.info().project.name}.png`) }) : Promise.resolve()
-
-const open = async (page: Page, origin: string, path: string) => {
-  await page.goto(origin + path)
-  const no = page.getByRole("button", { name: "No", exact: true })
-  await no.waitFor({ timeout: 3000 }).then(() => no.click(), () => {})
-}
 
 test("on a phone, tapping a course lights its chain, says what it needs below it, and opens its page, which Back returns from", async ({ page, fixture }) => {
   // The graph is drawn, lit, left for the course's page and come back to, which takes a while on a busy machine
@@ -44,7 +31,7 @@ test("on a phone, tapping a course lights its chain, says what it needs below it
   await expect(view.getByRole("button", { name: "By term" })).toHaveCount(0)
   // Stacked: each level under the one before
   const levels = view.locator(".level")
-  expect(await levels.count()).toBeGreaterThan(2)
+  await expect.poll(() => levels.count()).toBeGreaterThan(2)
   const [first, second] = [await levels.nth(0).boundingBox(), await levels.nth(1).boundingBox()]
   expect(second!.y).toBeGreaterThan(first!.y + first!.height - 1)
   // No edges until a course is tapped
@@ -64,7 +51,7 @@ test("on a phone, tapping a course lights its chain, says what it needs below it
   await expect(view.locator('.node[data-code="CS 416"]')).toHaveAttribute("data-chain", "needs")
   // What it unlocks here is the pool of choices, lit as one node, and its courses once it's open
   await expect(view.locator('.node[data-code="pool-1"]')).toHaveAttribute("data-chain", "unlocks")
-  expect(await view.locator(".edge.on").count()).toBeGreaterThan(0)
+  await expect.poll(() => view.locator(".edge.on").count()).toBeGreaterThan(0)
   await view.locator('.node[data-code="pool-1"]').click()
   await expect(view.locator('.node[data-code="CS 619"]')).toHaveAttribute("data-chain", "unlocks")
   await shoot(page, "program-focused")
@@ -103,6 +90,7 @@ test("a pool of choices is one node that opens to its courses, and a course open
 test("a program with a sample plan lays the same courses out by term, and the rest in a last lane", async ({ page, fixture }) => {
   await open(page, fixture.origin, "/map/program/computer-science-major-bs?course=CS+619")
   const view = page.locator(".view")
+  await expect(view.locator('.node[data-code="CS 619"]')).toHaveAttribute("aria-pressed", "true")
   const before = await view.locator(".node").evaluateAll(nodes => nodes.map(node => (node as HTMLElement).dataset.code).sort())
   await view.getByRole("button", { name: "By term" }).click()
   const labels = view.locator(".level h3")
@@ -117,7 +105,7 @@ test("a program with a sample plan lays the same courses out by term, and the re
   // The same nodes, the focus kept, the chain still drawn
   expect(await view.locator(".node").evaluateAll(nodes => nodes.map(node => (node as HTMLElement).dataset.code).sort())).toEqual(before)
   await expect(view.locator('.node[data-code="CS 619"]')).toHaveAttribute("aria-pressed", "true")
-  expect(await view.locator(".edge.on").count()).toBeGreaterThan(0)
+  await expect.poll(() => view.locator(".edge.on").count()).toBeGreaterThan(0)
   await shoot(page, "program-terms")
 })
 

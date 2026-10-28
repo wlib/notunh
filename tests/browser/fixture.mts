@@ -14,9 +14,11 @@
 // fixtures'
 
 import { createServer } from "node:http"
-import { readFileSync, existsSync, globSync } from "node:fs"
+import { spawn, type ChildProcess } from "node:child_process"
+import { readFileSync, existsSync, globSync, mkdirSync } from "node:fs"
 import { join, extname } from "node:path"
 import type { AddressInfo } from "node:net"
+import { test, type Page } from "@playwright/test"
 import { republished } from "../../scripts/republish.mts"
 
 export const RELEASES = ["A", "B", "C", "D", "R", "H"] as const
@@ -190,3 +192,40 @@ export const startFixture = async (dist: string, { isUsageOrigin = false, worker
 }
 
 export type Fixture = Awaited<ReturnType<typeof startFixture>>
+
+/**
+ * A page of the site, with the usage question answered no before it loads, as a browser answers it once, so no test
+ * races the prompt (src/shell/usage.tsx remembers the answer in localStorage)
+ */
+export const open = async (page: Page, origin: string, path = "/map/") => {
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem("usage", JSON.stringify("no"))
+    }
+    catch {}
+  })
+  await page.goto(origin + path)
+}
+
+/** Where screenshots go, when they're wanted */
+export const SHOTS = process.env.NOTUNH_SHOTS
+if (SHOTS)
+  mkdirSync(SHOTS, { recursive: true })
+
+/** A screenshot of the page, by name and browser, in NOTUNH_SHOTS when it's set */
+export const shoot = (page: Page, name: string) =>
+  SHOTS ? page.screenshot({ path: join(SHOTS, `${name}-${test.info().project.name}.png`) }) : Promise.resolve()
+
+export type Worker = { origin: string, process: ChildProcess }
+
+/** The Worker's app served from Node (tests/worker/serve.mts), once it says its port */
+export const startWorker = (dist: string) =>
+  new Promise<Worker>((resolve, reject) => {
+    const child = spawn(process.execPath, [join(import.meta.dirname, "../worker/serve.mts"), dist], { stdio: ["ignore", "pipe", "inherit"] })
+    child.stdout.on("data", (chunk: Buffer) => {
+      const port = chunk.toString().match(/PORT (\d+)/)?.[1]
+      if (port)
+        resolve({ origin: `http://127.0.0.1:${port}`, process: child })
+    })
+    child.on("exit", code => reject(new Error(`The Worker exited with ${code}`)))
+  })

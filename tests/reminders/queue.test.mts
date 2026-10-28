@@ -11,7 +11,8 @@ import { type Wake, WAKE_VERSION } from "../../src/reminders/watch.mts"
 import { type Visit, isSameOccasion, thereBy } from "../../src/shared/visit.mts"
 import { type Day, addDays, atClock, localDay, weekday } from "../../src/shared/time.mts"
 
-const NOW = Math.floor(Date.now() / 1000)
+// A Wednesday noon in term, in seconds
+const NOW = Date.UTC(2026, 9, 7, 16) / 1000
 const TODAY = localDay(NOW * 1000)
 const HERE = { lat: 43.13, lon: -70.93, name: "Your location", isYou: true as const }
 const BUILDINGS: Record<string, { lat: number, lon: number }> = { "Kingsbury Hall": { lat: 43.1361, lon: -70.9353 }, "Pettee Hall": { lat: 43.1340, lon: -70.9365 } }

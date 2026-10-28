@@ -13,8 +13,9 @@ import { isoOf } from "../../src/shared/time.mts"
 
 const ISO = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$/
 
-// From now to five years on, whenever now is
-const instant = fc.integer({ min: Date.now(), max: Date.now() + 5 * 365 * 86_400_000 })
+// From a day in term to five years on
+const NOW = Date.UTC(2026, 9, 7, 16)
+const instant = fc.integer({ min: NOW, max: NOW + 5 * 365 * 86_400_000 })
 
 const event: fc.Arbitrary<Event> = fc.record({
   id:     fc.string({ minLength: 1 }),
@@ -87,7 +88,7 @@ test("every official event placed in Durham has what Google requires and recomme
 )
 
 test("an event placed nowhere the map knows, or out of Durham, has no structured data", () => {
-  const official: Event = { id: "a", title: "A", start: Date.now(), end: Date.now() + 3_600_000, where: "", source: "25live", url: "" }
+  const official: Event = { id: "a", title: "A", start: NOW, end: NOW + 3_600_000, where: "", source: "25live", url: "" }
   expect(eventDataOf({ event: official, place: undefined, url: URL, image: IMAGE, description: "" })).toBeUndefined()
   // Portsmouth
   expect(eventDataOf({ event: official, place: { name: "Market Square", at: [-70.7593, 43.0771] }, url: URL, image: IMAGE, description: "" })).toBeUndefined()

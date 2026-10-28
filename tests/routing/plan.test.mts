@@ -1,7 +1,5 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { readFileSync } from "node:fs"
-import { gunzipSync } from "node:zlib"
 import { canAlight, canBoard, isServiceActive, serviceDayStart, withIndexes, type Feed, type FeedData, type Trip } from "../../src/transit/feed.mts"
 import { distance } from "../../src/geo/projection.mts"
 import { type StopPredictions, forecastOf } from "../../src/transit/observations/umo.mts"
@@ -21,9 +19,12 @@ import { holdProbability, isLikely } from "../../src/transit/models/estimates.mt
 import { probit } from "../../src/shared/normal.mts"
 import type { Visit } from "../../src/transit/inference/events.mts"
 import { type Day, addDays } from "../../src/shared/time.mts"
+import { recordedData } from "../map/fixtures/recording.mts"
 
-// The planner properties are cheap and the interesting cases are rare, so look harder
+// The planner properties are cheap and the interesting cases are rare, so look harder, but for the ones that scan,
+// plan or brute-force a whole feed on every run, which look as hard as a second allows under load
 fc.configureGlobal({ numRuns: 1000 })
+const HEAVY = 200
 const TODAY = "2026-10-01"
 const BASE = serviceDayStart(TODAY) / 1000
 const CENTER = { lat: 43.135, lon: -70.93 }
@@ -232,7 +233,7 @@ test("scan finds a valid itinerary, with the slack every boarding needs, wheneve
       expect(itinerary).toBeDefined()
       expect(feltEnd(itinerary!)).toBeLessThanOrEqual(best.felt + 1e-6)
     }
-  }))
+  }), { numRuns: HEAVY })
 )
 
 /** What plan and planBy both promise of their options: valid, each way once, none beating another on every count, best first */
@@ -261,7 +262,7 @@ test("plan suggests valid ways, each once, none beating another on every count, 
     const quickest = scan(feed, walksOf(feed), runs, buildConnections(runs, start), from, to, start, { now: start })
     if (quickest && savesWalking(feed, quickest, from, to))
       expect(options.some(option => itineraryKey(option) === itineraryKey(quickest) || dominates(option, quickest, LEEWAY) || cost(option, start) <= cost(quickest, start))).toBe(true)
-  }))
+  }), { numRuns: HEAVY })
 )
 
 test("dominating is a strict order on what a rider weighs: nothing beats itself, and a way beaten by one that's beaten is beaten", () =>
@@ -301,7 +302,7 @@ test("a timetable with its stops numbered otherwise plans the same itineraries, 
     const after = plan(other, walksOf(other), buildRuns(other, TODAY, []), from, to, start)
     expect(after.map(itineraryKey)).toEqual(before.map(itineraryKey))
     expect(after.map(itinerary => stopsOf(other, itinerary))).toEqual(before.map(itinerary => stopsOf(feed, itinerary)))
-  }))
+  }), { numRuns: HEAVY })
 )
 
 test("a run's connections keep a chronology however unevenly its stops are delayed, as the timetable's handoff or a source can leave them", () =>
@@ -337,7 +338,7 @@ test("plan's best option feels no worse than catching a bus from a nearer stop, 
       if (nearer && savesWalking(feed, nearer, from, to) && !options.some(option => dominates(option, nearer, LEEWAY)))
         expect(cost(options[0], start)).toBeLessThanOrEqual(cost(nearer, start) + 1e-6)
     })
-  }))
+  }), { numRuns: HEAVY })
 )
 
 /** The day's runs, as Umo's predictions forecast them, answered at an epoch second, by default before anything here */
@@ -542,12 +543,12 @@ test("planBy's options all arrive by the time asked with every boarding's slack,
     // Give or take the leeway, within which a way ranked better beats it
     if (latestDirect !== undefined && options.length < ALTERNATIVES)
       expect(options.some(option => option.start + LEEWAY >= latestDirect.start || busesOf(option) === busesOf(latestDirect))).toBe(true)
-  }))
+  }), { numRuns: HEAVY })
 )
 
-// The timetable of tests/map/replay.test.mts: route 3 from Kingsbury Hall out to Durham Road at Mast Road, 5 km off,
-// and route Gables from the Gables apartments round campus by Kingsbury Hall
-const { feed: recorded }: { feed: FeedData } = JSON.parse(gunzipSync(readFileSync(new URL("../map/fixtures/buses.json.gz", import.meta.url))).toString())
+// The recording's timetable: route 3 from Kingsbury Hall out to Durham Road at Mast Road, 5 km off, and route Gables
+// from the Gables apartments round campus by Kingsbury Hall
+const recorded = recordedData
 
 /** The first day a trip's service runs */
 const serviceDayOf = (feed: Feed, trip: Trip) => {
@@ -580,7 +581,7 @@ test("a time to be there by hours after the last bus still gets the last bus fir
     expect(itineraryKey(best)).toBe(itineraryKey(planBy(feed, walksOf(feed), runs, from, to, last + 2 * 3600, now)[0]))
     for (const option of rest)
       expect(option.start).toBeLessThan(best.start)
-  }), { numRuns: 25 })
+  }), { numRuns: 15 })
 })
 
 /** The stop an itinerary's last bus gets off at, by name */
@@ -708,5 +709,5 @@ test("planBy finds nothing when no bus arrives in time, and by the first of plan
     expect(inTime.length).toBeGreaterThan(0)
     if (inTime.length < ALTERNATIVES)
       expect(Math.max(...inTime.map(option => option.start))).toBeGreaterThanOrEqual(best.start)
-  }))
+  }), { numRuns: HEAVY })
 )

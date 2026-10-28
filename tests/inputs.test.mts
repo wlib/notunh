@@ -1,18 +1,18 @@
 /// <reference types="node" />
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
+import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { archiveOf, fetchGeneration, pointerOf } from "../scripts/release.mts"
 import { stageInputs } from "../scripts/inputs.mts"
 import { run } from "../scripts/files.mts"
+import { tempFolder } from "./fixtures/temp.mts"
 
 /** Files laid out as the repository is, by path */
 const files = fc.dictionary(fc.stringMatching(/^(src\/map|public\/data)\/[a-z]{1,8}\.json$/), fc.uint8Array({ maxLength: 64 }), { minKeys: 1, maxKeys: 6 })
 
 const folderOf = async (contents: Record<string, Uint8Array>) => {
-  const folder = await mkdtemp(join(tmpdir(), "notunh-inputs-test-"))
+  const folder = await tempFolder()
   for (const [path, data] of Object.entries(contents)) {
     await mkdir(dirname(join(folder, path)), { recursive: true })
     await writeFile(join(folder, path), data)
@@ -31,7 +31,7 @@ const releases = (pointer: string | undefined, archives: Record<string, Uint8Arr
 
 /** Stages a folder as a generation of the inputs, with what it staged, or undefined if it staged nothing */
 const staged = async (folder: string, pointer?: string) => {
-  const to = await mkdtemp(join(tmpdir(), "notunh-staged-"))
+  const to = await tempFolder()
   if (!await stageInputs(folder, to, releases(pointer)))
     return
   const manifest = JSON.parse(await readFile(join(to, "manifest.json"), "utf8"))
@@ -44,7 +44,7 @@ test("inputs staged are read back exactly as they were, under a version of their
     const folder = await folderOf(contents)
     const { manifest, archive } = (await staged(folder))!
     expect(manifest.version).toMatch(/^\d{4}-\d{2}-\d{2}-[0-9a-f]{8}$/)
-    const back = await mkdtemp(join(tmpdir(), "notunh-fetched-"))
+    const back = await tempFolder()
     await fetchGeneration("inputs", manifest.version, back, releases(manifest.version, { [archiveOf("inputs", manifest.version)]: archive }))
     for (const [path, data] of Object.entries(contents))
       expect(new Uint8Array(await readFile(join(back, path)))).toEqual(data)
@@ -53,7 +53,6 @@ test("inputs staged are read back exactly as they were, under a version of their
     const [path] = Object.keys(contents).slice(pick % Object.keys(contents).length)
     await writeFile(join(folder, path), new Uint8Array([...contents[path], 1]))
     expect((await staged(folder, manifest.version))!.manifest.version).not.toBe(manifest.version)
-    await Promise.all([folder, back].map(path => rm(path, { recursive: true })))
   }), { numRuns: 15 }),
   30_000
 )
@@ -66,10 +65,10 @@ test("a generation whose files aren't as its manifest says, or that holds anothe
   await writeFile(join(folder, "src/map/b.json"), new Uint8Array([3]))
   await run("tar", ["-czf", join(to, "changed.tar.gz"), "-C", folder, ".", "-C", to, "manifest.json"])
   const changed = new Uint8Array(await readFile(join(to, "changed.tar.gz")))
-  await expect(fetchGeneration("inputs", manifest.version, await mkdtemp(join(tmpdir(), "notunh-fetched-")), releases(undefined, { [url]: changed })))
+  await expect(fetchGeneration("inputs", manifest.version, await tempFolder(), releases(undefined, { [url]: changed })))
     .rejects.toThrow("isn't as its manifest says, at src/map/b.json")
   const archive = new Uint8Array(await readFile(join(to, "inputs.tar.gz")))
-  await expect(fetchGeneration("inputs", manifest.version, await mkdtemp(join(tmpdir(), "notunh-fetched-")), releases(undefined, { [url]: new Uint8Array() })))
+  await expect(fetchGeneration("inputs", manifest.version, await tempFolder(), releases(undefined, { [url]: new Uint8Array() })))
     .rejects.toThrow()
   // A manifest naming a file outside the folder it's fetched into, there with the bytes it names
   await writeFile(join(to, "manifest.json"), JSON.stringify({ ...manifest, files: { "../outside.json": manifest.files["src/map/a.json"] } }))
@@ -77,6 +76,6 @@ test("a generation whose files aren't as its manifest says, or that holds anothe
   await run("tar", ["-czf", join(to, "outside.tar.gz"), "-C", folder, ".", "-C", to, "manifest.json"])
   await expect(fetchGeneration("inputs", manifest.version, join(folder, "fetched"), releases(undefined, { [url]: new Uint8Array(await readFile(join(to, "outside.tar.gz"))) })))
     .rejects.toThrow("isn't as its manifest says, at ../outside.json")
-  await expect(fetchGeneration("inputs", "2026-01-01-00000000", await mkdtemp(join(tmpdir(), "notunh-fetched-")), releases(undefined, { [archiveOf("inputs", "2026-01-01-00000000")]: archive })))
+  await expect(fetchGeneration("inputs", "2026-01-01-00000000", await tempFolder(), releases(undefined, { [archiveOf("inputs", "2026-01-01-00000000")]: archive })))
     .rejects.toThrow(`holds ${manifest.version}`)
 })

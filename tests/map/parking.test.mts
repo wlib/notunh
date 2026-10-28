@@ -2,7 +2,9 @@ import { test, expect } from "vitest"
 import fc from "fast-check"
 import { AFTER, EARLY, STAY, defaultStay, purposeOfVisit, readPermit, stayOfVisit } from "../../src/map/state/parking.mts"
 
-const anInstant = fc.integer({ min: Date.now() - 400 * 86_400_000, max: Date.now() + 400 * 86_400_000 })
+// A year either side of a day in term
+const NOW = Date.UTC(2026, 9, 7, 16)
+const anInstant = fc.integer({ min: NOW - 400 * 86_400_000, max: NOW + 400 * 86_400_000 })
 
 test("a stay asked for with none is two hours from the minute it was asked", () =>
   fc.assert(fc.property(anInstant, now => {

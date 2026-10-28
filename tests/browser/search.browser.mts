@@ -3,32 +3,20 @@
 // replaces that summary whole, leaving one heading; and once the service worker keeps the map, the page opens offline
 // from the map as built, with no page's summary in it
 
-import { spawn, type ChildProcess } from "node:child_process"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { test as base, expect } from "@playwright/test"
-import { type Fixture, startFixture } from "./fixture.mts"
+import { type Fixture, type Worker, startFixture, startWorker } from "./fixture.mts"
 import { buildOf } from "../../src/shell/manifest.mts"
 import { boardableStops, type FeedData } from "../../src/transit/feed.mts"
 import { urlOf } from "../../src/map/link.mts"
 
 /** The Worker's app, started once for every test this process runs of this file */
-let worker: { origin: string, process: ChildProcess } | undefined
-
-const startWorker = () =>
-  new Promise<typeof worker>((resolve, reject) => {
-    const child = spawn(process.execPath, [join(import.meta.dirname, "../worker/serve.mts"), process.env.NOTUNH_DIST!], { stdio: ["ignore", "pipe", "inherit"] })
-    child.stdout.on("data", (chunk: Buffer) => {
-      const port = chunk.toString().match(/PORT (\d+)/)?.[1]
-      if (port)
-        resolve({ origin: `http://127.0.0.1:${port}`, process: child })
-    })
-    child.on("exit", code => reject(new Error(`The Worker exited with ${code}`)))
-  })
+let worker: Worker | undefined
 
 const test = base.extend<{ fixture: Fixture }>({
   fixture: async ({}, use) => {
-    worker ??= await startWorker()
+    worker ??= await startWorker(process.env.NOTUNH_DIST!)
     const fixture = await startFixture(process.env.NOTUNH_DIST!, { worker: worker!.origin })
     await use(fixture)
     await fixture.close()

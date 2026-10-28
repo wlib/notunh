@@ -177,22 +177,28 @@ const hoursAndNow = fc.tuple(hours, fc.constantFrom(...DAYS.slice(1, 7)), fc.int
 const minutesFrom = (now: WallTime, { day, minute }: WallTime) =>
   (Date.parse(day) - Date.parse(now.day)) / 60_000 + minute
 
-/** Whether any day's span, yesterday's included, covers a minute from now's midnight, the slow way */
-const isOpenAt = (hours: Hours, now: WallTime, minute: number) =>
-  [-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8].some(offset =>
-    spansOn(hours, addDays(now.day, offset)).some(([open, close]) => open + offset * DAY <= minute && minute < close + offset * DAY)
+/** The week and a day either side as it is from now's midnight: each day's spans, yesterday's included, in minutes from it */
+const spansFrom = (hours: Hours, now: WallTime) =>
+  [-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8].flatMap(offset =>
+    spansOn(hours, addDays(now.day, offset)).map(([open, close]): Span => [open + offset * DAY, close + offset * DAY])
   )
+
+/** Whether any span covers a minute from now's midnight, the slow way */
+const isOpenAt = (spans: Span[], minute: number) =>
+  spans.some(([open, close]) => open <= minute && minute < close)
 
 test("a hall is open until it closes, and closed until it opens, or for a week when it doesn't", () =>
   fc.assert(fc.property(hoursAndNow, ([hours, now]) => {
     const found = status(hours, now)
     const until = found.isOpen ? minutesFrom(now, found.closes) : found.opens ? minutesFrom(now, found.opens) : now.minute + 7 * DAY
     expect(until).toBeGreaterThan(now.minute)
-    for (let minute = now.minute; minute < until; minute++)
-      expect(isOpenAt(hours, now, minute)).toBe(found.isOpen)
+    // Whether it's open changes only where a span opens or closes, so now and each edge before until say it all
+    const spans = spansFrom(hours, now)
+    for (const minute of [now.minute, ...spans.flat().filter(edge => now.minute < edge && edge < until)])
+      expect(isOpenAt(spans, minute), `${minute}`).toBe(found.isOpen)
     // A hall open all week closes, as far as a week's hours say, at the end of them
     if ((found.isOpen || found.opens) && until < 7 * DAY)
-      expect(isOpenAt(hours, now, until)).toBe(!found.isOpen)
+      expect(isOpenAt(spans, until)).toBe(!found.isOpen)
   }))
 )
 

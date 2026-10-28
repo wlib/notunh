@@ -42,7 +42,7 @@ test("each file a page names downloads once, on a first visit however slowly it 
 
       await page.goto("about:blank")
       await page.goto(fixture.origin + path)
-      await page.waitForTimeout(2000)
+      await page.waitForLoadState("networkidle")
       for (const url of named)
         expect(downloads(url), url).toBe(1)
     }

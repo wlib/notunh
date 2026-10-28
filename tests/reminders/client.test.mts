@@ -11,8 +11,8 @@ import type { Visit } from "../../src/shared/visit.mts"
 import { type MoveOn, type PushScope, startPush } from "../../src/sw/push.mts"
 import { browserStorage } from "./browser.mts"
 
-// Now, as the page drops reminders of buses long gone
-const NOW = Math.floor(Date.now() / 1000)
+// Now, in seconds, as the page drops reminders of buses long gone: a Wednesday noon in term, which the page's clock is set to
+const NOW = Date.UTC(2026, 9, 7, 16) / 1000
 const KEY = "BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8"
 const REMINDER: Reminder = {
   id: "r1", from: { lat: 43.13, lon: -70.93, name: "Here" }, to: { lat: 43.14, lon: -70.94, name: "MUB" }, way: "w",
@@ -33,6 +33,8 @@ let online: (() => void)[]
 let isSubscribed: boolean
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] })
+  vi.setSystemTime(NOW * 1000)
   storage = browserStorage()
   asked = []
   worker = "up"
@@ -65,7 +67,10 @@ beforeEach(() => {
   })
 })
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
+})
 
 /** A tab: the page's reminders loaded afresh, as another window's are */
 const tab = async (): Promise<Tab> => {

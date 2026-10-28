@@ -4,7 +4,10 @@ import { type Page, fieldOf, fromField, isSameView, pageOf, urlOf } from "../../
 import { createPage } from "../../src/map/state/page.mts"
 import type { Purpose, Stay } from "../../src/parking/model.mts"
 import { sectionUrl } from "../../src/courses/course.mts"
-import { addDays, atClock, localDay } from "../../src/shared/time.mts"
+import { addDays, atClock } from "../../src/shared/time.mts"
+
+// A day in term, from which the minutes here range a year either way
+const TODAY = "2026-10-07"
 
 /**
  * A name as places, rooms and ids have them, any text a page could be of: unicode, slashes, plus signs, percent signs,
@@ -14,7 +17,7 @@ const aText = fc.oneof(fc.string({ minLength: 1, unit: "grapheme" }), fc.string(
   .filter(text => text.trim() === text && !/^\.+$/.test(text))
 /** An instant on a whole minute of Durham's clock within a year either way, one a field writes back as itself */
 const aMinute = fc.tuple(fc.integer({ min: -365, max: 365 }), fc.integer({ min: 0, max: 1439 }))
-  .map(([days, minute]) => atClock(addDays(localDay(Date.now()), days), `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`))
+  .map(([days, minute]) => atClock(addDays(TODAY, days), `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`))
   .filter(at => fromField(fieldOf(at)) === at)
 const aStay: fc.Arbitrary<Stay> = fc.tuple(aMinute, fc.integer({ min: 1, max: 72 * 60 }))
   .map(([from, minutes]) => ({ from, to: from + minutes * 60_000 }))
@@ -66,7 +69,7 @@ test("a section's link reads as its term and CRN, and what isn't a page is none"
 })
 
 test("parking's links carry the stay on Durham's clock and what it's for, never ?to=, and drop either where it makes no sense", () => {
-  const day = addDays(localDay(Date.now()), 1)
+  const day = addDays(TODAY, 1)
   const stay = { from: atClock(day, "06:30"), to: atClock(day, "08:30") }
   expect(urlOf({ kind: "parking", place: "Kingsbury Hall", stay, purpose: "class" })).toBe(`/map/parking/Kingsbury+Hall?arrive=${day}T06:30&leave=${day}T08:30&for=class`)
   expect(urlOf({ kind: "parking" })).toBe("/map/parking")
@@ -76,12 +79,19 @@ test("parking's links carry the stay on Durham's clock and what it's for, never 
   expect(urlOf({ kind: "program", slug: "computer-science-minor", course: "CS 518" })).toBe("/map/program/computer-science-minor?course=CS+518")
 })
 
-test("a page is the same view whatever stay or purpose parking's fields ask it for, and another place or area is another", () =>
+/** The kinds of page with something that changes in place: parking's stay and purpose, and a program's course in focus */
+const IN_PLACE = ["parking", "area", "program"]
+
+test("a page is the same view whatever parking's fields ask it for or a program's course in focus, and another place, area or program is another", () =>
   fc.assert(fc.property(aPage, aPage, (a, b) => {
     expect(isSameView(a, a)).toBe(true)
     if (a.kind === "parking" || a.kind === "area")
       expect(isSameView(a, { ...a, stay: undefined, purpose: "errand" })).toBe(true)
-    if (urlOf(a) !== urlOf(b) && !(a.kind === b.kind && (a.kind === "parking" || a.kind === "area")))
+    if (a.kind === "program")
+      expect(isSameView(a, { ...a, course: "CS 518" })).toBe(true)
+    // Two pages of a kind that changes in place may be one view in different states, but any other pair whose links
+    // differ are two views
+    if (urlOf(a) !== urlOf(b) && !(a.kind === b.kind && IN_PLACE.includes(a.kind)))
       expect(isSameView(a, b)).toBe(false)
     expect(isSameView(a, undefined)).toBe(false)
   }))

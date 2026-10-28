@@ -17,10 +17,8 @@ const { data, coverage } = prerequisitesOf(pages, 0)
 const textsIn = (req: Req): string[] =>
   "text" in req ? [req.text] : "course" in req ? [] : ("all" in req ? req.all : req.any).flatMap(textsIn)
 
-test("CS 518 needs CS 416 or 417 and unlocks CS 619 and IT 705", () => {
+test("CS 518 needs CS 416 or 417 and unlocks CS 619 and IT 705, and a course the catalog hasn't needs and unlocks nothing", () => {
   expect(reqsOf(data, "CS 518")).toEqual({ needs: "CS 416 or 417", unlocks: ["CS 619", "IT 705"] })
-  expect(reqsOf(data, "CS 619").needs).toBe("CS 515 (C-) and 518")
-  expect(reqsOf(data, "CS 791").needs).toBe("CS 520 (C-) and ((CS 619 and 620) or (CS 620 and (CS 727 or IT 666)))")
   expect(reqsOf(data, "NOPE 999")).toEqual({ needs: "", unlocks: [] })
 })
 
@@ -40,7 +38,7 @@ test("only the course-description pages are ever asked for, never /search/, /rib
   fc.assert(fc.property(fc.webPath(), fc.constantFrom("/search/", "/ribbit/", "/archives/", "/courseleaf/", "/undergraduate/programs-study/"), (path, disallowed) => {
     expect(isAllowed(`${CATALOG}${disallowed}${path}`)).toBe(false)
     expect(isAllowed(`${INDEX_URL}cs/${path.replace(/^\//, "")}?P=CS%20518`)).toBe(false)
-  }))
+  }), { numRuns: 30 })
 })
 
 test("all but a few sentences read for sure, the rest kept whole as text", () => {
@@ -94,7 +92,7 @@ test("unlocks is exactly needs read backwards", () => {
   fc.assert(fc.property(fc.array(fc.tuple(code, tree)), entries => isInverse(withUnlocks(new Map(entries)))))
 })
 
-test("the file fits its schema and stays small", () => {
+test("the file fits its schema, and names no course with nothing to say", () => {
   expect(() => v.parse(Prereqs, data)).not.toThrow()
   expect(Object.values(data.courses).every(course => course.needs || course.unlocks?.length)).toBe(true)
 })

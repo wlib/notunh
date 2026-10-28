@@ -1,18 +1,16 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { readFileSync } from "node:fs"
-import { gunzipSync } from "node:zlib"
 import {
   type Kept, type Leg, type Reminder, HEADS_UP, HEADS_UPS, MAX_LEAD, MIN_LEAD, NOT_LIVE, STATES, TOO_SOON,
   delayOf, firstRide, isCurrent, isTooSoon, leadTime, leaveAt, meaningOf, reminderOf, replanned, textOf, walkOf, watchOf
 } from "../../src/reminders/reminder.mts"
 import { type Wake, KINDS, WAKE_VERSION, pushOf } from "../../src/reminders/watch.mts"
-import { type FeedData, withIndexes } from "../../src/transit/feed.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
 import { BOARDING, type Run, buildRuns, slack as boardingSlack } from "../../src/transit/models/forecast.mts"
 import { type Itinerary, type RideLeg, type WalkLeg, wayKey } from "../../src/routing/plan.mts"
 import { walkAllowance, walkSeconds } from "../../src/routing/walks.mts"
 import type { Place } from "../../src/places/search.mts"
+import { recordedFeed } from "../map/fixtures/recording.mts"
 
 const NOW = 1_790_000_000
 const TRIP = "3B FULL_T04"
@@ -58,9 +56,8 @@ const wake: fc.Arbitrary<Wake> = fc.record({
   at:       fc.constant(NOW)
 })
 
-// The timetable of tests/map/replay.test.mts, and itineraries on its route 3 as the planner makes them
-const { feed: data }: { feed: FeedData } = JSON.parse(gunzipSync(readFileSync(new URL("../map/fixtures/buses.json.gz", import.meta.url))).toString())
-const feed = withIndexes(data)
+// The recording's timetable, and itineraries on its route 3 as the planner makes them
+const feed = recordedFeed
 const runs = buildRuns(feed, "2026-10-07", undefined, emptyModel())
 const run = runs.find(run => run.trip.id === TRIP && run.base === 1791345600)!
 const place = (index: number): Place => ({ lat: feed.stops[index].lat, lon: feed.stops[index].lon, name: `Near ${feed.stops[index].name}` })

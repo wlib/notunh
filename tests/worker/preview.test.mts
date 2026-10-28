@@ -21,9 +21,9 @@ import { segmentOf } from "../../src/map/link.mts"
 import { ROOMS, pathOf } from "../../src/laundry/rooms.mts"
 import { d1 } from "./d1.mts"
 
-// Nine in the morning today, whenever today is, so what's on at 1:30 is today's
-const NOW = dayStart(localDay(Date.now())) + 9 * HOUR
-const TODAY = localDay(NOW)
+// Nine on a Wednesday morning in term, with no clock change for weeks either side, so what's on at 1:30 is today's
+const TODAY = "2026-10-07"
+const NOW = dayStart(TODAY) + 9 * HOUR
 const at = (hours: number) => dayStart(TODAY) + hours * HOUR
 
 const ADA = hide("ada.lovelace@unh.edu")

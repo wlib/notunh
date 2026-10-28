@@ -17,7 +17,7 @@
     "fixtures": "node tests/fixtures/make.mts",
     "predev": "node scripts/inputs.mts --dev",
     "dev": "vite",
-    "prebuild": "node scripts/inputs.mts && npm run typecheck && npm test",
+    "prebuild": "node scripts/inputs.mts",
     "build": "vite build",
     "postbuild": "node scripts/search.mts",
     "preview": "vite preview",

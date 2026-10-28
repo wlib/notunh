@@ -1,8 +1,7 @@
 /** @jsxImportSource bruh/server */
 import { MetaDocument } from "bruh/server"
 import { Head } from "./src/shell/Head.tsx"
-
-const REPO = "https://github.com/wlib/notunh"
+import { REPO } from "./src/shell/pages.mts"
 // Backward, so address harvesters reading the page or this source skip it; page.mts turns it into a link
 const EMAIL_BACKWARD = "ppa.hnuton@leinad"
 
@@ -14,23 +13,23 @@ export default () =>
         <main class="page">
           <header class="intro">
             <h1 class="wordmark"><span>not</span>unh</h1>
-            <p>An unofficial guide to UNH.</p>
+            <p>An unofficial guide to UNH: live buses, the campus map, events, dining menus, and laundry.</p>
           </header>
 
           <nav class="sections" aria-label="Sections">
             <a href="/map/">
-              <strong>Map</strong>
-              <span>Live buses, directions, classes, parking, and what's on today.</span>
+              <strong>Map &amp; bus tracker</strong>
+              <span>Live Wildcat Transit buses, directions, classes, parking, and UNH events today.</span>
               <span class="icon icon-forward" aria-hidden="true" />
             </a>
             <a href="/dining/">
               <strong>Dining menus</strong>
-              <span>Holloway and Philbrook, with ingredients and allergens.</span>
+              <span>Today's Holloway and Philbrook menus, with hours, ingredients and allergens.</span>
               <span class="icon icon-forward" aria-hidden="true" />
             </a>
             <a href="/laundry/">
               <strong>Laundry</strong>
-              <span>Free washers and dryers in every residence hall.</span>
+              <span>Free washers and dryers in every residence hall, live.</span>
               <span class="icon icon-forward" aria-hidden="true" />
             </a>
           </nav>

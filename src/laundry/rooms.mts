@@ -1,7 +1,7 @@
 // UNH's laundry rooms, as scripts/laundry/rooms.mts lists them at build time, and the slug each is at under
 // /laundry/, which the Worker's page route and the map's places go by too
 
-import rooms from "./rooms.json"
+import rooms from "./rooms.json" with { type: "json" }
 import type { Room } from "./upstream.mts"
 import { slug } from "../shared/slug.mts"
 

@@ -126,13 +126,13 @@ export const share = (title: string) => {
   ;(navigator.share?.({ title, url }) ?? navigator.clipboard?.writeText(url).then(() => notice.value = "Link copied."))?.catch(() => {})
 }
 
-/** A page's head: its name, which a Back to it says, short where the title's long, over what kind of thing it is where the title alone doesn't say */
+/** A page's head, whose title is the page's heading while the map's own is hidden: its name, which a Back to it says, short where the title's long, over what kind of thing it is where the title alone doesn't say */
 export const Head = ({ kind, title, name }: { kind?: BruhChild, title: string, name?: string }) => {
   state.name.value = name ?? title
   return (
     <header class="view-head">
       {kind && <p class="view-kind">{kind}</p>}
-      <h2>{title}</h2>
+      <h1>{title}</h1>
     </header>
   )
 }

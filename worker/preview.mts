@@ -1,25 +1,26 @@
-// Link previews of the pages people share: a pin's, /p/<id>, and the map's, /map/event/<id>, /map/place/<name>,
-// /map/section/<term>/<crn> and the rest (src/map/link.mts). Each is the built page with a head saying what it's of
-// (src/social/preview.mts) and a card of its own (card.mts), at /map/card/ and the page's path, with a version of what
-// the card says, so a changed event is a new address, drawn on its first fetch and kept at the edge. The map itself,
-// /map/, never reaches the Worker. The service worker keeps the map as its own path answers it, never a page's
-// (src/sw/worker.mts). Anything that doesn't resolve, an unknown id or an event gone, is the page as built
+// The pages people share and search engines find: a pin's, /p/<id>, the map's, /map/event/<id>, /map/place/<name>,
+// /map/section/<term>/<crn> and the rest (src/map/link.mts), and each laundry room's, /laundry/<room>/. Each is the
+// built page with a head saying what it's of (src/social/preview.mts): its title, line, canonical address, structured
+// data, and a card of its own (card.mts), at /map/card/ and the page's path, with a version of what the card says, so a
+// changed event is a new address, drawn on its first fetch and kept at the edge. Its body says it too, in place of the
+// page's shell (src/shell/summary.mts), which the app replaces whole as it loads. The map itself, /map/, never reaches
+// the Worker, and the service worker keeps each page as its own path answers it, never one of these (src/sw/worker.mts).
+// A page of nothing in particular, like Directions, is the map as built; one of something there isn't, like an event
+// gone, is the map as built answering 404, kept out of search; and one whose data can't be read, the map as built.
+// Instructors' pages and pins preview as themselves, and are kept out of search
 
 import { Hono } from "hono/tiny"
 import type { Context } from "hono"
 import type { StandardSchemaV1 } from "@standard-schema/spec"
+import type { Thing, WithContext } from "schema-dts"
 import { type Page, pageOf, viewOf } from "../src/map/link.mts"
-import { type Preview, areaPreview, coursePreview, describe, eventPreview, parkingPreview, personPreview, placePreview, programPreview, roomPreview, sectionPreview, stopPreview } from "../src/social/preview.mts"
-import { EventsData, pinPath } from "../src/social/event.mts"
-import { Gazetteer } from "../src/places/gazetteer.mts"
-import { CoursesIndex, TermFile, activeTerms, termOf } from "../src/courses/course.mts"
-import { createPeople } from "../src/courses/people.mts"
-import { roomKey } from "../src/courses/rooms.mts"
-import { PrereqsIndex } from "../src/programs/prereqs.mts"
-import { Program, Programs } from "../src/programs/program.mts"
-import { ParkingData } from "../src/parking/sources.mts"
-import { FeedData } from "../src/transit/feed.mts"
-import { IMAGE, NAME, SITE, imageOf } from "../src/shell/pages.mts"
+import { type Resolved, type Site, OF_SOMETHING, UNLISTED, eventResolved, resolve } from "../src/map/site.mts"
+import { type Preview, describe } from "../src/social/preview.mts"
+import { pinPath } from "../src/social/event.mts"
+import { pathOf, roomAtSlug } from "../src/laundry/rooms.mts"
+import { escaped, summaryHtml, type Summary } from "../src/shell/summary.mts"
+import { breadcrumbsOf, eventDataOf } from "../src/shell/structured.mts"
+import { IMAGE, NAME, SITE, imageOf, scriptJson, trailTo } from "../src/shell/pages.mts"
 import { readJson } from "../src/shared/json.mts"
 import type { Env } from "./env.mts"
 import { dataOf, siteBuild } from "./site.mts"
@@ -30,29 +31,39 @@ type Worker = { Bindings: Env }
 
 export const previews = new Hono<Worker>()
 
-/** The kinds of the map's pages that preview as what they're of; the rest preview as the map */
-const SHOWN: readonly Page["kind"][] = ["event", "place", "section", "course", "person", "room", "program", "parking", "area", "stop"]
-
 /** Where pages' cards are, each at its page's path after this */
 const CARD = "/map/card/"
 
-//#region The head
+/** What a title adds to say it's of UNH, by the kind of page, unless it says so already */
+const CONTEXTS: Partial<Record<Page["kind"], string>> = {
+  event: "UNH event", place: "UNH map", section: "UNH class", course: "UNH course", person: "UNH", room: "UNH classroom",
+  program: "UNH catalog", parking: "UNH parking", area: "UNH parking", stop: "UNH bus stop"
+}
 
-const escaped = (text: string) =>
-  text.replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" })[char]!)
+//#region The page
 
-/** What a page's head says of a preview: its title and line, its own link, and its card's */
-export type Head = { title: string, description: string, url: string, image: string }
+/** What a page's head says of it: its title and line, its own address and its card's, its structured data, and whether search may list it */
+export type Head = { title: string, description: string, url: string, image: string, data: WithContext<Thing>[], isListed: boolean }
 
-/** A page's head from its preview, its link, and its card's */
-export const headOf = (preview: Preview, url: string, image: string): Head =>
-  ({ title: `${preview.title} · ${NAME}`, description: describe(preview), url, image })
+/** A page's head from its preview, its address and its card's, with what its title adds, unless the title has it */
+export const headOf = (preview: Preview, url: string, image: string, { context, data = [], isListed = true }: { context?: string, data?: WithContext<Thing>[], isListed?: boolean } = {}): Head => ({
+  title:       [preview.title, context && !preview.title.includes("UNH") ? context : "", NAME].filter(Boolean).join(" · "),
+  description: describe(preview),
+  url,
+  image,
+  data,
+  isListed
+})
+
+/** Kept out of search engines' results, in a page's head */
+const NOINDEX = `<meta name="robots" content="noindex">`
 
 /**
- * A built page's HTML with a preview's head in place of its own: its title, and every meta that previews and search
- * engines read of it that the page has, escaped, with nothing else changed
+ * A built page's HTML with another head's words in place of its own: its title, every meta that previews and search
+ * engines read that the page has, its canonical address and its structured data, escaped, and kept out of search
+ * where it's not to be listed, with nothing else changed
  */
-export const withHead = (html: string, { title, description, url, image }: Head) => {
+export const withHead = (html: string, { title, description, url, image, data, isListed }: Head) => {
   const alt = `${title}: ${description}`
   const named: Record<string, string> = {
     "description": description,
@@ -67,78 +78,61 @@ export const withHead = (html: string, { title, description, url, image }: Head)
   return [
     head
       .replace(/<title>[^<]*<\/title>/, () => `<title>${escaped(title)}</title>`)
-      .replace(/<meta (name|property)="([^"]+)" content="[^"]*"/g, (tag, attribute: string, name: string) => name in named ? `<meta ${attribute}="${name}" content="${escaped(named[name])}"` : tag),
+      .replace(/<meta (name|property)="([^"]+)" content="[^"]*"/g, (tag, attribute: string, name: string) => name in named ? `<meta ${attribute}="${name}" content="${escaped(named[name])}"` : tag)
+      .replace(/<link rel="canonical" href="[^"]*">/, () => `<link rel="canonical" href="${escaped(url)}">`)
+      // scriptJson escapes every "<", so the script's JSON holds none
+      .replace(/<script type="application\/ld\+json">[^<]*<\/script>/, () => data.length ? `<script type="application/ld+json">${scriptJson(data)}</script>` : "")
+      + (isListed ? "" : NOINDEX),
     ...body
   ].join("</head>")
+}
+
+/** A built page's HTML kept out of search, as a page of nothing there is is */
+export const unlisted = (html: string) =>
+  html.replace("</head>", `${NOINDEX}</head>`)
+
+/**
+ * A built page's HTML saying a summary in its body: in place of its shell, the first <section class="shell">, with the
+ * app's title no longer the page's heading, which the summary's title is. The app replaces both as it loads
+ */
+export const withBody = (html: string, summary: Summary) => {
+  const body = Math.max(0, html.indexOf("<body"))
+  return html.slice(0, body) + html.slice(body)
+    .replace(/<h1 class="app-title">([\s\S]*?)<\/h1>/, (_, title: string) => `<p class="app-title">${title}</p>`)
+    .replace(/<section class="shell">[\s\S]*?<\/section>/, () => summaryHtml(summary))
 }
 
 //#endregion
 
 //#region What a page is of
 
-/** A data file the map page names, as a schema makes it */
-const named = async <T,>(env: Env, name: string, schema: StandardSchemaV1<unknown, T>) => {
-  const path = (await siteBuild(env.ASSETS)).data[name]
-  if (!path)
-    throw new Error(`The map page names no ${name}`)
-  return dataOf(env.ASSETS, path, response => readJson(response, schema, path))
-}
+/** The site's data, as the map page served now names it, read from the Worker's own assets */
+const siteOf = (env: Env): Site => ({
+  named: async <T,>(name: string, schema: StandardSchemaV1<unknown, T>) => {
+    const path = (await siteBuild(env.ASSETS)).data[name]
+    if (!path)
+      throw new Error(`The map page names no ${name}`)
+    return dataOf(env.ASSETS, path, response => readJson(response, schema, path))
+  },
+  file: <T,>(path: string, schema: StandardSchemaV1<unknown, T>) =>
+    dataOf(env.ASSETS, path, response => readJson(response, schema, path))
+})
 
-/** A data file by its own path, as an index names it */
-const file = <T,>(env: Env, path: string, schema: StandardSchemaV1<unknown, T>) =>
-  dataOf(env.ASSETS, path, response => readJson(response, schema, path))
+/** A page that couldn't be read, which is logged */
+const UNREAD = Symbol("unread")
 
-/** The terms of the courses index, all of them or those live at an instant, with their sections */
-const termsOf = async (env: Env, which: "all" | number) => {
-  const index = await named(env, "courses", CoursesIndex)
-  const entries = which === "all" ? index.terms : activeTerms(index.terms, which)
-  return Promise.all(entries.map(async entry => termOf(index, entry, await file(env, entry.file, TermFile))))
-}
-
-/** A page's preview from the site's data and the pins, at an instant, or none for a page naming nothing there is */
-export const previewOf = async (env: Env, page: Page, now: number): Promise<Preview | undefined> => {
-  switch (page.kind) {
-    case "event": {
-      // A pin is still found while the build's events can't be read
-      const built = await named(env, "events", EventsData).then(({ events }) => events.find(({ id }) => id === page.id), () => undefined)
-      const event = built ?? await publicPin(env.DB, page.id)
-      return event && eventPreview(event)
-    }
-    case "place": {
-      const [{ places }, { events }] = await Promise.all([named(env, "gazetteer", Gazetteer), named(env, "events", EventsData)])
-      const place = places.find(({ name }) => name === page.name)
-      return place && placePreview(place, events, now)
-    }
-    case "section": {
-      const index = await named(env, "courses", CoursesIndex)
-      const entry = index.terms.find(({ code }) => code === page.term)
-      const term = entry && termOf(index, entry, await file(env, entry.file, TermFile))
-      const section = term?.sections.find(({ crn }) => crn === page.crn)
-      return section && sectionPreview(term!, section)
-    }
-    case "course":
-      return coursePreview(page.code, await termsOf(env, "all"))
-    case "person": {
-      const person = createPeople(await termsOf(env, now)).find(({ id }) => id === page.id)
-      return person && personPreview(person)
-    }
-    case "room":
-      return roomPreview(page.where, await termsOf(env, now), where => roomKey(where) === roomKey(page.where))
-    case "program": {
-      const index = await named(env, "prereqs", PrereqsIndex)
-      const listed = index.programs ? (await file(env, index.programs, Programs)).programs.find(({ slug }) => slug === page.slug) : undefined
-      return listed && programPreview(listed, (await file(env, listed.file, Program)).courses.length, index.year ?? "")
-    }
-    case "parking": {
-      const { places } = await named(env, "gazetteer", Gazetteer)
-      return !page.place || places.some(({ name }) => name === page.place) ? parkingPreview(page.place) : undefined
-    }
-    case "area": {
-      const area = (await named(env, "parking", ParkingData)).areas.find(({ id }) => id === page.id)
-      return area && areaPreview(area)
-    }
-    case "stop":
-      return stopPreview(await named(env, "gtfs", FeedData), page.id)
+/** What a page is of, a pin's included, or none where it's of nothing there is, or UNREAD where its data couldn't be read */
+const resolvedOf = async (env: Env, page: Page): Promise<Resolved | undefined | typeof UNREAD> => {
+  try {
+    const found = await resolve(siteOf(env), page, Date.now())
+    if (found || page.kind !== "event")
+      return found
+    const pin = await publicPin(env.DB, page.id)
+    return pin && eventResolved(pin)
+  }
+  catch (error) {
+    console.error(`Couldn't resolve ${viewOf(page)}`, error)
+    return UNREAD
   }
 }
 
@@ -151,16 +145,33 @@ export const versionOf = async (preview: Preview) =>
 const cardUrl = async (page: Page, preview: Preview) =>
   `${SITE}${CARD}${viewOf(page).slice("/map/".length)}?v=${await versionOf(preview)}`
 
-/** What a page is of, or none where it's of nothing there is, or that couldn't be read, which is logged */
-const resolved = (env: Env, page: Page | undefined) =>
-  page && SHOWN.includes(page.kind)
-    ? previewOf(env, page, Date.now()).catch(error => void console.error(`Couldn't preview ${viewOf(page)}`, error))
-    : Promise.resolve(undefined)
+/** A page of the map's head: an official event's structured data, and the trail to it */
+const mapHead = async (page: Page, { preview, event, place }: Resolved) => {
+  const url = SITE + viewOf(page)
+  const image = await cardUrl(page, preview)
+  const isListed = !UNLISTED.includes(page.kind) && event?.source !== "pin"
+  // A page kept out of search says nothing for it
+  const data = isListed ? [
+    ...event ? [eventDataOf({ event, place, url, image, description: describe(preview) })].filter(thing => thing !== undefined) : [],
+    breadcrumbsOf(trailTo("/map/", preview.title, url))
+  ] : []
+  return headOf(preview, url, image, { context: CONTEXTS[page.kind], data, isListed })
+}
 
-/** A built page with a preview's head */
-const headed = async (c: Context<Worker>, path: string, head: Head) => {
-  const page = await c.env.ASSETS.fetch(new URL(path, c.req.url))
-  return page.ok ? c.html(withHead(await page.text(), head), 200, { "cache-control": "public, max-age=60" }) : page
+/** A built page by its path, as the assets answer it */
+const built = (c: Context<Worker>, path: string) =>
+  c.env.ASSETS.fetch(new URL(path, c.req.url))
+
+/** A built page with another head, and a summary in its body where there's one, answered with a status */
+const headed = async (c: Context<Worker>, path: string, head: Head, summary?: Summary) => {
+  const page = await built(c, path)
+  if (!page.ok)
+    return page
+  const html = withHead(await page.text(), head)
+  return c.html(summary ? withBody(html, summary) : html, 200, {
+    "cache-control": "public, max-age=60",
+    ...!head.isListed && { "x-robots-tag": "noindex" }
+  })
 }
 
 //#endregion
@@ -174,11 +185,11 @@ previews.get(`${CARD}*`, async c => {
     return kept
   const url = new URL(c.req.url)
   const page = pageOf(`/map/${url.pathname.slice(CARD.length)}`)
-  const preview = await resolved(c.env, page)
-  if (!page || !preview)
+  const found = page && OF_SOMETHING.includes(page.kind) ? await resolvedOf(c.env, page) : undefined
+  if (!page || !found || found === UNREAD)
     return c.redirect(imageOf("/map/"), 302)
-  const isCurrent = url.searchParams.get("v") === await versionOf(preview)
-  const card = new Response(await render(preview), {
+  const isCurrent = url.searchParams.get("v") === await versionOf(found.preview)
+  const card = new Response(await render(found.preview), {
     headers: { "content-type": "image/png", "cache-control": isCurrent ? "public, max-age=31536000, immutable" : "public, max-age=600" }
   })
   if (cache && isCurrent)
@@ -186,22 +197,54 @@ previews.get(`${CARD}*`, async c => {
   return card
 })
 
-// One of the map's pages: the map with that page's head, or as built for one that's of nothing to preview
+// One of the map's pages: the map, headed and summarized as what it's of; as built for a page of nothing in particular
+// or whose data couldn't be read; and for one of something there isn't, or no page at all, as built answering 404
 previews.get("/map/*", async c => {
   const { pathname, search } = new URL(c.req.url)
   const page = pageOf(pathname, search)
-  const preview = await resolved(c.env, page)
-  if (!page || !preview)
-    return c.env.ASSETS.fetch(new URL("/map/", c.req.url))
-  return headed(c, "/map/", headOf(preview, SITE + viewOf(page), await cardUrl(page, preview)))
+  if (page && !OF_SOMETHING.includes(page.kind))
+    return built(c, "/map/")
+  const found = page && await resolvedOf(c.env, page)
+  if (found === UNREAD)
+    return built(c, "/map/")
+  if (!page || !found) {
+    const map = await built(c, "/map/")
+    return c.html(unlisted(await map.text()), 404, { "cache-control": "public, max-age=60", "x-robots-tag": "noindex" })
+  }
+  // An instructor's body says nothing more than their head, which is only for the link
+  const head = await mapHead(page, found)
+  return headed(c, "/map/", head, UNLISTED.includes(page.kind) ? undefined : { ...found.preview, parts: found.parts })
 })
 
-// A pin's own page, with the pin in its head, and the page as built for a pin gone or hidden, which it says
+// A pin's own page, with the pin in its head, kept out of search, and the page as built for a pin gone or hidden,
+// which it says
 previews.get("/p/:id", async c => {
   const page: Page = { kind: "event", id: c.req.param("id") }
   const pin = await publicPin(c.env.DB, page.id)
   if (!pin)
-    return c.env.ASSETS.fetch(new URL("/p/", c.req.url)).then(built => new Response(built.body, { status: 404, headers: built.headers }))
-  const preview = eventPreview(pin)
-  return headed(c, "/p/", headOf(preview, SITE + pinPath(pin.id), await cardUrl(page, preview)))
+    return built(c, "/p/").then(page => new Response(page.body, { status: 404, headers: page.headers }))
+  const { preview } = eventResolved(pin)
+  return headed(c, "/p/", headOf(preview, SITE + pinPath(pin.id), await cardUrl(page, preview), { context: CONTEXTS.event, isListed: false }))
+})
+
+// A laundry room's own address: the laundry page, which opens that room, headed and summarized as the room
+previews.get("/laundry/:room/", async c => {
+  const room = roomAtSlug(c.req.param("room"))
+  if (!room)
+    return c.notFound()
+  const url = SITE + pathOf(room.id)
+  const preview: Preview = {
+    kind:  "Laundry room",
+    title: `${room.name} laundry`,
+    lines: [`Which washers and dryers are free in ${room.name} at UNH now, and how long the rest have left`]
+  }
+  const head: Head = {
+    ...headOf(preview, url, SITE + imageOf("/laundry/")),
+    title: `${room.name} laundry: free washers & dryers · ${NAME}`,
+    data:  [breadcrumbsOf(trailTo("/laundry/", preview.title, url))]
+  }
+  return headed(c, "/laundry/", head, {
+    ...preview,
+    parts: [{ heading: "Getting there", items: [{ text: `Directions to ${room.name}`, href: `/map/?to=laundry/${c.req.param("room")}` }] }]
+  })
 })

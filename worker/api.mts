@@ -11,7 +11,7 @@ import { sValidator } from "@hono/standard-validator"
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { drizzle } from "drizzle-orm/d1"
 import * as v from "valibot"
-import { ROOMS, roomAtSlug } from "../src/laundry/rooms.mts"
+import { ROOMS } from "../src/laundry/rooms.mts"
 import { Day } from "../src/shared/time.mts"
 import { describeIssues } from "../src/shared/json.mts"
 import type { Env } from "./env.mts"
@@ -198,13 +198,9 @@ app.delete("/api/push/devices/:device", valid(v.object({ device: ID }), "param")
 // Pins, marks, device links and email verification (social.mts)
 app.route("/", social)
 
-// The pages a shared link opens, with what they're of in their heads, and their cards (preview.mts)
+// The pages a shared link or a search opens, pins', the map's and laundry rooms', each headed and summarized as what
+// it's of, and their cards (preview.mts)
 app.route("/", previews)
-
-// The laundry page, which opens the room its address names
-app.get("/laundry/:room/", c =>
-  roomAtSlug(c.req.param("room")) ? c.env.ASSETS.fetch(new URL("/laundry/", c.req.url)) : c.notFound()
-)
 
 // Whatever else reaches the Worker, as the assets would answer it
 app.notFound(c =>

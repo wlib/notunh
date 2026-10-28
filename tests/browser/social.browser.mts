@@ -11,6 +11,8 @@ import { test as base, expect, devices, type Browser, type Page } from "@playwri
 import { type Fixture, startFixture } from "./fixture.mts"
 import { pinPath } from "../../src/social/event.mts"
 import { atClock, hhmm, localDay } from "../../src/shared/time.mts"
+import { PAGES } from "../../src/shell/pages.mts"
+import { escaped } from "../../src/shell/summary.mts"
 
 
 /** The Worker's app, started once for every test this process runs of this file, for each browser in turn */
@@ -167,7 +169,7 @@ test("an event made here opens for anyone with the link, who can say they're goi
   await shoot(guest, "event-guest")
   // The page the Worker serves carries the event for link previews
   const html = await (await fetch(fixture.origin + path)).text()
-  expect(html).toContain("<title>Pickup tennis · notunh</title>")
+  expect(html).toContain("<title>Pickup tennis · UNH event · notunh</title>")
   expect(html).toMatch(/<meta property="og:description" content="[^"]*Thompson Hall[^"]*1 going">/)
   // Directions is the event on the map, whose Directions plans the trip to it
   await guest.getByRole("link", { name: "Directions" }).click()
@@ -202,7 +204,7 @@ test("a link to an event's page on the map previews it with a card of its own, w
 
   // As a crawler asks: the map with the event in its head, and its card, and the map itself as built
   const html = await (await fetch(fixture.origin + link)).text()
-  expect(html).toContain("<title>Bring your own board games · notunh</title>")
+  expect(html).toContain("<title>Bring your own board games · UNH event · notunh</title>")
   expect(html).toMatch(/<meta name="description" content="\w{3}, \w{3} \d{1,2} [^"]+ · Dimond Library · by the steps">/)
   const image = html.match(/<meta property="og:image" content="([^"]+)">/)![1]
   expect(image).toMatch(new RegExp(`^https://notunh\\.app/map/card/event/${id}\\?v=[0-9a-f]{12}$`))
@@ -213,7 +215,9 @@ test("a link to an event's page on the map previews it with a card of its own, w
   if (SHOTS)
     writeFileSync(join(SHOTS, `preview-${test.info().project.name}.png`), new Uint8Array(png.buffer))
   expect(await (await fetch(`${fixture.origin}/map/`)).text()).toBe(asset)
-  expect(await (await fetch(`${fixture.origin}/map/event/nope`)).text()).toBe(asset)
+  const gone = await fetch(`${fixture.origin}/map/event/nope`)
+  expect(gone.status).toBe(404)
+  expect(await gone.text()).toBe(asset.replace("</head>", `<meta name="robots" content="noindex"></head>`))
 
   // Someone opening the link: the map at the event, then again from the service worker's copy, which is the map's
   const other = await stranger(browser)
@@ -230,11 +234,11 @@ test("a link to an event's page on the map previews it with a card of its own, w
   const copy = (await kept())!
   expect(copy).not.toContain("board games")
   expect(copy).not.toContain("/map/card/")
-  expect(copy).toContain("<title>UNH Campus Map")
+  expect(copy).toContain(`<title>${escaped(PAGES["/map/"].title)}</title>`)
   // Offline, a page's path opens from that copy, as the map at that page
   await fixture.setOffline(true)
   await guest.goto(fixture.origin + link)
-  await expect(guest).toHaveTitle(/^UNH Campus Map/)
+  await expect(guest).toHaveTitle(PAGES["/map/"].title)
   await expect(guest.locator(".panel")).toBeVisible()
   await guest.goto(`${fixture.origin}/map/place/Dimond+Library`)
   await expect(guest.getByRole("heading", { name: "Dimond Library" })).toBeVisible()

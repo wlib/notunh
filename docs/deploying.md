@@ -27,7 +27,7 @@ Nothing deletes releases. Old `inputs-*` and `map-data-*` ones may be deleted by
 
 ## Build and deploy
 
-1. `prebuild` installs the inputs and map data the pointers name (`scripts/inputs.mts`), keeps what's served now beside them for open tabs, matches places, and runs the typecheck and tests. Needing no secrets and writing only its own folder, any branch's build is safe.
+1. `prebuild` installs the inputs and map data the pointers name (`scripts/inputs.mts`), keeps what's served now beside them for open tabs, and matches places. Typecheck and tests run in the pull request's Check and the nightly Inputs, not here. Needing no secrets and writing only its own folder, any branch's build is safe.
 2. `vite build`, then `postbuild` (`scripts/search.mts`) writes the sitemap and IndexNow's key file.
 3. `predeploy` applies D1 migrations (`npm run db:migrate`). A failed migration stops the deploy.
 4. `wrangler deploy` ships the Worker and site together.

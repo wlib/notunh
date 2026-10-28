@@ -23,7 +23,11 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # Installs the fixtures as the inputs and map data, then typechecks and tests before building (package.json prebuild)
+      # The fixtures as the inputs and map data, typechecked and tested here alone, as Workers Builds only builds what
+      # this has passed
+      - run: node scripts/inputs.mts && npm run typecheck && npm test
+        env:
+          NOTUNH_OFFLINE: 1
       - run: npm run build
         env:
           NOTUNH_OFFLINE: 1

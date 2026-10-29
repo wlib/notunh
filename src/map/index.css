@@ -1105,6 +1105,31 @@ body {
   color: var(--on-accent);
 }
 
+/* A room's days, today, tomorrow, and any other picked, in one row */
+.view .days {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: -0.25rem;
+  padding: 0.25rem;
+}
+
+.view .days::-webkit-scrollbar {
+  display: none;
+}
+
+/* Any other day, the native picker laid invisibly over its chip, so a tap anywhere on it opens the picker */
+.days .pick {
+  position: relative;
+}
+
+.days .pick input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  font-size: max(1rem, 16px);
+}
+
 /* Set apart from the facts above and the actions below, within a lead that isn't a grid of its own */
 .view .offsets {
   display: flex;
@@ -1241,6 +1266,38 @@ body {
   border: none;
   background: none;
   text-align: start;
+}
+
+/* Practices, quieter than what's on to go to: one as its own row, more gathered at a place, opening to show each (EventLines in Pages.tsx) */
+.rows > li.practices {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.practices summary,
+.rows > li.practice > .row {
+  color: var(--muted);
+}
+
+.practices summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.practices summary::-webkit-details-marker {
+  display: none;
+}
+
+.practices summary strong {
+  font-weight: 550;
+}
+
+.practices details[open] > summary .row-state {
+  transform: rotate(90deg);
+}
+
+.practices details > .rows {
+  padding-inline-start: 0.75rem;
+  border-inline-start: 2px solid var(--border);
 }
 
 /* A row that leaves the map, as a chapter's to UNH's page for it */

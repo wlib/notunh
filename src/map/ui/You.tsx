@@ -13,6 +13,7 @@ import { LINK_TTL, linkUrl, parseCode, shown } from "../../social/link.mts"
 import { encode, pathOf } from "../../social/qr.mts"
 import { capture } from "../../shell/usage.tsx"
 import { sync } from "../../shell/sync.mts"
+import { state } from "../state/map.mts"
 import { MyCourses } from "./Courses.tsx"
 import { Head } from "./Pages.tsx"
 
@@ -169,6 +170,8 @@ const Email = () => {
     api.verify(address.peek(), code.peek()).then(
       ({ verified: done, joined }) => {
         verified.value = done
+        // Rooms asked about since are told their bookings' titles now
+        state.askAfresh()
         standing.value = joined ? "Your things are back." : undefined
         capture("email_verified")
         void sync()

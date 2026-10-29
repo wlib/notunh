@@ -16,6 +16,7 @@ import { CoursesIndex, emptyIndex } from "../../courses/course.mts"
 import { NO_PREREQS, PrereqsIndex } from "../../programs/prereqs.mts"
 import { NO_PARKING, ParkingData } from "../../parking/sources.mts"
 import { MenusIndex } from "../../dining/menus.mts"
+import { NO_ROOMS, RoomsData } from "../../courses/bookings.mts"
 import { latest } from "../../shell/build.mts"
 
 /** The middle of campus, which search prefers the nearer of two places by one name to */
@@ -29,7 +30,7 @@ const ALIASES = new Map(CHAPTERS.filter(isPlaced).map(chapter => [chapter.name, 
  * The map works without a model or today's events, so it starts with an empty one of either that can't load
  */
 export const loadMapData = async () => {
-  const [feed, model, network, gazetteerData, tiles, style, places, events, coursesIndex, prereqsIndex, parking, menus] = await Promise.all([
+  const [feed, model, network, gazetteerData, tiles, style, places, events, rooms, coursesIndex, prereqsIndex, parking, menus] = await Promise.all([
     latest("gtfs", loadFeed),
     latest("model", Model, emptyModel),
     latest("walk", WalkData),
@@ -39,6 +40,8 @@ export const loadMapData = async () => {
     latest("places", Places),
     // The map works without today's events, so it starts with none if they can't load
     latest("events", EventsData, (): EventsData => ({ fetched: 0, events: [] })),
+    // The rooms to book and the week's bookings as of the build, which the Worker's newer word is merged over (rooms.mts)
+    latest("rooms", RoomsData, () => NO_ROOMS),
     // The indexes alone, which name the term files and the prerequisites loaded once something asks (state/courses.mts),
     // and the parking areas, which are as small
     latest("courses", CoursesIndex, emptyIndex),
@@ -61,7 +64,7 @@ export const loadMapData = async () => {
       ...gazetteer.value.map(({ name, at: [lon, lat] }) => ({ lat, lon, name }))
     ], CAMPUS, ALIASES)
   })
-  return { feed, model, tiles, style, gazetteer, buildings, walks, searchPlaces, events, coursesIndex, prereqsIndex, parking, menus }
+  return { feed, model, tiles, style, gazetteer, buildings, walks, searchPlaces, events, rooms, coursesIndex, prereqsIndex, parking, menus }
 }
 
 export type MapData = Awaited<ReturnType<typeof loadMapData>>

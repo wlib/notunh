@@ -21,7 +21,7 @@ export const LONG = 500
 const CAMPUS = { lat: 43.1365, lon: -70.9345 }
 
 /** Where events come from; a course's are dated class meetings (src/courses/course.mts), never in events.json */
-export const SOURCES = ["presence", "25live", "athletics", "dserec", "pin", "course"] as const
+export const SOURCES = ["presence", "25live", "athletics", "dserec", "rec", "pin", "course"] as const
 export type Source = typeof SOURCES[number]
 
 const Text = (max: number) =>
@@ -39,7 +39,12 @@ export const Event = v.object({
   where:  Text(SHORT),
   source: v.picklist(SOURCES),
   /** Where to read more: the source's own page, or a pin's */
-  url:    v.string()
+  url:    v.string(),
+  /** For one to sign up for, as Campus Rec's programs are: how many spots are left, and when signing up closes */
+  left:   v.optional(v.number()),
+  closes: v.optional(v.number()),
+  /** The ids other calendars tell the same thing by, where they do (src/social/sport.mts) */
+  also:   v.optional(v.array(v.string()))
 })
 export type Event = v.InferOutput<typeof Event>
 

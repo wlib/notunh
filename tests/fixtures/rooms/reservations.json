@@ -1,0 +1,5787 @@
+{
+"space_reservations": {
+"engine": "accl",
+"space_reservation": [
+{
+"reservation_id": 2531561,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:40:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 32,
+"space_name": "003 301",
+"building_name": "Hewitt Hall",
+"formal_name": "Hewitt Hall 301 CHHS Computer Lab"
+},
+"last_mod_user": "abc1000",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2814822,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:40:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 32,
+"space_name": "003 301",
+"building_name": "Hewitt Hall",
+"formal_name": "Hewitt Hall 301 CHHS Computer Lab"
+},
+"last_mod_user": "abc1001",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2541586,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:10:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 32,
+"space_name": "003 301",
+"building_name": "Hewitt Hall",
+"formal_name": "Hewitt Hall 301 CHHS Computer Lab"
+},
+"last_mod_user": "abc1002",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 3013320,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T06:10:00-04:00",
+"reservation_end_dt": "2026-10-28T07:30:00-04:00",
+"spaces": {
+"space_id": 105,
+"space_name": "007 208",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room"
+},
+"last_mod_user": "abc1003",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2861789,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:10:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 105,
+"space_name": "007 208",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room"
+},
+"last_mod_user": "abc1004",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2861851,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:10:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 105,
+"space_name": "007 208",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room"
+},
+"last_mod_user": "abc1005",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2861912,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:10:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 105,
+"space_name": "007 208",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room"
+},
+"last_mod_user": "abc1006",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2717006,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:10:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 105,
+"space_name": "007 208",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room"
+},
+"last_mod_user": "abc1007",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2579517,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:10:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 105,
+"space_name": "007 208",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room"
+},
+"last_mod_user": "abc1008",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2582663,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:10:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 105,
+"space_name": "007 208",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room"
+},
+"last_mod_user": "abc1009",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2866504,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:10:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 105,
+"space_name": "007 208",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room"
+},
+"last_mod_user": "abc1010",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2887888,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:10:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 105,
+"space_name": "007 208",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room"
+},
+"last_mod_user": "abc1011",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2775385,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:10:00-04:00",
+"reservation_end_dt": "2026-10-28T10:00:00-04:00",
+"spaces": {
+"space_id": 113,
+"space_name": "007 G44",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall G44 Registrar Classroom"
+},
+"last_mod_user": "abc1012",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2775431,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:10:00-04:00",
+"reservation_end_dt": "2026-10-28T10:00:00-04:00",
+"spaces": {
+"space_id": 113,
+"space_name": "007 G44",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall G44 Registrar Classroom"
+},
+"last_mod_user": "abc1013",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2583297,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:10:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 113,
+"space_name": "007 G44",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall G44 Registrar Classroom"
+},
+"last_mod_user": "abc1014",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2585109,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:10:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 113,
+"space_name": "007 G44",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall G44 Registrar Classroom"
+},
+"last_mod_user": "abc1015",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2990937,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:10:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 113,
+"space_name": "007 G44",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall G44 Registrar Classroom"
+},
+"last_mod_user": "abc1016",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2990968,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:10:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 113,
+"space_name": "007 G44",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall G44 Registrar Classroom"
+},
+"last_mod_user": "abc1017",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2990875,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:10:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 113,
+"space_name": "007 G44",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall G44 Registrar Classroom"
+},
+"last_mod_user": "abc1018",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2990906,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:10:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 113,
+"space_name": "007 G44",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall G44 Registrar Classroom"
+},
+"last_mod_user": "abc1019",
+"event": {
+"event_name": "(Private)",
+"event_title": "",
+"event_type_name": "",
+"organization_name": "",
+"state_name": ""
+}
+},
+{
+"reservation_id": 2472332,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 32,
+"space_name": "003 301",
+"building_name": "Hewitt Hall",
+"formal_name": "Hewitt Hall 301 CHHS Computer Lab"
+},
+"last_mod_user": "abc1020",
+"event": {
+"event_name": "Meeting 20",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Health Management & Policy",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2738372,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 105,
+"space_name": "007 208",
+"building_name": "New Hampshire Hall",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room"
+},
+"last_mod_user": "abc1021",
+"event": {
+"event_name": "Offline / Maintenance 21",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3154848,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 127,
+"space_name": "008 140",
+"building_name": "Hamilton Smith Hall",
+"formal_name": "Hamilton Smith Hall 140 Registrar Classroom"
+},
+"last_mod_user": "abc1022",
+"event": {
+"event_name": "Meeting 22",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "UNH Pre-Law Society",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3151170,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 127,
+"space_name": "008 140",
+"building_name": "Hamilton Smith Hall",
+"formal_name": "Hamilton Smith Hall 140 Registrar Classroom"
+},
+"last_mod_user": "abc1023",
+"event": {
+"event_name": "Meeting 23",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Tau Kappa Epsilon",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2706707,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 128,
+"space_name": "008 150",
+"building_name": "Hamilton Smith Hall",
+"formal_name": "Hamilton Smith Hall 150 Registrar Classroom"
+},
+"last_mod_user": "abc1024",
+"event": {
+"event_name": "Offline / Maintenance 24",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2991808,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:30:00-04:00",
+"reservation_end_dt": "2026-10-28T19:30:00-04:00",
+"spaces": {
+"space_id": 129,
+"space_name": "008 201",
+"building_name": "Hamilton Smith Hall",
+"formal_name": "Hamilton Smith Hall 201 Registrar Classroom"
+},
+"last_mod_user": "abc1025",
+"event": {
+"event_name": "Meeting 25",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "HOSA- Future Health Professionals",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3241032,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 131,
+"space_name": "008 205",
+"building_name": "Hamilton Smith Hall",
+"formal_name": "Hamilton Smith Hall 205 Registrar Classroom"
+},
+"last_mod_user": "abc1026",
+"event": {
+"event_name": "Film / Movie 26",
+"event_title": "",
+"event_type_name": "Film / Movie",
+"organization_name": "Classics Humanities & Italian Studies",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2998146,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T20:00:00-04:00",
+"reservation_end_dt": "2026-10-28T21:00:00-04:00",
+"spaces": {
+"space_id": 132,
+"space_name": "008 210",
+"building_name": "Hamilton Smith Hall",
+"formal_name": "Hamilton Smith Hall 210 Registrar Classroom"
+},
+"last_mod_user": "abc1027",
+"event": {
+"event_name": "Meeting 27",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "The 'Cat Pack Captains",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2707261,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:30:00-04:00",
+"spaces": {
+"space_id": 142,
+"space_name": "008 G34",
+"building_name": "Hamilton Smith Hall",
+"formal_name": "Hamilton Smith Hall G34 Registrar Classroom"
+},
+"last_mod_user": "abc1028",
+"event": {
+"event_name": "Offline / Maintenance 28",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242937,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 155,
+"space_name": "014 112",
+"building_name": "DeMeritt Hall",
+"formal_name": "DeMeritt Hall 112 Registrar Classroom"
+},
+"last_mod_user": "abc1029",
+"event": {
+"event_name": "Breakout / Overflow Session 29",
+"event_title": "",
+"event_type_name": "Breakout / Overflow Session",
+"organization_name": "Natural Resources and the Environment",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3002232,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:30:00-04:00",
+"spaces": {
+"space_id": 155,
+"space_name": "014 112",
+"building_name": "DeMeritt Hall",
+"formal_name": "DeMeritt Hall 112 Registrar Classroom"
+},
+"last_mod_user": "abc1030",
+"event": {
+"event_name": "Meeting 30",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Phi Sigma Sigma",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2986001,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:30:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 160,
+"space_name": "014 240",
+"building_name": "DeMeritt Hall",
+"formal_name": "DeMeritt Hall 240 Registrar Classroom"
+},
+"last_mod_user": "abc1031",
+"event": {
+"event_name": "Meeting 31",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "American Cancer Society on Campus",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3115392,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 185,
+"space_name": "017 175",
+"building_name": "Paul College",
+"formal_name": "Paul College 175 Registrar Classroom"
+},
+"last_mod_user": "abc1032",
+"event": {
+"event_name": "Meeting 32",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Sports Career Club",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243158,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T20:30:00-04:00",
+"reservation_end_dt": "2026-10-28T22:00:00-04:00",
+"spaces": {
+"space_id": 185,
+"space_name": "017 175",
+"building_name": "Paul College",
+"formal_name": "Paul College 175 Registrar Classroom"
+},
+"last_mod_user": "abc1033",
+"event": {
+"event_name": "Meeting 33",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Theta Chi",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3188083,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 213,
+"space_name": "017 G75",
+"building_name": "Paul College",
+"formal_name": "Paul College G75 Registrar Classroom"
+},
+"last_mod_user": "abc1034",
+"event": {
+"event_name": "Meeting 34",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Chi Omega",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2978922,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T20:00:00-04:00",
+"reservation_end_dt": "2026-10-28T22:00:00-04:00",
+"spaces": {
+"space_id": 213,
+"space_name": "017 G75",
+"building_name": "Paul College",
+"formal_name": "Paul College G75 Registrar Classroom"
+},
+"last_mod_user": "abc1035",
+"event": {
+"event_name": "Meeting 35",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Chi Omega",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243423,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 219,
+"space_name": "017 G86",
+"building_name": "Paul College",
+"formal_name": "Paul College G86 Collaboration Space"
+},
+"last_mod_user": "abc1036",
+"event": {
+"event_name": "Meeting 36",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243161,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 219,
+"space_name": "017 G86",
+"building_name": "Paul College",
+"formal_name": "Paul College G86 Collaboration Space"
+},
+"last_mod_user": "abc1037",
+"event": {
+"event_name": "Meeting 37",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243249,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 219,
+"space_name": "017 G86",
+"building_name": "Paul College",
+"formal_name": "Paul College G86 Collaboration Space"
+},
+"last_mod_user": "abc1038",
+"event": {
+"event_name": "Meeting 38",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244250,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 219,
+"space_name": "017 G86",
+"building_name": "Paul College",
+"formal_name": "Paul College G86 Collaboration Space"
+},
+"last_mod_user": "abc1039",
+"event": {
+"event_name": "Meeting 39",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244289,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 219,
+"space_name": "017 G86",
+"building_name": "Paul College",
+"formal_name": "Paul College G86 Collaboration Space"
+},
+"last_mod_user": "abc1040",
+"event": {
+"event_name": "Meeting 40",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244333,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:30:00-04:00",
+"reservation_end_dt": "2026-10-28T21:30:00-04:00",
+"spaces": {
+"space_id": 219,
+"space_name": "017 G86",
+"building_name": "Paul College",
+"formal_name": "Paul College G86 Collaboration Space"
+},
+"last_mod_user": "abc1041",
+"event": {
+"event_name": "Meeting 41",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243765,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 228,
+"space_name": "017 Info 3",
+"building_name": "Paul College",
+"formal_name": "Paul College Info 3 Info Table-Top of Grand  Staircase"
+},
+"last_mod_user": "abc1042",
+"event": {
+"event_name": "Exam Review 42",
+"event_title": "",
+"event_type_name": "Exam Review",
+"organization_name": "Durham - Student",
+"state_name": "Tentative"
+}
+},
+{
+"reservation_id": 2892928,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:00:00-04:00",
+"reservation_end_dt": "2026-10-28T21:00:00-04:00",
+"spaces": {
+"space_id": 234,
+"space_name": "018 105",
+"building_name": "Huddleston Hall",
+"formal_name": "Huddleston Hall 105 Huddleston Ballroom"
+},
+"last_mod_user": "abc1043",
+"event": {
+"event_name": "Reception / Banquet 43",
+"event_title": "",
+"event_type_name": "Reception / Banquet",
+"organization_name": "Honors College",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3239316,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 235,
+"space_name": "018 110",
+"building_name": "Huddleston Hall",
+"formal_name": "Huddleston Hall 110 Sunroom"
+},
+"last_mod_user": "abc1044",
+"event": {
+"event_name": "Presentation / Speaker 44",
+"event_title": "",
+"event_type_name": "Presentation / Speaker",
+"organization_name": "Languages Literatures and Cultures",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2957914,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:30:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 235,
+"space_name": "018 110",
+"building_name": "Huddleston Hall",
+"formal_name": "Huddleston Hall 110 Sunroom"
+},
+"last_mod_user": "abc1045",
+"event": {
+"event_name": "Meeting 45",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Honors College",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2738151,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 283,
+"space_name": "025 G04",
+"building_name": "Murkland Hall",
+"formal_name": "Murkland Hall G04 Registrar Classroom"
+},
+"last_mod_user": "abc1046",
+"event": {
+"event_name": "Offline / Maintenance 46",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244022,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 287,
+"space_name": "025 G15",
+"building_name": "Murkland Hall",
+"formal_name": "Murkland Hall G15 Classroom"
+},
+"last_mod_user": "abc1047",
+"event": {
+"event_name": "Student Collaboration / Study Group 47",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Sigma Beta",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 1756301,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:10:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 303,
+"space_name": "026 G46",
+"building_name": "James Hall",
+"formal_name": "James Hall G46 Registrar Classroom"
+},
+"last_mod_user": "abc1048",
+"event": {
+"event_name": "Presentation / Speaker 48",
+"event_title": "",
+"event_type_name": "Presentation / Speaker",
+"organization_name": "Graduate School",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2993826,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 303,
+"space_name": "026 G46",
+"building_name": "James Hall",
+"formal_name": "James Hall G46 Registrar Classroom"
+},
+"last_mod_user": "abc1049",
+"event": {
+"event_name": "Meeting 49",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Xi Sigma Pi-Natl Forestry Honor Society",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2754458,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 345,
+"space_name": "035 114",
+"building_name": "Pettee Hall",
+"formal_name": "Pettee Hall 114 Registrar Classroom"
+},
+"last_mod_user": "abc1050",
+"event": {
+"event_name": "Offline / Maintenance 50",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2754390,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T08:30:00-04:00",
+"spaces": {
+"space_id": 352,
+"space_name": "035 G02",
+"building_name": "Pettee Hall",
+"formal_name": "Pettee Hall G02 Registrar Classroom"
+},
+"last_mod_user": "abc1051",
+"event": {
+"event_name": "Offline / Maintenance 51",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2989062,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 352,
+"space_name": "035 G02",
+"building_name": "Pettee Hall",
+"formal_name": "Pettee Hall G02 Registrar Classroom"
+},
+"last_mod_user": "abc1052",
+"event": {
+"event_name": "Meeting 52",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "COLA-Dean's Office",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2718698,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T08:30:00-04:00",
+"spaces": {
+"space_id": 381,
+"space_name": "048 N129",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall N129 Registrar Computer Lab"
+},
+"last_mod_user": "abc1053",
+"event": {
+"event_name": "Offline / Maintenance 53",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2718826,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:30:00-04:00",
+"spaces": {
+"space_id": 397,
+"space_name": "048 N310",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall N310 Registrar Classroom"
+},
+"last_mod_user": "abc1054",
+"event": {
+"event_name": "Offline / Maintenance 54",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2719935,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 399,
+"space_name": "048 N334",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall N334 Registrar Classroom"
+},
+"last_mod_user": "abc1055",
+"event": {
+"event_name": "Offline / Maintenance 55",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2720266,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 400,
+"space_name": "048 N343",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall N343 Registrar Classroom"
+},
+"last_mod_user": "abc1056",
+"event": {
+"event_name": "Offline / Maintenance 56",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2996285,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 400,
+"space_name": "048 N343",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall N343 Registrar Classroom"
+},
+"last_mod_user": "abc1057",
+"event": {
+"event_name": "Exam 57",
+"event_title": "",
+"event_type_name": "Exam",
+"organization_name": "Electrical & Computer Engineering",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3002899,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:30:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 413,
+"space_name": "048 S145",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S145 Registrar Classroom"
+},
+"last_mod_user": "abc1058",
+"event": {
+"event_name": "Meeting 58",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Engineers Without Borders",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3004079,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 413,
+"space_name": "048 S145",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S145 Registrar Classroom"
+},
+"last_mod_user": "abc1059",
+"event": {
+"event_name": "Community Event 59",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Society of Women Engineers (SWE)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243301,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 427,
+"space_name": "048 S236L",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236L Collaboration Space"
+},
+"last_mod_user": "abc1060",
+"event": {
+"event_name": "Student Collaboration / Study Group 60",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242634,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 427,
+"space_name": "048 S236L",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236L Collaboration Space"
+},
+"last_mod_user": "abc1061",
+"event": {
+"event_name": "Student Collaboration / Study Group 61",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3239953,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 427,
+"space_name": "048 S236L",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236L Collaboration Space"
+},
+"last_mod_user": "abc1062",
+"event": {
+"event_name": "Student Collaboration / Study Group 62",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243460,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 428,
+"space_name": "048 S236M",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236M Collaboration Space"
+},
+"last_mod_user": "abc1063",
+"event": {
+"event_name": "Student Collaboration / Study Group 63",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243789,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 428,
+"space_name": "048 S236M",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236M Collaboration Space"
+},
+"last_mod_user": "abc1064",
+"event": {
+"event_name": "Student Collaboration / Study Group 64",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243823,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 428,
+"space_name": "048 S236M",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236M Collaboration Space"
+},
+"last_mod_user": "abc1065",
+"event": {
+"event_name": "Student Collaboration / Study Group 65",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244023,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 428,
+"space_name": "048 S236M",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236M Collaboration Space"
+},
+"last_mod_user": "abc1066",
+"event": {
+"event_name": "Student Collaboration / Study Group 66",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3240391,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 429,
+"space_name": "048 S236N",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236N Collaboration Space"
+},
+"last_mod_user": "abc1067",
+"event": {
+"event_name": "Student Collaboration / Study Group 67",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3236891,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 429,
+"space_name": "048 S236N",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236N Collaboration Space"
+},
+"last_mod_user": "abc1068",
+"event": {
+"event_name": "Student Collaboration / Study Group 68",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243857,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 429,
+"space_name": "048 S236N",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236N Collaboration Space"
+},
+"last_mod_user": "abc1069",
+"event": {
+"event_name": "Student Collaboration / Study Group 69",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3238436,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 430,
+"space_name": "048 S236P",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236P Collaboration Space"
+},
+"last_mod_user": "abc1070",
+"event": {
+"event_name": "Student Collaboration / Study Group 70",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244108,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:30:00-04:00",
+"reservation_end_dt": "2026-10-28T16:30:00-04:00",
+"spaces": {
+"space_id": 430,
+"space_name": "048 S236P",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236P Collaboration Space"
+},
+"last_mod_user": "abc1071",
+"event": {
+"event_name": "Student Collaboration / Study Group 71",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243939,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:30:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 431,
+"space_name": "048 S236T_1",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236T_1 Alcove 1 Collaboration  Space"
+},
+"last_mod_user": "abc1072",
+"event": {
+"event_name": "Student Collaboration / Study Group 72",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244113,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 434,
+"space_name": "048 S236T_4",
+"building_name": "Kingsbury Hall",
+"formal_name": "Kingsbury Hall S236T_4 Alcove 4 Collaboration  Space"
+},
+"last_mod_user": "abc1073",
+"event": {
+"event_name": "Student Collaboration / Study Group 73",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3210285,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T16:30:00-04:00",
+"spaces": {
+"space_id": 476,
+"space_name": "056 115",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 115 (MUB)"
+},
+"last_mod_user": "abc1074",
+"event": {
+"event_name": "Meeting 74",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Student Nutrition Association",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3239876,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:30:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 476,
+"space_name": "056 115",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 115 (MUB)"
+},
+"last_mod_user": "abc1075",
+"event": {
+"event_name": "Student Collaboration / Study Group 75",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244241,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T21:30:00-04:00",
+"spaces": {
+"space_id": 479,
+"space_name": "056 142",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 142 Collaboration Space (MUB)"
+},
+"last_mod_user": "abc1076",
+"event": {
+"event_name": "Student Collaboration / Study Group 76",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3099506,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 480,
+"space_name": "056 144",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 144 Collaboration Space (MUB)"
+},
+"last_mod_user": "abc1077",
+"event": {
+"event_name": "Student Collaboration / Study Group 77",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Phi Sigma Sigma",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2900502,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 481,
+"space_name": "056 160",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 160 Wildcat Den (MUB)"
+},
+"last_mod_user": "abc1078",
+"event": {
+"event_name": "Practice / Rehearsal 78",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "Maiden Harmony",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3004105,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T20:00:00-04:00",
+"reservation_end_dt": "2026-10-28T22:00:00-04:00",
+"spaces": {
+"space_id": 481,
+"space_name": "056 160",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 160 Wildcat Den (MUB)"
+},
+"last_mod_user": "abc1079",
+"event": {
+"event_name": "Practice / Rehearsal 79",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "The New Hampshire Gentlemen",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3008655,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:15:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 482,
+"space_name": "056 162",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 162 (MUB)"
+},
+"last_mod_user": "abc1080",
+"event": {
+"event_name": "Meeting 80",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "UNH Fiber Arts Club",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2998073,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 482,
+"space_name": "056 162",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 162 (MUB)"
+},
+"last_mod_user": "abc1081",
+"event": {
+"event_name": "Meeting 81",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "UNH Energy Club",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2677792,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:45:00-04:00",
+"reservation_end_dt": "2026-10-28T19:15:00-04:00",
+"spaces": {
+"space_id": 483,
+"space_name": "056 164",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 164 (MUB)"
+},
+"last_mod_user": "abc1082",
+"event": {
+"event_name": "Community Event 82",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Little Library Club",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 1837452,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T20:00:00-04:00",
+"reservation_end_dt": "2026-10-28T21:00:00-04:00",
+"spaces": {
+"space_id": 483,
+"space_name": "056 164",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 164 (MUB)"
+},
+"last_mod_user": "abc1083",
+"event": {
+"event_name": "Meeting 83",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Sketched Out Comedy Troupe",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2900998,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 484,
+"space_name": "056 203",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 203 (MUB)"
+},
+"last_mod_user": "abc1084",
+"event": {
+"event_name": "Meeting 84",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Student Engagement",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3233688,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T21:30:00-04:00",
+"spaces": {
+"space_id": 484,
+"space_name": "056 203",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 203 (MUB)"
+},
+"last_mod_user": "abc1085",
+"event": {
+"event_name": "Meeting 85",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Interfraternity Council",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3237724,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 485,
+"space_name": "056 207",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 207 Conference Room (MUB)"
+},
+"last_mod_user": "abc1086",
+"event": {
+"event_name": "Community Event 86",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2993693,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 485,
+"space_name": "056 207",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 207 Conference Room (MUB)"
+},
+"last_mod_user": "abc1087",
+"event": {
+"event_name": "Meeting 87",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "College Democrats",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3008737,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:30:00-04:00",
+"spaces": {
+"space_id": 485,
+"space_name": "056 207",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 207 Conference Room (MUB)"
+},
+"last_mod_user": "abc1088",
+"event": {
+"event_name": "Meeting 88",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Ratio Christi UNH",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3239887,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T07:00:00-04:00",
+"reservation_end_dt": "2026-10-28T22:30:00-04:00",
+"spaces": {
+"space_id": 486,
+"space_name": "056 221",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 221 Granite State Room (MUB)"
+},
+"last_mod_user": "abc1089",
+"event": {
+"event_name": "Community Event 89",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243117,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:30:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 493,
+"space_name": "056 234",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 234 Collaboration Space (MUB)"
+},
+"last_mod_user": "abc1090",
+"event": {
+"event_name": "Social Event 90",
+"event_title": "",
+"event_type_name": "Social Event",
+"organization_name": "Intervarsity Christian Fellowship",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 1819768,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 495,
+"space_name": "056 237",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 237 (MUB)"
+},
+"last_mod_user": "abc1091",
+"event": {
+"event_name": "Meeting 91",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Enrollment Management",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3237907,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 495,
+"space_name": "056 237",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 237 (MUB)"
+},
+"last_mod_user": "abc1092",
+"event": {
+"event_name": "Meeting 92",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Muslim Students Association",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242025,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 495,
+"space_name": "056 237",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 237 (MUB)"
+},
+"last_mod_user": "abc1093",
+"event": {
+"event_name": "Meeting 93",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "The Butterfly Garden Club",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2997453,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 495,
+"space_name": "056 237",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 237 (MUB)"
+},
+"last_mod_user": "abc1094",
+"event": {
+"event_name": "Meeting 94",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Reading the Rainbow",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2856430,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T07:00:00-04:00",
+"reservation_end_dt": "2026-10-28T08:30:00-04:00",
+"spaces": {
+"space_id": 496,
+"space_name": "056 240",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 240 Strafford Room (MUB)"
+},
+"last_mod_user": "abc1095",
+"event": {
+"event_name": "Offline / Maintenance 95",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "MUB-Memorial Union & Student Activities",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 1819768,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 496,
+"space_name": "056 240",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 240 Strafford Room (MUB)"
+},
+"last_mod_user": "abc1096",
+"event": {
+"event_name": "Meeting 96",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Enrollment Management",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2946352,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:30:00-04:00",
+"spaces": {
+"space_id": 496,
+"space_name": "056 240",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 240 Strafford Room (MUB)"
+},
+"last_mod_user": "abc1097",
+"event": {
+"event_name": "Offline / Maintenance 97",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "MUB-Memorial Union & Student Activities",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3144869,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 498,
+"space_name": "056 302",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 302 (MUB)"
+},
+"last_mod_user": "abc1098",
+"event": {
+"event_name": "Meeting 98",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Love for Our Elders",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3196452,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 500,
+"space_name": "056 304",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 304 Conference Room (MUB)"
+},
+"last_mod_user": "abc1099",
+"event": {
+"event_name": "Meeting 99",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2693949,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:30:00-04:00",
+"reservation_end_dt": "2026-10-28T13:30:00-04:00",
+"spaces": {
+"space_id": 502,
+"space_name": "056 311",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 311 Theater I (MUB)"
+},
+"last_mod_user": "abc1100",
+"event": {
+"event_name": "Community Event 100",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2081200,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 502,
+"space_name": "056 311",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 311 Theater I (MUB)"
+},
+"last_mod_user": "abc1101",
+"event": {
+"event_name": "Youth Programming / Camp 101",
+"event_title": "",
+"event_type_name": "Youth Programming / Camp",
+"organization_name": "Education",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3175225,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T21:00:00-04:00",
+"spaces": {
+"space_id": 502,
+"space_name": "056 311",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 311 Theater I (MUB)"
+},
+"last_mod_user": "abc1102",
+"event": {
+"event_name": "Film / Movie 102",
+"event_title": "",
+"event_type_name": "Film / Movie",
+"organization_name": "Ski and Board Club",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3239891,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 503,
+"space_name": "056 312",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 312 Theater II (MUB)"
+},
+"last_mod_user": "abc1103",
+"event": {
+"event_name": "Community Event 103",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2994377,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:30:00-04:00",
+"reservation_end_dt": "2026-10-28T19:30:00-04:00",
+"spaces": {
+"space_id": 504,
+"space_name": "056 321",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 321 Conference Room (MUB)"
+},
+"last_mod_user": "abc1104",
+"event": {
+"event_name": "Meeting 104",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "NAMI On Campus",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2081348,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 505,
+"space_name": "056 330",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 330 (MUB)"
+},
+"last_mod_user": "abc1105",
+"event": {
+"event_name": "Youth Programming / Camp 105",
+"event_title": "",
+"event_type_name": "Youth Programming / Camp",
+"organization_name": "Education",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3239884,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 506,
+"space_name": "056 330/332",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 330/332 (MUB)"
+},
+"last_mod_user": "abc1106",
+"event": {
+"event_name": "Community Event 106",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2986715,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 506,
+"space_name": "056 330/332",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 330/332 (MUB)"
+},
+"last_mod_user": "abc1107",
+"event": {
+"event_name": "Meeting 107",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "UNH K-Pop Club!",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2999877,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 506,
+"space_name": "056 330/332",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 330/332 (MUB)"
+},
+"last_mod_user": "abc1108",
+"event": {
+"event_name": "Meeting 108",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Young Americans For Liberty (YAL)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3196833,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T21:00:00-04:00",
+"reservation_end_dt": "2026-10-28T22:45:00-04:00",
+"spaces": {
+"space_id": 506,
+"space_name": "056 330/332",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 330/332 (MUB)"
+},
+"last_mod_user": "abc1109",
+"event": {
+"event_name": "Meeting 109",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Sigma Chi",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2081348,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 507,
+"space_name": "056 332",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 332 (MUB)"
+},
+"last_mod_user": "abc1110",
+"event": {
+"event_name": "Youth Programming / Camp 110",
+"event_title": "",
+"event_type_name": "Youth Programming / Camp",
+"organization_name": "Education",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2081348,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 508,
+"space_name": "056 334",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 334 (MUB)"
+},
+"last_mod_user": "abc1111",
+"event": {
+"event_name": "Youth Programming / Camp 111",
+"event_title": "",
+"event_type_name": "Youth Programming / Camp",
+"organization_name": "Education",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2693938,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 509,
+"space_name": "056 334/336",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 334/336 (MUB)"
+},
+"last_mod_user": "abc1112",
+"event": {
+"event_name": "Community Event 112",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2839420,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:30:00-04:00",
+"spaces": {
+"space_id": 509,
+"space_name": "056 334/336",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 334/336 (MUB)"
+},
+"last_mod_user": "abc1113",
+"event": {
+"event_name": "Community Event 113",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Catholic Student Org",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2081348,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 510,
+"space_name": "056 336",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 336 (MUB)"
+},
+"last_mod_user": "abc1114",
+"event": {
+"event_name": "Youth Programming / Camp 114",
+"event_title": "",
+"event_type_name": "Youth Programming / Camp",
+"organization_name": "Education",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2081348,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 512,
+"space_name": "056 338",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 338 (MUB)"
+},
+"last_mod_user": "abc1115",
+"event": {
+"event_name": "Youth Programming / Camp 115",
+"event_title": "",
+"event_type_name": "Youth Programming / Camp",
+"organization_name": "Education",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3233674,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 512,
+"space_name": "056 338",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 338 (MUB)"
+},
+"last_mod_user": "abc1116",
+"event": {
+"event_name": "Meeting 116",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "GIVE at UNH",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2693938,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 513,
+"space_name": "056 338/340",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 338/340 (MUB)"
+},
+"last_mod_user": "abc1117",
+"event": {
+"event_name": "Community Event 117",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3180280,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:30:00-04:00",
+"spaces": {
+"space_id": 514,
+"space_name": "056 340",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building 340 (MUB)"
+},
+"last_mod_user": "abc1118",
+"event": {
+"event_name": "Community Event 118",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Ornithology Club",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3240295,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:30:00-04:00",
+"reservation_end_dt": "2026-10-28T19:30:00-04:00",
+"spaces": {
+"space_id": 520,
+"space_name": "056 G14",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building G14 MUB Art Space (MUB)"
+},
+"last_mod_user": "abc1119",
+"event": {
+"event_name": "Meeting 119",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Fashion Club",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3196977,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:30:00-04:00",
+"reservation_end_dt": "2026-10-28T22:30:00-04:00",
+"spaces": {
+"space_id": 520,
+"space_name": "056 G14",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building G14 MUB Art Space (MUB)"
+},
+"last_mod_user": "abc1120",
+"event": {
+"event_name": "Meeting 120",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Sigma Alpha Prof Agricultural Sorority",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3232528,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:30:00-04:00",
+"spaces": {
+"space_id": 521,
+"space_name": "056 G18",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building G18 The Underground (MUB)"
+},
+"last_mod_user": "abc1121",
+"event": {
+"event_name": "Community Event 121",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Black Student Union (BSU)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2793584,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T21:00:00-04:00",
+"spaces": {
+"space_id": 521,
+"space_name": "056 G18",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building G18 The Underground (MUB)"
+},
+"last_mod_user": "abc1122",
+"event": {
+"event_name": "Practice / Rehearsal 122",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "New Hampshire Notables",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2693938,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 522,
+"space_name": "056 Info 1",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building Info 1 Table (MUB)"
+},
+"last_mod_user": "abc1123",
+"event": {
+"event_name": "Community Event 123",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2693938,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 523,
+"space_name": "056 Info 2",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building Info 2 Table (MUB)"
+},
+"last_mod_user": "abc1124",
+"event": {
+"event_name": "Community Event 124",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2693938,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 524,
+"space_name": "056 Info 3",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building Info 3 Table (MUB)"
+},
+"last_mod_user": "abc1125",
+"event": {
+"event_name": "Community Event 125",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2693938,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 525,
+"space_name": "056 Info 4",
+"building_name": "Memorial Union Building / MUB",
+"formal_name": "Memorial Union Building Info 4 Table (MUB)"
+},
+"last_mod_user": "abc1126",
+"event": {
+"event_name": "Community Event 126",
+"event_title": "",
+"event_type_name": "Community Event",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3241551,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:00:00-04:00",
+"reservation_end_dt": "2026-10-28T09:00:00-04:00",
+"spaces": {
+"space_id": 532,
+"space_name": "057 121",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 121 Collaboration Space"
+},
+"last_mod_user": "abc1127",
+"event": {
+"event_name": "Student Collaboration / Study Group 127",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243297,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:30:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 532,
+"space_name": "057 121",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 121 Collaboration Space"
+},
+"last_mod_user": "abc1128",
+"event": {
+"event_name": "Student Collaboration / Study Group 128",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3241413,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 532,
+"space_name": "057 121",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 121 Collaboration Space"
+},
+"last_mod_user": "abc1129",
+"event": {
+"event_name": "Student Collaboration / Study Group 129",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242175,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 532,
+"space_name": "057 121",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 121 Collaboration Space"
+},
+"last_mod_user": "abc1130",
+"event": {
+"event_name": "Student Collaboration / Study Group 130",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3237886,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 532,
+"space_name": "057 121",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 121 Collaboration Space"
+},
+"last_mod_user": "abc1131",
+"event": {
+"event_name": "Student Collaboration / Study Group 131",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243137,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 532,
+"space_name": "057 121",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 121 Collaboration Space"
+},
+"last_mod_user": "abc1132",
+"event": {
+"event_name": "Student Collaboration / Study Group 132",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243804,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T20:30:00-04:00",
+"reservation_end_dt": "2026-10-28T22:30:00-04:00",
+"spaces": {
+"space_id": 532,
+"space_name": "057 121",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 121 Collaboration Space"
+},
+"last_mod_user": "abc1133",
+"event": {
+"event_name": "Student Collaboration / Study Group 133",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243252,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:30:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 533,
+"space_name": "057 123",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 123 Collaboration Space"
+},
+"last_mod_user": "abc1134",
+"event": {
+"event_name": "Student Collaboration / Study Group 134",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243959,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 533,
+"space_name": "057 123",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 123 Collaboration Space"
+},
+"last_mod_user": "abc1135",
+"event": {
+"event_name": "Student Collaboration / Study Group 135",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243850,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:30:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 533,
+"space_name": "057 123",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 123 Collaboration Space"
+},
+"last_mod_user": "abc1136",
+"event": {
+"event_name": "Student Collaboration / Study Group 136",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242021,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 533,
+"space_name": "057 123",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 123 Collaboration Space"
+},
+"last_mod_user": "abc1137",
+"event": {
+"event_name": "Student Collaboration / Study Group 137",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242655,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:30:00-04:00",
+"reservation_end_dt": "2026-10-28T19:30:00-04:00",
+"spaces": {
+"space_id": 533,
+"space_name": "057 123",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 123 Collaboration Space"
+},
+"last_mod_user": "abc1138",
+"event": {
+"event_name": "Student Collaboration / Study Group 138",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242622,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 534,
+"space_name": "057 125",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 125 Collaboration Space"
+},
+"last_mod_user": "abc1139",
+"event": {
+"event_name": "Meeting 139",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243794,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 534,
+"space_name": "057 125",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 125 Collaboration Space"
+},
+"last_mod_user": "abc1140",
+"event": {
+"event_name": "Student Collaboration / Study Group 140",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242828,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 534,
+"space_name": "057 125",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 125 Collaboration Space"
+},
+"last_mod_user": "abc1141",
+"event": {
+"event_name": "Student Collaboration / Study Group 141",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243463,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:30:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 534,
+"space_name": "057 125",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 125 Collaboration Space"
+},
+"last_mod_user": "abc1142",
+"event": {
+"event_name": "Student Collaboration / Study Group 142",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242809,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 534,
+"space_name": "057 125",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 125 Collaboration Space"
+},
+"last_mod_user": "abc1143",
+"event": {
+"event_name": "Student Collaboration / Study Group 143",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244299,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 534,
+"space_name": "057 125",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 125 Collaboration Space"
+},
+"last_mod_user": "abc1144",
+"event": {
+"event_name": "Student Collaboration / Study Group 144",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243302,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 538,
+"space_name": "057 221_A",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_A Collaboration Space"
+},
+"last_mod_user": "abc1145",
+"event": {
+"event_name": "Student Collaboration / Study Group 145",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243936,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:30:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 538,
+"space_name": "057 221_A",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_A Collaboration Space"
+},
+"last_mod_user": "abc1146",
+"event": {
+"event_name": "Student Collaboration / Study Group 146",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244117,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 538,
+"space_name": "057 221_A",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_A Collaboration Space"
+},
+"last_mod_user": "abc1147",
+"event": {
+"event_name": "Student Collaboration / Study Group 147",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244307,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:30:00-04:00",
+"reservation_end_dt": "2026-10-28T19:30:00-04:00",
+"spaces": {
+"space_id": 538,
+"space_name": "057 221_A",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_A Collaboration Space"
+},
+"last_mod_user": "abc1148",
+"event": {
+"event_name": "Student Collaboration / Study Group 148",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243257,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:00:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 539,
+"space_name": "057 221_B",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_B Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1149",
+"event": {
+"event_name": "Student Collaboration / Study Group 149",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242963,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 539,
+"space_name": "057 221_B",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_B Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1150",
+"event": {
+"event_name": "Student Collaboration / Study Group 150",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243144,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 539,
+"space_name": "057 221_B",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_B Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1151",
+"event": {
+"event_name": "Student Collaboration / Study Group 151",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243971,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:30:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 539,
+"space_name": "057 221_B",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_B Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1152",
+"event": {
+"event_name": "Student Collaboration / Study Group 152",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244125,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 539,
+"space_name": "057 221_B",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_B Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1153",
+"event": {
+"event_name": "Student Collaboration / Study Group 153",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3241536,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:30:00-04:00",
+"spaces": {
+"space_id": 539,
+"space_name": "057 221_B",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_B Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1154",
+"event": {
+"event_name": "Student Collaboration / Study Group 154",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244305,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:30:00-04:00",
+"reservation_end_dt": "2026-10-28T20:30:00-04:00",
+"spaces": {
+"space_id": 539,
+"space_name": "057 221_B",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_B Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1155",
+"event": {
+"event_name": "Exam Review 155",
+"event_title": "",
+"event_type_name": "Exam Review",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243326,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 540,
+"space_name": "057 221_C",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_C Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1156",
+"event": {
+"event_name": "Student Collaboration / Study Group 156",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243434,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 540,
+"space_name": "057 221_C",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_C Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1157",
+"event": {
+"event_name": "Student Collaboration / Study Group 157",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243976,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 540,
+"space_name": "057 221_C",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_C Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1158",
+"event": {
+"event_name": "Student Collaboration / Study Group 158",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244247,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 540,
+"space_name": "057 221_C",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_C Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1159",
+"event": {
+"event_name": "Student Collaboration / Study Group 159",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243129,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 541,
+"space_name": "057 221_D",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_D Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1160",
+"event": {
+"event_name": "Meeting 160",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243265,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:30:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 541,
+"space_name": "057 221_D",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_D Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1161",
+"event": {
+"event_name": "Student Collaboration / Study Group 161",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243787,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 541,
+"space_name": "057 221_D",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_D Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1162",
+"event": {
+"event_name": "Student Collaboration / Study Group 162",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243307,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:00:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 542,
+"space_name": "057 221_E",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_E Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1163",
+"event": {
+"event_name": "Student Collaboration / Study Group 163",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243764,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:30:00-04:00",
+"reservation_end_dt": "2026-10-28T13:30:00-04:00",
+"spaces": {
+"space_id": 542,
+"space_name": "057 221_E",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_E Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1164",
+"event": {
+"event_name": "Student Collaboration / Study Group 164",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243801,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:30:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 542,
+"space_name": "057 221_E",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_E Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1165",
+"event": {
+"event_name": "Breakout / Overflow Session 165",
+"event_title": "",
+"event_type_name": "Breakout / Overflow Session",
+"organization_name": "Nursing",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242932,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 542,
+"space_name": "057 221_E",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_E Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1166",
+"event": {
+"event_name": "Student Collaboration / Study Group 166",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244234,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:30:00-04:00",
+"reservation_end_dt": "2026-10-28T19:30:00-04:00",
+"spaces": {
+"space_id": 542,
+"space_name": "057 221_E",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_E Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1167",
+"event": {
+"event_name": "Student Collaboration / Study Group 167",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244242,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:30:00-04:00",
+"reservation_end_dt": "2026-10-28T21:30:00-04:00",
+"spaces": {
+"space_id": 542,
+"space_name": "057 221_E",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_E Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1168",
+"event": {
+"event_name": "Student Collaboration / Study Group 168",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243830,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 543,
+"space_name": "057 221_F",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_F Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1169",
+"event": {
+"event_name": "Student Collaboration / Study Group 169",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242955,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 543,
+"space_name": "057 221_F",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_F Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1170",
+"event": {
+"event_name": "Student Collaboration / Study Group 170",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3240376,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 543,
+"space_name": "057 221_F",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_F Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1171",
+"event": {
+"event_name": "Student Collaboration / Study Group 171",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243261,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:45:00-04:00",
+"reservation_end_dt": "2026-10-28T12:45:00-04:00",
+"spaces": {
+"space_id": 544,
+"space_name": "057 221_G",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_G Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1172",
+"event": {
+"event_name": "Student Collaboration / Study Group 172",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243792,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:45:00-04:00",
+"reservation_end_dt": "2026-10-28T14:45:00-04:00",
+"spaces": {
+"space_id": 544,
+"space_name": "057 221_G",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_G Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1173",
+"event": {
+"event_name": "Student Collaboration / Study Group 173",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243202,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 544,
+"space_name": "057 221_G",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 221_G Alcove - Collaboration Space"
+},
+"last_mod_user": "abc1174",
+"event": {
+"event_name": "Student Collaboration / Study Group 174",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3237971,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 545,
+"space_name": "057 235",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 235 Studio"
+},
+"last_mod_user": "abc1175",
+"event": {
+"event_name": "Student Collaboration / Study Group 175",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Beta Theta Pi",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243169,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 546,
+"space_name": "057 237",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 237  Parker Media Lab (PML)"
+},
+"last_mod_user": "abc1176",
+"event": {
+"event_name": "Orientation 176",
+"event_title": "",
+"event_type_name": "Orientation",
+"organization_name": "Online and Continuing Education",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243254,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:00:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 553,
+"space_name": "057 321",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 321 Office"
+},
+"last_mod_user": "abc1177",
+"event": {
+"event_name": "Meeting 177",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Chemistry",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3240641,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 553,
+"space_name": "057 321",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 321 Office"
+},
+"last_mod_user": "abc1178",
+"event": {
+"event_name": "Student Collaboration / Study Group 178",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243462,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 553,
+"space_name": "057 321",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 321 Office"
+},
+"last_mod_user": "abc1179",
+"event": {
+"event_name": "Student Collaboration / Study Group 179",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243253,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 553,
+"space_name": "057 321",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 321 Office"
+},
+"last_mod_user": "abc1180",
+"event": {
+"event_name": "Student Collaboration / Study Group 180",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3234571,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:00:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 554,
+"space_name": "057 327",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 327 Conference Room"
+},
+"last_mod_user": "abc1181",
+"event": {
+"event_name": "Training / Workshop 181",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "COLA-Dean's Office",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243322,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 554,
+"space_name": "057 327",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 327 Conference Room"
+},
+"last_mod_user": "abc1182",
+"event": {
+"event_name": "Exam Review 182",
+"event_title": "",
+"event_type_name": "Exam Review",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243458,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 557,
+"space_name": "057 349",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 349 Collaboration Space"
+},
+"last_mod_user": "abc1183",
+"event": {
+"event_name": "Student Collaboration / Study Group 183",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243769,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 557,
+"space_name": "057 349",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 349 Collaboration Space"
+},
+"last_mod_user": "abc1184",
+"event": {
+"event_name": "Student Collaboration / Study Group 184",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243975,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 557,
+"space_name": "057 349",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 349 Collaboration Space"
+},
+"last_mod_user": "abc1185",
+"event": {
+"event_name": "Student Collaboration / Study Group 185",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3236344,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 557,
+"space_name": "057 349",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 349 Collaboration Space"
+},
+"last_mod_user": "abc1186",
+"event": {
+"event_name": "Student Collaboration / Study Group 186",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243778,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 557,
+"space_name": "057 349",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 349 Collaboration Space"
+},
+"last_mod_user": "abc1187",
+"event": {
+"event_name": "Student Collaboration / Study Group 187",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243790,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 558,
+"space_name": "057 351",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 351 Collaboration Space"
+},
+"last_mod_user": "abc1188",
+"event": {
+"event_name": "Student Collaboration / Study Group 188",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243815,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 558,
+"space_name": "057 351",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 351 Collaboration Space"
+},
+"last_mod_user": "abc1189",
+"event": {
+"event_name": "Exam Review 189",
+"event_title": "",
+"event_type_name": "Exam Review",
+"organization_name": "Durham - Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243838,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:30:00-04:00",
+"reservation_end_dt": "2026-10-28T18:30:00-04:00",
+"spaces": {
+"space_id": 558,
+"space_name": "057 351",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 351 Collaboration Space"
+},
+"last_mod_user": "abc1190",
+"event": {
+"event_name": "Student Collaboration / Study Group 190",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244318,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 558,
+"space_name": "057 351",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 351 Collaboration Space"
+},
+"last_mod_user": "abc1191",
+"event": {
+"event_name": "Student Collaboration / Study Group 191",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2977710,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:30:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 559,
+"space_name": "057 352",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 352 Conference Room"
+},
+"last_mod_user": "abc1192",
+"event": {
+"event_name": "Training / Workshop 192",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "History",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244118,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 560,
+"space_name": "057 354",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 354 Lactation/Nursing Mother's Room"
+},
+"last_mod_user": "abc1193",
+"event": {
+"event_name": "Exam Review 193",
+"event_title": "",
+"event_type_name": "Exam Review",
+"organization_name": "Chemistry",
+"state_name": "Tentative"
+}
+},
+{
+"reservation_id": 3003569,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 561,
+"space_name": "057 421",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 421 Daggett Instruction Room"
+},
+"last_mod_user": "abc1194",
+"event": {
+"event_name": "Training / Workshop 194",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "Graduate School",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3240874,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 566,
+"space_name": "057 537",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 537 Collaboration Space"
+},
+"last_mod_user": "abc1195",
+"event": {
+"event_name": "Breakout / Overflow Session 195",
+"event_title": "",
+"event_type_name": "Breakout / Overflow Session",
+"organization_name": "Athletics",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243054,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 566,
+"space_name": "057 537",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 537 Collaboration Space"
+},
+"last_mod_user": "abc1196",
+"event": {
+"event_name": "Exam 196",
+"event_title": "",
+"event_type_name": "Exam",
+"organization_name": "UNH Kenya Connect",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243788,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 566,
+"space_name": "057 537",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 537 Collaboration Space"
+},
+"last_mod_user": "abc1197",
+"event": {
+"event_name": "Student Collaboration / Study Group 197",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Nursing",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244249,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 566,
+"space_name": "057 537",
+"building_name": "Dimond Library",
+"formal_name": "Dimond Library 537 Collaboration Space"
+},
+"last_mod_user": "abc1198",
+"event": {
+"event_name": "Student Collaboration / Study Group 198",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Bridge UNH",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 1759871,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:10:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 600,
+"space_name": "061 A218",
+"building_name": "Paul Creative Arts Center",
+"formal_name": "Paul Creative Arts Center A218 Registrar Classroom (PCAC)"
+},
+"last_mod_user": "abc1199",
+"event": {
+"event_name": "Presentation / Speaker 199",
+"event_title": "",
+"event_type_name": "Presentation / Speaker",
+"organization_name": "Art and Art History",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 1759906,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:10:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 600,
+"space_name": "061 A218",
+"building_name": "Paul Creative Arts Center",
+"formal_name": "Paul Creative Arts Center A218 Registrar Classroom (PCAC)"
+},
+"last_mod_user": "abc1200",
+"event": {
+"event_name": "Presentation / Speaker 200",
+"event_title": "",
+"event_type_name": "Presentation / Speaker",
+"organization_name": "Art and Art History",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3009840,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:30:00-04:00",
+"spaces": {
+"space_id": 638,
+"space_name": "062 120",
+"building_name": "Spaulding Life Sciences",
+"formal_name": "Spaulding Life Sciences 120 Classroom"
+},
+"last_mod_user": "abc1201",
+"event": {
+"event_name": "Meeting 201",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Biological Sciences",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3009861,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:30:00-04:00",
+"spaces": {
+"space_id": 641,
+"space_name": "062 165",
+"building_name": "Spaulding Life Sciences",
+"formal_name": "Spaulding Life Sciences 165 Classroom"
+},
+"last_mod_user": "abc1202",
+"event": {
+"event_name": "Meeting 202",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Biological Sciences",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2751993,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:30:00-04:00",
+"reservation_end_dt": "2026-10-28T20:00:00-04:00",
+"spaces": {
+"space_id": 722,
+"space_name": "082 N108",
+"building_name": "Parsons Hall",
+"formal_name": "Parsons Hall N108 Registrar Classroom"
+},
+"last_mod_user": "abc1203",
+"event": {
+"event_name": "Offline / Maintenance 203",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2708307,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:30:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 783,
+"space_name": "088 201",
+"building_name": "Horton Social Science Center",
+"formal_name": "Horton Social Science Center 201 Registrar Classroom"
+},
+"last_mod_user": "abc1204",
+"event": {
+"event_name": "Offline / Maintenance 204",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2708726,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:30:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 785,
+"space_name": "088 207",
+"building_name": "Horton Social Science Center",
+"formal_name": "Horton Social Science Center 207 Registrar Classroom"
+},
+"last_mod_user": "abc1205",
+"event": {
+"event_name": "Offline / Maintenance 205",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2708914,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 786,
+"space_name": "088 210",
+"building_name": "Horton Social Science Center",
+"formal_name": "Horton Social Science Center 210 Registrar Classroom"
+},
+"last_mod_user": "abc1206",
+"event": {
+"event_name": "Offline / Maintenance 206",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3234885,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 787,
+"space_name": "088 215",
+"building_name": "Horton Social Science Center",
+"formal_name": "Horton Social Science Center 215 Registrar Classroom"
+},
+"last_mod_user": "abc1207",
+"event": {
+"event_name": "Exam 207",
+"event_title": "",
+"event_type_name": "Exam",
+"organization_name": "Chemistry",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2995625,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:30:00-04:00",
+"reservation_end_dt": "2026-10-28T18:30:00-04:00",
+"spaces": {
+"space_id": 805,
+"space_name": "089 230",
+"building_name": "Mcconnell Hall",
+"formal_name": "Mcconnell Hall 230 Registrar Classroom"
+},
+"last_mod_user": "abc1208",
+"event": {
+"event_name": "Meeting 208",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Psychology Club",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2720669,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:30:00-04:00",
+"spaces": {
+"space_id": 810,
+"space_name": "089 340",
+"building_name": "Mcconnell Hall",
+"formal_name": "Mcconnell Hall 340 Registrar Classroom"
+},
+"last_mod_user": "abc1209",
+"event": {
+"event_name": "Offline / Maintenance 209",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2720687,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 941,
+"space_name": "292 217",
+"building_name": "Morse Hall",
+"formal_name": "Morse Hall 217 Registrar's Classroom"
+},
+"last_mod_user": "abc1210",
+"event": {
+"event_name": "Offline / Maintenance 210",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2704084,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:30:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 946,
+"space_name": "293 110",
+"building_name": "Gregg Hall",
+"formal_name": "Gregg Hall 110 Registrar  Classroom"
+},
+"last_mod_user": "abc1211",
+"event": {
+"event_name": "Offline / Maintenance 211",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "ET&S-Enterprise Technology and Services",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2997737,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 991,
+"space_name": "335 G79",
+"building_name": "Rudman Hall",
+"formal_name": "Rudman Hall G79 Sustainability Institute Hub"
+},
+"last_mod_user": "abc1212",
+"event": {
+"event_name": "Meeting 212",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Sustainability Institute",
+"state_name": "Tentative"
+}
+},
+{
+"reservation_id": 3239909,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T06:00:00-04:00",
+"reservation_end_dt": "2026-10-28T07:00:00-04:00",
+"spaces": {
+"space_id": 1012,
+"space_name": "337 R40",
+"building_name": "Whittemore Center Arena",
+"formal_name": "Whittemore Center Arena R40 Rink Ice Only"
+},
+"last_mod_user": "abc1213",
+"event": {
+"event_name": "Practice / Rehearsal 213",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "Athletics",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2866120,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:30:00-04:00",
+"reservation_end_dt": "2026-10-28T10:00:00-04:00",
+"spaces": {
+"space_id": 1012,
+"space_name": "337 R40",
+"building_name": "Whittemore Center Arena",
+"formal_name": "Whittemore Center Arena R40 Rink Ice Only"
+},
+"last_mod_user": "abc1214",
+"event": {
+"event_name": "Practice / Rehearsal 214",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "Athletics",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3187932,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:30:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 1012,
+"space_name": "337 R40",
+"building_name": "Whittemore Center Arena",
+"formal_name": "Whittemore Center Arena R40 Rink Ice Only"
+},
+"last_mod_user": "abc1215",
+"event": {
+"event_name": "Practice / Rehearsal 215",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "Athletics",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2895944,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 1012,
+"space_name": "337 R40",
+"building_name": "Whittemore Center Arena",
+"formal_name": "Whittemore Center Arena R40 Rink Ice Only"
+},
+"last_mod_user": "abc1216",
+"event": {
+"event_name": "Practice / Rehearsal 216",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "Athletics",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2866237,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:30:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 1012,
+"space_name": "337 R40",
+"building_name": "Whittemore Center Arena",
+"formal_name": "Whittemore Center Arena R40 Rink Ice Only"
+},
+"last_mod_user": "abc1217",
+"event": {
+"event_name": "Practice / Rehearsal 217",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "Athletics",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2966154,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:15:00-04:00",
+"reservation_end_dt": "2026-10-28T19:30:00-04:00",
+"spaces": {
+"space_id": 1012,
+"space_name": "337 R40",
+"building_name": "Whittemore Center Arena",
+"formal_name": "Whittemore Center Arena R40 Rink Ice Only"
+},
+"last_mod_user": "abc1218",
+"event": {
+"event_name": "Social Event 218",
+"event_title": "",
+"event_type_name": "Social Event",
+"organization_name": "Campus Recreation",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2966174,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T19:45:00-04:00",
+"reservation_end_dt": "2026-10-28T21:00:00-04:00",
+"spaces": {
+"space_id": 1012,
+"space_name": "337 R40",
+"building_name": "Whittemore Center Arena",
+"formal_name": "Whittemore Center Arena R40 Rink Ice Only"
+},
+"last_mod_user": "abc1219",
+"event": {
+"event_name": "Social Event 219",
+"event_title": "",
+"event_type_name": "Social Event",
+"organization_name": "Campus Recreation",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3239871,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T21:15:00-04:00",
+"reservation_end_dt": "2026-10-28T22:30:00-04:00",
+"spaces": {
+"space_id": 1012,
+"space_name": "337 R40",
+"building_name": "Whittemore Center Arena",
+"formal_name": "Whittemore Center Arena R40 Rink Ice Only"
+},
+"last_mod_user": "abc1220",
+"event": {
+"event_name": "Practice / Rehearsal 220",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "Campus Recreation",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3239900,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T22:45:00-04:00",
+"reservation_end_dt": "2026-10-28T23:55:00-04:00",
+"spaces": {
+"space_id": 1012,
+"space_name": "337 R40",
+"building_name": "Whittemore Center Arena",
+"formal_name": "Whittemore Center Arena R40 Rink Ice Only"
+},
+"last_mod_user": "abc1221",
+"event": {
+"event_name": "Practice / Rehearsal 221",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "Athletics",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2946224,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:15:00-04:00",
+"reservation_end_dt": "2026-10-28T16:45:00-04:00",
+"spaces": {
+"space_id": 1023,
+"space_name": "530 101",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 101 (Zeliff Conference Room)"
+},
+"last_mod_user": "abc1222",
+"event": {
+"event_name": "Meeting 222",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Law-Dean's Office",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3237918,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:15:00-04:00",
+"reservation_end_dt": "2026-10-28T13:15:00-04:00",
+"spaces": {
+"space_id": 1024,
+"space_name": "530 102",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 102"
+},
+"last_mod_user": "abc1223",
+"event": {
+"event_name": "Exam 223",
+"event_title": "",
+"event_type_name": "Exam",
+"organization_name": "Law-Registrar",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2982283,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T07:45:00-04:00",
+"reservation_end_dt": "2026-10-28T15:45:00-04:00",
+"spaces": {
+"space_id": 1025,
+"space_name": "530 103",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 103"
+},
+"last_mod_user": "abc1224",
+"event": {
+"event_name": "Meeting 224",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Cooperative Ext-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3237918,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:15:00-04:00",
+"reservation_end_dt": "2026-10-28T13:15:00-04:00",
+"spaces": {
+"space_id": 1032,
+"space_name": "530 175",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 175 (Tenney Family Board Room)"
+},
+"last_mod_user": "abc1225",
+"event": {
+"event_name": "Exam 225",
+"event_title": "",
+"event_type_name": "Exam",
+"organization_name": "Law-Registrar",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3131588,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:45:00-04:00",
+"spaces": {
+"space_id": 1032,
+"space_name": "530 175",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 175 (Tenney Family Board Room)"
+},
+"last_mod_user": "abc1226",
+"event": {
+"event_name": "Meeting 226",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Law-Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2590794,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:30:00-04:00",
+"reservation_end_dt": "2026-10-28T10:30:00-04:00",
+"spaces": {
+"space_id": 1033,
+"space_name": "530 200",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 200"
+},
+"last_mod_user": "abc1227",
+"event": {
+"event_name": "COURSE 227",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2989346,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 1033,
+"space_name": "530 200",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 200"
+},
+"last_mod_user": "abc1228",
+"event": {
+"event_name": "COURSE 228",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2591514,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 1033,
+"space_name": "530 200",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 200"
+},
+"last_mod_user": "abc1229",
+"event": {
+"event_name": "COURSE 229",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2591651,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:30:00-04:00",
+"reservation_end_dt": "2026-10-28T10:30:00-04:00",
+"spaces": {
+"space_id": 1034,
+"space_name": "530 201",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 201"
+},
+"last_mod_user": "abc1230",
+"event": {
+"event_name": "COURSE 230",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2689528,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 1034,
+"space_name": "530 201",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 201"
+},
+"last_mod_user": "abc1231",
+"event": {
+"event_name": "COURSE 231",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2993915,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 1034,
+"space_name": "530 201",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 201"
+},
+"last_mod_user": "abc1232",
+"event": {
+"event_name": "TA Session 232",
+"event_title": "",
+"event_type_name": "TA Session",
+"organization_name": "Law-Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3119853,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:45:00-04:00",
+"spaces": {
+"space_id": 1034,
+"space_name": "530 201",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 201"
+},
+"last_mod_user": "abc1233",
+"event": {
+"event_name": "TA Session 233",
+"event_title": "",
+"event_type_name": "TA Session",
+"organization_name": "Law-Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3233225,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:15:00-04:00",
+"reservation_end_dt": "2026-10-28T12:45:00-04:00",
+"spaces": {
+"space_id": 1035,
+"space_name": "530 202",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 202"
+},
+"last_mod_user": "abc1234",
+"event": {
+"event_name": "Exam 234",
+"event_title": "",
+"event_type_name": "Exam",
+"organization_name": "Law-Registrar",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2955894,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:45:00-04:00",
+"reservation_end_dt": "2026-10-28T10:30:00-04:00",
+"spaces": {
+"space_id": 1036,
+"space_name": "530 204",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 204 (Rich Room)"
+},
+"last_mod_user": "abc1235",
+"event": {
+"event_name": "COURSE 235",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2955939,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:45:00-04:00",
+"spaces": {
+"space_id": 1036,
+"space_name": "530 204",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 204 (Rich Room)"
+},
+"last_mod_user": "abc1236",
+"event": {
+"event_name": "COURSE 236",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2590669,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 1036,
+"space_name": "530 204",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 204 (Rich Room)"
+},
+"last_mod_user": "abc1237",
+"event": {
+"event_name": "COURSE 237",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2985773,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:30:00-04:00",
+"reservation_end_dt": "2026-10-28T10:30:00-04:00",
+"spaces": {
+"space_id": 1037,
+"space_name": "530 205",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 205"
+},
+"last_mod_user": "abc1238",
+"event": {
+"event_name": "COURSE 238",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2893383,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 1037,
+"space_name": "530 205",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 205"
+},
+"last_mod_user": "abc1239",
+"event": {
+"event_name": "COURSE 239",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2590969,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 1037,
+"space_name": "530 205",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 205"
+},
+"last_mod_user": "abc1240",
+"event": {
+"event_name": "COURSE 240",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2953115,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:30:00-04:00",
+"spaces": {
+"space_id": 1037,
+"space_name": "530 205",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 205"
+},
+"last_mod_user": "abc1241",
+"event": {
+"event_name": "COURSE 241",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2590999,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 1040,
+"space_name": "530 227",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 227"
+},
+"last_mod_user": "abc1242",
+"event": {
+"event_name": "COURSE 242",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2590254,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:15:00-04:00",
+"reservation_end_dt": "2026-10-28T20:15:00-04:00",
+"spaces": {
+"space_id": 1040,
+"space_name": "530 227",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 227"
+},
+"last_mod_user": "abc1243",
+"event": {
+"event_name": "COURSE 243",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3196890,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:15:00-04:00",
+"reservation_end_dt": "2026-10-28T09:45:00-04:00",
+"spaces": {
+"space_id": 1041,
+"space_name": "530 228",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 228 (Wood Board Room)"
+},
+"last_mod_user": "abc1244",
+"event": {
+"event_name": "Practice / Rehearsal 244",
+"event_title": "",
+"event_type_name": "Practice / Rehearsal",
+"organization_name": "Law-Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2989086,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:00:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 1041,
+"space_name": "530 228",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 228 (Wood Board Room)"
+},
+"last_mod_user": "abc1245",
+"event": {
+"event_name": "TA Session 245",
+"event_title": "",
+"event_type_name": "TA Session",
+"organization_name": "Law-Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2988709,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:40:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 1042,
+"space_name": "530 229",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law -Room 229"
+},
+"last_mod_user": "abc1246",
+"event": {
+"event_name": "TA Session 246",
+"event_title": "",
+"event_type_name": "TA Session",
+"organization_name": "Law-Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2908178,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 1042,
+"space_name": "530 229",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law -Room 229"
+},
+"last_mod_user": "abc1247",
+"event": {
+"event_name": "COURSE 247",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2900283,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 1042,
+"space_name": "530 229",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law -Room 229"
+},
+"last_mod_user": "abc1248",
+"event": {
+"event_name": "COURSE 248",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2908208,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:30:00-04:00",
+"spaces": {
+"space_id": 1042,
+"space_name": "530 229",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law -Room 229"
+},
+"last_mod_user": "abc1249",
+"event": {
+"event_name": "COURSE 249",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3242616,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:45:00-04:00",
+"reservation_end_dt": "2026-10-28T17:15:00-04:00",
+"spaces": {
+"space_id": 1044,
+"space_name": "530 240",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 240 (Courtroom)"
+},
+"last_mod_user": "abc1250",
+"event": {
+"event_name": "Make Up Class 250",
+"event_title": "",
+"event_type_name": "Make Up Class",
+"organization_name": "Law-Academic Affairs",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2734780,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T08:45:00-04:00",
+"reservation_end_dt": "2026-10-28T10:15:00-04:00",
+"spaces": {
+"space_id": 1045,
+"space_name": "530 274",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 274"
+},
+"last_mod_user": "abc1251",
+"event": {
+"event_name": "Meeting 251",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Law-Dean's Office",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2590699,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 1045,
+"space_name": "530 274",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 274"
+},
+"last_mod_user": "abc1252",
+"event": {
+"event_name": "COURSE 252",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2591903,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 1045,
+"space_name": "530 274",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 274"
+},
+"last_mod_user": "abc1253",
+"event": {
+"event_name": "COURSE 253",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2900252,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 1046,
+"space_name": "530 282",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 282"
+},
+"last_mod_user": "abc1254",
+"event": {
+"event_name": "COURSE 254",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2988753,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 1046,
+"space_name": "530 282",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 282"
+},
+"last_mod_user": "abc1255",
+"event": {
+"event_name": "TA Session 255",
+"event_title": "",
+"event_type_name": "TA Session",
+"organization_name": "Law-Student",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2990827,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 1046,
+"space_name": "530 282",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 282"
+},
+"last_mod_user": "abc1256",
+"event": {
+"event_name": "COURSE 256",
+"event_title": "",
+"event_type_name": "COURSE",
+"organization_name": "(Private)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3231344,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T17:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 1046,
+"space_name": "530 282",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 282"
+},
+"last_mod_user": "abc1257",
+"event": {
+"event_name": "Meeting 257",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Law-Rudman Center",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3102789,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T07:45:00-04:00",
+"reservation_end_dt": "2026-10-28T16:15:00-04:00",
+"spaces": {
+"space_id": 1047,
+"space_name": "530 283",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Room 283 (Karl Jorda Conference Room)"
+},
+"last_mod_user": "abc1258",
+"event": {
+"event_name": "Student Collaboration / Study Group 258",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "Law-Rudman Center",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3003091,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 1280,
+"space_name": "530 313",
+"building_name": "UNH School of Law - 2 White Street",
+"formal_name": "UNH School of Law - Adjunct Faculty Office"
+},
+"last_mod_user": "abc1259",
+"event": {
+"event_name": "Meeting 259",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "Law-Academic Affairs",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2982540,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 1057,
+"space_name": "802 115",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  115 Conference Room"
+},
+"last_mod_user": "abc1260",
+"event": {
+"event_name": "Breakout / Overflow Session 260",
+"event_title": "",
+"event_type_name": "Breakout / Overflow Session",
+"organization_name": "Mathematics and Statistics",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2976465,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:30:00-04:00",
+"reservation_end_dt": "2026-10-28T13:30:00-04:00",
+"spaces": {
+"space_id": 1063,
+"space_name": "802 146",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  146 Registrar Classroom"
+},
+"last_mod_user": "abc1261",
+"event": {
+"event_name": "Breakout / Overflow Session 261",
+"event_title": "",
+"event_type_name": "Breakout / Overflow Session",
+"organization_name": "UNHM-Applied Engineering & Sciences",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243314,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T11:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 1072,
+"space_name": "802 235",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  235 Student Collaboration  Room"
+},
+"last_mod_user": "abc1262",
+"event": {
+"event_name": "Student Collaboration / Study Group 262",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243140,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:30:00-04:00",
+"reservation_end_dt": "2026-10-28T14:30:00-04:00",
+"spaces": {
+"space_id": 1072,
+"space_name": "802 235",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  235 Student Collaboration  Room"
+},
+"last_mod_user": "abc1263",
+"event": {
+"event_name": "Student Collaboration / Study Group 263",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244016,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:30:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 1072,
+"space_name": "802 235",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  235 Student Collaboration  Room"
+},
+"last_mod_user": "abc1264",
+"event": {
+"event_name": "Student Collaboration / Study Group 264",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3244157,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 1075,
+"space_name": "802 261",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  261 Student Collaboration  Room"
+},
+"last_mod_user": "abc1265",
+"event": {
+"event_name": "Student Collaboration / Study Group 265",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3243819,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:30:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 1076,
+"space_name": "802 264",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  264 Student Collaboration  Room"
+},
+"last_mod_user": "abc1266",
+"event": {
+"event_name": "Student Collaboration / Study Group 266",
+"event_title": "",
+"event_type_name": "Student Collaboration / Study Group",
+"organization_name": "",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2735054,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 1079,
+"space_name": "802 302",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  302 Registrar Classroom"
+},
+"last_mod_user": "abc1267",
+"event": {
+"event_name": "Training / Workshop 267",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "UNHM-Osher Lifelong Learning Inst (OLLI)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2757712,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 1083,
+"space_name": "802 325",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  325 Registrar Classroom"
+},
+"last_mod_user": "abc1268",
+"event": {
+"event_name": "Training / Workshop 268",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "UNHM-Osher Lifelong Learning Inst (OLLI)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2757727,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 1083,
+"space_name": "802 325",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  325 Registrar Classroom"
+},
+"last_mod_user": "abc1269",
+"event": {
+"event_name": "Training / Workshop 269",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "UNHM-Osher Lifelong Learning Inst (OLLI)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2757712,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 1084,
+"space_name": "802 325/329",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  325/329 Registrar Combo"
+},
+"last_mod_user": "abc1270",
+"event": {
+"event_name": "Training / Workshop 270",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "UNHM-Osher Lifelong Learning Inst (OLLI)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2757727,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 1084,
+"space_name": "802 325/329",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  325/329 Registrar Combo"
+},
+"last_mod_user": "abc1271",
+"event": {
+"event_name": "Training / Workshop 271",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "UNHM-Osher Lifelong Learning Inst (OLLI)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2757712,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:00:00-04:00",
+"spaces": {
+"space_id": 1085,
+"space_name": "802 329",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  329 Registrar Classroom"
+},
+"last_mod_user": "abc1272",
+"event": {
+"event_name": "Training / Workshop 272",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "UNHM-Osher Lifelong Learning Inst (OLLI)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2757727,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 1085,
+"space_name": "802 329",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  329 Registrar Classroom"
+},
+"last_mod_user": "abc1273",
+"event": {
+"event_name": "Training / Workshop 273",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "UNHM-Osher Lifelong Learning Inst (OLLI)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2951276,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T10:00:00-04:00",
+"reservation_end_dt": "2026-10-28T11:00:00-04:00",
+"spaces": {
+"space_id": 1099,
+"space_name": "802 435",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  435 Conference Room"
+},
+"last_mod_user": "abc1274",
+"event": {
+"event_name": "Info Session / Fair / Open House 274",
+"event_title": "",
+"event_type_name": "Info Session / Fair / Open House",
+"organization_name": "UNHM-Admissions",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2951423,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T13:00:00-04:00",
+"reservation_end_dt": "2026-10-28T14:00:00-04:00",
+"spaces": {
+"space_id": 1099,
+"space_name": "802 435",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  435 Conference Room"
+},
+"last_mod_user": "abc1275",
+"event": {
+"event_name": "Info Session / Fair / Open House 275",
+"event_title": "",
+"event_type_name": "Info Session / Fair / Open House",
+"organization_name": "UNHM-Admissions",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3239120,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T14:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:00:00-04:00",
+"spaces": {
+"space_id": 1099,
+"space_name": "802 435",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  435 Conference Room"
+},
+"last_mod_user": "abc1276",
+"event": {
+"event_name": "Meeting 276",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "UNHM--Registrar's Office",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2951565,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:00:00-04:00",
+"reservation_end_dt": "2026-10-28T16:00:00-04:00",
+"spaces": {
+"space_id": 1099,
+"space_name": "802 435",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  435 Conference Room"
+},
+"last_mod_user": "abc1277",
+"event": {
+"event_name": "Info Session / Fair / Open House 277",
+"event_title": "",
+"event_type_name": "Info Session / Fair / Open House",
+"organization_name": "UNHM-Admissions",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3142843,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T00:00:00-04:00",
+"reservation_end_dt": "2026-10-28T23:59:00-04:00",
+"spaces": {
+"space_id": 1106,
+"space_name": "802 501",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  501 Conference Room"
+},
+"last_mod_user": "abc1278",
+"event": {
+"event_name": "Offline / Maintenance 278",
+"event_title": "",
+"event_type_name": "Offline / Maintenance",
+"organization_name": "UNHM--Registrar's Office",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2996250,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:30:00-04:00",
+"reservation_end_dt": "2026-10-28T18:00:00-04:00",
+"spaces": {
+"space_id": 1107,
+"space_name": "802 502",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  502 Registrar Classroom"
+},
+"last_mod_user": "abc1279",
+"event": {
+"event_name": "Meeting 279",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "UNHM-Life Sciences",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3238259,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:00:00-04:00",
+"reservation_end_dt": "2026-10-28T13:00:00-04:00",
+"spaces": {
+"space_id": 1118,
+"space_name": "802 573",
+"building_name": "UNHM 88 Commercial Street",
+"formal_name": "UNHM 88 Commercial Street  573 Conference Room"
+},
+"last_mod_user": "abc1280",
+"event": {
+"event_name": "Meeting 280",
+"event_title": "",
+"event_type_name": "Meeting",
+"organization_name": "UNHM-Osher Lifelong Learning Inst (OLLI)",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3007883,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T00:00:00-04:00",
+"reservation_end_dt": "2026-10-28T23:59:00-04:00",
+"spaces": {
+"space_id": 1260,
+"space_name": "Calendar Only Event",
+"building_name": "",
+"formal_name": "Calendar Only Event"
+},
+"last_mod_user": "abc1281",
+"event": {
+"event_name": "Info Session / Fair / Open House 281",
+"event_title": "",
+"event_type_name": "Info Session / Fair / Open House",
+"organization_name": "Academic Affairs-Admin Operations",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3007956,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 1260,
+"space_name": "Calendar Only Event",
+"building_name": "",
+"formal_name": "Calendar Only Event"
+},
+"last_mod_user": "abc1282",
+"event": {
+"event_name": "Training / Workshop 282",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "Online and Continuing Education",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2929153,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 1260,
+"space_name": "Calendar Only Event",
+"building_name": "",
+"formal_name": "Calendar Only Event"
+},
+"last_mod_user": "abc1283",
+"event": {
+"event_name": "Training / Workshop 283",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "Online and Continuing Education",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3016764,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T09:00:00-04:00",
+"reservation_end_dt": "2026-10-28T15:30:00-04:00",
+"spaces": {
+"space_id": 1260,
+"space_name": "Calendar Only Event",
+"building_name": "",
+"formal_name": "Calendar Only Event"
+},
+"last_mod_user": "abc1284",
+"event": {
+"event_name": "Training / Workshop 284",
+"event_title": "",
+"event_type_name": "Training / Workshop",
+"organization_name": "Online and Continuing Education",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3240836,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T15:10:00-04:00",
+"reservation_end_dt": "2026-10-28T16:10:00-04:00",
+"spaces": {
+"space_id": 1260,
+"space_name": "Calendar Only Event",
+"building_name": "",
+"formal_name": "Calendar Only Event"
+},
+"last_mod_user": "abc1285",
+"event": {
+"event_name": "Presentation / Speaker 285",
+"event_title": "",
+"event_type_name": "Presentation / Speaker",
+"organization_name": "EOS-Study of Earth Oceans & Space",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2854529,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T16:00:00-04:00",
+"reservation_end_dt": "2026-10-28T17:00:00-04:00",
+"spaces": {
+"space_id": 1260,
+"space_name": "Calendar Only Event",
+"building_name": "",
+"formal_name": "Calendar Only Event"
+},
+"last_mod_user": "abc1286",
+"event": {
+"event_name": "Info Session / Fair / Open House 286",
+"event_title": "",
+"event_type_name": "Info Session / Fair / Open House",
+"organization_name": "National Fellowships",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 2852430,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T18:00:00-04:00",
+"reservation_end_dt": "2026-10-28T19:00:00-04:00",
+"spaces": {
+"space_id": 1260,
+"space_name": "Calendar Only Event",
+"building_name": "",
+"formal_name": "Calendar Only Event"
+},
+"last_mod_user": "abc1287",
+"event": {
+"event_name": "Info Session / Fair / Open House 287",
+"event_title": "",
+"event_type_name": "Info Session / Fair / Open House",
+"organization_name": "National Fellowships",
+"state_name": "Confirmed"
+}
+},
+{
+"reservation_id": 3187920,
+"reservation_state": 1,
+"reservation_start_dt": "2026-10-28T12:00:00-04:00",
+"reservation_end_dt": "2026-10-28T12:30:00-04:00",
+"spaces": {
+"space_id": 1168,
+"space_name": "OOCL Online",
+"building_name": "Online/Off-Campus Locations",
+"formal_name": "Location Online"
+},
+"last_mod_user": "abc1288",
+"event": {
+"event_name": "Info Session / Fair / Open House 288",
+"event_title": "",
+"event_type_name": "Info Session / Fair / Open House",
+"organization_name": "Carsey School of Public Policy",
+"state_name": "Confirmed"
+}
+}
+]
+}
+}

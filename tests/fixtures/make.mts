@@ -3,9 +3,9 @@
 // install them in place of the inputs and map data (scripts/inputs.mts). The timetable is cut to the campus
 // connectors, and the menus to each hall's first two days and each meal's first two stations. The models are empty, and the style is Liberty as the tests
 // have it, with no sprite or fonts. The walk, gazetteer, and rooms are whole. The events, the courses, the
-// prerequisites, and the parking areas are made as the inputs make them, from the trimmed answers beside the data
-// (../events/, ../courses/ with its made-up addresses, ../programs/ and ../parking/), as of one fixed day, so they're
-// the same whenever they're made
+// prerequisites, the parking areas and the rooms to book are made as the inputs make them, from the trimmed answers
+// beside the data (../events/, ../courses/ with its made-up addresses, ../programs/, ../parking/ and ../rooms/), as
+// of one fixed day, so they're the same whenever they're made
 
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
@@ -21,7 +21,7 @@ import { bundle } from "../../scripts/map/style.mts"
 import { FIXTURES } from "../../scripts/files.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { EVENTS, from25Live, fromAthletics, fromDserec, fromPresence, merged } from "../../src/social/sources.mts"
+import { EVENTS, REC_PROGRAMS, from25Live, fromAthletics, fromDserec, fromPresence, fromRecOfferings, merged, programOf } from "../../src/social/sources.mts"
 import { COURSES } from "../../src/courses/course.mts"
 import { fromLive25 } from "../../src/courses/calendar.mts"
 import { placeOfCode } from "../../src/courses/buildings.mts"
@@ -33,6 +33,8 @@ import { publishPrereqs, readPages, readPrograms } from "../../scripts/programs/
 import { withTitles } from "../../src/programs/requirements.mts"
 import { PARKING } from "../../src/parking/sources.mts"
 import { cached, parkingOf } from "../../scripts/map/parking.mts"
+import { ROOMS, bookingsFrom, shownTo, spacesFrom } from "../../src/courses/bookings.mts"
+import { facilitiesFrom, recBookingsFrom } from "../../src/courses/rec.mts"
 
 const REPO = new URL("../../", import.meta.url)
 const ROUTES = ["Gables", "WestEdge"]
@@ -40,6 +42,9 @@ const DAYS = 2
 const STATIONS = 2
 /** The day the fixtures are as of, Saturday 24 October 2026 */
 const MADE = Date.UTC(2026, 9, 24)
+/** The day of bookings the rooms' fixtures keep, and Campus Rec's facilities whose schedules they keep, by file */
+const ROOMS_DAY = "2026-10-28"
+const REC = { westgym: "d949aebc-c63a-4440-bb87-beda6b2ce438", court1: "b78ab042-f000-4b3a-b36a-1a147cbc5ad6", bremner: "82626de1-7fb2-4d95-a83d-8f86f8462ba2" }
 /** The registrar's terms the fixtures have answers for: Fall 2026, J-Term and Spring 2027 */
 const TERMS = ["202610", "202630", "202650"]
 
@@ -121,8 +126,19 @@ const fixture = (path: string) =>
 const gazetteer = v.parse(Gazetteer, await read("src/map/gazetteer.json"))
 const names = gazetteer.places.map(place => place.name)
 const match = placeMatcher(names)
-const events = merged([fromPresence(JSON.parse(await fixture("events/presence.json")), match), from25Live(JSON.parse(await fixture("events/25live.json")), match), fromAthletics(await fixture("events/athletics.ics"), match), fromDserec(JSON.parse(await fixture("events/dserec.json")), match)], 0)
+const program = { id: REC_PROGRAMS[3], ...programOf(await fixture("events/rec-program.html")) }
+const events = merged([fromPresence(JSON.parse(await fixture("events/presence.json")), match), from25Live(JSON.parse(await fixture("events/25live.json")), match), fromAthletics(await fixture("events/athletics.ics"), match), fromDserec(JSON.parse(await fixture("events/dserec.json")), match), fromRecOfferings(await fixture("events/rec-offerings.html"), program, program.semesters[0].name, match)], 0)
 await write(EVENTS, { fetched: MADE, events })
+
+// The rooms to book, read from 25Live's trimmed answers as the build reads the whole ones, with their NetIDs and
+// titles made up: the spaces placed, and the one day of bookings kept, as anyone is told them
+// and Campus Rec's facilities, with the week of the West Gym, its Court 1 and Bremner Field kept (../rec/)
+const facilities = facilitiesFrom(await fixture("rec/schedule.html"), match)
+const spaces = [...spacesFrom(JSON.parse(await fixture("rooms/spaces.json")), match), ...facilities]
+const placed = new Set(spaces.map(({ id }) => id))
+const rec = await Promise.all(Object.entries(REC).map(async ([name, id]) => recBookingsFrom(JSON.parse(await fixture(`rec/${name}.json`)), id, ROOMS_DAY, ROOMS_DAY)))
+const bookings = shownTo([...bookingsFrom(JSON.parse(await fixture("rooms/reservations.json"))), ...rec.flat()], false).filter(({ space }) => placed.has(space))
+await write(ROOMS, { fetched: MADE, spaces, days: [{ day: ROOMS_DAY, fetched: MADE, bookings }] })
 
 // The courses, each term's answer read a hundred rows a page as the API gives them, published as of that day: Fall
 // live, J-Term and Spring to come

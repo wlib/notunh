@@ -1,6 +1,6 @@
 // The map page's state: your location, the live buses, which you're on, your trip, today's events, the courses,
-// parking, the page the sheet shows, and what the map shows. Starting it starts its polling and watching, and stop
-// ends them, so the page owns the one it starts, and a test can make its own
+// parking, the rooms to book, the page the sheet shows, and what the map shows. Starting it starts its polling and
+// watching, and stop ends them, so the page owns the one it starts, and a test can make its own
 
 import { type MapData, loadMapData } from "./data.mts"
 import { createLocation } from "./location.mts"
@@ -12,6 +12,7 @@ import { createToday } from "./today.mts"
 import { createCoursesState } from "./courses.mts"
 import { createPage } from "./page.mts"
 import { createParkingState } from "./parking.mts"
+import { createRooms } from "./rooms.mts"
 import type { Own } from "../../shell/state.mts"
 
 export const createMapState = (data: MapData) => {
@@ -24,7 +25,8 @@ export const createMapState = (data: MapData) => {
   const today = createToday({ ...data, ...live }, own)
   const courses = createCoursesState({ ...data, ...live })
   const parking = createParkingState(data)
-  const state = { ...data, ...location, ...live, ...riding, ...trip, ...today, ...courses, ...parking, ...createPage(own) }
+  const rooms = createRooms({ ...data, ...courses }, own)
+  const state = { ...data, ...location, ...live, ...riding, ...trip, ...today, ...courses, ...parking, ...rooms, ...createPage(own) }
   return { ...state, ...createView(state), stop: () => stops.splice(0).forEach(stop => stop()) }
 }
 

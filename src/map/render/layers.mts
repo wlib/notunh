@@ -12,6 +12,7 @@ import { chapterNamed } from "../../places/chapters.mts"
 import type { Placed } from "../state/today.mts"
 import { clockOf } from "../../shared/time.mts"
 import { groupBy } from "../../shared/group.mts"
+import { isPractice } from "../../social/sport.mts"
 import type { Coordinates } from "../../geo/projection.mts"
 import { laneSlots, lanePieces, measureCorridors } from "./corridors.mts"
 import { DENSITY, GREEK, QUIET, buildingIcon, busIcon, chapterIcon, chevronIcon } from "./icons.mts"
@@ -119,19 +120,24 @@ export const chapterFeatures = (places: readonly GazetteerPlace[]) =>
 /**
  * A marker for each place with something on today, which a tap opens, labelled in words by what's on there now,
  * "Tennis · till 3:00 PM", filled, else by what's next, "Soccer · 3:00 PM", outlined. Today's list is soonest first,
- * so the first at a place still to end is the one it's labelled by
+ * so the first at a place still to end is the one it's labelled by, but for practices, which only label a place
+ * that has nothing else on, drawn muted (src/social/sport.mts)
  */
 export const eventFeatures = (placed: readonly Placed[], now: number) =>
-  [...groupBy(placed.filter(({ event }) => event.end > now), ({ place }) => place.name).values()].map(([{ event, place }], i): GeoJSON.Feature => ({
-    type: "Feature",
-    id: i,
-    properties: {
-      place: place.name,
-      on:    event.start <= now,
-      label: event.start <= now ? `${event.title} · till ${clockOf(event.end)}` : `${event.title} · ${clockOf(event.start)}`
-    },
-    geometry: { type: "Point", coordinates: [place.lon, place.lat] }
-  }))
+  [...groupBy(placed.filter(({ event }) => event.end > now), ({ place }) => place.name).values()].map((here, i): GeoJSON.Feature => {
+    const { event, place } = here.find(({ event }) => !isPractice(event)) ?? here[0]
+    return {
+      type: "Feature",
+      id: i,
+      properties: {
+        place: place.name,
+        on:    event.start <= now,
+        muted: isPractice(event),
+        label: event.start <= now ? `${event.title} · till ${clockOf(event.end)}` : `${event.title} · ${clockOf(event.start)}`
+      },
+      geometry: { type: "Point", coordinates: [place.lon, place.lat] }
+    }
+  })
 
 /** Adds the map's own images, sources, and layers, all empty until drawn */
 export const addLayers = (map: MapLibre) => {
@@ -213,10 +219,13 @@ export const addLayers = (map: MapLibre) => {
     source: "events",
     minzoom: 13,
     paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 4, 17, 9],
+      // A place with only practices on is smaller and fainter, there to say something's on but not to go to
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, ["case", ["get", "muted"], 3, 4], 17, ["case", ["get", "muted"], 6.5, 9]],
       "circle-color": ["case", ["get", "on"], EVENT, "white"],
       "circle-stroke-color": ["case", ["get", "on"], "white", EVENT],
-      "circle-stroke-width": 2
+      "circle-stroke-width": ["case", ["get", "muted"], 1.5, 2],
+      "circle-opacity": ["case", ["get", "muted"], 0.75, 1],
+      "circle-stroke-opacity": ["case", ["get", "muted"], 0.75, 1]
     }
   })
   map.addLayer({
@@ -227,7 +236,7 @@ export const addLayers = (map: MapLibre) => {
     layout: {
       "text-field": ["get", "label"],
       "text-font": FONT,
-      "text-size": 11,
+      "text-size": ["case", ["get", "muted"], 10, 11],
       "text-offset": [0, 1],
       "text-anchor": "top",
       "text-max-width": 9,
@@ -236,7 +245,8 @@ export const addLayers = (map: MapLibre) => {
     paint: {
       "text-color": EVENT,
       "text-halo-color": "white",
-      "text-halo-width": 1.5
+      "text-halo-width": 1.5,
+      "text-opacity": ["case", ["get", "muted"], 0.6, 1]
     }
   })
 

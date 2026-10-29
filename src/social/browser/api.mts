@@ -2,10 +2,13 @@
 // (src/reminders/browser/store.mts), made the first time anything is asked, so a pin, a mark, and a reminder are
 // all one device's. Reads that need no device take none, so the pin page works for anyone with the link. A refusal
 // is an error with the Worker's own words, which the UI shows as they are. A mark comes with the phone's push
-// subscription where it can have one, so the host setting that time asks it "Going?" (src/social/ask.mts)
+// subscription where it can have one, so the host setting that time asks it "Going?" (src/social/ask.mts). The
+// rooms' bookings are read the same way, as a verified device is told their titles (worker/rooms.mts)
 
 import * as v from "valibot"
 import { Pin } from "../event.mts"
+import { Booked } from "../../courses/bookings.mts"
+import type { Day } from "../../shared/time.mts"
 import { device, deviceKept } from "../../reminders/browser/store.mts"
 import { key } from "../../reminders/browser/api.mts"
 import { readJson } from "../../shared/json.mts"
@@ -37,6 +40,10 @@ const read = async <T,>(path: string, schema: v.GenericSchema<unknown, T>): Prom
 
 export const pin = (id: string) =>
   read(`/api/pins/${encodeURIComponent(id)}`, Pin)
+
+/** What's booked on a Durham day in the rooms to book, or in one, as this device may be told (worker/rooms.mts) */
+export const bookedOn = (day: Day, space?: string) =>
+  read(`/api/rooms/${day}${space === undefined ? "" : `/${space}`}`, Booked)
 
 /** The public pins on a Durham day */
 export const pinsOn = (day: string) =>

@@ -32,6 +32,7 @@ Bus samples are one gzipped row per source per minute polled (`src/transit/obser
 | `POST /api/derived/:name` `{ day, identity, generation, parts }` | token | Commits a generation once every part is stored, else 409 |
 | `GET /api/storage` | token | D1's bytes and rows per table, counted on demand |
 | `GET /api/laundry/rooms[/:id]` | public | [Laundry](#laundry) |
+| `GET /api/rooms/:day[/:space]` | public; says more to a verified device asking as itself | A day's bookings from 25Live, of the map's rooms or one of them ([courses.md](courses.md#rooms-to-book)) |
 | `GET /api/push/key`, `PUT`/`DELETE /api/reminders/:id`, `DELETE /api/push/devices/:device` | device | [reminders.md](reminders.md#routes) |
 | `GET /api/pins?day=…`, `/api/pins/:id`, `/p/:id`, `/map/<page>`, `/map/card/<page>` | public; says more to the device asking as itself | The day's public pins, one, and a shared page headed with what it's of, and its card ([deploying.md](deploying.md#search-and-sharing)) |
 | `POST /api/pins`, `POST /api/pins/:id/{marks,set,going,reports}`, `DELETE /api/pins/:id` | device | Make, mark a time, set the time (host), go, report, delete (host) |

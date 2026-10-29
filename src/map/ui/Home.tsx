@@ -16,7 +16,7 @@ import { Icon } from "../../shell/ui.tsx"
 import { capture } from "../../shell/usage.tsx"
 import { state } from "../state/map.mts"
 import { nowMs, walkTo } from "./common.tsx"
-import { DayName, EventRow, Row, placeNamed, sectionPage } from "./Pages.tsx"
+import { DayName, EventLines, Row, placeNamed, sectionPage } from "./Pages.tsx"
 import { Reminders, currentReminders } from "./Remind.tsx"
 import { Suggestions, SearchRow, isSearching } from "./Search.tsx"
 
@@ -96,11 +96,11 @@ const Today = () =>
     return <>
       {on.length > 0 && <>
         <h2 class="eyebrow">Now</h2>
-        <ul class="rows" aria-label="Now">{on.map(event => <EventRow event={event} standing={<span class="on">On</span>} />)}</ul>
+        <ul class="rows" aria-label="Now"><EventLines events={on} standing={<span class="on">On</span>} /></ul>
       </>}
       <h2 class="eyebrow">{on.length ? "Later today" : "Today"}</h2>
       <ul class="rows" aria-label="Today">
-        {later.map(event => <EventRow event={event} />)}
+        <EventLines events={later} />
         <NewEvent />
       </ul>
     </>
@@ -111,7 +111,7 @@ const DayRows = ({ day, events }: DayList<Event | Pin>) => {
   const away = daysBetween(localDay(nowMs()), day)
   return <>
     <h2 class="eyebrow">{away === 1 ? relativeDay(1) : <Day of={day} weekday="long" month="short" day="numeric" />}</h2>
-    <ul class="rows" aria-label={day}>{events.map(event => <EventRow event={event} day={day} />)}</ul>
+    <ul class="rows" aria-label={day}><EventLines events={events} day={day} /></ul>
   </>
 }
 

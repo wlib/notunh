@@ -33,7 +33,7 @@ const FEED: FeedData = {
 }
 
 // As the map's page names them in development
-const DATA = { ...Object.fromEntries(["gtfs", "model", "walk", "gazetteer", "tiles", "style", "places", "events"].map(name => [name, `/src/map/${name}.json`])), courses: "/src/courses/courses.json", prereqs: "/src/programs/prereqs.json", parking: "/src/parking/parking.json", menus: "/src/dining/menus.json" }
+const DATA = { ...Object.fromEntries(["gtfs", "model", "walk", "gazetteer", "tiles", "style", "places", "events", "rooms"].map(name => [name, `/src/map/${name}.json`])), courses: "/src/courses/courses.json", prereqs: "/src/programs/prereqs.json", parking: "/src/parking/parking.json", menus: "/src/dining/menus.json" }
 const BUILDINGS = places.buildings as Building[]
 const PARKING = { sources: { zones: NOON, parkMobile: NOON, osm: NOON }, built: NOON, areas: [{ id: "B", name: "B Lot", permits: ["faculty"], always: false, osm: [], at: [-70.93, 43.13] }] }
 
@@ -84,6 +84,8 @@ const load = async ({ at = NOON, saved = {} as Record<string, unknown>, permissi
       return Response.json(places)
     if (url.includes("events.json"))
       return Response.json({ fetched: 0, events: [] })
+    if (url.includes("rooms.json"))
+      return Response.json({ fetched: 0, spaces: [], days: [] })
     if (url.includes("courses.json"))
       return Response.json({ built: 0, calendar: { fetched: 0, noClass: [], swaps: {}, holidays: [], terms: {} }, terms: [], files: [] })
     if (url.includes("parking.json"))

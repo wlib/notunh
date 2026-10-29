@@ -22,6 +22,7 @@ import { room, rooms } from "./laundry.mts"
 import { type Ask, Setting, vapidOf } from "./reminders.mts"
 import { social } from "./social.mts"
 import { previews } from "./preview.mts"
+import { rooms as bookings } from "./rooms.mts"
 
 type Worker = { Bindings: Env }
 
@@ -32,8 +33,8 @@ const isBuild = bearerAuth<Worker>({
   verifyToken: async (token, c) => Boolean(c.env.BUILD_TOKEN) && timingSafeEqual(token, c.env.BUILD_TOKEN!)
 })
 
-// Every route under /api/ but health, laundry's, reminders', and the social routes, which go by each device's own secret
-app.use("/api/*", (c, next) => /^\/api\/(health$|laundry\/|push\/|reminders\/|pins|link|email|me$|state$|session$)/.test(c.req.path) ? next() : isBuild(c, next))
+// Every route under /api/ but health, laundry's, the rooms', reminders', and the social routes, which go by each device's own secret
+app.use("/api/*", (c, next) => /^\/api\/(health$|laundry\/|rooms\/|push\/|reminders\/|pins|link|email|me$|state$|session$)/.test(c.req.path) ? next() : isBuild(c, next))
 
 /** Part of a request as a schema makes it, its JSON body by default, or a 400 saying what's wrong with it */
 const valid = <S extends StandardSchemaV1, T extends "json" | "form" | "query" | "param" = "json">(schema: S, target = "json" as T) =>
@@ -194,6 +195,9 @@ app.delete("/api/push/devices/:device", valid(v.object({ device: ID }), "param")
   const secret = secretOf(c.req.header("authorization"))
   return secret ? ask(c.env, c.req.valid("param").device, { kind: "forget", secret }) : c.text("No secret", 401)
 })
+
+// What's booked in the rooms 25Live books, said to each asker as they may see it (rooms.mts)
+app.route("/", bookings)
 
 // Pins, marks, device links and email verification (social.mts)
 app.route("/", social)

@@ -1,14 +1,15 @@
 /** @jsxImportSource bruh/browser */
 
 // The pages the sheet shows over the home, each at a link of its own (link.mts): a section, which leads with its
-// next meeting; an instructor, with their next scheduled class and their week; a room, with what's scheduled there
-// today; a course, with what it needs and unlocks, the programs naming it, and its sections, the next term's too; a
-// place, with what's on there, the stop beside it and its own facts; an event, with Going for one made here; parking
-// near a place, and a parking area (Parking.tsx); a program, a planning view of its own (Program.tsx); a stop and a
-// bus (StopView.tsx, BusView.tsx); directions (Directions.tsx); a new event (NewEvent.tsx); you (You.tsx); and the
-// buses (Buses.tsx). Each offers Directions and Remind for the visit it leads with, which need nothing saved, and
-// where to park for it, and says where it is, which the map marks. What's said of a person is their scheduled
-// teaching from the registrar's sections, and of a room its classes, which never make it free
+// next meeting; an instructor, with their next scheduled class and their week; a room, whether it's free and what's
+// booked and scheduled there (Rooms.tsx); a course, with what it needs and unlocks, the programs naming it, and its
+// sections, the next term's too; a place, with what's on there, the stop beside it and its own facts; an event, with
+// Going for one made here; parking near a place, and a parking area (Parking.tsx); a program, a planning view of its
+// own (Program.tsx); a stop and a bus (StopView.tsx, BusView.tsx); directions (Directions.tsx); a new event
+// (NewEvent.tsx); you (You.tsx); and the buses (Buses.tsx). Each offers Directions and Remind for the visit it leads
+// with, which need nothing saved, and where to park for it, and says where it is, which the map marks. What's said of
+// a person is their scheduled teaching from the registrar's sections, and of a room 25Live doesn't book its classes,
+// which never make it free
 
 import type { BruhChild } from "bruh/browser"
 import { type DerivativeNode, type SourceNode, r } from "bruh/reactive"
@@ -18,12 +19,12 @@ import { state } from "../state/map.mts"
 import { type CourseEvent, type Meeting, type Section, type Term, KINDS, codeOf, courseOf, registrarUrl, standing } from "../../courses/course.mts"
 import type { Courses } from "../../courses/browser/terms.mts"
 import { type Person, nextTeaching } from "../../courses/people.mts"
-import { roomKey } from "../../courses/rooms.mts"
 import { mailto } from "../../courses/email.mts"
 import { type Dated, datedFrom, daysOf, isSaved, keyOf, patternsOf } from "../../courses/saved.mts"
 import { reqsOf } from "../../programs/prereqs.mts"
 import { type Event, type Pin, type Source as EventSource, LINGER, placeOf, upcoming, whereOf } from "../../social/event.mts"
 import { isUnset } from "../../social/marks.mts"
+import { gathered } from "../../social/sport.mts"
 import { askOf } from "../../social/ask.mts"
 import * as social from "../../social/browser/api.mts"
 import { share as shareStory } from "../../social/story.mts"
@@ -38,6 +39,7 @@ import { type Occurrence, type Visit, thereBy, visitOf } from "../../shared/visi
 import { clockOf, daysBetween, localDay, localMinutes, nextAt } from "../../shared/time.mts"
 import type { Place } from "../../places/search.mts"
 import { type Chapter, chapterNamed } from "../../places/chapters.mts"
+import { servicesAt } from "../../places/services.mts"
 import { ClockRange, ClockTime, Count, Counted, Day, DayRange, List, Minutes, Weekdays, relativeDay } from "../../shell/intl.tsx"
 import { capture } from "../../shell/usage.tsx"
 import { minutes, nowMs, walkTo } from "./common.tsx"
@@ -53,6 +55,7 @@ import { DirectionsView } from "./Directions.tsx"
 import { NewEventView } from "./NewEvent.tsx"
 import { YouView } from "./You.tsx"
 import { BusesView } from "./Buses.tsx"
+import { RoomView, SpacesHere } from "./Rooms.tsx"
 import { NewEvent } from "./Home.tsx"
 
 /** A notice for the page shown, like a link copied */
@@ -66,9 +69,9 @@ const pinOf = (id: string) => {
   return pins.get(id)!
 }
 
-/** An event by its id, if it's one of the build's or on today's list, as it is there, so its page shows at once */
+/** An event by its id, or another calendar's id for it, if it's one of the build's or on today's list, as it is there, so its page shows at once */
 const listedEvent = (id: string): Event | Pin | undefined =>
-  [...state.todayList.peek(), ...state.events.peek().events].find(event => event.id === id)
+  [...state.todayList.peek(), ...state.events.peek().events].find(event => event.id === id || event.also?.includes(id))
 
 /** Minutes after midnight on Durham's clock as a range, "2:10 – 3:30 PM", as the registrar's patterns are */
 export const Hours = ({ start, end }: Pick<Meeting, "start" | "end">) =>
@@ -93,7 +96,7 @@ export const placeNamed = (name: string | undefined) =>
   placeOf(state.gazetteer.peek(), name) ?? state.buildings.peek().find(building => building.name === name)
 
 /** Where a page is, marked on the map while it's shown: a place, by name, and when, as an occurrence there begins */
-const focusOn = (page: Page, name: string | undefined, at?: number) => {
+export const focusOn = (page: Page, name: string | undefined, at?: number) => {
   const place = placeNamed(name)
   // A map label is text the map draws, not elements, so its time is formatted here
   state.focusAt(page, place && { place, label: at === undefined ? place.name : `${place.name} · ${clockOf(at)}` })
@@ -138,8 +141,8 @@ export const Head = ({ kind, title, name }: { kind?: BruhChild, title: string, n
 }
 
 /** A row of a page's list: when, what and where, and how it stands, which a tap opens, and beside it what else it offers */
-export const Row = ({ time, what, sub, standing, onclick, aside }: { time?: BruhChild, what: BruhChild, sub?: BruhChild, standing?: BruhChild, onclick?: () => void, aside?: BruhChild }) =>
-  <li>
+export const Row = ({ time, what, sub, standing, onclick, aside, class: className }: { time?: BruhChild, what: BruhChild, sub?: BruhChild, standing?: BruhChild, onclick?: () => void, aside?: BruhChild, class?: string }) =>
+  <li class={className}>
     <button type="button" class="row" onclick={onclick}>
       {time !== undefined && <span class="row-time">{time}</span>}
       <span class="row-what">
@@ -209,7 +212,7 @@ const Loading = () =>
   r(() => <p class="muted">{state.coursesFailed.value ? "The courses couldn't load. Try again once online." : "Loading courses…"}</p>)
 
 /** The courses, once loaded, to show a page of */
-const withCourses = (show: (courses: Courses) => BruhChild) =>
+export const withCourses = (show: (courses: Courses) => BruhChild) =>
   r(() => state.courses.value ? show(state.courses.value) : <Loading />)
 
 const Missing = ({ what, why = "Not in the terms notunh has now." }: { what: string, why?: string }) =>
@@ -219,7 +222,7 @@ const Missing = ({ what, why = "Not in the terms notunh has now." }: { what: str
   </>
 
 /** Where to go, how long it takes from here, and when to leave to be there in time, as a page's facts say */
-const Facts = ({ where, place, visit, extra }: { where: string, place?: string, visit?: Visit, extra?: string }) =>
+export const Facts = ({ where, place, visit, extra }: { where: string, place?: string, visit?: Visit, extra?: string }) =>
   r(() => {
     const walk = walkTo(placeNamed(place))
     return (
@@ -254,11 +257,11 @@ const Needs = ({ code }: { code: string }) =>
   })
 
 /** When the registrar's data was read, and what else a page's foot says */
-const Source = ({ term, extra }: { term: Pick<Term, "fetched">, extra?: BruhChild }) =>
+export const Source = ({ term, extra }: { term: Pick<Term, "fetched">, extra?: BruhChild }) =>
   <p class="view-foot muted">UNH Time &amp; Room, fetched <Day of={localDay(term.fetched)} month="short" day="numeric" />{extra}</p>
 
 /** What a list of a room's classes leaves unsaid, as the registrar schedules classes alone */
-const CLASSES_ONLY = " · classes only; a room with none may still be booked"
+export const CLASSES_ONLY = " · classes only; a room with none may still be booked"
 
 const SectionView = ({ courses, term, section }: { courses: Courses, term: Term, section: Section }) => {
   const key = keyOf(term.code, section.crn)
@@ -439,39 +442,6 @@ export const SectionRow = ({ term, section, aside }: { term: Term, section: Sect
     onclick={() => state.go(sectionPage(term, section))}
   />
 
-const RoomView = ({ courses, where }: { courses: Courses, where: string }) => {
-  const meeting = courses.terms.flatMap(term => term.sections).flatMap(section => section.meetings).find(meeting => roomKey(meeting.where) === roomKey(where))
-  const named = meeting?.where ?? where
-  const place = meeting?.place
-  focusOn({ kind: "room", where }, place)
-  return (
-    <>
-      <Head kind={place ? `Room · ${place}` : "Room"} title={named} />
-      {place && <Facts where={place} place={place} />}
-      <div class="view-actions">
-        {place && <button type="button" class="button primary" onclick={() => directions(placeNamed(place), named)}>Directions</button>}
-        <button type="button" class="button" onclick={() => share(named)}>Share</button>
-      </div>
-      <h3 class="eyebrow">Today</h3>
-      {r(() => {
-        const today = courses.schedule.on({ room: named }, localDay(nowMs()))
-        return today.length
-          ? <ul class="rows">{today.map(({ term, section, event, also }) =>
-              <Row
-                time={<Span {...event} />}
-                what={<List type="unit" items={[section, ...also].map(courseOf)} />}
-                sub={section.title}
-                standing={event.end <= nowMs() ? "ended" : event.start <= nowMs() ? "now" : undefined}
-                onclick={() => state.go(sectionPage(term, section))}
-              />
-            )}</ul>
-          : <p class="muted">No classes scheduled here today.</p>
-      })}
-      {courses.terms.length > 0 && <Source term={courses.terms[0]} extra={CLASSES_ONLY} />}
-    </>
-  )
-}
-
 /** A term's sections of a course, or that it isn't offered, which a term to come leaves unsaid */
 const Offered = ({ term, code, isLater }: { term: Term, code: string, isLater?: boolean }) => {
   const sections = term.sections.filter(section => courseOf(section) === code)
@@ -507,18 +477,55 @@ const CourseView = ({ courses, code }: { courses: Courses, code: string }) => {
  * An event as a row: when, its day too where it isn't on the day the row's under, or that its time's still to pick,
  * what, and where, which opens its page
  */
-export const EventRow = ({ event, day = localDay(nowMs()), standing }: { event: Event | Pin, day?: string, standing?: BruhChild }) =>
+export const EventRow = ({ event, day = localDay(nowMs()), standing, muted }: { event: Event | Pin, day?: string, standing?: BruhChild, muted?: boolean }) =>
   <Row
+    class={muted ? "practice" : undefined}
     time={
       isUnset(event)               ? "To pick" :
       localDay(event.start) === day ? <Span {...event} /> :
                                       <><DayName day={localDay(event.start)} /><small><ClockTime at={new Date(event.start)} /></small></>
     }
     what={event.title}
-    sub={whereOf(event)}
+    sub={event.left === undefined ? whereOf(event) : <>{whereOf(event)} · <Counted value={event.left} one="spot left" other="spots left" /></>}
     standing={standing}
     onclick={() => state.go({ kind: "event", id: event.id })}
   />
+
+/** How many spots are left of one to sign up for, and till when: "8 spots left · sign up by Sat, Oct 31" */
+const SpotsLeft = ({ event }: { event: Event }) =>
+  <>
+    <Counted value={event.left!} one="spot left" other="spots left" />
+    {event.closes !== undefined && <> · sign up by <Day of={localDay(event.closes - 1)} weekday="short" month="short" day="numeric" /></>}
+  </>
+
+/** A day's practices, as one muted line that opens to show each: "3 practices" over "Baseball, Softball · Bremner Field" */
+const PracticesRow = ({ practices, place, day = localDay(nowMs()) }: { practices: (Event | Pin)[], place?: string, day?: string }) => {
+  const [first] = practices
+  return (
+    <li class="practices">
+      <details>
+        <summary class="row">
+          <span class="row-time">{localDay(first.start) === day ? <Span {...first} /> : <><DayName day={localDay(first.start)} /><small><ClockTime at={new Date(first.start)} /></small></>}</span>
+          <span class="row-what">
+            <strong class="truncate"><Counted value={practices.length} one="practice" other="practices" /></strong>
+            <span class="muted truncate"><List type="unit" items={[...new Set(practices.map(({ title }) => title.split(":")[0]))]} />{place && ` · ${place}`}</span>
+          </span>
+          <span class="row-state">›</span>
+        </summary>
+        <ul class="rows">{practices.map(event => <EventRow event={event} day={day} />)}</ul>
+      </details>
+    </li>
+  )
+}
+
+/**
+ * A list's events with each day's practices, holds and rehearsals after the rest, as gathered in
+ * src/social/sport.mts, the same in every list, so a field with only practices still says something's on there
+ */
+export const EventLines = ({ events, day, standing }: { events: (Event | Pin)[], day?: string, standing?: BruhChild }) =>
+  <>{gathered(events).map(line =>
+    "event" in line ? <EventRow event={line.event} day={day} standing={line.isMuted ? undefined : standing} muted={line.isMuted} /> :
+                      <PracticesRow {...line} day={day} />)}</>
 
 /** How many events search lists */
 const FOUND = 5
@@ -671,18 +678,20 @@ const PlaceView = ({ name }: { name: string }) => {
         return <>
           {here.length > 0 && <>
             <h3 class="eyebrow">Here today</h3>
-            <ul class="rows">{here.map(event => <EventRow event={event} />)}</ul>
+            <ul class="rows"><EventLines events={here} /></ul>
           </>}
           <h3 class="eyebrow">This week</h3>
           <ul class="rows">
-            {week.map(({ event }) => <EventRow event={event} day="" />)}
+            <EventLines events={week.map(({ event }) => event)} day="" />
             <NewEvent place={name} />
           </ul>
         </>
       })}
       <NearestStop place={place} />
+      <SpacesHere name={name} />
       <ScheduledNow name={name} />
       <div class="lines">
+        {servicesAt(name).map(({ label, url }) => <LinkLine href={url}>{label}</LinkLine>)}
         {chapter && <LinkLine href={chapter.url}>UNH chapter page</LinkLine>}
         <Building name={name} />
         <div class="line remind-line place-by">
@@ -729,7 +738,7 @@ const ScheduledNow = ({ name }: { name: string }) =>
   })
 
 /** Where an event's source is, in its own name, for its page's foot */
-const SOURCES: Record<Exclude<EventSource, "pin" | "course">, string> = { presence: "Wildcat Link", "25live": "UNH Events Calendar", athletics: "UNH Athletics", dserec: "Campus Rec sport clubs" }
+const SOURCES: Record<Exclude<EventSource, "pin" | "course">, string> = { presence: "Wildcat Link", "25live": "UNH Events Calendar", athletics: "UNH Athletics", dserec: "Campus Rec sport clubs", rec: "Campus Rec programs" }
 
 /**
  * An event: when and where, Directions and Remind for getting there by its start, and for one made here, its
@@ -762,6 +771,7 @@ const EventView = ({ id }: { id: string }) => {
       : share(event.title)
     const actions = <>
       {pin && !unset && <Going pin={pin} act={act} />}
+      {event.left !== undefined && <a class="button" href={event.url} target="_blank" rel="noopener">Sign up</a>}
       <button type="button" class="button" onclick={shareIt}>Share</button>
     </>
     return (
@@ -769,6 +779,7 @@ const EventView = ({ id }: { id: string }) => {
         <Head kind={pin && <>A UNH student{pin.spots !== undefined && <> · <Counted value={pin.spots} one="spot" other="spots" /></>}</>} title={event.title} />
         <p class="view-when">{unset ? "Time to pick" : <When {...event} />}</p>
         <Facts where={whereOf(event)} place={event.place} />
+        {event.left !== undefined && <p class="view-facts"><SpotsLeft event={event} /></p>}
         {isAsked && <p class="ask" role="status">{askOf(pin).title}</p>}
         {visit
           ? <VisitActions visit={visit} offset={offset} what={event.title}>{actions}</VisitActions>
@@ -813,7 +824,7 @@ export const PageView = ({ page }: { page: Page }) => {
           const person = courses.people.find(person => person.id === page.id)
           return person ? <PersonView courses={courses} person={person} /> : <Missing what="That instructor" />
         }) :
-        page.kind === "room"       ? withCourses(courses => <RoomView courses={courses} where={page.where} />) :
+        page.kind === "room"       ? <RoomView where={page.where} /> :
         page.kind === "course"     ? withCourses(courses => <CourseView courses={courses} code={page.code} />) :
         page.kind === "place"      ? <PlaceView name={page.name} /> :
         page.kind === "parking"    ? <ParkingView page={page} /> :

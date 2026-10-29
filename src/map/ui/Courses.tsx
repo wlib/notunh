@@ -11,6 +11,7 @@ import { codeOf, courseOf } from "../../courses/course.mts"
 import type { Courses } from "../../courses/browser/terms.mts"
 import { type Person, nextTeaching } from "../../courses/people.mts"
 import { crnsIn } from "../../courses/search.mts"
+import { spaceFor } from "../../courses/spaces.mts"
 import { icsOf } from "../../courses/ics.mts"
 import { weekOf } from "../../courses/saved.mts"
 import { visitOf } from "../../shared/visit.mts"
@@ -84,11 +85,13 @@ export const CourseResults = ({ query }: { query: DerivativeNode<string> }) =>
     if (!text || !courses)
       return null
     const { people, sections, rooms } = courses.search(text)
+    // A room 25Live books is among the rooms to book, which say whether it's free (Rooms.tsx)
+    const classrooms = rooms.filter(({ where }) => !spaceFor(state.spaces.value, where))
     return (
       <>
         {people.length > 0 && <Group label="Instructors">{people.map(person => <PersonRow courses={courses} person={person} />)}</Group>}
         {sections.length > 0 && <Group label="Sections">{sections.map(({ term, section }) => <SectionRow term={term} section={section} />)}</Group>}
-        {rooms.length > 0 && <Group label="Rooms">{rooms.map(({ where }) => <RoomRow courses={courses} where={where} />)}</Group>}
+        {classrooms.length > 0 && <Group label="Rooms">{classrooms.map(({ where }) => <RoomRow courses={courses} where={where} />)}</Group>}
       </>
     )
   })

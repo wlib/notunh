@@ -23,6 +23,7 @@ export const ALIASES: Record<string, string> = {
   "Lundholm Gymnasium":          "Field House",
   "Lundholm":                    "Field House",
   "Swasey Pool":                 "Field House",
+  "Swasey Indoor Pool":          "Field House",
   "Whittemore Center":           "Whittemore Center Arena",
   "Whittemore Center at Key Auto Group Complex": "Whittemore Center Arena",
   "Marini Auditorium":           "Paul College",
@@ -55,14 +56,23 @@ export const ALIASES: Record<string, string> = {
 const patternOf = (names: readonly string[]) =>
   new RegExp(`(?<![\\w])(?:${[...names].sort((a, b) => b.length - a.length).map(name => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})(?![\\w])`, "gi")
 
-/** Finds the gazetteer place a venue string means, given the gazetteer's names, or none */
-export const placeMatcher = (names: readonly string[]) => {
+/**
+ * Finds the gazetteer place some text means, given the gazetteer's names and any other names for them, and the words
+ * that named it, or none: the longest name found wins
+ */
+export const placeFinder = (names: readonly string[], others: readonly (readonly [string, string])[] = []) => {
   const known = new Set(names)
-  const aliases = Object.entries(ALIASES).filter(([, name]) => known.has(name))
+  const aliases = [...Object.entries(ALIASES), ...others].filter(([, name]) => known.has(name))
   const byLower = new Map([...names.map(name => [name.toLowerCase(), name] as const), ...aliases.map(([alias, name]) => [alias.toLowerCase(), name] as const)])
   const pattern = patternOf([...byLower.keys()])
-  return (text: string): string | undefined => {
-    const found = [...text.matchAll(pattern)].map(([match]) => match).sort((a, b) => b.length - a.length)[0]
-    return found && byLower.get(found.toLowerCase())
+  return (text: string): { place: string, found: string } | undefined => {
+    const found = byLower.size ? [...text.matchAll(pattern)].map(([match]) => match).sort((a, b) => b.length - a.length)[0] : undefined
+    return found ? { place: byLower.get(found.toLowerCase())!, found } : undefined
   }
+}
+
+/** Finds the gazetteer place a venue string means, given the gazetteer's names, or none */
+export const placeMatcher = (names: readonly string[]) => {
+  const find = placeFinder(names)
+  return (text: string) => find(text)?.place
 }

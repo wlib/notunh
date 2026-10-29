@@ -7,11 +7,12 @@ import { EVENTS } from "../src/social/sources.mts"
 import { COURSES } from "../src/courses/course.mts"
 import { PREREQS } from "../src/programs/prereqs.mts"
 import { PARKING } from "../src/parking/sources.mts"
+import { ROOMS } from "../src/courses/bookings.mts"
 
 export const INPUT_SOURCES = ["src/map/gtfs.json", "src/map/model.json", "src/map/style.json", "src/dining/menus.json", "src/laundry/rooms.json", "src/laundry/usual.json"]
 
-/** What generations made before the campus pages lack: today's events, the courses, the prerequisites, and parking */
-export const LATER_SOURCES = [EVENTS, COURSES, PREREQS, PARKING]
+/** What generations made before the campus pages lack: today's events, the courses, the prerequisites, parking, and the rooms to book */
+export const LATER_SOURCES = [EVENTS, COURSES, PREREQS, PARKING, ROOMS]
 
 const exists = (path: string) =>
   stat(path).then(stats => stats.isFile(), () => false)

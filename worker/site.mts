@@ -2,7 +2,9 @@
 // file by name (src/shell/manifest.mts), so the Worker reads the files the pages do, by their hashed paths, each read
 // once in the isolate for as long as the release naming it is served
 
+import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { type Build, buildOf } from "../src/shell/manifest.mts"
+import { readJson } from "../src/shared/json.mts"
 import { getOrCreate } from "../src/shared/group.mts"
 import { SITE } from "../src/shell/pages.mts"
 
@@ -29,4 +31,12 @@ export const dataOf = <T,>(assets: Fetcher, path: string, parse: (response: Resp
   const data = getOrCreate(read, path, () => assets.fetch(new URL(path, SITE).href).then(parse)) as Promise<T>
   data.catch(() => read.get(path) === data && read.delete(path))
   return data
+}
+
+/** A data file of the map page's, by its name there, as its schema makes it */
+export const named = async <T,>(assets: Fetcher, name: string, schema: StandardSchemaV1<unknown, T>) => {
+  const path = (await siteBuild(assets)).data[name]
+  if (!path)
+    throw new Error(`The map page names no ${name}`)
+  return dataOf(assets, path, response => readJson(response, schema, path))
 }

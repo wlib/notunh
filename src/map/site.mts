@@ -5,7 +5,7 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { type Page, urlOf } from "./link.mts"
-import { plain, areaPreview, coursePreview, eventPreview, meetingWhen, parkingPreview, personPreview, placePreview, programPreview, programsPreview, roomPreview, roomsOf, sectionPreview, stopPreview, weeklyOf, whenOf } from "../social/preview.mts"
+import { plain, areaPreview, coursePreview, eventPreview, meetingWhen, parkingPreview, personPreview, placePreview, programPreview, programsPreview, roomPreview, roomsOf, sectionPreview, spacePreview, stopPreview, weeklyOf, whenOf } from "../social/preview.mts"
 import { type Event, type Pin, EventsData, calendarOf, gazetteerPlaceOf, whereOf } from "../social/event.mts"
 import { type GazetteerPlace, Gazetteer } from "../places/gazetteer.mts"
 import { Places } from "../places/buildings.mts"
@@ -13,6 +13,8 @@ import { chapterNamed } from "../places/chapters.mts"
 import { type Term, type TermEntry, CoursesIndex, KINDS, TermFile, activeTerms, codeOf, courseOf, termOf } from "../courses/course.mts"
 import { createPeople } from "../courses/people.mts"
 import { roomKey } from "../courses/rooms.mts"
+import { RoomsData } from "../courses/bookings.mts"
+import { spaceFor } from "../courses/spaces.mts"
 import { PrereqsIndex } from "../programs/prereqs.mts"
 import { Program, Programs } from "../programs/program.mts"
 import { ParkingData } from "../parking/sources.mts"
@@ -199,7 +201,12 @@ export const resolve = async (site: Site, page: Page, now: number): Promise<Reso
       const terms = await termsOf(site, entries => activeTerms(entries, now))
       const isRoom = (where: string) => roomKey(where) === roomKey(page.where)
       const preview = roomPreview(page.where, terms, isRoom)
-      return preview && {
+      if (!preview) {
+        // A room with no classes, but one anyone can book, like a study room or a court
+        const space = spaceFor((await site.named("rooms", RoomsData)).spaces, page.where)
+        return space && { preview: spacePreview(space), parts: [] }
+      }
+      return {
         preview,
         parts: [{
           heading: "Classes here",

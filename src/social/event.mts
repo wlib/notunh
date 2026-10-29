@@ -19,7 +19,7 @@ export const SHORT = 80
 export const LONG = 500
 
 /** Where events come from; a course's are dated class meetings (src/courses/course.mts), never in events.json */
-export const SOURCES = ["presence", "25live", "athletics", "dserec", "pin", "course"] as const
+export const SOURCES = ["presence", "25live", "athletics", "dserec", "rec", "pin", "course"] as const
 export type Source = typeof SOURCES[number]
 
 /** The calendars official events come from, each as a page names it, and who runs its events where that's one body, which a club's own on Wildcat Link isn't */
@@ -27,7 +27,8 @@ export const CALENDARS: Record<Exclude<Source, "pin" | "course">, { name: string
   presence:  { name: "Wildcat Link" },
   "25live":  { name: "UNH Events Calendar", organizer: { name: "University of New Hampshire", url: "https://www.unh.edu" } },
   athletics: { name: "UNH Athletics", organizer: { name: "UNH Athletics", url: "https://unhwildcats.com" } },
-  dserec:    { name: "UNH Club Sports", organizer: { name: "UNH Club Sports", url: "https://unh.dserec.com/online/clubsports" } }
+  dserec:    { name: "UNH Club Sports", organizer: { name: "UNH Club Sports", url: "https://unh.dserec.com/online/clubsports" } },
+  rec:       { name: "Campus Rec programs", organizer: { name: "UNH Campus Recreation", url: "https://crec.unh.edu" } }
 }
 
 /** The calendar an event is listed on, or none for one made here or a class */
@@ -49,7 +50,12 @@ export const Event = v.object({
   where:  Text(SHORT),
   source: v.picklist(SOURCES),
   /** Where to read more: the source's own page, or a pin's */
-  url:    v.string()
+  url:    v.string(),
+  /** For one to sign up for, as Campus Rec's programs are: how many spots are left, and when signing up closes */
+  left:   v.optional(v.number()),
+  closes: v.optional(v.number()),
+  /** The ids other calendars tell the same thing by, where they do (src/social/sport.mts) */
+  also:   v.optional(v.array(v.string()))
 })
 export type Event = v.InferOutput<typeof Event>
 

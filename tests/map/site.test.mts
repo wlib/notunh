@@ -17,7 +17,7 @@ const FIXTURES = new URL("../fixtures/data/", import.meta.url)
 /** The map page's data files by name, as the fixtures have them, and the buildings, which the build matches */
 const SOURCES: Record<string, string> = {
   events: "src/map/events.json", gazetteer: "src/map/gazetteer.json", gtfs: "src/map/gtfs.json", courses: "src/courses/courses.json",
-  prereqs: "src/programs/prereqs.json", parking: "src/parking/parking.json"
+  prereqs: "src/programs/prereqs.json", parking: "src/parking/parking.json", rooms: "src/map/rooms.json"
 }
 const BUILDINGS = { inputs: "", buildings: [{ id: "dining/holloway-commons", kind: "dining", name: "Holloway Commons", lat: 43.135, lon: -70.934 }] }
 

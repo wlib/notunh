@@ -1,0 +1,2463 @@
+{
+"spaces": {
+"engine": "accl",
+"space": [
+{
+"space_id": 32,
+"space_name": "003 301",
+"formal_name": "Hewitt Hall 301 CHHS Computer Lab",
+"building_name": "Hewitt Hall",
+"max_capacity": 26,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 105,
+"space_name": "007 208",
+"formal_name": "New Hampshire Hall 208 Hannaway Registrar Room",
+"building_name": "New Hampshire Hall",
+"max_capacity": 100,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 113,
+"space_name": "007 G44",
+"formal_name": "New Hampshire Hall G44 Registrar Classroom",
+"building_name": "New Hampshire Hall",
+"max_capacity": 85,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 117,
+"space_name": "008 102",
+"formal_name": "Hamilton Smith Hall 102 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 25,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 118,
+"space_name": "008 103",
+"formal_name": "Hamilton Smith Hall 103 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 24,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 120,
+"space_name": "008 105",
+"formal_name": "Hamilton Smith Hall 105 TEAL Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 45,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 121,
+"space_name": "008 107",
+"formal_name": "Hamilton Smith Hall 107 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 40,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 122,
+"space_name": "008 108",
+"formal_name": "Hamilton Smith Hall 108 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 40,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 123,
+"space_name": "008 124",
+"formal_name": "Hamilton Smith Hall 124 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 24,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 124,
+"space_name": "008 126",
+"formal_name": "Hamilton Smith Hall 126 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 27,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 126,
+"space_name": "008 130",
+"formal_name": "Hamilton Smith Hall 130 TEAL Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 99,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 127,
+"space_name": "008 140",
+"formal_name": "Hamilton Smith Hall 140 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 84,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 128,
+"space_name": "008 150",
+"formal_name": "Hamilton Smith Hall 150 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 80,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 129,
+"space_name": "008 201",
+"formal_name": "Hamilton Smith Hall 201 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 40,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 130,
+"space_name": "008 202",
+"formal_name": "Hamilton Smith Hall 202 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 40,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 131,
+"space_name": "008 205",
+"formal_name": "Hamilton Smith Hall 205 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 120,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 132,
+"space_name": "008 210",
+"formal_name": "Hamilton Smith Hall 210 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 180,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 137,
+"space_name": "008 332",
+"formal_name": "Hamilton Smith Hall 332 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 30,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 140,
+"space_name": "008 344",
+"formal_name": "Hamilton Smith Hall 344 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 24,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 141,
+"space_name": "008 G21",
+"formal_name": "Hamilton Smith Hall G21 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 36,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 142,
+"space_name": "008 G34",
+"formal_name": "Hamilton Smith Hall G34 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 50,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 143,
+"space_name": "008 G35",
+"formal_name": "Hamilton Smith Hall G35 Registrar Classroom",
+"building_name": "Hamilton Smith Hall",
+"max_capacity": 36,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 155,
+"space_name": "014 112",
+"formal_name": "DeMeritt Hall 112 Registrar Classroom",
+"building_name": "DeMeritt Hall",
+"max_capacity": 172,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 160,
+"space_name": "014 240",
+"formal_name": "DeMeritt Hall 240 Registrar Classroom",
+"building_name": "DeMeritt Hall",
+"max_capacity": 72,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 161,
+"space_name": "014 251",
+"formal_name": "DeMeritt Hall 251 Registrar  Classroom",
+"building_name": "DeMeritt Hall",
+"max_capacity": 32,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 181,
+"space_name": "017 125",
+"formal_name": "Paul College 125 TEAL Registrar Classroom",
+"building_name": "Paul College",
+"max_capacity": 40,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 182,
+"space_name": "017 135",
+"formal_name": "Paul College 135 TEAL Registrar Classroom",
+"building_name": "Paul College",
+"max_capacity": 44,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1286,
+"space_name": "017 163",
+"formal_name": "Paul College 163 Classroom",
+"building_name": "Paul College",
+"max_capacity": 30,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 184,
+"space_name": "017 165",
+"formal_name": "Paul College 165 Registrar Classroom",
+"building_name": "Paul College",
+"max_capacity": 80,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 185,
+"space_name": "017 175",
+"formal_name": "Paul College 175 Registrar Classroom",
+"building_name": "Paul College",
+"max_capacity": 80,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 189,
+"space_name": "017 185",
+"formal_name": "Paul College 185 Registrar Classroom",
+"building_name": "Paul College",
+"max_capacity": 80,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 201,
+"space_name": "017 235",
+"formal_name": "Paul College 235 Registrar Classroom",
+"building_name": "Paul College",
+"max_capacity": 40,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 204,
+"space_name": "017 G25",
+"formal_name": "Paul College G25 Executive Development  Classroom",
+"building_name": "Paul College",
+"max_capacity": 72,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 212,
+"space_name": "017 G59",
+"formal_name": "Paul College G59 Classroom",
+"building_name": "Paul College",
+"max_capacity": 40,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 213,
+"space_name": "017 G75",
+"formal_name": "Paul College G75 Registrar Classroom",
+"building_name": "Paul College",
+"max_capacity": 200,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 217,
+"space_name": "017 G85",
+"formal_name": "Paul College G85 Marriott Registrar Classroom",
+"building_name": "Paul College",
+"max_capacity": 80,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 219,
+"space_name": "017 G86",
+"formal_name": "Paul College G86 Collaboration Space",
+"building_name": "Paul College",
+"max_capacity": 6,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 221,
+"space_name": "017 G89",
+"formal_name": "Paul College G89 Hospitality Kitchen",
+"building_name": "Paul College",
+"max_capacity": 20,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 226,
+"space_name": "017 Info 1",
+"formal_name": "Paul College Info 1 Info Table Across from Cafe",
+"building_name": "Paul College",
+"max_capacity": 6,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 228,
+"space_name": "017 Info 3",
+"formal_name": "Paul College Info 3 Info Table-Top of Grand  Staircase",
+"building_name": "Paul College",
+"max_capacity": 6,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 233,
+"space_name": "018 100LBB",
+"formal_name": "Huddleston Hall 100LBB Sunroom Lobby",
+"building_name": "Huddleston Hall",
+"max_capacity": 1,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 234,
+"space_name": "018 105",
+"formal_name": "Huddleston Hall 105 Huddleston Ballroom",
+"building_name": "Huddleston Hall",
+"max_capacity": 200,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 235,
+"space_name": "018 110",
+"formal_name": "Huddleston Hall 110 Sunroom",
+"building_name": "Huddleston Hall",
+"max_capacity": 190,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 243,
+"space_name": "018 224A",
+"formal_name": "Huddleston Hall 224A Registrar Classroom",
+"building_name": "Huddleston Hall",
+"max_capacity": 22,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 244,
+"space_name": "018 224B",
+"formal_name": "Huddleston Hall 224B Registrar Classroom",
+"building_name": "Huddleston Hall",
+"max_capacity": 24,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 270,
+"space_name": "025 102",
+"formal_name": "Murkland Hall 102 Registrar Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 35,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 271,
+"space_name": "025 104",
+"formal_name": "Murkland Hall 104 Registrar Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 35,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 272,
+"space_name": "025 115",
+"formal_name": "Murkland Hall 115 Richard's  Auditorium-Registrar",
+"building_name": "Murkland Hall",
+"max_capacity": 230,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 273,
+"space_name": "025 118",
+"formal_name": "Murkland Hall 118 Registrar Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 30,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 274,
+"space_name": "025 201",
+"formal_name": "Murkland Hall 201 Registrar Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 25,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 275,
+"space_name": "025 202",
+"formal_name": "Murkland Hall 202 Registrar Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 40,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 276,
+"space_name": "025 203",
+"formal_name": "Murkland Hall 203 Registrar Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 25,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 277,
+"space_name": "025 204",
+"formal_name": "Murkland Hall 204 Registrar Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 25,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 281,
+"space_name": "025 G01",
+"formal_name": "Murkland Hall G01 Registrar Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 27,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 282,
+"space_name": "025 G02",
+"formal_name": "Murkland Hall G02 Registrar Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 40,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 283,
+"space_name": "025 G04",
+"formal_name": "Murkland Hall G04 Registrar Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 25,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 287,
+"space_name": "025 G15",
+"formal_name": "Murkland Hall G15 Classroom",
+"building_name": "Murkland Hall",
+"max_capacity": 30,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 289,
+"space_name": "025 G17",
+"formal_name": "Murkland Hall G17 Registrar Film Room",
+"building_name": "Murkland Hall",
+"max_capacity": 48,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 303,
+"space_name": "026 G46",
+"formal_name": "James Hall G46 Registrar Classroom",
+"building_name": "James Hall",
+"max_capacity": 80,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 305,
+"space_name": "026 G54",
+"formal_name": "James Hall G54 Registrar Classroom",
+"building_name": "James Hall",
+"max_capacity": 40,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 339,
+"space_name": "032 350",
+"formal_name": "Field House 350 Lundholm Loft",
+"building_name": "Field House",
+"max_capacity": 100,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 343,
+"space_name": "035 106",
+"formal_name": "Pettee Hall 106 Registrar Classroom",
+"building_name": "Pettee Hall",
+"max_capacity": 48,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 344,
+"space_name": "035 109",
+"formal_name": "Pettee Hall 109 Registrar Classroom",
+"building_name": "Pettee Hall",
+"max_capacity": 20,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 345,
+"space_name": "035 114",
+"formal_name": "Pettee Hall 114 Registrar Classroom",
+"building_name": "Pettee Hall",
+"max_capacity": 40,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 352,
+"space_name": "035 G02",
+"formal_name": "Pettee Hall G02 Registrar Classroom",
+"building_name": "Pettee Hall",
+"max_capacity": 28,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 353,
+"space_name": "035 G10",
+"formal_name": "Pettee Hall G10 Registrar Classroom",
+"building_name": "Pettee Hall",
+"max_capacity": 70,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 375,
+"space_name": "048 N101",
+"formal_name": "Kingsbury Hall N101 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 86,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 378,
+"space_name": "048 N113",
+"formal_name": "Kingsbury Hall N113 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 48,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 380,
+"space_name": "048 N121",
+"formal_name": "Kingsbury Hall N121 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 54,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 381,
+"space_name": "048 N129",
+"formal_name": "Kingsbury Hall N129 Registrar Computer Lab",
+"building_name": "Kingsbury Hall",
+"max_capacity": 28,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 383,
+"space_name": "048 N133",
+"formal_name": "Kingsbury Hall N133 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 34,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 384,
+"space_name": "048 N134",
+"formal_name": "Kingsbury Hall N134 AT Computer Lab",
+"building_name": "Kingsbury Hall",
+"max_capacity": 15,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 387,
+"space_name": "048 N204",
+"formal_name": "Kingsbury Hall N204 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 25,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 397,
+"space_name": "048 N310",
+"formal_name": "Kingsbury Hall N310 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 30,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 398,
+"space_name": "048 N328",
+"formal_name": "Kingsbury Hall N328 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 50,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 399,
+"space_name": "048 N334",
+"formal_name": "Kingsbury Hall N334 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 40,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 400,
+"space_name": "048 N343",
+"formal_name": "Kingsbury Hall N343 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 71,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 401,
+"space_name": "048 N345",
+"formal_name": "Kingsbury Hall N345 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 18,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 413,
+"space_name": "048 S145",
+"formal_name": "Kingsbury Hall S145 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 72,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 427,
+"space_name": "048 S236L",
+"formal_name": "Kingsbury Hall S236L Collaboration Space",
+"building_name": "Kingsbury Hall",
+"max_capacity": 12,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 428,
+"space_name": "048 S236M",
+"formal_name": "Kingsbury Hall S236M Collaboration Space",
+"building_name": "Kingsbury Hall",
+"max_capacity": 10,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 429,
+"space_name": "048 S236N",
+"formal_name": "Kingsbury Hall S236N Collaboration Space",
+"building_name": "Kingsbury Hall",
+"max_capacity": 8,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 430,
+"space_name": "048 S236P",
+"formal_name": "Kingsbury Hall S236P Collaboration Space",
+"building_name": "Kingsbury Hall",
+"max_capacity": 14,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 431,
+"space_name": "048 S236T_1",
+"formal_name": "Kingsbury Hall S236T_1 Alcove 1 Collaboration  Space",
+"building_name": "Kingsbury Hall",
+"max_capacity": 5,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 432,
+"space_name": "048 S236T_2",
+"formal_name": "Kingsbury Hall S236T_2 Alcove 2 Collaboration  Space",
+"building_name": "Kingsbury Hall",
+"max_capacity": 5,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 433,
+"space_name": "048 S236T_3",
+"formal_name": "Kingsbury Hall S236T_3 Alcove 3 Collaboration  Space",
+"building_name": "Kingsbury Hall",
+"max_capacity": 5,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 434,
+"space_name": "048 S236T_4",
+"formal_name": "Kingsbury Hall S236T_4 Alcove 4 Collaboration  Space",
+"building_name": "Kingsbury Hall",
+"max_capacity": 5,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 435,
+"space_name": "048 S236T_5",
+"formal_name": "Kingsbury Hall S236T_5 Alcove 5 Collaboration  Space",
+"building_name": "Kingsbury Hall",
+"max_capacity": 5,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 436,
+"space_name": "048 S236T_6",
+"formal_name": "Kingsbury Hall S236T_6 Alcove 6 Collaboration  Space",
+"building_name": "Kingsbury Hall",
+"max_capacity": 5,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 457,
+"space_name": "048 W389",
+"formal_name": "Kingsbury Hall W389 Registrar Classroom",
+"building_name": "Kingsbury Hall",
+"max_capacity": 15,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 475,
+"space_name": "056 *Misc 1",
+"formal_name": "Memorial Union Building Miscellaneous Space (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1281,
+"space_name": "056 *Misc 2",
+"formal_name": "Memorial Union Building Miscellaneous Space 2 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 476,
+"space_name": "056 115",
+"formal_name": "Memorial Union Building 115 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 40,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 477,
+"space_name": "056 117",
+"formal_name": "Memorial Union Building 117 Student Government Conference Room (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 12,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 479,
+"space_name": "056 142",
+"formal_name": "Memorial Union Building 142 Collaboration Space (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 6,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 480,
+"space_name": "056 144",
+"formal_name": "Memorial Union Building 144 Collaboration Space (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 6,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 481,
+"space_name": "056 160",
+"formal_name": "Memorial Union Building 160 Wildcat Den (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 160,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 482,
+"space_name": "056 162",
+"formal_name": "Memorial Union Building 162 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 170,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 483,
+"space_name": "056 164",
+"formal_name": "Memorial Union Building 164 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 150,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 484,
+"space_name": "056 203",
+"formal_name": "Memorial Union Building 203 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 70,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 485,
+"space_name": "056 207",
+"formal_name": "Memorial Union Building 207 Conference Room (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 16,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 486,
+"space_name": "056 221",
+"formal_name": "Memorial Union Building 221 Granite State Room (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 850,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 487,
+"space_name": "056 223",
+"formal_name": "Memorial Union Building 223 Food Court - Low Ceiling (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 489,
+"space_name": "056 223B",
+"formal_name": "Memorial Union Building 223B GSR Green Room (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 490,
+"space_name": "056 225",
+"formal_name": "Memorial Union Building 225 Food Court - High Ceiling (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 491,
+"space_name": "056 231",
+"formal_name": "Memorial Union Building 231 Grafton Lounge (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 492,
+"space_name": "056 233",
+"formal_name": "Memorial Union Building Interfaith Prayer & Meditation Space (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 493,
+"space_name": "056 234",
+"formal_name": "Memorial Union Building 234 Collaboration Space (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 6,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 494,
+"space_name": "056 236",
+"formal_name": "Memorial Union Building 236 Office Space (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 495,
+"space_name": "056 237",
+"formal_name": "Memorial Union Building 237 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 60,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 496,
+"space_name": "056 240",
+"formal_name": "Memorial Union Building 240 Strafford Room (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 450,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 497,
+"space_name": "056 300CRA",
+"formal_name": "Memorial Union Building 300CRA 3rd Fl Lobby (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 498,
+"space_name": "056 302",
+"formal_name": "Memorial Union Building 302 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 75,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 499,
+"space_name": "056 303",
+"formal_name": "Memorial Union Building 303 Memorial Room  (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 500,
+"space_name": "056 304",
+"formal_name": "Memorial Union Building 304 Conference Room (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 10,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 501,
+"space_name": "056 309",
+"formal_name": "Memorial Union Building 309 Merrimack Lounge (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 502,
+"space_name": "056 311",
+"formal_name": "Memorial Union Building 311 Theater I (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 112,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 503,
+"space_name": "056 312",
+"formal_name": "Memorial Union Building 312 Theater II (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 203,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 504,
+"space_name": "056 321",
+"formal_name": "Memorial Union Building 321 Conference Room (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 16,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 505,
+"space_name": "056 330",
+"formal_name": "Memorial Union Building 330 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 87,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 506,
+"space_name": "056 330/332",
+"formal_name": "Memorial Union Building 330/332 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 170,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 507,
+"space_name": "056 332",
+"formal_name": "Memorial Union Building 332 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 87,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 508,
+"space_name": "056 334",
+"formal_name": "Memorial Union Building 334 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 87,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 509,
+"space_name": "056 334/336",
+"formal_name": "Memorial Union Building 334/336 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 170,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 510,
+"space_name": "056 336",
+"formal_name": "Memorial Union Building 336 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 87,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 511,
+"space_name": "056 337",
+"formal_name": "Memorial Union Building 337 Rockingham Lounge (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 512,
+"space_name": "056 338",
+"formal_name": "Memorial Union Building 338 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 87,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 513,
+"space_name": "056 338/340",
+"formal_name": "Memorial Union Building 338/340 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 155,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 514,
+"space_name": "056 340",
+"formal_name": "Memorial Union Building 340 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 87,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 515,
+"space_name": "056 341",
+"formal_name": "Memorial Union Building 341 Lactation Room (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 2,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 516,
+"space_name": "056 A154",
+"formal_name": "Memorial Union Building A154 Games Room - All (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 517,
+"space_name": "056 A154_Pool",
+"formal_name": "Memorial Union Building A154_Pool Games Room Pool Table Side (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 518,
+"space_name": "056 A154_Vide o",
+"formal_name": "Memorial Union Building A154_Vide o Games Room Video Side (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 519,
+"space_name": "056 G12",
+"formal_name": "Memorial Union Building G12 (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 520,
+"space_name": "056 G14",
+"formal_name": "Memorial Union Building G14 MUB Art Space (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 36,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 521,
+"space_name": "056 G18",
+"formal_name": "Memorial Union Building G18 The Underground (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 160,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 522,
+"space_name": "056 Info 1",
+"formal_name": "Memorial Union Building Info 1 Table (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 2,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 523,
+"space_name": "056 Info 2",
+"formal_name": "Memorial Union Building Info 2 Table (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 2,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 524,
+"space_name": "056 Info 3",
+"formal_name": "Memorial Union Building Info 3 Table (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 2,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 525,
+"space_name": "056 Info 4",
+"formal_name": "Memorial Union Building Info 4 Table (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 2,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 527,
+"space_name": "056 South Deck",
+"formal_name": "Memorial Union Building South Deck (MUB)",
+"building_name": "Memorial Union Building / MUB",
+"max_capacity": 1,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 532,
+"space_name": "057 121",
+"formal_name": "Dimond Library 121 Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 5,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 533,
+"space_name": "057 123",
+"formal_name": "Dimond Library 123 Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 4,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 534,
+"space_name": "057 125",
+"formal_name": "Dimond Library 125 Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 4,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 538,
+"space_name": "057 221_A",
+"formal_name": "Dimond Library 221_A Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 10,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 539,
+"space_name": "057 221_B",
+"formal_name": "Dimond Library 221_B Alcove - Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 5,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 540,
+"space_name": "057 221_C",
+"formal_name": "Dimond Library 221_C Alcove - Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 5,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 541,
+"space_name": "057 221_D",
+"formal_name": "Dimond Library 221_D Alcove - Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 5,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 542,
+"space_name": "057 221_E",
+"formal_name": "Dimond Library 221_E Alcove - Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 5,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 543,
+"space_name": "057 221_F",
+"formal_name": "Dimond Library 221_F Alcove - Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 5,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 544,
+"space_name": "057 221_G",
+"formal_name": "Dimond Library 221_G Alcove - Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 5,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 545,
+"space_name": "057 235",
+"formal_name": "Dimond Library 235 Studio",
+"building_name": "Dimond Library",
+"max_capacity": 24,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 546,
+"space_name": "057 237",
+"formal_name": "Dimond Library 237  Parker Media Lab (PML)",
+"building_name": "Dimond Library",
+"max_capacity": 9,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 550,
+"space_name": "057 305",
+"formal_name": "Dimond Library 305 Hubbard Reading Reading  Room",
+"building_name": "Dimond Library",
+"max_capacity": 410,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 553,
+"space_name": "057 321",
+"formal_name": "Dimond Library 321 Office",
+"building_name": "Dimond Library",
+"max_capacity": 3,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 554,
+"space_name": "057 327",
+"formal_name": "Dimond Library 327 Conference Room",
+"building_name": "Dimond Library",
+"max_capacity": 10,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 556,
+"space_name": "057 343",
+"formal_name": "Dimond Library 343 Conference Room",
+"building_name": "Dimond Library",
+"max_capacity": 23,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 557,
+"space_name": "057 349",
+"formal_name": "Dimond Library 349 Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 5,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 558,
+"space_name": "057 351",
+"formal_name": "Dimond Library 351 Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 5,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 559,
+"space_name": "057 352",
+"formal_name": "Dimond Library 352 Conference Room",
+"building_name": "Dimond Library",
+"max_capacity": 24,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 560,
+"space_name": "057 354",
+"formal_name": "Dimond Library 354 Lactation/Nursing Mother's Room",
+"building_name": "Dimond Library",
+"max_capacity": 2,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 561,
+"space_name": "057 421",
+"formal_name": "Dimond Library 421 Daggett Instruction Room",
+"building_name": "Dimond Library",
+"max_capacity": 50,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 566,
+"space_name": "057 537",
+"formal_name": "Dimond Library 537 Collaboration Space",
+"building_name": "Dimond Library",
+"max_capacity": 16,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 600,
+"space_name": "061 A218",
+"formal_name": "Paul Creative Arts Center A218 Registrar Classroom (PCAC)",
+"building_name": "Paul Creative Arts Center",
+"max_capacity": 130,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 609,
+"space_name": "061 D201",
+"formal_name": "Paul Creative Arts Center D201 Johnson Theatre (PCAC)",
+"building_name": "Paul Creative Arts Center",
+"max_capacity": 667,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 633,
+"space_name": "061 M316",
+"formal_name": "Paul Creative Arts Center M316 THDA Classroom (PCAC)",
+"building_name": "Paul Creative Arts Center",
+"max_capacity": 25,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 638,
+"space_name": "062 120",
+"formal_name": "Spaulding Life Sciences 120 Classroom",
+"building_name": "Spaulding Life Sciences",
+"max_capacity": 24,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 640,
+"space_name": "062 145",
+"formal_name": "Spaulding Life Sciences 145 Registrar Classroom",
+"building_name": "Spaulding Life Sciences",
+"max_capacity": 270,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 641,
+"space_name": "062 165",
+"formal_name": "Spaulding Life Sciences 165 Classroom",
+"building_name": "Spaulding Life Sciences",
+"max_capacity": 24,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 651,
+"space_name": "062 G25",
+"formal_name": "Spaulding Life Sciences G25 Registrar's Classroom",
+"building_name": "Spaulding Life Sciences",
+"max_capacity": 80,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 652,
+"space_name": "062 G47",
+"formal_name": "Spaulding Life Sciences G47  Classroom",
+"building_name": "Spaulding Life Sciences",
+"max_capacity": 40,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 714,
+"space_name": "077 150Pod 1 2  3 4",
+"formal_name": "Stoke Hall  150Pod 1 2  3 4 All Pods",
+"building_name": "Stoke Hall",
+"max_capacity": 40,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 721,
+"space_name": "082 N104",
+"formal_name": "Parsons Hall N104 Registrar Classroom",
+"building_name": "Parsons Hall",
+"max_capacity": 120,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 722,
+"space_name": "082 N108",
+"formal_name": "Parsons Hall N108 Registrar Classroom",
+"building_name": "Parsons Hall",
+"max_capacity": 216,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 724,
+"space_name": "082 N114",
+"formal_name": "Parsons Hall N114 Registrar Classroom",
+"building_name": "Parsons Hall",
+"max_capacity": 40,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 725,
+"space_name": "082 N116",
+"formal_name": "Parsons Hall N116 Registrar Classroom",
+"building_name": "Parsons Hall",
+"max_capacity": 65,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 738,
+"space_name": "082 NB22",
+"formal_name": "Parsons Hall NB22 Registrar Classroom",
+"building_name": "Parsons Hall",
+"max_capacity": 40,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 739,
+"space_name": "082 NB24",
+"formal_name": "Parsons Hall NB24 Registrar Classroom",
+"building_name": "Parsons Hall",
+"max_capacity": 35,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 783,
+"space_name": "088 201",
+"formal_name": "Horton Social Science Center 201 Registrar Classroom",
+"building_name": "Horton Social Science Center",
+"max_capacity": 42,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 784,
+"space_name": "088 204",
+"formal_name": "Horton Social Science Center 204 Registrar Classroom",
+"building_name": "Horton Social Science Center",
+"max_capacity": 70,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 785,
+"space_name": "088 207",
+"formal_name": "Horton Social Science Center 207 Registrar Classroom",
+"building_name": "Horton Social Science Center",
+"max_capacity": 78,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 786,
+"space_name": "088 210",
+"formal_name": "Horton Social Science Center 210 Registrar Classroom",
+"building_name": "Horton Social Science Center",
+"max_capacity": 146,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 787,
+"space_name": "088 215",
+"formal_name": "Horton Social Science Center 215 Registrar Classroom",
+"building_name": "Horton Social Science Center",
+"max_capacity": 40,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 788,
+"space_name": "088 304",
+"formal_name": "Horton Social Science Center 304 Registrar Classroom",
+"building_name": "Horton Social Science Center",
+"max_capacity": 50,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 789,
+"space_name": "088 307",
+"formal_name": "Horton Social Science Center 307 Registrar Classroom",
+"building_name": "Horton Social Science Center",
+"max_capacity": 72,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 795,
+"space_name": "088 B04",
+"formal_name": "Horton Social Science Center B04  Registrar Classroom",
+"building_name": "Horton Social Science Center",
+"max_capacity": 290,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 804,
+"space_name": "089 220",
+"formal_name": "Mcconnell Hall 220 Howard Butcher III  Registrar Classroom",
+"building_name": "Mcconnell Hall",
+"max_capacity": 75,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 805,
+"space_name": "089 230",
+"formal_name": "Mcconnell Hall 230 Registrar Classroom",
+"building_name": "Mcconnell Hall",
+"max_capacity": 55,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 806,
+"space_name": "089 240",
+"formal_name": "Mcconnell Hall 240 Ben Dorson Lecture  Hall-Registrar",
+"building_name": "Mcconnell Hall",
+"max_capacity": 154,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 807,
+"space_name": "089 245",
+"formal_name": "Mcconnell Hall 245 Registrar Classroom",
+"building_name": "Mcconnell Hall",
+"max_capacity": 39,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 810,
+"space_name": "089 340",
+"formal_name": "Mcconnell Hall 340 Registrar Classroom",
+"building_name": "Mcconnell Hall",
+"max_capacity": 66,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 815,
+"space_name": "091 170F",
+"formal_name": "New England Center 170F Lactation Room",
+"building_name": "",
+"max_capacity": 2,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 837,
+"space_name": "095_C C219",
+"formal_name": "Cole Hall C219 Registrar Classroom",
+"building_name": "Cole Hall",
+"max_capacity": 150,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 854,
+"space_name": "110 106",
+"formal_name": "Kendall Hall 106 Registrar's Classroom",
+"building_name": "Kendall Hall",
+"max_capacity": 24,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 859,
+"space_name": "110 205",
+"formal_name": "Kendall Hall 205 Registrar Classroom",
+"building_name": "Kendall Hall",
+"max_capacity": 30,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 941,
+"space_name": "292 217",
+"formal_name": "Morse Hall 217 Registrar's Classroom",
+"building_name": "Morse Hall",
+"max_capacity": 40,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 945,
+"space_name": "292 A121",
+"formal_name": "Morse Hall A121 Lactation Room",
+"building_name": "Morse Hall",
+"max_capacity": 2,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 946,
+"space_name": "293 110",
+"formal_name": "Gregg Hall 110 Registrar  Classroom",
+"building_name": "Gregg Hall",
+"max_capacity": 40,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 991,
+"space_name": "335 G79",
+"formal_name": "Rudman Hall G79 Sustainability Institute Hub",
+"building_name": "Rudman Hall",
+"max_capacity": 14,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 992,
+"space_name": "335 G89",
+"formal_name": "Rudman Hall G89 Registrar Classroom",
+"building_name": "Rudman Hall",
+"max_capacity": 50,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 995,
+"space_name": "336 105",
+"formal_name": "Chase Ocean Engineering Laboratory 105 Registrar Classroom",
+"building_name": "Chase Ocean Engineering Laboratory",
+"max_capacity": 84,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1008,
+"space_name": "337 C00LBA",
+"formal_name": "Whittemore Center Arena C00LBA Whittemore Lobby",
+"building_name": "Whittemore Center Arena",
+"max_capacity": 400,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1009,
+"space_name": "337 I14",
+"formal_name": "Whittemore Center Arena I14 Conference Room",
+"building_name": "Whittemore Center Arena",
+"max_capacity": 12,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1010,
+"space_name": "337 M01",
+"formal_name": "Whittemore Center Arena M01 Skybox Lounge",
+"building_name": "Whittemore Center Arena",
+"max_capacity": 184,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1011,
+"space_name": "337 R23",
+"formal_name": "Whittemore Center Arena R23 Media Room",
+"building_name": "Whittemore Center Arena",
+"max_capacity": 50,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1012,
+"space_name": "337 R40",
+"formal_name": "Whittemore Center Arena R40 Rink Ice Only",
+"building_name": "Whittemore Center Arena",
+"max_capacity": 300,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1013,
+"space_name": "337 RA-D",
+"formal_name": "Whittemore Center Arena RA-D Locker Rooms/Special Areas",
+"building_name": "Whittemore Center Arena",
+"max_capacity": 50,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1014,
+"space_name": "337 Whitt Arena - Event Rental",
+"formal_name": "Whittemore Center Arena Whitt Arena - Event Rental",
+"building_name": "Whittemore Center Arena",
+"max_capacity": 6500,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1018,
+"space_name": "365 103",
+"formal_name": "10 West Edge Drive 103 Lactation Room",
+"building_name": "10 West Edge Drive",
+"max_capacity": 2,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1023,
+"space_name": "530 101",
+"formal_name": "UNH School of Law - Room 101 (Zeliff Conference Room)",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 14,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1024,
+"space_name": "530 102",
+"formal_name": "UNH School of Law - Room 102",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 18,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1025,
+"space_name": "530 103",
+"formal_name": "UNH School of Law - Room 103",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 36,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1027,
+"space_name": "530 146",
+"formal_name": "UNH School of Law - Room 146 (OneTouch Recording Studio)",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 4,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1028,
+"space_name": "530 147",
+"formal_name": "UNH School of Law - Room 147 (Post-Production Room)",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 4,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1029,
+"space_name": "530 150",
+"formal_name": "UNH School of Law - Jury Box Caf\u00e9",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 127,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1254,
+"space_name": "530 150T",
+"formal_name": "UNH School of Law - Jury Box Caf\u00e9 Table",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 127,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1030,
+"space_name": "530 151",
+"formal_name": "UNH School of Law - Rotunda 1st Floor",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 50,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1031,
+"space_name": "530 170",
+"formal_name": "UNH School of Law - FPCIP Lobby",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 185,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1032,
+"space_name": "530 175",
+"formal_name": "UNH School of Law - Room 175 (Tenney Family Board Room)",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 20,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1033,
+"space_name": "530 200",
+"formal_name": "UNH School of Law - Room 200",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 77,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1034,
+"space_name": "530 201",
+"formal_name": "UNH School of Law - Room 201",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 23,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1035,
+"space_name": "530 202",
+"formal_name": "UNH School of Law - Room 202",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 16,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1036,
+"space_name": "530 204",
+"formal_name": "UNH School of Law - Room 204 (Rich Room)",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 140,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1037,
+"space_name": "530 205",
+"formal_name": "UNH School of Law - Room 205",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 75,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1038,
+"space_name": "530 222",
+"formal_name": "UNH School of Law - Main Lobby",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 50,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1253,
+"space_name": "530 222R",
+"formal_name": "UNH School of Law - Reception Area",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 50,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1039,
+"space_name": "530 223",
+"formal_name": "UNH School of Law - Rotunda 2nd Floor",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 144,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1040,
+"space_name": "530 227",
+"formal_name": "UNH School of Law - Room 227",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 28,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1041,
+"space_name": "530 228",
+"formal_name": "UNH School of Law - Room 228 (Wood Board Room)",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 20,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1042,
+"space_name": "530 229",
+"formal_name": "UNH School of Law -Room 229",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 100,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1043,
+"space_name": "530 239",
+"formal_name": "UNH School of Law - Career Services Conference Room",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 8,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1044,
+"space_name": "530 240",
+"formal_name": "UNH School of Law - Room 240 (Courtroom)",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 54,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1045,
+"space_name": "530 274",
+"formal_name": "UNH School of Law - Room 274",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 36,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1046,
+"space_name": "530 282",
+"formal_name": "UNH School of Law - Room 282",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 155,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1047,
+"space_name": "530 283",
+"formal_name": "UNH School of Law - Room 283 (Karl Jorda Conference Room)",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 10,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1280,
+"space_name": "530 313",
+"formal_name": "UNH School of Law - Adjunct Faculty Office",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 2,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1256,
+"space_name": "530 317",
+"formal_name": "UNH School of Law - Adjunct Faculty Office",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 2,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1048,
+"space_name": "530 321",
+"formal_name": "UNH School of Law - IP Library",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 150,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1049,
+"space_name": "530 CYD",
+"formal_name": "UNH School of Law - Courtyard",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 150,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1050,
+"space_name": "530 LWN",
+"formal_name": "UNH School of Law - Front Lawn",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 200,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1262,
+"space_name": "530 OFFCMPS",
+"formal_name": "UNH School of Law - Off Campus Event",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 9999999,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1257,
+"space_name": "530 ONLINE",
+"formal_name": "UNH School of Law - Online Event",
+"building_name": "UNH School of Law - 2 White Street",
+"max_capacity": 9999999,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1053,
+"space_name": "802 101",
+"formal_name": "UNHM 88 Commercial Street  101 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 45,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1054,
+"space_name": "802 102",
+"formal_name": "UNHM 88 Commercial Street  102 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 40,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1055,
+"space_name": "802 104",
+"formal_name": "UNHM 88 Commercial Street  104 3D Printing Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 12,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1056,
+"space_name": "802 114",
+"formal_name": "UNHM 88 Commercial Street  114 EET Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 20,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1057,
+"space_name": "802 115",
+"formal_name": "UNHM 88 Commercial Street  115 Conference Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 8,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1058,
+"space_name": "802 116",
+"formal_name": "UNHM 88 Commercial Street  116 MET Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 20,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1059,
+"space_name": "802 126",
+"formal_name": "UNHM 88 Commercial Street  126 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 24,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1060,
+"space_name": "802 128",
+"formal_name": "UNHM 88 Commercial Street  128 Physics Studio-Registrar",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 24,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1061,
+"space_name": "802 132",
+"formal_name": "UNHM 88 Commercial Street  132 Registrar CT Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 20,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1062,
+"space_name": "802 142",
+"formal_name": "UNHM 88 Commercial Street  142 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 48,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1063,
+"space_name": "802 146",
+"formal_name": "UNHM 88 Commercial Street  146 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 48,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1064,
+"space_name": "802 149",
+"formal_name": "UNHM 88 Commercial Street  149 Engineering-Computing  Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 25,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1066,
+"space_name": "802 200",
+"formal_name": "UNHM 88 Commercial Street  200 Foyer Table - North",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 2,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1067,
+"space_name": "802 201",
+"formal_name": "UNHM 88 Commercial Street  201 Multi-Purpose Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 160,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1068,
+"space_name": "802 202",
+"formal_name": "UNHM 88 Commercial Street  202 Green Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 2,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1069,
+"space_name": "802 210A",
+"formal_name": "UNHM 88 Commercial Street  210A Table1 - Student Commons",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 40,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1070,
+"space_name": "802 210B",
+"formal_name": "UNHM 88 Commercial Street  210B Table2 - Student  Commons",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 40,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1071,
+"space_name": "802 210C",
+"formal_name": "UNHM 88 Commercial Street  210C Table - Outside Multi-Purpose Room (201)",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 40,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1072,
+"space_name": "802 235",
+"formal_name": "UNHM 88 Commercial Street  235 Student Collaboration  Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 4,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1075,
+"space_name": "802 261",
+"formal_name": "UNHM 88 Commercial Street  261 Student Collaboration  Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 4,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1076,
+"space_name": "802 264",
+"formal_name": "UNHM 88 Commercial Street  264 Student Collaboration  Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 6,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1077,
+"space_name": "802 273",
+"formal_name": "UNHM 88 Commercial Street  273 Student Collaboration  Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 10,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1078,
+"space_name": "802 301",
+"formal_name": "UNHM 88 Commercial Street  301 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 40,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1079,
+"space_name": "802 302",
+"formal_name": "UNHM 88 Commercial Street  302 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 36,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1081,
+"space_name": "802 306",
+"formal_name": "UNHM 88 Commercial Street  306 Student Collaboration  Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 4,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1082,
+"space_name": "802 307",
+"formal_name": "UNHM 88 Commercial Street  307 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 24,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1083,
+"space_name": "802 325",
+"formal_name": "UNHM 88 Commercial Street  325 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 24,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1084,
+"space_name": "802 325/329",
+"formal_name": "UNHM 88 Commercial Street  325/329 Registrar Combo",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 48,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1085,
+"space_name": "802 329",
+"formal_name": "UNHM 88 Commercial Street  329 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 24,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1086,
+"space_name": "802 333",
+"formal_name": "UNHM 88 Commercial Street  333 STEM Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 20,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1087,
+"space_name": "802 341",
+"formal_name": "UNHM 88 Commercial Street  341 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 33,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1088,
+"space_name": "802 345",
+"formal_name": "UNHM 88 Commercial Street  345 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 34,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1089,
+"space_name": "802 347",
+"formal_name": "UNHM 88 Commercial Street  347 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 20,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1090,
+"space_name": "802 361",
+"formal_name": "UNHM 88 Commercial Street  361 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 22,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1091,
+"space_name": "802 365",
+"formal_name": "UNHM 88 Commercial Street  365 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 20,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1092,
+"space_name": "802 366",
+"formal_name": "UNHM 88 Commercial Street  366 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 16,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1093,
+"space_name": "802 367",
+"formal_name": "UNHM 88 Commercial Street  367 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 20,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1094,
+"space_name": "802 368",
+"formal_name": "UNHM 88 Commercial Street  368 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 20,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1096,
+"space_name": "802 374",
+"formal_name": "UNHM 88 Commercial Street  374 Conference Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 8,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1097,
+"space_name": "802 376",
+"formal_name": "UNHM 88 Commercial Street  376 Registrar Computer Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 26,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1098,
+"space_name": "802 380",
+"formal_name": "UNHM 88 Commercial Street  380 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 38,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1099,
+"space_name": "802 435",
+"formal_name": "UNHM 88 Commercial Street  435 Conference Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 12,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1100,
+"space_name": "802 443",
+"formal_name": "UNHM 88 Commercial Street  443 Creative Media Editing  Studio",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 8,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1101,
+"space_name": "802 456",
+"formal_name": "UNHM 88 Commercial Street  456 Film Screening Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 40,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1106,
+"space_name": "802 501",
+"formal_name": "UNHM 88 Commercial Street  501 Conference Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 16,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1107,
+"space_name": "802 502",
+"formal_name": "UNHM 88 Commercial Street  502 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 24,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1108,
+"space_name": "802 503",
+"formal_name": "UNHM 88 Commercial Street  503 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 30,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1109,
+"space_name": "802 504",
+"formal_name": "UNHM 88 Commercial Street  504 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 16,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1110,
+"space_name": "802 505",
+"formal_name": "UNHM 88 Commercial Street  505 Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 16,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1111,
+"space_name": "802 514",
+"formal_name": "UNHM 88 Commercial Street  514 Conference Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 12,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1112,
+"space_name": "802 531",
+"formal_name": "UNHM 88 Commercial Street  531 Conference Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 12,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1113,
+"space_name": "802 538",
+"formal_name": "UNHM 88 Commercial Street  538 Wellness Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 1,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1114,
+"space_name": "802 540",
+"formal_name": "UNHM 88 Commercial Street  540 General Biology Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 24,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1115,
+"space_name": "802 550D",
+"formal_name": "UNHM 88 Commercial Street  550D Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 24,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1116,
+"space_name": "802 554",
+"formal_name": "UNHM 88 Commercial Street  554 Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 24,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1117,
+"space_name": "802 560",
+"formal_name": "UNHM 88 Commercial Street  560 Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 16,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1118,
+"space_name": "802 573",
+"formal_name": "UNHM 88 Commercial Street  573 Conference Room",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 12,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1119,
+"space_name": "802 574",
+"formal_name": "UNHM 88 Commercial Street  574 Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 24,
+"last_mod_user": "staff5"
+},
+{
+"space_id": 1120,
+"space_name": "802 584",
+"formal_name": "UNHM 88 Commercial Street  584 Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 16,
+"last_mod_user": "staff6"
+},
+{
+"space_id": 1123,
+"space_name": "802 625",
+"formal_name": "UNHM 88 Commercial Street  625 TEAL Registrar Classroom",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 30,
+"last_mod_user": "staff0"
+},
+{
+"space_id": 1127,
+"space_name": "802 650EC",
+"formal_name": "UNHM 88 Commercial Street  650EC Registrar Lab",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 16,
+"last_mod_user": "staff1"
+},
+{
+"space_id": 1128,
+"space_name": "802 B01A",
+"formal_name": "UNHM 88 Commercial Street  B01A Engineering Technology Machine Shop",
+"building_name": "UNHM 88 Commercial Street",
+"max_capacity": 8,
+"last_mod_user": "staff2"
+},
+{
+"space_id": 1260,
+"space_name": "Calendar Only Event",
+"formal_name": "Calendar Only Event",
+"building_name": "",
+"max_capacity": 99999,
+"last_mod_user": "staff3"
+},
+{
+"space_id": 1168,
+"space_name": "OOCL Online",
+"formal_name": "Location Online",
+"building_name": "Online/Off-Campus Locations",
+"max_capacity": 99999,
+"last_mod_user": "staff4"
+},
+{
+"space_id": 1202,
+"space_name": "OUT Jess",
+"formal_name": "Outdoor Space Jessie Doe",
+"building_name": "Outdoor Spaces",
+"max_capacity": 200,
+"last_mod_user": "staff5"
+}
+]
+}
+}

@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises"
 import * as v from "valibot"
 import { type Event, Event as EventSchema, EventsData } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, merged } from "../../src/social/sources.mts"
+import { dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromRecOfferings, merged, programOf, programUrl, REC_PROGRAMS } from "../../src/social/sources.mts"
 import { addDays, atClock } from "../../src/shared/time.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 
@@ -19,6 +19,8 @@ const live = from25Live(rawLive, match)
 const athletics = fromAthletics(await fixture("athletics.ics"), match)
 const rawClubs = JSON.parse(await fixture("dserec.json")) as { data: DserecRow[] }
 const clubs = fromDserec(rawClubs, match)
+const program = { id: REC_PROGRAMS[3], ...programOf(await fixture("rec-program.html")) }
+const offerings = fromRecOfferings(await fixture("rec-offerings.html"), program, "Fall 2026", match)
 
 test("each calendar's answer reads into events of the one shape, each a window at a place where the text names one", () => {
   for (const event of [...presence, ...live, ...athletics, ...clubs]) {
@@ -90,7 +92,7 @@ test("merging keeps each id once, in order of start, dropping what ended before 
 
 test("the fixture's events file is what the build would make of the fixtures, and reads as events data", async () => {
   const file = v.parse(EventsData, JSON.parse(await readFile(new URL("../fixtures/data/src/map/events.json", import.meta.url), "utf8")))
-  expect(file.events).toEqual(merged([presence, live, athletics, clubs], 0))
+  expect(file.events).toEqual(merged([presence, live, athletics, clubs, offerings], 0))
 })
 
 //#region DSE Rec
@@ -180,3 +182,24 @@ test("the clubs' events are asked for over Durham days, as DSE Rec's own pages a
 })
 
 //#endregion
+
+test("Campus Rec's offerings with spots left read as events on their day, in their semester's year, placed where the program meets", async () => {
+  expect(program.name).toBe("Night Skiing Trips")
+  expect(program.semesters).toEqual([{ id: "5b063ec2-be1d-448d-af9a-4c60d6a4d686", name: "Fall 2026" }])
+  const events = offerings
+  expect(events.map(({ title, left }) => [title, left])).toEqual([
+    ["Honors students: Pancakes on Mt. Major", 2],
+    ["Canoeing at Mendums Pond", 8],
+    ["Stratham Hill Fire Tower Hike", 9]
+  ])
+  const [pancakes] = events
+  expect(pancakes).toMatchObject({ id: "rec:c1837821-0e05-4cb6-a777-b0e87cfafacc", source: "rec", place: "Hamel Rec Center", url: programUrl(program.id) })
+  expect([pancakes.start, pancakes.end]).toEqual([atClock("2026-11-07", "10:00"), atClock("2026-11-07", "16:30")])
+  expect(pancakes.closes).toBe(atClock("2026-11-04", "00:00"))
+  // Who leads a trip isn't what it is
+  expect(events.some(event => /Alex|Sam|Robin|Jordan/.test(event.title))).toBe(false)
+  for (const event of events)
+    expect(() => v.parse(EventSchema, event)).not.toThrow()
+  // None left is none to sign up for
+  expect(fromRecOfferings((await fixture("rec-offerings.html")).replace(/\d+ Spots available/g, "0 Spots available"), program, "Fall 2026", match)).toEqual([])
+})

@@ -94,11 +94,14 @@ const asked = async (env: Env, credential: Credential | undefined): Promise<Who 
   if (!credential)
     return
   const { device, secret } = credential
-  const hash = await sha256(secret)
-  const db = drizzle(env.DB)
-  await db.insert(devices).values({ id: device, secret: hash, person: device, created: Date.now() }).onConflictDoNothing()
-  const [row] = await db.select({ secret: devices.secret, person: devices.person }).from(devices).where(eq(devices.id, device))
-  return row?.secret === hash ? { device, person: row.person } : undefined
+  await drizzle(env.DB).insert(devices).values({ id: device, secret: await sha256(secret), person: device, created: Date.now() }).onConflictDoNothing()
+  return whoIs(env, credential)
+}
+
+/** Who a credential is, if it's a device's whose secret is the one set, without making it one */
+const whoIs = async (env: Env, { device, secret }: Credential): Promise<Who | undefined> => {
+  const [row] = await drizzle(env.DB).select({ secret: devices.secret, person: devices.person }).from(devices).where(eq(devices.id, device))
+  return row?.secret === await sha256(secret) ? { device, person: row.person } : undefined
 }
 
 const isSecure = (c: Asking) =>
@@ -505,6 +508,17 @@ social.get("/api/me", async c => {
     return c.text("Not this device's", 401)
   return c.json({ person: who.person, verified: await verifiedOf(drizzle(c.env.DB), who.person, Date.now()) ?? null }, 200, { "cache-control": "no-store" })
 })
+
+/**
+ * Whether a read is asked by a device, by its secret or cookie, whose person holds a verified UNH address. Asked
+ * without making the device one, as a read alone never does
+ */
+export const isVerifiedAsker = async (c: Asking) => {
+  const named = c.req.query("device")
+  const credential = credentialOf(c, named && v.is(ID, named) ? named : undefined)
+  const who = credential && await whoIs(c.env, credential)
+  return who !== undefined && await verifiedOf(drizzle(c.env.DB), who.person, Date.now()) !== undefined
+}
 
 /** A pin anyone may read by its id, or none for an id that isn't one, or a pin gone or hidden */
 export const publicPin = (db: D1Database, id: string) =>

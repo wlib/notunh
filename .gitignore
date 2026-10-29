@@ -27,6 +27,7 @@ src/laundry/usual.json
 # Wrangler's local secrets, like BUILD_TOKEN for `npm run worker`
 .dev.vars
 src/map/events.json
+src/map/rooms.json
 src/parking/parking.json
 src/programs/prereqs.json
 src/courses/courses.json

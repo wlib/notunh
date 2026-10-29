@@ -1,8 +1,8 @@
 // Makes the inputs a build pins (scripts/inputs.mts) in inputs/, laid out as the repository is, as the Inputs
 // workflow does each night (.github/workflows/inputs.yml):
 //
-//   node scripts/data.mts acquire    the timetable, style, events, courses, menus, laundry rooms, parking areas, and
-//                                    prerequisites, from upstream
+//   node scripts/data.mts acquire    the timetable, style, events, rooms to book, courses, menus, laundry rooms,
+//                                    parking areas, and prerequisites, from upstream
 //   node scripts/data.mts learn      the bus and laundry models, through the Worker (scripts/learn.mts), with
 //                                    --store to learn and store, --rebuild, and --local
 //
@@ -14,7 +14,7 @@ import { rm } from "node:fs/promises"
 import { STAGED, run } from "./files.mts"
 
 const STAGES = {
-  acquire: ["map/gtfs", "map/style", "map/events", "map/courses", "dining/menus", "laundry/rooms", "map/parking", "programs/prereqs"],
+  acquire: ["map/gtfs", "map/style", "map/events", "map/rooms", "map/courses", "dining/menus", "laundry/rooms", "map/parking", "programs/prereqs"],
   learn:   ["map/model", "laundry/model"]
 }
 

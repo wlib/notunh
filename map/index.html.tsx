@@ -51,6 +51,7 @@ export default () =>
           style:     "/src/map/style.json",
           places:    "/src/map/places.json",
           events:    "/src/map/events.json",
+          rooms:     "/src/map/rooms.json",
           courses:   "/src/courses/courses.json",
           prereqs:   "/src/programs/prereqs.json",
           parking:   "/src/parking/parking.json",

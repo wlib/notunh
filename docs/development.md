@@ -81,6 +81,7 @@ Nightly unless said; each stage is `node scripts/<stage>.mts` (`scripts/data.mts
 | Base map | OpenFreeMap's Liberty style | `map/style`, partly self-hosted |
 | Addresses | Photon (komoot) | Asked by the page while searching |
 | Events | Presence (Wildcat Link), 25Live (unh.edu/calendar), unhwildcats.com, DSE Rec Club Sports (`unh.dserec.com`) | `map/events` ([social.md](social.md#official-events)) |
+| Rooms to book | 25Live's REST data (`25live.collegenet.com/25live/data/unh/run/`), and Campus Rec's Fusion schedule (`crec.unh.edu`), no sign-in | `map/rooms`, a week; then through the Worker ([courses.md](courses.md#rooms-to-book)) |
 | Courses | Registrar's course API (`wapi.unh.edu/dhub`, courses.unh.edu's own), 25Live's academic calendar | `map/courses`, `--cache <folder>` reuses answers under a day old ([courses.md](courses.md)) |
 | Prerequisites, programs | catalog.unh.edu | `programs/prereqs`, read weekly; `--from <folder> --programs <folder>` reads pages kept ([programs.md](programs.md)) |
 | Parking | UNH's visitor page and zone table PDF, ParkMobile's zones, OSM's parking areas; rules by hand in `src/parking/areas.mts` | `map/parking` checks the rules, `--cached` against the fixtures ([parking.md](parking.md)) |

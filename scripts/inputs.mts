@@ -35,6 +35,7 @@ import { TILES, writeManifest } from "./map/tiles.mts"
 import { keepServedStyle } from "./map/style.mts"
 import { keepPublishedMenus } from "./dining/menus.mts"
 import { COURSES, emptyIndex } from "../src/courses/course.mts"
+import { NO_ROOMS, ROOMS } from "../src/courses/bookings.mts"
 
 /** For npm run dev, which keeps what a generation lacks, rather than a build, which ships only what it installs */
 const isDev = process.argv.includes("--dev")
@@ -94,11 +95,12 @@ const installMapData = async (version: string) => {
   }
 }
 
-/** What a later source is where there's none: no events, no terms, no prerequisites; parking always has its fixtures' */
+/** What a later source is where there's none: no events, no terms, no prerequisites, no rooms; parking always has its fixtures' */
 const EMPTY: Record<string, unknown> = {
   [EVENTS]:  { fetched: 0, events: [] } satisfies EventsData,
   [COURSES]: emptyIndex(),
-  [PREREQS]: NO_PREREQS
+  [PREREQS]: NO_PREREQS,
+  [ROOMS]:   NO_ROOMS
 }
 
 /** A later source as installed in a folder laid out as the repository, with the files it names, by path, or none */

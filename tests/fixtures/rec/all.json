@@ -1,0 +1,122 @@
+[
+  {
+    "Id": "27af2c21-bf68-4fe6-9fe2-6fa9bc77d660",
+    "Text": "Quarterly Gift Fund Meeting",
+    "StartDate": "2021-10-08T10:00:00.000",
+    "EndDate": "2021-10-08T11:00:00.000",
+    "AllDay": false,
+    "Description": "",
+    "RecurrenceRule": "FREQ=MONTHLY;INTERVAL=3;BYDAY=FR;BYSETPOS=2",
+    "RecurrenceException": null,
+    "BackgroundColor": "#191970",
+    "TextColor": "#FFFFFF"
+  },
+  {
+    "Id": "ce50285e-e30d-40d8-ac2a-8cd3b52f7245",
+    "Text": "Hold for Camp Wildcub",
+    "StartDate": "2027-08-02T07:30:00.000",
+    "EndDate": "2027-08-02T12:30:00.000",
+    "AllDay": false,
+    "Description": "",
+    "RecurrenceRule": "FREQ=DAILY;UNTIL=20270806T163000Z",
+    "RecurrenceException": null,
+    "BackgroundColor": "#191970",
+    "TextColor": "#FFFFFF"
+  },
+  {
+    "Id": "b6db44bf-5424-4178-be54-1e375bf85944",
+    "Text": "Hold for Camp Wildcub ",
+    "StartDate": "2027-07-26T07:30:00.000",
+    "EndDate": "2027-07-26T12:30:00.000",
+    "AllDay": false,
+    "Description": "",
+    "RecurrenceRule": "FREQ=DAILY;UNTIL=20270730T163000Z",
+    "RecurrenceException": null,
+    "BackgroundColor": "#191970",
+    "TextColor": "#FFFFFF"
+  },
+  {
+    "Id": "9fa794af-8a37-4b74-a0f7-8c475bf29d94",
+    "Text": "Hold for Camp Wildcub",
+    "StartDate": "2027-07-12T07:30:00.000",
+    "EndDate": "2027-07-12T12:30:00.000",
+    "AllDay": false,
+    "Description": "",
+    "RecurrenceRule": "FREQ=DAILY;UNTIL=20270716T163000Z",
+    "RecurrenceException": null,
+    "BackgroundColor": "#191970",
+    "TextColor": "#FFFFFF"
+  },
+  {
+    "Id": "9d4d81a1-10f4-4f8d-a5cb-65cc8b4bd048",
+    "Text": "Hold For Camp Wildcub",
+    "StartDate": "2027-07-06T07:30:00.000",
+    "EndDate": "2027-07-06T12:30:00.000",
+    "AllDay": false,
+    "Description": "",
+    "RecurrenceRule": "FREQ=DAILY;UNTIL=20270709T163000Z",
+    "RecurrenceException": null,
+    "BackgroundColor": "#191970",
+    "TextColor": "#FFFFFF"
+  },
+  {
+    "Id": "a9e27a63-ab54-47bb-9071-62599d3b2f21",
+    "Text": "HOLD for Volleyball Camp",
+    "StartDate": "2027-07-05T08:00:00.000",
+    "EndDate": "2027-07-05T20:00:00.000",
+    "AllDay": false,
+    "Description": "",
+    "RecurrenceRule": "FREQ=DAILY;UNTIL=20270712T000000Z",
+    "RecurrenceException": null,
+    "BackgroundColor": "#191970",
+    "TextColor": "#FFFFFF"
+  },
+  {
+    "Id": "bda5b9fa-5416-4700-85ee-ab154dd8d7e3",
+    "Text": "STUDENT REC FIELD CLOSED FOR RENOVATIONS",
+    "StartDate": "2027-05-17T00:00:00.000",
+    "EndDate": "2027-05-17T23:59:59.000",
+    "AllDay": true,
+    "Description": "",
+    "RecurrenceRule": "FREQ=DAILY;UNTIL=20270901T040000Z",
+    "RecurrenceException": null,
+    "BackgroundColor": "#191970",
+    "TextColor": "#FFFFFF"
+  },
+  {
+    "Id": "ba92d6b2-6ed7-4010-a16f-33f3f539e176",
+    "Text": "Wildcat Camp",
+    "StartDate": "2027-04-26T08:30:00.000",
+    "EndDate": "2027-04-26T16:30:00.000",
+    "AllDay": false,
+    "Description": "",
+    "RecurrenceRule": "FREQ=DAILY;UNTIL=20270430T203000Z",
+    "RecurrenceException": null,
+    "BackgroundColor": "#191970",
+    "TextColor": "#FFFFFF"
+  },
+  {
+    "Id": "db9c276a-6cc3-4e76-bb9f-a4359f779bf3",
+    "Text": "HOLD for Admissions",
+    "StartDate": "2027-04-16T08:00:00.000",
+    "EndDate": "2027-04-16T16:00:00.000",
+    "AllDay": false,
+    "Description": "",
+    "RecurrenceRule": "FREQ=DAILY;UNTIL=20270418T200000Z",
+    "RecurrenceException": null,
+    "BackgroundColor": "#191970",
+    "TextColor": "#FFFFFF"
+  },
+  {
+    "Id": "10b6eddb-5dc9-4a0b-86c3-e45c41c450da",
+    "Text": "HOLD for Admissions",
+    "StartDate": "2027-04-09T08:00:00.000",
+    "EndDate": "2027-04-09T16:00:00.000",
+    "AllDay": false,
+    "Description": "",
+    "RecurrenceRule": "FREQ=DAILY;UNTIL=20270411T200000Z",
+    "RecurrenceException": null,
+    "BackgroundColor": "#191970",
+    "TextColor": "#FFFFFF"
+  }
+]

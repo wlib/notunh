@@ -7,6 +7,7 @@
 
 import * as v from "valibot"
 import { type Event, SHORT } from "./event.mts"
+import { deduped } from "./sport.mts"
 import { usable } from "../shared/json.mts"
 import { type Day, addDays, atClock } from "../shared/time.mts"
 
@@ -238,11 +239,112 @@ export const fromDserec = (json: unknown, match: Matcher): Event[] => {
 
 //#endregion
 
-/** Every source's events as one list, those ending before `from` left out, soonest first, each id once */
+//#region Campus Rec programs
+
+/**
+ * Campus Rec's programs read as events: Outdoor Adventures' trips, the Mendums Pond shuttle, pool kayaking, night
+ * skiing. Signing up takes UNH's sign-in, so each links to its program's page
+ */
+export const REC_PROGRAMS = ["392bd3c0-01a0-44f3-b54e-5da34cd69d70", "9448c2c6-6b22-44dd-a691-5a7f516751f1", "6cfccb96-0c98-4d72-b77e-95f61928d923", "8520b0bd-ad58-415b-a070-7dc7c18e06fc"]
+
+const FUSION = "https://crec.unh.edu/Program"
+
+/** A program's page, which names its semesters and says what it is and where it meets */
+export const programUrl = (program: string) =>
+  `${FUSION}/GetProgramDetails?courseId=${program}`
+
+/** A program's offerings in a semester, as its page asks for them */
+export const offeringsUrl = (program: string, semester: string) =>
+  `${FUSION}/GetOfferingsForSemester?semesterId=${semester}&programId=${program}`
+
+/** A program's name, its semesters by id and name ("Fall 2026"), and its description, from its page */
+export const programOf = (html: string) => {
+  const name = plain(html.match(/<h1 class="progTitle">([^<]*)/)?.[1] ?? "")
+  const select = html.match(/<select[^>]*name="semester-select"[^>]*>([\s\S]*?)<\/select>/)?.[1] ?? ""
+  const semesters = [...select.matchAll(/<option value="([0-9a-f-]{36})">([^<]*)/g)].map(([, id, semester]) => ({ id, name: plain(semester) }))
+  const body = html.replace(/<(script|style)[\s\S]*?<\/\1>/g, "")
+  const description = plain(body.slice(body.indexOf("Waivers are required"), body.indexOf('id="schedule-heading"')), 2000)
+  return { name, semesters, description }
+}
+
+/** "10am", "11:30am", "4:30 pm" as "HH:MM" */
+const clock24 = (hours: string, minutes = "00", meridiem: string) =>
+  `${String(+hours % 12 + (/p/i.test(meridiem) ? 12 : 0)).padStart(2, "0")}:${minutes}`
+
+/**
+ * An offering's day and times from its title, as Campus Rec writes them, "Saturday 11/7 (10am-4:30pm): Pancakes on
+ * Mt. Major" or "Saturday 9/5 11:30am Departure", in a semester's year; a departure alone is an hour long
+ */
+const whenOf = (title: string, year: string) => {
+  const date = title.match(/\b(\d{1,2})\/(\d{1,2})\b/)
+  const times = [...title.matchAll(/\b(\d{1,2})(?::(\d\d))?\s*(am|pm)\b/gi)]
+  if (!date || !times.length)
+    return
+  const day = `${year}-${date[1].padStart(2, "0")}-${date[2].padStart(2, "0")}` as Day
+  const start = atClock(day, clock24(times[0][1], times[0][2], times[0][3]))
+  const end = times[1] ? atClock(day, clock24(times[1][1], times[1][2], times[1][3])) : start + 3_600_000
+  return end > start ? { start, end } : undefined
+}
+
+/** What an offering is, its title without when it is or who leads it: "Pancakes on Mt. Major", else the program's name */
+const whatOf = (title: string, program: string) => {
+  const what = title
+    .replace(/^.*?\b\d{1,2}\/\d{1,2}\b\s*(\([^)]*\))?\s*:?\s*/, "")
+    .replace(/\b\d{1,2}(:\d\d)?\s*(am|pm)\b\s*/gi, "")
+    // Its leaders, whom Campus Rec names, aren't what it is: "- Liv and Elise", "with Liv and Tessa"
+    .replace(/\s+(-|with)\s+[A-Z][a-z]+(\s+(and|&)\s+[A-Z][a-z]+)*\s*$/, "")
+    .trim()
+  const named = !what || /^departure$/i.test(what) ? program : what.replace(/^\*[^*]*\*\s*/, "")
+  // Who may go, where it's only some: "*HONORS STUDENTS ONLY*"
+  return /honors students only/i.test(title) ? `Honors students: ${named}` : named
+}
+
+/** "until Wed, Nov 4 2026 at 12:00 AM", when signing up for an offering closes, on Durham's clock */
+const closesOf = (card: string) => {
+  const [, month, date, year, hours, minutes, meridiem] = card.match(/until \w{3}, (\w{3}) (\d{1,2}) (\d{4}) at (\d{1,2}):(\d\d) ([AP]M)/) ?? []
+  const index = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(month)
+  return index < 0 ? undefined : atClock(`${year}-${String(index + 1).padStart(2, "0")}-${date.padStart(2, "0")}` as Day, clock24(hours, minutes, meridiem))
+}
+
+/**
+ * A program's offerings in a semester as events, from the cards its page loads: those with a day and time in their
+ * title and spots left, placed by their title, else where the program says it meets ("Meeting location: Hamel
+ * Recreation Center", "held at Swasey Indoor Pool")
+ */
+export const fromRecOfferings = (html: string, program: { id: string, name: string, description: string }, semester: string, match: Matcher): Event[] =>
+  html.split(/(?=<div class="offering-card)/).slice(1).flatMap(card => {
+    const id = card.match(/data-offering-id="([0-9a-f-]{36})"/)?.[1]
+    const title = plain(card.match(/<h3 class="card-title">([^<]*)/)?.[1] ?? "", 500)
+    const left = Number(card.match(/(\d+) Spots? available/i)?.[1] ?? 0)
+    const when = whenOf(title, semester.match(/\d{4}/)?.[0] ?? "")
+    if (!id || !when || left < 1)
+      return []
+    const meets = program.description.match(/(?:meet(?:ing location)?|held)\s*(?:at|:)\s*(?:the\s+)?([^.,]+)/i)?.[1] ?? ""
+    const place = match(title) ?? match(meets)
+    const closes = closesOf(card)
+    return [{
+      id:     `rec:${id}`,
+      title:  plain(whatOf(title, program.name)),
+      ...when,
+      place,
+      where:  place ? "" : plain(meets) || program.name,
+      source: "rec",
+      url:    programUrl(program.id),
+      left,
+      ...closes !== undefined && { closes }
+    }]
+  })
+
+//#endregion
+
+/**
+ * Every source's events as one list, those ending before `from` left out, soonest first, each id once, and each thing
+ * more than one calendar tells told once (deduped in sport.mts)
+ */
 export const merged = (lists: readonly Event[][], from: number): Event[] => {
   const byId = new Map<string, Event>()
   for (const event of lists.flat())
     if (event.end >= from && event.start <= event.end && !byId.has(event.id))
       byId.set(event.id, event)
-  return [...byId.values()].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id))
+  return deduped([...byId.values()])
 }

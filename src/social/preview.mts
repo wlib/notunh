@@ -9,6 +9,7 @@ import { daysOf, patternsOf } from "../courses/saved.mts"
 import type { GazetteerPlace } from "../places/gazetteer.mts"
 import type { Area } from "../parking/model.mts"
 import type { Listed } from "../programs/program.mts"
+import type { Space } from "../courses/bookings.mts"
 import type { FeedData } from "../transit/feed.mts"
 import { TIME_ZONE, localDay } from "../shared/time.mts"
 import { type Event, type Pin, whereOf } from "./event.mts"
@@ -132,6 +133,13 @@ export const roomPreview = (where: string, terms: readonly Pick<Term, "sections"
     lines: [`Classes: ${listed([...new Set(meetings.map(({ section }) => courseOf(section)))])}`]
   }
 }
+
+/** A space anyone can book, by its kind, where it is, and how many it holds: "Study room · Dimond Library" */
+export const spacePreview = (space: Pick<Space, "where" | "place" | "source" | "isStudy" | "capacity">): Preview => ({
+  kind:  `${space.source === "rec" ? "Campus Rec" : space.isStudy ? "Study room" : "Room"} · ${space.place}`,
+  title: space.where,
+  lines: space.capacity ? [`Up to ${space.capacity} people`] : []
+})
 
 const PROGRAMS: Record<Listed["kind"], string> = { major: "Major", option: "Option", minor: "Minor", cognate: "Cognate", program: "Program" }
 

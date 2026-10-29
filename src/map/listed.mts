@@ -1,7 +1,7 @@
 // Every page of the map worth a search engine's while, for the sitemap (scripts/search.mts): the official events not
 // over, the places with something on, classes, a laundry room, a dining hall or a chapter, every stop a bus picks up
-// at, the courses, sections and rooms of the terms not over, the programs, and parking. Never an instructor's, which
-// are people (UNLISTED in site.mts). Each is of something as of the instant, so resolves
+// at, the courses, sections and rooms of the terms not over, the rooms anyone can book, the programs, and parking.
+// Never an instructor's, which are people (UNLISTED in site.mts). Each is of something as of the instant, so resolves
 
 import type { Page } from "./link.mts"
 import { type Site, notOver, termsOf } from "./site.mts"
@@ -11,15 +11,16 @@ import { Places } from "../places/buildings.mts"
 import { CHAPTERS, isPlaced } from "../places/chapters.mts"
 import { activeTerms, courseOf } from "../courses/course.mts"
 import { roomKey } from "../courses/rooms.mts"
+import { RoomsData } from "../courses/bookings.mts"
 import { PrereqsIndex } from "../programs/prereqs.mts"
 import { Programs } from "../programs/program.mts"
 import { ParkingData } from "../parking/sources.mts"
 import { FeedData, boardableStops } from "../transit/feed.mts"
 
 export const listedPages = async (site: Site, now: number): Promise<Page[]> => {
-  const [{ events }, { places }, { buildings }, feed, prereqs, { areas }, terms] = await Promise.all([
+  const [{ events }, { places }, { buildings }, feed, prereqs, { areas }, { spaces }, terms] = await Promise.all([
     site.named("events", EventsData), site.named("gazetteer", Gazetteer), site.named("places", Places), site.named("gtfs", FeedData),
-    site.named("prereqs", PrereqsIndex), site.named("parking", ParkingData), termsOf(site, notOver(now))
+    site.named("prereqs", PrereqsIndex), site.named("parking", ParkingData), site.named("rooms", RoomsData), termsOf(site, notOver(now))
   ])
   const active = new Set(activeTerms(terms, now))
   const upcoming = events.filter(event => event.end > now)
@@ -31,7 +32,10 @@ export const listedPages = async (site: Site, now: number): Promise<Page[]> => {
     ...buildings.map(building => building.name),
     ...CHAPTERS.filter(isPlaced).map(chapter => chapter.name)
   ].filter(name => name !== undefined && named.has(name)) as string[])
-  const rooms = new Map(meetings.filter(meeting => meeting.place).map(meeting => [roomKey(meeting.where), meeting.where]))
+  const rooms = new Map([
+    ...spaces.map(space => [roomKey(space.where), space.where] as const),
+    ...meetings.filter(meeting => meeting.place).map(meeting => [roomKey(meeting.where), meeting.where] as const)
+  ])
   const programs = prereqs.programs ? (await site.file(prereqs.programs, Programs)).programs : []
   const stops = boardableStops(feed)
   return [

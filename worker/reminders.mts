@@ -19,6 +19,7 @@ import { getOrCreate } from "../src/shared/group.mts"
 import { type Vapid, Subscription, push } from "./push.mts"
 import type { Env } from "./env.mts"
 import { dataOf, siteBuild } from "./site.mts"
+import { SITE } from "../src/shared/site.mts"
 
 /** ms a device is kept after its last reminder ends */
 export const FORGET_MS = 30 * 86_400_000
@@ -45,7 +46,7 @@ const sha256 = async (text: string) =>
 
 /** The Worker's VAPID keys, or none where reminders aren't set up, as in Previews */
 export const vapidOf = (env: Env): Vapid | undefined =>
-  env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY ? { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY, subject: env.VAPID_SUBJECT ?? "https://notunh.app" } : undefined
+  env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY ? { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY, subject: env.VAPID_SUBJECT ?? SITE } : undefined
 
 type Device = { secret: string, endpoint: string, p256dh: string, auth: string, touched: number }
 /** A reminder's row: its watch, and a stamp of its setting, so a check begun before it was replaced leaves it be */

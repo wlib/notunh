@@ -27,7 +27,7 @@ Nothing deletes releases. Old `inputs-*` and `map-data-*` ones may be deleted by
 
 ## Build and deploy
 
-1. `prebuild` installs the inputs and map data the pointers name (`scripts/inputs.mts`), keeps what's served now beside them for open tabs, matches places, and runs the typecheck and tests. Needing no secrets and writing only its own folder, any branch's build is safe.
+1. `prebuild` installs the inputs and map data the pointers name (`scripts/inputs.mts`), keeps what's served now beside them for open tabs, and matches places. Typecheck and tests run in the pull request's Check and the nightly Inputs, not here. Needing no secrets and writing only its own folder, any branch's build is safe.
 2. `vite build`, then `postbuild` (`scripts/search.mts`) writes the sitemap and IndexNow's key file.
 3. `predeploy` applies D1 migrations (`npm run db:migrate`). A failed migration stops the deploy.
 4. `wrangler deploy` ships the Worker and site together.
@@ -68,11 +68,10 @@ Worker versions don't roll D1 back.
 
 ## Search and sharing
 
-- Each page's title, description and structured data are in `src/shell/pages.mts`; `src/shell/Head.tsx` makes the canonical URL, Open Graph and Twitter cards, and JSON-LD (`WebSite` on the home, `WebApplication` on each).
-- `/map/`, `/dining/` and `/laundry/` render their header and description on the server, laundry every room as a link, so crawlers see more than an empty `#app`. `src/shell/ui.tsx` renders on either side: `#jsx` resolves to bruh's browser or server JSX (`imports` in `package.json`).
-- Laundry rooms (`/laundry/<room>/`) are the laundry page, canonical `/laundry/`, not in the sitemap.
-- Pages' link previews are `public/social/<page>.png`, made by hand with `npm run social` (no browser on Workers Builds): Playwright shoots the dev server (the map staged by `src/map/social.mts`), and `scripts/social.mts` lays out each 1200×630 card from `label` and `shows` in `pages.mts`.
-- Shared pages preview as what they're of: `/p/<id>` and the map's, `/map/event/<id>`, `place/`, `section/` and the rest (`worker/preview.mts`). From the data the map's head names (`worker/site.mts`), the Worker heads it with a title, line (`src/social/preview.mts`) and card, `/map/card/<page>?v=<hash of its words>`, drawn by bundled Satori and resvg in Inter (`worker/card.mts`), edge-cached by URL; bump `LOOK` for a new look. Else it's the page as built.
-- A page's sitemap `lastmod` moves only when it differs from the one served by more than release. Google reads the sitemap `robots.txt` names; Cloudflare prepends its content signals to `public/robots.txt`.
+[search.md](search.md) has the sitemap, bodies, structured data and the owner's checklist.
 
-Set up once, by hand: the `notunh.app` domain property in Google Search Console (TXT record in Cloudflare DNS, then submit `https://notunh.app/sitemap.xml`), and Bing Webmaster Tools imported from it.
+- Each page's title, description and trail are in `src/shell/pages.mts`; `src/shell/Head.tsx` makes the canonical URL, Open Graph and Twitter cards, and JSON-LD.
+- `src/shell/ui.tsx` renders on either side: `#jsx` resolves to bruh's browser or server JSX (`imports` in `package.json`).
+- Pages' link previews are `public/social/<page>.png`, made by hand with `npm run social` (no browser on Workers Builds): Playwright shoots the dev server (the map staged by `src/map/social.mts`), and `scripts/social.mts` lays out each 1200×630 card from `label` and `shows` in `pages.mts`.
+- Shared pages preview as what they're of: `/p/<id>`, the map's (`/map/event/<id>`, `place/`, `section/` and the rest) and laundry rooms' (`worker/preview.mts`). From the data the map's head names (`worker/site.mts`, `src/map/site.mts`), the Worker heads it with a title, line (`src/social/preview.mts`), canonical address and card, `/map/card/<page>?v=<hash of its words>`, drawn by bundled Satori and resvg in Inter (`worker/card.mts`), edge-cached by URL; bump `LOOK` for a new look.
+- Google reads the sitemap `robots.txt` names; Cloudflare prepends its content signals to `public/robots.txt`.

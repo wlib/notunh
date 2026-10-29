@@ -1,10 +1,7 @@
 import { test, expect } from "vitest"
-import { readFileSync } from "node:fs"
-import { gunzipSync } from "node:zlib"
 import { flush, r } from "bruh/reactive"
-import { withIndexes, type FeedData } from "../../src/transit/feed.mts"
+import { withIndexes } from "../../src/transit/feed.mts"
 import { extract } from "../../src/transit/inference/events.mts"
-import { unpackFixes, type RawFix } from "../../src/transit/observations/raw.mts"
 import { emptyModel } from "../../src/transit/models/model.mts"
 import { update } from "../../src/transit/models/fit.mts"
 import { NO_PACE } from "../../src/transit/models/movement.mts"
@@ -12,13 +9,11 @@ import { routeLines } from "../../src/transit/shapes.mts"
 import { buildRuns } from "../../src/transit/models/forecast.mts"
 import { localDay } from "../../src/shared/time.mts"
 import { type Fixed, drawing, follow } from "../../src/map/state/following.mts"
+import { recordedData as data, recordedFeed, recordedFixes } from "./fixtures/recording.mts"
 
-// The recording replay.test.mts scores: half an hour of seven buses' fixes, and the timetable then
-const { feed: data, rows }: { feed: FeedData, rows: { source: string, at: number, body: unknown[] }[] } =
-  JSON.parse(gunzipSync(readFileSync(new URL("fixtures/buses.json.gz", import.meta.url))).toString())
-const fixes = rows.filter(row => row.source === "buses").flatMap(row => unpackFixes(row.at, { version: 0, samples: row.body as RawFix[], polls: null }))
-  .sort((a, b) => a.at - b.at)
-const learned = update(emptyModel(), "2026-10-06", extract(withIndexes(data), fixes))
+// The recording replay.test.mts scores, its fixes in order
+const fixes = recordedFixes.toSorted((a, b) => a.at - b.at)
+const learned = update(emptyModel(), "2026-10-06", extract(recordedFeed, fixes))
 
 /** The map following the buses through the first part of the recording, as the page's state does, by a model */
 const following = (share: number) => {

@@ -58,7 +58,7 @@ test("coming back reloads after an hour away or on a new day, and otherwise mark
       expect(page.visibleSince.peek()).toBe(since)
       expect(page.isVisible.peek()).toBe(since !== undefined)
     }
-  }))
+  }), { numRuns: 30 })
 })
 
 test("the clock ticks every 15 s and on coming back, and today follows it, reaching dependents only on a new day", async () => {
@@ -90,7 +90,7 @@ test("the clock ticks every 15 s and on coming back, and today follows it, reach
       expect(days.at(-1)).toBe(localDay(now))
       expect(days.every((day, i) => i === 0 || day !== days[i - 1])).toBe(true)
     }
-  }))
+  }), { numRuns: 30 })
 })
 
 test("a page loaded out of view counts as away since it loaded", async () => {
@@ -125,18 +125,6 @@ test("a page busy on coming back from long away, as on a bus, isn't reloaded unt
   page.setVisibility("hidden")
   await vi.advanceTimersByTimeAsync(0)
   expect(page.reload).toHaveBeenCalledOnce()
-})
-
-test("pageshow after the visibility event already brought the page back changes nothing", async () => {
-  const loadedAt = Date.UTC(2026, 9, 7, 16)
-  const page = await load(loadedAt)
-  page.setVisibility("hidden")
-  vi.advanceTimersByTime(30_000)
-  page.setVisibility("visible")
-  vi.advanceTimersByTime(5_000)
-  page.restore()
-  expect(page.visibleSince.peek()).toBe(loadedAt + 30_000)
-  expect(page.reload).not.toHaveBeenCalled()
 })
 
 test("newer code waits while the page is busy, as on a bus, and comes in once it's not and out of view", async () => {

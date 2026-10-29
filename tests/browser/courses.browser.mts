@@ -4,10 +4,8 @@
 // Yours and You's week; and Remind on an instructor's class is set with nothing saved. Screenshots go to
 // NOTUNH_SHOTS when it's set
 
-import { mkdirSync } from "node:fs"
-import { join } from "node:path"
 import { test as base, expect, devices, type BrowserContext, type Page } from "@playwright/test"
-import { type Fixture, startFixture } from "./fixture.mts"
+import { type Fixture, open, shoot, startFixture } from "./fixture.mts"
 import type { CoursesIndex, Section, TermFile } from "../../src/courses/course.mts"
 import { emptyCalendar } from "../../src/courses/calendar.mts"
 import { addDays, atClock, daysBetween, localDay, weekday } from "../../src/shared/time.mts"
@@ -25,11 +23,6 @@ const { defaultBrowserType, ...phone } = devices["iPhone 13"]
 // Without the service worker, whose own fetches a page's routes can't answer, but for Remind, which needs it
 test.use({ ...phone, proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" }, timezoneId: "America/New_York", serviceWorkers: "block" })
 
-const SHOTS = process.env.NOTUNH_SHOTS
-if (SHOTS)
-  mkdirSync(SHOTS, { recursive: true })
-const shoot = (page: Page, name: string) =>
-  SHOTS ? page.screenshot({ path: join(SHOTS, `${name}-${test.info().project.name}.png`) }) : Promise.resolve()
 
 /** This week's Monday, which the fall fixture's eighth week is moved to, so the term is under way whenever this runs */
 const monday = addDays(localDay(Date.now()), -weekday(localDay(Date.now())))
@@ -61,12 +54,6 @@ const serveCourses = async (target: Page | BrowserContext) => {
 /** This week's Tuesday at a time, as the design's scene is */
 const tuesday = (time: string) =>
   new Date(atClock(addDays(monday, 1), time))
-
-const open = async (page: Page, origin: string, path = "/map/") => {
-  await page.goto(origin + path)
-  const no = page.getByRole("button", { name: "No", exact: true })
-  await no.waitFor({ timeout: 3000 }).then(() => no.click(), () => {})
-}
 
 test("searching an instructor's name answers with a row holding their next class and its room, and Directions", async ({ page, fixture }) => {
   await page.clock.setFixedTime(tuesday("13:40"))

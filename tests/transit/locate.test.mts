@@ -102,7 +102,8 @@ test("the same fixes always give the same passages, and the live locator finds t
     expect(online.map(passage => passage.index)).toEqual(offline.map(passage => passage.index))
     // Where matching it all at once puts a fix a few meters elsewhere, as near the end of a loop, a time moves a little
     online.forEach((passage, i) => expect(Math.abs(passage.arrive.median - offline[i].arrive.median)).toBeLessThanOrEqual(Math.max(...plan.every)))
-  }))
+    // Each run drives a whole route and matches it twice over
+  }), { numRuns: 50 })
 )
 
 test("nothing is made up across a long silence, which starts a new track", () =>

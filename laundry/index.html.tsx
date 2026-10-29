@@ -14,14 +14,17 @@ export default () =>
         data={{ usual: "/src/laundry/usual.json" }}
       />
       <body>
-        {/* What the app replaces once it's loaded: its header, what it does, and every room, which are this build's,
-            in the list's own rows. No counts, which would be stale */}
+        {/* What the app replaces once it's loaded: its header, what it does, which the Worker replaces with the room on
+            a room's own address (worker/preview.mts), and every room, which are this build's, in the list's own rows.
+            No counts, which would be stale */}
         <div id="app">
           <main class="laundry">
             <header>
               <AppTitle page="Laundry" />
             </header>
-            <p class="shell muted">{PAGES["/laundry/"].description}</p>
+            <section class="shell">
+              <p class="muted">{PAGES["/laundry/"].description}</p>
+            </section>
             <ul class="rooms">
               {ROOMS.map(({ id, name }) =>
                 <li class="room-row">

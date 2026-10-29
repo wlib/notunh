@@ -1,6 +1,6 @@
 # The Worker
 
-`worker/`: [Hono](https://hono.dev), Drizzle on D1. It runs only for `/api/*`, laundry rooms' addresses, `/p/<id>`, the map's pages, `/map/<kind>/…`, and their cards (`run_worker_first` in `wrangler.jsonc`); the rest is static.
+`worker/`: [Hono](https://hono.dev), Drizzle on D1. It runs only for `/api/*`, laundry rooms' addresses, `/p/<id>`, the map's pages, `/map/<kind>/…`, and their cards, heading and summarizing each as what it's of ([search.md](search.md)) (`run_worker_first` in `wrangler.jsonc`); the rest is static.
 
 ## Crons
 
@@ -70,7 +70,7 @@ Routes:
 
 - `GET /api/laundry/rooms`: every room's free counts from D1 alone, edge-cached 5 minutes, so the list never reaches the vendor. Counts over 30 minutes old say when they're from. A map place page asks it once, for its halls' machines.
 - `GET /api/laundry/rooms/:id`: the room live, edge-cached 30 s, falling back to the collector's last record (marked stale).
-- `/laundry/<room>/`: the laundry page for each room in `src/laundry/rooms.json`; other `/laundry/…` paths 404. `vite.config.mts` routes the same in development.
+- `/laundry/<room>/`: the laundry page for each room in `src/laundry/rooms.json`, headed as the room (`worker/preview.mts`); other `/laundry/…` paths 404. `vite.config.mts` routes the same in development.
 
 The collector writes changes to `transitions` and `latest`, each poll to `polls`, and a snapshot per room to `room_snapshots`, in epoch ms. D1 allows 100 bound parameters a statement and 50 queries a run, so a round writes at most 168 changes, leaving the rest for the next.
 

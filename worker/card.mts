@@ -16,6 +16,7 @@ import extended600 from "@fontsource/inter/files/inter-latin-ext-600-normal.woff
 import extended800 from "@fontsource/inter/files/inter-latin-ext-800-normal.woff"
 import { type Preview } from "../src/social/preview.mts"
 import { IMAGE } from "../src/shell/pages.mts"
+import { HOST } from "../src/shared/site.mts"
 import { LIGHT, SURFACE } from "../src/shell/theme.mts"
 
 /** Bumped when the card's look changes, so every card's address changes with it */
@@ -69,7 +70,7 @@ export const cardOf = ({ kind, title, lines: [first = "", ...rest] }: Preview): 
     ),
     div({ alignItems: "center", gap: 24 },
       div({ padding: "6px 16px 7px", border: `2px solid ${LIGHT.border}`, borderRadius: 999, fontSize: 22, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: LIGHT.muted }, "Unofficial"),
-      div({ fontSize: 26, fontWeight: 500, color: LIGHT.muted }, "notunh.app")
+      div({ fontSize: 26, fontWeight: 500, color: LIGHT.muted }, HOST)
     )
   )
 }

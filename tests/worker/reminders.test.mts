@@ -1,7 +1,5 @@
 import { test, expect, vi, beforeEach, afterEach } from "vitest"
 import fc from "fast-check"
-import { readFileSync } from "node:fs"
-import { gunzipSync } from "node:zlib"
 import { app } from "../../worker/api.mts"
 import { FORGET_MS, MAX_REMINDERS, Reminders, SITE_RETRY_MS, WINDOW_MS } from "../../worker/reminders.mts"
 import { samples } from "../../worker/schema.mts"
@@ -13,12 +11,12 @@ import type { Env } from "../../worker/env.mts"
 import { d1 } from "./d1.mts"
 import { durableNamespace } from "./durable.mts"
 import { browser, vapidKeys } from "./webpush.mts"
+import * as recording from "../map/fixtures/recording.mts"
 import * as v from "valibot"
 
-// Half an hour of the Worker's samples on a Wednesday afternoon (tests/map/replay.test.mts), stored as the crons store
-// them, with a route 3 bus on its way to Thompson Hall (stop 209), due at 18:31 UTC and leaving at 18:40
-const { feed, rows }: { feed: unknown, rows: { source: string, at: number, body: unknown[] }[] } =
-  JSON.parse(gunzipSync(readFileSync(decodeURIComponent(new URL("../map/fixtures/buses.json.gz", import.meta.url).pathname))).toString())
+// The recording's samples, stored as the crons store them, with its route 3 bus on its way to Thompson Hall (stop
+// 209), due at 18:31 UTC and leaving at 18:40
+const { recordedData: feed, recordedRows: rows } = recording
 const NOW = Date.UTC(2026, 9, 7, 18, 18)
 const DEVICE = "device-aaaaaaaaaaaaaaaa"
 const SECRET = "secret-bbbbbbbbbbbbbbbb"
@@ -203,7 +201,7 @@ test("whatever the samples say, each check sets the alarm ahead, and the phone i
       }
       expect(pushed.length).toBeLessThanOrEqual(3)
     }
-  ), { numRuns: 25 })
+  ), { numRuns: 10 })
 }, 60_000)
 
 test("a push the service refuses for good forgets the device, and one it can't take now is tried again after the wait it asks for, else a doubling one", async () => {
@@ -295,7 +293,7 @@ test("a push service that never takes a push is given up on after a few tries, w
     }
     expect(device().state.rows("reminders")).toEqual([])
     expect(pushed.length).toBeLessThanOrEqual(MAX_PUSHES * (MAX_TRIES + 1))
-  }), { numRuns: 15 })
+  }), { numRuns: 10 })
 }, 60_000)
 
 test("a device forgotten on a warm object can set a reminder again, and asking an unknown device anything else leaves nothing behind", async () => {

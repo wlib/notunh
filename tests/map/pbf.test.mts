@@ -106,10 +106,11 @@ const read = async (data: Uint8Array, cuts: number[] = []) => {
 // Never empty, as OpenStreetMap's aren't, and the format keeps the empty string to end a node's tags
 const tags = fc.dictionary(fc.constantFrom("name", "highway", "building", "amenity", "entrance", "ref:é"), fc.string({ minLength: 1, maxLength: 12 }), { maxKeys: 3 })
 // OpenStreetMap's ids run past 2³², and its coordinates are stored to the ten-millionth of a degree
-const ids = fc.uniqueArray(fc.integer({ min: 1, max: 2 ** 40 }), { minLength: 1, maxLength: 30 }).map(ids => ids.sort((a, b) => a - b))
+const idsOf = (maxNodes: number) => fc.uniqueArray(fc.integer({ min: 1, max: 2 ** 40 }), { minLength: 1, maxLength: maxNodes }).map(ids => ids.sort((a, b) => a - b))
 const degrees = (max: number) => fc.integer({ min: -max * 1e7, max: max * 1e7 }).map(value => value / 1e7)
 
-const elements = ids.chain(nodeIds => fc.tuple(
+/** An extract of up to so many nodes, with ways over them and relations */
+const elementsOf = (maxNodes: number) => idsOf(maxNodes).chain(nodeIds => fc.tuple(
   fc.tuple(...nodeIds.map(id => fc.record({ lat: degrees(90), lon: degrees(180), tags }).map(({ tags, ...place }): OsmNode =>
     ({ type: "node", id, ...place, ...Object.keys(tags).length ? { tags } : {} })
   ))),
@@ -128,6 +129,8 @@ const elements = ids.chain(nodeIds => fc.tuple(
     tags
   }), { maxLength: 4, selector: relation => relation.id }).map(relations => relations.map((relation): OsmRelation => ({ type: "relation", ...relation })))
 ).map(([nodes, ways, relations]): OsmElement[] => [...nodes, ...ways, ...relations]))
+
+const elements = elementsOf(30)
 
 const coding = fc.record({
   // In billionths, as fine as the coordinates are
@@ -201,8 +204,9 @@ test("the elements within some bounds have their outlines and extents, and the w
   ])
 })
 
+// Reading a file once per byte, so of small extracts: a cut lands on every part of the format in a few nodes
 test("a file cut short at any byte is refused as truncated, or read up to the last whole blob, and never hangs", () =>
-  fc.assert(fc.asyncProperty(elements, coding, async (written, coding) => {
+  fc.assert(fc.asyncProperty(elementsOf(4), coding, async (written, coding) => {
     const parts = blobs(written, coding, 1_760_000_000)
     const whole = file(parts)
     // Where each blob but the last ends, which is where a shorter file could end whole

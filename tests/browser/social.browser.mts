@@ -4,32 +4,22 @@
 // are asked "Going?"; a code links two devices; and an emailed code verifies an address. Screenshots go to
 // NOTUNH_SHOTS when it's set
 
-import { spawn, type ChildProcess } from "node:child_process"
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { test as base, expect, devices, type Browser, type Page } from "@playwright/test"
-import { type Fixture, startFixture } from "./fixture.mts"
+import { type Fixture, type Worker, SHOTS, open, shoot, startFixture, startWorker } from "./fixture.mts"
 import { pinPath } from "../../src/social/event.mts"
 import { atClock, hhmm, localDay } from "../../src/shared/time.mts"
+import { jsx } from "bruh/server"
+import { PAGES } from "../../src/shell/pages.mts"
 
 
 /** The Worker's app, started once for every test this process runs of this file, for each browser in turn */
-let worker: { origin: string, process: ChildProcess } | undefined
-
-const startWorker = () =>
-  new Promise<typeof worker>((resolve, reject) => {
-    const child = spawn(process.execPath, [join(import.meta.dirname, "../worker/serve.mts"), process.env.NOTUNH_DIST!], { stdio: ["ignore", "pipe", "inherit"] })
-    child.stdout.on("data", (chunk: Buffer) => {
-      const port = chunk.toString().match(/PORT (\d+)/)?.[1]
-      if (port)
-        resolve({ origin: `http://127.0.0.1:${port}`, process: child })
-    })
-    child.on("exit", code => reject(new Error(`The Worker exited with ${code}`)))
-  })
+let worker: Worker | undefined
 
 const test = base.extend<{ fixture: Fixture }>({
   fixture: async ({}, use) => {
-    worker ??= await startWorker()
+    worker ??= await startWorker(process.env.NOTUNH_DIST!)
     const fixture = await startFixture(process.env.NOTUNH_DIST!, { worker: worker!.origin })
     await use(fixture)
     await fixture.close()
@@ -45,22 +35,11 @@ test.afterAll(() => {
 const { defaultBrowserType, ...phone } = devices["iPhone 13"]
 test.use({ ...phone, proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" }, timezoneId: "America/New_York" })
 
-const SHOTS = process.env.NOTUNH_SHOTS
-if (SHOTS)
-  mkdirSync(SHOTS, { recursive: true })
-
-const shoot = (page: Page, name: string) =>
-  SHOTS ? page.screenshot({ path: join(SHOTS, `${name}-${test.info().project.name}.png`) }) : Promise.resolve()
-
-/** A page, with the usage question answered if it's asked, as it is once a browser */
-const open = async (page: Page, origin: string, path: string) => {
-  await page.goto(origin + path)
-  const no = page.getByRole("button", { name: "No", exact: true })
-  await no.waitFor({ timeout: 3000 }).then(() => no.click(), () => {})
-}
-
 const openMap = (page: Page, origin: string) =>
   open(page, origin, "/map/")
+
+/** A linking code as shown, once the Worker has given one */
+const CODE = /^[2-9A-Z]{4}-[2-9A-Z]{4}$/
 
 type Timed = { start: number, end: number, place?: string, source: string }
 
@@ -135,15 +114,19 @@ test("today's list has sport clubs' home events, by club, at the fields the map 
   // The fixtures' rather than the build's, which has whatever the calendars said the night it was made
   const { events } = JSON.parse(readFileSync(new URL("../fixtures/data/src/map/events.json", import.meta.url), "utf8")) as { events: Timed[] }
   // The lacrosse game, the fourth placed, on in this hour, so it's on today's list whatever the time of day
-  await eventsToday(page, Math.floor(Date.now() / 3_600_000) * 3_600_000 - 4 * 3_600_000, events.filter(event => event.source === "dserec"))
+  const hour = Math.floor(Date.now() / 3_600_000) * 3_600_000
+  await page.clock.setFixedTime(hour)
+  await eventsToday(page, hour - 4 * 3_600_000, events.filter(event => event.source === "dserec"))
   await openMap(page, fixture.origin)
   // Under way, so in Now, with the rest of the day under it
   const rows = page.getByRole("list", { name: /^(Now|Today)$/ }).locator(".row")
   const row = rows.filter({ hasText: "Women’s Lacrosse game: UNHWCL Play Day" })
   await expect(row).toBeVisible()
   await expect(row).toContainText("Bremner Field")
-  await rows.last().scrollIntoViewIfNeeded()
-  await shoot(page, "today-clubs")
+  if (SHOTS) {
+    await rows.last().scrollIntoViewIfNeeded()
+    await shoot(page, "today-clubs")
+  }
 })
 
 test("an event made here opens for anyone with the link, who can say they're going, of its spots, and its page previews it", async ({ page, browser, fixture }) => {
@@ -167,7 +150,7 @@ test("an event made here opens for anyone with the link, who can say they're goi
   await shoot(guest, "event-guest")
   // The page the Worker serves carries the event for link previews
   const html = await (await fetch(fixture.origin + path)).text()
-  expect(html).toContain("<title>Pickup tennis · notunh</title>")
+  expect(html).toContain("<title>Pickup tennis · UNH event · notunh</title>")
   expect(html).toMatch(/<meta property="og:description" content="[^"]*Thompson Hall[^"]*1 going">/)
   // Directions is the event on the map, whose Directions plans the trip to it
   await guest.getByRole("link", { name: "Directions" }).click()
@@ -202,7 +185,7 @@ test("a link to an event's page on the map previews it with a card of its own, w
 
   // As a crawler asks: the map with the event in its head, and its card, and the map itself as built
   const html = await (await fetch(fixture.origin + link)).text()
-  expect(html).toContain("<title>Bring your own board games · notunh</title>")
+  expect(html).toContain("<title>Bring your own board games · UNH event · notunh</title>")
   expect(html).toMatch(/<meta name="description" content="\w{3}, \w{3} \d{1,2} [^"]+ · Dimond Library · by the steps">/)
   const image = html.match(/<meta property="og:image" content="([^"]+)">/)![1]
   expect(image).toMatch(new RegExp(`^https://notunh\\.app/map/card/event/${id}\\?v=[0-9a-f]{12}$`))
@@ -213,7 +196,9 @@ test("a link to an event's page on the map previews it with a card of its own, w
   if (SHOTS)
     writeFileSync(join(SHOTS, `preview-${test.info().project.name}.png`), new Uint8Array(png.buffer))
   expect(await (await fetch(`${fixture.origin}/map/`)).text()).toBe(asset)
-  expect(await (await fetch(`${fixture.origin}/map/event/nope`)).text()).toBe(asset)
+  const gone = await fetch(`${fixture.origin}/map/event/nope`)
+  expect(gone.status).toBe(404)
+  expect(await gone.text()).toBe(asset.replace("</head>", `<meta name="robots" content="noindex"></head>`))
 
   // Someone opening the link: the map at the event, then again from the service worker's copy, which is the map's
   const other = await stranger(browser)
@@ -230,11 +215,11 @@ test("a link to an event's page on the map previews it with a card of its own, w
   const copy = (await kept())!
   expect(copy).not.toContain("board games")
   expect(copy).not.toContain("/map/card/")
-  expect(copy).toContain("<title>UNH Campus Map")
+  expect(copy).toContain(`${jsx("title", { children: PAGES["/map/"].title })}`)
   // Offline, a page's path opens from that copy, as the map at that page
   await fixture.setOffline(true)
   await guest.goto(fixture.origin + link)
-  await expect(guest).toHaveTitle(/^UNH Campus Map/)
+  await expect(guest).toHaveTitle(PAGES["/map/"].title)
   await expect(guest.locator(".panel")).toBeVisible()
   await guest.goto(`${fixture.origin}/map/place/Dimond+Library`)
   await expect(guest.getByRole("heading", { name: "Dimond Library" })).toBeVisible()
@@ -330,8 +315,8 @@ test("a code shown on one device, typed on another, links them as one person", a
   await openMap(laptop, fixture.origin)
   await laptop.getByRole("button", { name: "You", exact: true }).click()
   await laptop.getByRole("button", { name: "Show a code on this device" }).click()
+  await expect(laptop.locator(".code")).toHaveText(CODE)
   const code = (await laptop.locator(".code").textContent())!
-  expect(code).toMatch(/^[2-9A-Z]{4}-[2-9A-Z]{4}$/)
   await expect(laptop.getByRole("img", { name: `QR code for ${code}` })).toBeVisible()
   await shoot(laptop, "link-code")
 
@@ -366,6 +351,7 @@ test("approving a code shown by a verified device shows its address on the appro
   await laptop.getByRole("button", { name: "Confirm" }).click()
   await expect(laptop.getByText("Verified as")).toBeVisible()
   await laptop.getByRole("button", { name: "Show a code on this device" }).click()
+  await expect(laptop.locator(".code")).toHaveText(CODE)
   const code = (await laptop.locator(".code").textContent())!
 
   // The phone, verified as nobody, approves it, and is bo@unh.edu at once
@@ -398,6 +384,7 @@ test("a code emailed to a UNH address verifies this device once typed back, whic
   await page.locator("input[name=place]").fill("Memorial Union Building")
   // From this hour, so it's under way and on today's list whatever the time this runs
   await fillWhen(page, 0, Math.floor(Date.now() / 3_600_000) * 3_600_000)
+  await page.clock.setFixedTime(Date.now())
   await page.getByRole("button", { name: "Post it" }).click()
   await expect(page.getByRole("heading", { name: "Open mic" })).toBeVisible()
   // Listed on today's map for everyone
@@ -428,6 +415,7 @@ test("a permit set on one of two linked devices reaches the other, and comes bac
   await openMap(laptop, fixture.origin)
   await laptop.getByRole("button", { name: "You", exact: true }).click()
   await laptop.getByRole("button", { name: "Show a code on this device" }).click()
+  await expect(laptop.locator(".code")).toHaveText(CODE)
   const code = (await laptop.locator(".code").textContent())!
   // A link of its own, as the phone's camera opens it, rather than a fragment on the page it's on
   await page.goto(`${fixture.origin}/map/you#link=${code.replace("-", "")}`)

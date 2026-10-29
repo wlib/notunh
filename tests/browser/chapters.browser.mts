@@ -2,8 +2,8 @@
 // which says what it is and links to UNH's page for it, and one whose house the map doesn't place is found all the
 // same, saying so
 
-import { test as base, expect, devices, type Page } from "@playwright/test"
-import { type Fixture, startFixture } from "./fixture.mts"
+import { test as base, expect, devices } from "@playwright/test"
+import { type Fixture, open, startFixture } from "./fixture.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
   fixture: async ({}, use) => {
@@ -16,12 +16,6 @@ const test = base.extend<{ fixture: Fixture }>({
 // A phone, with every other origin, like Umo and the map's tiles, out of reach
 const { defaultBrowserType, ...phone } = devices["iPhone 13"]
 test.use({ ...phone, viewport: { width: 390, height: 844 }, proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" }, timezoneId: "America/New_York" })
-
-const open = async (page: Page, origin: string) => {
-  await page.goto(origin + "/map/")
-  const no = page.getByRole("button", { name: "No", exact: true })
-  await no.waitFor({ timeout: 3000 }).then(() => no.click(), () => {})
-}
 
 test("a chapter's nickname finds its house, whose page says its letters, chapter and council, and links to UNH's page", async ({ page, fixture }) => {
   await open(page, fixture.origin)
@@ -38,7 +32,7 @@ test("a chapter's nickname finds its house, whose page says its letters, chapter
   await expect(view.locator(".view-facts").first()).toContainText("Lambda Sigma chapter")
   await expect(view.locator(".view-facts").first()).toContainText("Interfraternity Council")
   await expect(view.getByRole("link", { name: /UNH chapter page/ })).toHaveAttribute("href", /chapter-scorecards\/sigma-chi$/)
-  await expect(page).toHaveURL(/[?&]place=Sigma\+Chi/)
+  await expect(page).toHaveURL(/\/map\/place\/Sigma\+Chi$/)
 })
 
 test("a chapter's letters and nickname find it, and one the map doesn't place is found by its nickname, saying so", async ({ page, fixture }) => {

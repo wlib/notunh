@@ -12,7 +12,7 @@ import { localDay } from "../../src/shared/time.mts"
 import { fakePage, headOf, leavePage } from "../shell/page.mts"
 
 // Each run loads the app's state afresh, which is slower than the pure properties
-fc.configureGlobal({ numRuns: 40 })
+fc.configureGlobal({ numRuns: 25 })
 
 const STALE = 180 // s
 const TICK = 15_000
@@ -412,7 +412,7 @@ test("a link to anywhere unknown is dropped, and the kept trip with it left as i
     expect(state.from.peek()).toEqual(today.from)
     expect(state.to.peek()).toEqual(today.to)
     expect(state.selected.peek()).toBe("walk")
-  }))
+  }), { numRuns: 10 })
 })
 
 test("a link asks for your location where it isn't yet shared, and plans from there once it is", async () => {

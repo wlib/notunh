@@ -59,7 +59,7 @@ test("a calendar app expanding the file's rules, UNTIL as the UTC instant it is,
 )
 
 test("every VEVENT has a DTSTAMP in UTC, and a TZID start goes with a UTC UNTIL, as RFC 5545 requires", () => {
-  const now = Date.now()
+  const now = Date.UTC(2026, 9, 7, 16)
   const ics = icsOf(saved(timed.slice(0, 10)), calendar, now)
   for (const event of vevents(ics)) {
     expect(event.DTSTAMP).toEqual([utc(now)])

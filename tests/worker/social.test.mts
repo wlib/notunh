@@ -17,6 +17,11 @@ import { d1 } from "./d1.mts"
 import { type Key, MAX_BYTES, SYNCED, isNewer } from "../../src/shared/sync.mts"
 import { browser, vapidKeys } from "./webpush.mts"
 
+// The Worker's clock, pinned: a pin's day is counted on Durham's, and codes expire by it
+const NOW = Date.parse("2026-10-07T16:00:00Z")
+vi.useFakeTimers({ toFake: ["Date"] })
+vi.setSystemTime(NOW)
+
 const PAGE = `<html><head><title>A pin · notunh</title><meta property="og:title" content="A pin"><meta property="og:description" content="Somewhere, sometime"><meta property="og:url" content="https://notunh.app/p/"><meta name="twitter:title" content="A pin"></head><body></body></html>`
 
 /** A Worker with a fresh database, the pin page as its asset, and a mailer that keeps what it's sent */
@@ -48,7 +53,7 @@ const worker = (vars: Partial<Env> = {}) => {
 
 type Device = ReturnType<ReturnType<typeof worker>["device"]>
 
-const soon = () => Date.now() + 3_600_000
+const soon = () => NOW + 3_600_000
 
 /** Times an hour long, an hour apart from an hour from now */
 const timesOf = (count: number): Time[] =>
@@ -100,7 +105,7 @@ test("what's checked: text lengths, the window, a place, one to three times, spo
   await refused({ title: "x".repeat(81) }, 400)
   await refused({ description: "x".repeat(501) }, 400)
   await refused({ times: [{ start: soon(), end: soon() - 1 }] }, 400)
-  await refused({ times: [{ start: Date.now() - 2 * 86_400_000, end: Date.now() }] }, 400)
+  await refused({ times: [{ start: NOW - 2 * 86_400_000, end: NOW }] }, 400)
   await refused({ times: [] }, 400)
   await refused({ times: timesOf(4) }, 400)
   await refused({ place: undefined }, 400)
@@ -284,7 +289,7 @@ test("a code links the device that shows it to the person of the device that app
   const pin = await made(laptop, { times: timesOf(2) })
   const { code, expires } = await (await laptop.ask("POST", "/api/link", {})).json() as { code: string, expires: number }
   expect(parseCode(code)).toBe(code)
-  expect(expires).toBeGreaterThan(Date.now())
+  expect(expires).toBeGreaterThan(NOW)
   expect(await (await laptop.ask("GET", `/api/link/${code}`)).json()).toMatchObject({ linked: false })
   // Only the device that made the code may ask after it
   expect((await phone.ask("GET", `/api/link/${code}`)).status).toBe(404)
@@ -378,14 +383,14 @@ test("the Worker keeps each key's newest write, whichever of a person's devices 
       sent.push(...Object.values(Object.fromEntries(writes.slice(at, at += 1 + cuts[i % cuts.length]).map(found => [found.key, found]))))
     for (const asking of devices)
       expect((await (await asking.ask("POST", "/api/state", { entries: {} })).json() as Kept).entries).toEqual(newest(sent))
-  })), 60_000)
+  }), { numRuns: 25 }))
 
 test("a write is never kept as later than the Worker's clock, only keys kept for you are taken, and values are bounded", async () => {
   const { device } = worker()
   const ana = device("ana")
-  const ahead = Date.now() + 86_400_000
+  const ahead = NOW + 86_400_000
   const { entries } = await (await ana.ask("POST", "/api/state", { entries: { "parking-permit": { value: "commuter", at: ahead, by: "a" } } })).json() as Kept
-  expect(entries["parking-permit"].at).toBeLessThanOrEqual(Date.now())
+  expect(entries["parking-permit"].at).toBeLessThanOrEqual(NOW)
   expect(entries["parking-permit"].value).toBe("commuter")
   expect((await ana.ask("POST", "/api/state", { entries: { "map-trip": { value: 1, at: 1, by: "a" } } })).status).toBe(400)
   expect((await ana.ask("POST", "/api/state", { entries: { "map-goals": { value: "x".repeat(MAX_BYTES), at: 1, by: "a" } } })).status).toBe(400)

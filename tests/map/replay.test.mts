@@ -1,25 +1,15 @@
 import { test, expect } from "vitest"
-import { readFileSync } from "node:fs"
-import { gunzipSync } from "node:zlib"
-import { withIndexes, type FeedData } from "../../src/transit/feed.mts"
 import { extract, type Visit } from "../../src/transit/inference/events.mts"
-import { unpackFixes, unpackPredictions, type RawFix, type RawPrediction } from "../../src/transit/observations/raw.mts"
 import { LEADS, emptyModel } from "../../src/transit/models/model.mts"
 import { update } from "../../src/transit/models/fit.mts"
 import { PREDICTOR, attachPredictions, score } from "../../scripts/map/replay.mts"
 import { sightingsFrom } from "../../src/transit/models/tracking.mts"
+import { recordedFeed, recordedFixes, recordedPredictions } from "./fixtures/recording.mts"
 
-// Half an hour of the Worker's samples, recorded on a Wednesday afternoon with seven buses out, and the timetable
-// then, cut down to their routes
-const { feed: data, rows }: { feed: FeedData, rows: { source: string, at: number, body: unknown[] }[] } =
-  JSON.parse(gunzipSync(readFileSync(new URL("fixtures/buses.json.gz", import.meta.url))).toString())
-const feed = withIndexes(data)
-// Recorded before rows were versioned, as bare arrays of samples
-const fixes = rows.filter(row => row.source === "buses").flatMap(row => unpackFixes(row.at, { version: 0, samples: row.body as RawFix[], polls: null }))
-const samples = rows
-  .filter(row => row.source === "predictions")
-  .map(row => ({ at: row.at, predictions: unpackPredictions(row.at, { version: 0, samples: row.body as RawPrediction[], polls: null }) }))
+const feed = recordedFeed
+const fixes = recordedFixes
 const visits = extract(feed, fixes)
+const samples = recordedPredictions
 const predicted = attachPredictions(visits, samples)
 const DAY = "2026-10-07"
 

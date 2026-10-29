@@ -170,11 +170,8 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["bruh"]
   },
-  // The Worker's WebAssembly and fonts are made modules above, rather than left to Node with the rest of node_modules.
-  // A property test runs a hundred cases, which on a busy machine, like Workers Builds' running the whole suite before
-  // each deploy, takes past vitest's 5 s though nothing hangs
+  // The Worker's WebAssembly and fonts are made modules above, rather than left to Node with the rest of node_modules
   test: {
-    server:      { deps: { inline: [/\.(wasm|woff)$/] } },
-    testTimeout: 30_000
+    server: { deps: { inline: [/\.(wasm|woff)$/] } }
   }
 })

@@ -10,6 +10,7 @@ import * as v from "valibot"
 import type { GazetteerPlace } from "../places/gazetteer.mts"
 import type { Place } from "../places/search.mts"
 import { distance } from "../geo/projection.mts"
+import { CAMPUS } from "../places/durham.mts"
 import { type Day, addDays, dayStart, localDay } from "../shared/time.mts"
 import { usable } from "../shared/json.mts"
 
@@ -17,12 +18,22 @@ import { usable } from "../shared/json.mts"
 export const SHORT = 80
 export const LONG = 500
 
-/** The middle of campus, which a name on two places is resolved to the nearer to, as search does */
-const CAMPUS = { lat: 43.1365, lon: -70.9345 }
-
 /** Where events come from; a course's are dated class meetings (src/courses/course.mts), never in events.json */
 export const SOURCES = ["presence", "25live", "athletics", "dserec", "rec", "pin", "course"] as const
 export type Source = typeof SOURCES[number]
+
+/** The calendars official events come from, each as a page names it, and who runs its events where that's one body, which a club's own on Wildcat Link isn't */
+export const CALENDARS: Record<Exclude<Source, "pin" | "course">, { name: string, organizer?: { name: string, url: string } }> = {
+  presence:  { name: "Wildcat Link" },
+  "25live":  { name: "UNH Events Calendar", organizer: { name: "University of New Hampshire", url: "https://www.unh.edu" } },
+  athletics: { name: "UNH Athletics", organizer: { name: "UNH Athletics", url: "https://unhwildcats.com" } },
+  dserec:    { name: "UNH Club Sports", organizer: { name: "UNH Club Sports", url: "https://unh.dserec.com/online/clubsports" } },
+  rec:       { name: "Campus Rec programs", organizer: { name: "UNH Campus Recreation", url: "https://crec.unh.edu" } }
+}
+
+/** The calendar an event is listed on, or none for one made here or a class */
+export const calendarOf = ({ source }: Pick<Event, "source">) =>
+  source === "pin" || source === "course" ? undefined : CALENDARS[source]
 
 const Text = (max: number) =>
   v.pipe(v.string(), v.trim(), v.maxLength(max))
@@ -99,6 +110,9 @@ export const isOn = (event: Event, day: string, now: number) =>
 export const today = <E extends Event>(events: readonly E[], now: number) =>
   events.filter(event => isOn(event, localDay(now), now)).sort((a, b) => a.start - b.start)
 
+/** How many days after today a week's list looks: the home's, a place's, and the map's shell's */
+export const WEEK = 7
+
 /** A day to come and what's on it, soonest first, as the home's list has the days after today */
 export type DayList<E extends Event = Event> = { day: Day, events: E[] }
 
@@ -114,12 +128,14 @@ export const upcoming = <E extends Event>(events: readonly E[], now: number, day
 }
 
 /** The gazetteer place a name means: of those by the name, the nearest the middle of campus, as search picks */
-export const placeOf = (gazetteer: readonly GazetteerPlace[], name: string | undefined): Place | undefined => {
-  if (name === undefined)
-    return
-  const found = gazetteer
+export const gazetteerPlaceOf = (gazetteer: readonly GazetteerPlace[], name: string | undefined) =>
+  name === undefined ? undefined : gazetteer
     .filter(place => place.name === name)
     .sort((a, b) => distance({ lon: a.at[0], lat: a.at[1] }, CAMPUS) - distance({ lon: b.at[0], lat: b.at[1] }, CAMPUS))[0]
+
+/** That place as a point by name, as the map marks it */
+export const placeOf = (gazetteer: readonly GazetteerPlace[], name: string | undefined): Place | undefined => {
+  const found = gazetteerPlaceOf(gazetteer, name)
   return found && { lat: found.at[1], lon: found.at[0], name: found.name }
 }
 

@@ -5,9 +5,10 @@ import { encode, type RawPoll } from "../src/transit/observations/raw.mts"
 import { samples } from "./schema.mts"
 import { inserts } from "./rows.mts"
 import type { Env } from "./env.mts"
+import { SITE } from "../src/shared/site.mts"
 
 /** Who's asking, for Umo, which refuses a request without a User-Agent. Never sent to the laundry vendor */
-export const HEADERS = { "user-agent": "notunh/1 (+https://notunh.app)" }
+export const HEADERS = { "user-agent": `notunh/1 (+${SITE})` }
 
 /** What a cron trigger runs, given the epoch milliseconds its minute started at and a signal for the minute running out */
 export type Job = {

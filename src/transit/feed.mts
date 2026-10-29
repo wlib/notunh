@@ -118,6 +118,25 @@ export const tripBase = (feed: FeedData, trip: Trip, at: number) => {
     .sort((a, b) => offset(a) - offset(b))[0] as number | undefined
 }
 
+/**
+ * Every bus the timetable has leaving a stop, by its index, from one instant up to another, soonest first, each with
+ * its trip and when it leaves in epoch ms. Only where someone can get on, on whichever service day runs it
+ */
+export const scheduledFrom = (feed: Pick<FeedData, "trips" | "services">, stop: number, from: number, to: number) => {
+  const departures: { trip: Trip, at: number }[] = []
+  for (let day = addDays(localDay(from), -1); day <= localDay(to); day = addDays(day, 1)) {
+    const base = serviceDayStart(day)
+    for (const trip of feed.trips)
+      if (isServiceActive(feed.services[trip.service], day))
+        trip.stops.forEach((at, position) => {
+          const leaves = base + trip.times[position] * 1000
+          if (at === stop && canBoard(trip, position) && leaves >= from && leaves < to)
+            departures.push({ trip, at: leaves })
+        })
+  }
+  return departures.sort((a, b) => a.at - b.at)
+}
+
 export const isServiceActive = (service: Service | undefined, day: Day) => {
   if (!service || service.removed.includes(day))
     return false

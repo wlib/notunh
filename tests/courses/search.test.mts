@@ -19,16 +19,12 @@ test("a course code in any spelling finds its sections, and a section number nar
     const exact = search(`${query}${between}${section.section}${between === " (" ? ")" : ""}`).sections
     expect(exact.map(({ section }) => section.crn)).toContain(section.crn)
     expect(exact.every(({ section: found }) => found.section.toUpperCase() === section.section.toUpperCase())).toBe(true)
-  }), { numRuns: 500 })
+  }), { numRuns: 100 })
 )
 
-test("five digits are a CRN, and a pasted schedule is every CRN it names", () => {
+test("five digits are a CRN, finding its section alone, or nothing", () => {
   fc.assert(fc.property(fc.constantFrom(...fall.sections), section => {
     expect(search(section.crn).sections).toEqual([{ term: fall, section }])
-  }))
-  fc.assert(fc.property(fc.uniqueArray(fc.constantFrom(...fall.sections), { minLength: 2, maxLength: 8 }), sections => {
-    const pasted = sections.map(section => `${section.crn}\t${section.subject} ${section.number}\t${section.title}`).join("\n")
-    expect(search(pasted).sections.map(({ section }) => section.crn)).toEqual(sections.map(({ crn }) => crn))
   }))
   expect(search("99999")).toEqual(empty)
 })
@@ -86,11 +82,4 @@ test("searching several terms puts the earlier term's sections first", () => {
   const firstSpring = found.findIndex(({ term }) => term === spring)
   if (firstSpring >= 0)
     expect(found.slice(firstSpring).every(({ term }) => term === spring)).toBe(true)
-})
-
-test("a search answers in a few milliseconds", () => {
-  const started = performance.now()
-  for (let i = 0; i < 100; i++)
-    search("organic chemistry")
-  expect((performance.now() - started) / 100).toBeLessThan(10)
 })

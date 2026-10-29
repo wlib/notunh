@@ -61,6 +61,17 @@ export const atClock = (day: Day, time: string) => {
 export const hhmm = (ms: number) =>
   `${String(Math.floor(localMinutes(ms) / 60)).padStart(2, "0")}:${String(localMinutes(ms) % 60).padStart(2, "0")}`
 
+/**
+ * A moment on Durham's clock as ISO 8601 with its offset, "2026-10-30T13:30:00-04:00", as structured data dates
+ * events, to the second
+ */
+export const isoOf = (ms: number) => {
+  const offset = offsetAt(ms)
+  const minutes = Math.abs(offset) / 60_000
+  const sign = offset < 0 ? "-" : "+"
+  return `${new Date(Math.floor(ms / 1000) * 1000 + offset).toISOString().slice(0, 19)}${sign}${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`
+}
+
 /** A moment as read off Durham's clock, like "2:35 PM", where there's no element to format it (src/shell/intl.tsx) */
 export const clockOf = (ms: number) =>
   clockFormat.format(ms)

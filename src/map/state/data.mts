@@ -9,6 +9,7 @@ import { Places } from "../../places/buildings.mts"
 import { Gazetteer } from "../../places/gazetteer.mts"
 import { createPlaceSearch } from "../../places/search.mts"
 import { CHAPTERS, aliasesOf, isPlaced } from "../../places/chapters.mts"
+import { CAMPUS } from "../../places/durham.mts"
 import { loadStyle } from "../basemap/style.mts"
 import { TilesManifest } from "../basemap/tiles.mts"
 import { EventsData } from "../../social/event.mts"
@@ -18,9 +19,6 @@ import { NO_PARKING, ParkingData } from "../../parking/sources.mts"
 import { MenusIndex } from "../../dining/menus.mts"
 import { NO_ROOMS, RoomsData } from "../../courses/bookings.mts"
 import { latest } from "../../shell/build.mts"
-
-/** The middle of campus, which search prefers the nearer of two places by one name to */
-const CAMPUS = { lat: 43.1365, lon: -70.9345 }
 
 /** The other names of the places that go by more than one: the chapters' houses, by their letters and nicknames */
 const ALIASES = new Map(CHAPTERS.filter(isPlaced).map(chapter => [chapter.name, aliasesOf(chapter)]))

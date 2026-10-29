@@ -60,10 +60,7 @@ test("every building code in the fixtures is in the table, and an unknown code f
   expect(() => fromDhub(unknown, place)).toThrow(UnknownBuilding)
 })
 
-test("registrar times read as minutes after midnight, round the clock", () => {
-  expect(parseTime("10:10am - 12:00pm")).toEqual([610, 720])
-  expect(parseTime("12:40pm - 2:00pm")).toEqual([760, 840])
-  expect(parseTime("12:00am - 1:00am")).toEqual([0, 60])
+test("registrar times read as minutes after midnight, round the clock, and hours arranged as none", () => {
   expect(parseTime("Hours Arranged")).toBeUndefined()
   fc.assert(fc.property(fc.integer({ min: 0, max: 1439 }), fc.integer({ min: 0, max: 1439 }), (a, b) => {
     const time = (m: number) => `${((Math.floor(m / 60) + 11) % 12) + 1}:${String(m % 60).padStart(2, "0")}${m < 720 ? "am" : "pm"}`

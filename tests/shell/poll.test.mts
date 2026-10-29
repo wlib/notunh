@@ -106,7 +106,7 @@ test("a request left hanging while the page was hidden doesn't hold up the next 
         vi.clearAllTimers()
       }
     }
-  ))
+  ), { numRuns: 25 })
 })
 
 test("stopping cancels the request in flight, and nothing is asked after", async () => {

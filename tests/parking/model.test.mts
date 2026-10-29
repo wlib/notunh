@@ -4,10 +4,10 @@ import { type Permit, type Stay, type Who, fits, holds, inWinterSeason, options,
 import { type Day, HOUR, addDays, atClock, dayStart, localDay, localMinutes, offsetAt, weekday } from "../../src/shared/time.mts"
 import { areas } from "./fixtures.mts"
 
-const today = localDay(Date.now())
+const today: Day = "2026-10-28"
 const clock = (minute: number) => `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`
 
-/** A day within half a year of today either way, so nothing here rots and both clock changes and a winter are crossed */
+/** A day within half a year of today either way, so both clock changes and a winter are crossed */
 const aDay = fc.integer({ min: -180, max: 180 }).map(days => addDays(today, days))
 const anInstant = fc.tuple(aDay, fc.integer({ min: 0, max: 1439 })).map(([day, minute]) => atClock(day, clock(minute)))
 /** A stay from a few minutes to three days */

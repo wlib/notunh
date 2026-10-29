@@ -5,10 +5,8 @@
 // parking before anything Photon finds further off. Dates come from today, the winter's from the coming January.
 // Screenshots go to NOTUNH_SHOTS when it's set
 
-import { mkdirSync } from "node:fs"
-import { join } from "node:path"
 import { test as base, expect, devices, type Page } from "@playwright/test"
-import { type Fixture, startFixture } from "./fixture.mts"
+import { type Fixture, open as openPage, shoot, startFixture } from "./fixture.mts"
 import { emptyIndex } from "../../src/courses/course.mts"
 import { fieldOf, segmentOf } from "../../src/map/link.mts"
 import { type Day, addDays, atClock, localDay, weekday } from "../../src/shared/time.mts"
@@ -24,11 +22,6 @@ const test = base.extend<{ fixture: Fixture }>({
 const { defaultBrowserType, ...phone } = devices["iPhone 13"]
 test.use({ ...phone, proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" }, timezoneId: "America/New_York", serviceWorkers: "block" })
 
-const SHOTS = process.env.NOTUNH_SHOTS
-if (SHOTS)
-  mkdirSync(SHOTS, { recursive: true })
-const shoot = (page: Page, name: string) =>
-  SHOTS ? page.screenshot({ path: join(SHOTS, `${name}-${test.info().project.name}.png`) }) : Promise.resolve()
 
 const today = localDay(Date.now())
 
@@ -50,9 +43,7 @@ const stayOn = (day: Day, from: string, to: string) =>
 const open = async (page: Page, origin: string, path: string) => {
   // No holidays, so a weekday is a weekday whatever UNH's calendar says this year
   await page.route(/\/assets\/courses-[\w-]+\.json$/, route => route.fulfill({ json: emptyIndex() }))
-  await page.goto(origin + path)
-  const no = page.getByRole("button", { name: "No", exact: true })
-  await no.waitFor({ timeout: 3000 }).then(() => no.click(), () => {})
+  await openPage(page, origin, path)
 }
 
 test("B Lot from 6:30 to 8:30 on a weekday says a permit is required from 7 AM, and the sheet near Kingsbury ranks it", async ({ page, fixture }) => {
@@ -116,7 +107,7 @@ test("the permit chosen in the sheet's fields changes a verdict, and is kept on 
   await asked.click()
   await view.getByLabel("Permit", { exact: true }).selectOption("faculty")
   await expect(asked).toContainText("faculty/staff")
-  expect(await page.evaluate(() => localStorage.getItem("parking-permit"))).toBe(JSON.stringify("faculty"))
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("parking-permit"))).toBe(JSON.stringify("faculty"))
 
   await page.goto(fixture.origin + `/map/area/B${stayOn(tuesday, "06:30", "08:30")}`)
   await expect(view.locator(".view-when")).toHaveText("Fits")

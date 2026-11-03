@@ -19,11 +19,16 @@
 // its box is the taller of the heights involved, slid down to show the right amount. Once still, the box is swapped
 // for the detent's own height in a single frame, so no frame of the motion has to lay out or paint its content
 //
+// A page in it swipes back, as a phone's own stacks do: a touch whose first move is to the right, not from the
+// screen's left edge, which is Safari's own swipe back, nor on a row that scrolls sideways, is the page's, which
+// follows the finger by translate and, let go far enough across or flicked, slides off and goes Back (state/page.mts),
+// to the page it was opened over or, from the first page this visit opened, to the home; else it springs back
+//
 // What it shows can be scrolled to a position before it's long enough to be there, as a page returned to loads what it
 // lists, and is scrolled there as it grows, unless it's touched first
 
 import { r, watch } from "bruh/reactive"
-import { type Detent, type Owner, landing, owner, placed, releaseVelocity, travelOf } from "../detents.mts"
+import { type Detent, type Owner, canSwipeBack, landing, owner, placed, releaseVelocity, swipesBack, travelOf } from "../detents.mts"
 
 // The sheet's alone: everything else asks for what it wants of it below
 const detent = r<Detent>("half")
@@ -62,9 +67,9 @@ const translated = (element: Element) => parseFloat(getComputedStyle(element).tr
 
 /**
  * The sheet, of the panel, its grabber and header, which stay put, and its body, which scrolls, holding the content
- * as its one child
+ * as its one child; and the pages in it, whether one's shown and how it goes back, for swiping back
  */
-export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTMLElement, body: HTMLElement) => {
+export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTMLElement, body: HTMLElement, pages: { hasPage: () => boolean, back: () => void }) => {
   const app = panel.parentElement!
   const content = body.firstElementChild as HTMLElement
   /** px of the screen's bottom the keyboard covers */
@@ -227,7 +232,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   // and taps on anything else are left alone. A touch only becomes a drag once it's moved, so a tap changes nothing
   // about the sheet, and a field never starts one: what it opens, a keyboard or a picker, is placed by where the
   // field is as it's touched
-  let touched: { x: number, y: number, at: number, isHandle: boolean, owner?: Owner } | undefined
+  let touched: { x: number, y: number, at: number, isHandle: boolean, canGoBack: boolean, owner?: Owner } | undefined
   /**
    * A drag in hand: the finger's last y and when, how fast its travel is changing, and the sheet as the drag found
    * it, laid out in a box as tall as tall, with its travel from there and its furthest (travelOf in detents.mts)
@@ -277,8 +282,36 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   }
 
   /**
-   * Whose a touch on the content is, which its first move decides for good: the sheet's, or else the content's own,
-   * which the browser scrolls as it would anything
+   * A page being swiped back: the finger's last x and when, how fast, the page's element and how far it's across,
+   * and how wide the sheet is, which is all the way back
+   */
+  let swipe: { x: number, at: number, velocity: number, dx: number, view: HTMLElement, width: number } | undefined
+
+  /** Shows the page this far across, following the finger and never left of where it rests */
+  const slide = (dx: number) => {
+    const held = swipe!
+    held.dx = Math.max(0, dx)
+    held.view.style.translate = `${px(held.dx)} 0`
+  }
+
+  /** Lets the page go: off the sheet and Back, or back to where it rests, each a short slide */
+  const letGo = (goesBack: boolean) => {
+    const { view, width } = swipe!
+    swipe = undefined
+    panel.classList.remove("swiping")
+    panel.classList.add("settling")
+    view.style.translate = goesBack ? `${px(width)} 0` : ""
+    Promise.all(view.getAnimations().map(animation => animation.finished)).then(() => {
+      panel.classList.remove("settling")
+      view.style.translate = ""
+      if (goesBack)
+        pages.back()
+    }, () => {})
+  }
+
+  /**
+   * Whose a touch on the content is, which its first move decides for good: the sheet's, the page's to swipe back,
+   * or else the content's own, which the browser scrolls as it would anything
    */
   const claim = (x: number, y: number) => {
     if (!touched || touched.owner)
@@ -289,11 +322,18 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
       return
     const isTall = extentNow() >= caps().tall - 1
     const canScroll = body.scrollTop < maxScroll() - 1
-    if (owner({ isTall, canScroll, dx, dy }) === "sheet")
-      touched.owner = "sheet"
-    else
+    const whose = owner({ isTall, canScroll, canGoBack: touched.canGoBack, dx, dy })
+    if (whose === "content")
       touched = undefined
+    else
+      touched.owner = whose
   }
+
+  /** Whether an element, or one it's in up to the panel, scrolls sideways itself, as a row of chips does */
+  const inScroller = (target: Element | null): boolean =>
+    target !== null && target !== panel && (
+      target.scrollWidth > target.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(target).overflowX) || inScroller(target.parentElement)
+    )
 
   panel.addEventListener("pointerdown", event => {
     // Another finger mid-drag changes nothing
@@ -305,7 +345,8 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     if (!isSheet() || target.closest("input, textarea, select, dialog"))
       return
     const isHandle = target.closest(".grabber, .panel-header") !== null && !target.closest("button:not(.grabber)")
-    touched = { x: event.clientX, y: event.clientY, at: event.timeStamp, isHandle, owner: isHandle ? "sheet" : undefined }
+    const canGoBack = !isHandle && !swipe && canSwipeBack({ hasPage: pages.hasPage(), x: event.clientX, inScroller: inScroller(target) })
+    touched = { x: event.clientX, y: event.clientY, at: event.timeStamp, isHandle, canGoBack, owner: isHandle ? "sheet" : undefined }
     // A handle holds the pointer from the start, so a drag up off the sheet still moves it; anything else only once
     // it's a drag, as a click goes to whatever holds the pointer when it's let go
     if (isHandle)
@@ -318,7 +359,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   panel.addEventListener("touchmove", event => {
     const { clientX, clientY } = event.changedTouches[0]
     claim(clientX, clientY)
-    if (drag || touched?.owner === "sheet")
+    if (drag || swipe || touched?.owner)
       event.preventDefault()
   }, { passive: false })
 
@@ -326,6 +367,24 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     claim(event.clientX, event.clientY)
     if (!touched)
       return
+    if (touched.owner === "back") {
+      if (!swipe) {
+        const view = body.querySelector<HTMLElement>(".view")
+        if (event.clientX - touched.x < SLOP || !view)
+          return
+        panel.setPointerCapture(event.pointerId)
+        panel.classList.add("swiping")
+        // From where and when it was touched, as a drag's first move is
+        swipe = { x: touched.x, at: touched.at, velocity: 0, dx: 0, view, width: panel.clientWidth }
+      }
+      const held = swipe
+      const was = held.dx
+      slide(held.dx + event.clientX - held.x)
+      held.velocity = (held.dx - was) / Math.max(1, event.timeStamp - held.at)
+      held.x = event.clientX
+      held.at = event.timeStamp
+      return
+    }
     if (!drag) {
       if (Math.abs(event.clientY - touched.y) < SLOP)
         return
@@ -343,6 +402,11 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   const release = (event: PointerEvent) => {
     const wasTouched = touched
     touched = undefined
+    if (swipe) {
+      const { width, dx, velocity, at } = swipe
+      letGo(event.type !== "pointercancel" && swipesBack(width, dx, releaseVelocity(velocity, event.timeStamp - at)))
+      return
+    }
     if (!drag) {
       // A tap on the grabber or the header toggles it
       if (wasTouched?.isHandle && event.type === "pointerup")

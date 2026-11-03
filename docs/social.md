@@ -36,7 +36,11 @@ The result is `src/map/events.json`, a map data file like the timetable; a gener
 
 ## Pins
 
-Made from **+ New event**, the last row of today on the home, or **+ New event here** on a place's page: `/map/new/<place>` (`src/map/ui/NewEvent.tsx`). What, where (a place the map knows, searched as typed by its name or what people call it, the first found taken once the field is left), where exactly, a day (Today, Tomorrow, or another) with a start and an end, each a chip over its native picker, the end keeping its length as the start moves, up to two more times (**+ Another time**), details, **spots**, and Link only or Everyone. The device makes the pin's id, so a retry is the same pin. Posted, it opens as `/map/event/<id>`, with Going, the times to mark or set, Share, and Delete, asked again in a dialog over the page, or Report (`src/social/ui.tsx`, shared with `/p/`).
+Made from **+ New event**, the last row of today on the home, or **+ New event here** on a place's page: `/map/new/<place>` (`src/map/ui/NewEvent.tsx`). What, where (a place the map knows, searched as typed by its name or what people call it, the first found taken once the field is left), where exactly, a day (Today, Tomorrow, or another) with a start and an end, each a chip over its native picker, the end keeping its length as the start moves, up to two more times (**+ Another time**, and **− Remove a time** for the last), details, **spots**, and Link only or Everyone. The form makes the pin's id as it opens, so posting again after a failure is the same pin. Posted, it takes the form's place in the history and opens as `/map/event/<id>`, with Going, the times to mark or set, Share, and in the foot Edit and Delete, asked again in a dialog over the page, or Report (`src/social/ui.tsx`, shared with `/p/`).
+
+The map's event page shows a pin as the Worker last told this device of it, or as the home's list has it, and asks for it again as it opens, since a list never says whose it is or who's going; what a command answers is what the page shows next, and the home's list is asked again after each, as a time set or an event deleted changes it.
+
+**Edit** opens `/map/edit/<id>`, the same form filled with the event as the page last had it, its times as the host sees them (those to pick from while its time is to pick, else the one it's at, `timesToEdit`), saved as **Save** by `PUT /api/pins/:id` and checked as a new one is, its times where they're changed, a public one taking a verified address. Times as they were change nothing of marks, the set time or Going. One time makes it an ordinary event at that time, keeping who's going and dropping the marks. Several are to pick from again: the set time is cleared, nobody is going, and each mark stays on its time where that time is kept, the rest dropped; the form says so. Spots never drop below those going, checked in the same batch as the edit, so a Going taken meanwhile can't be overrun. Saved, it opens as its page again in the form's place. `/p/` links its Edit to the map's.
 
 `/p/<id>` (`p/index.html.tsx`, `src/social/pin.tsx`) is the light page a shared link opens, with no account or install: place, time, **Directions**, **Going** (a count, never a list), **Share**, linking to the map's page. The Worker puts the pin in its head for previews ([deploying.md](deploying.md#search-and-sharing)); the page fills in the rest from `GET /api/pins/:id`.
 
@@ -101,7 +105,7 @@ Unbound, as in Previews, the message is logged and nothing sent. `wrangler dev` 
 - The Rate Limiting binding bounds commands per address a minute, as for reminders.
 - Titles, places and `where` are 80 characters, descriptions 500; a person makes at most 10 pins a day, within four months.
 - Reports from two devices hide a pin from everyone (`HIDE`).
-- A maker deletes their pin, with everything of its.
+- A maker edits their pin, which isn't counted as making one, or deletes it, with everything of its.
 - `SOCIAL_OFF` in `wrangler.jsonc` switches features off, each answering 503: any of `pins`, `link`, `email`, `sync` (`/api/state` and `/api/session`).
 
 ## Budget

@@ -8,14 +8,14 @@
 // marked it "Going?" (src/social/marks.mts, src/social/ask.mts)
 
 import { Hono } from "hono/tiny"
-import type { MiddlewareHandler } from "hono"
+import type { Context, MiddlewareHandler } from "hono"
 import { sValidator } from "@hono/standard-validator"
 import type { StandardSchemaV1 } from "@standard-schema/spec"
-import { type SQL, and, eq, gt, inArray, isNotNull, lt, sql } from "drizzle-orm"
+import { type SQL, and, eq, gt, inArray, isNotNull, lt, notInArray, sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/d1"
 import * as v from "valibot"
-import { type Pin, LINGER, LONG, MAX_SPOTS, MAX_TIMES, PINS_AHEAD, SHORT, isOn, pinPath } from "../src/social/event.mts"
-import { isUnset, sortedTimes, spanOf } from "../src/social/marks.mts"
+import { type Pin, type Time, LINGER, LONG, MAX_SPOTS, MAX_TIMES, PINS_AHEAD, SHORT, isOn, pinPath } from "../src/social/event.mts"
+import { isSameTime, isUnset, sortedTimes, spanOf, timesToEdit } from "../src/social/marks.mts"
 import { askOf } from "../src/social/ask.mts"
 import { LINK_TTL, codeOf, parseCode } from "../src/social/link.mts"
 import { SITE } from "../src/shell/pages.mts"
@@ -210,6 +210,19 @@ const NewPin = v.object({
   spots:       v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(MAX_SPOTS))),
   visibility:  v.picklist(["link", "public"])
 })
+type NewPin = v.InferOutput<typeof NewPin>
+
+/** A pin as its host edits it: what it's made with, under the id in its path */
+const EditedPin = v.omit(NewPin, ["id"])
+
+/**
+ * Why a pin can't be as given, as answered, or none: times given, which an edit gives only where they're new, are for
+ * the coming weeks, and only a verified UNH address lists it
+ */
+const refusal = async (c: Context<Worker>, db: Db, who: Who, times: readonly Time[] | undefined, visibility: NewPin["visibility"], now: number) =>
+  times && (times[0].start < now - DAY || times.at(-1)!.start > now + FURTHEST) ? c.text("An event is for the coming weeks", 400) :
+  visibility === "public" && !await verifiedOf(db, who.person, now) ? c.text("Listing an event takes a verified UNH address", 403) :
+  undefined
 
 social.post("/api/pins", on("pins"), limited, valid(NewPin), asDevice, async c => {
   const { device: _, times: given, spots, ...made } = c.req.valid("json")
@@ -217,10 +230,9 @@ social.post("/api/pins", on("pins"), limited, valid(NewPin), asDevice, async c =
   const db = drizzle(c.env.DB)
   const now = Date.now()
   const times = sortedTimes(given)
-  if (times[0].start < now - DAY || times.at(-1)!.start > now + FURTHEST)
-    return c.text("An event is for the coming weeks", 400)
-  if (made.visibility === "public" && !await verifiedOf(db, who.person, now))
-    return c.text("Listing an event takes a verified UNH address", 403)
+  const refused = await refusal(c, db, who, times, made.visibility, now)
+  if (refused)
+    return refused
   const [{ n }] = await db.select({ n: sql<number>`count(*)` }).from(pins).where(and(eq(pins.person, who.person), gt(pins.created, now - DAY)))
   if (n >= MAX_PINS_A_DAY)
     return c.text(`At most ${MAX_PINS_A_DAY} events a day`, 429)
@@ -250,36 +262,43 @@ social.get("/api/pins", on("pins"), valid(v.object({ day: Day, days: v.optional(
   return c.json(listed, 200, { "cache-control": "no-store" })
 })
 
-social.get("/api/pins/:id", on("pins"), valid(v.object({ id: ID }), "param"), async c => {
+const PinId = valid(v.object({ id: ID }), "param")
+
+social.get("/api/pins/:id", on("pins"), PinId, async c => {
   const pin = await readPin(drizzle(c.env.DB), c.req.valid("param").id, await maybeDevice(c))
   return pin ? c.json(pin, 200, { "cache-control": "no-store" }) : c.notFound()
 })
 
-/** A command on one pin, as its host if `byHost`, else as anyone, given the pin's row */
-const onPin = (byHost: boolean, run: (c: Parameters<MiddlewareHandler<Worker>>[0], row: Row, who: Who, db: Db) => Promise<Response>): MiddlewareHandler<Worker> => async c => {
-  const db = drizzle(c.env.DB)
-  const who = c.get("who")
-  const [found] = await rowsWhere(db, eq(pins.id, c.req.param("id")!))
-  if (!found || found.reports >= HIDE)
-    return c.notFound()
-  if (byHost && found.row.person !== who.person)
-    return c.text("Not your event", 403)
-  return run(c, found.row, who, db)
-}
+type Body<S extends v.GenericSchema> = { out: { json: v.InferOutput<S> } }
 
-/** Whether a pin's time is still to pick, as its row has it */
-const isUnsetRow = (row: Row) =>
-  isUnset({ times: row.times, chosen: row.chosen ?? undefined })
+/**
+ * A command on one pin, by its id in the path: its body checked by the schema, as the device, then run as the pin's
+ * host if `byHost`, else as anyone, with the pin's row, for one that's there and not hidden
+ */
+const onPin = <S extends v.GenericSchema>(schema: S, byHost: boolean, run: (c: Context<Worker, string, Body<S>>, row: Row, who: Who, db: Db) => Promise<Response>) => [
+  PinId,
+  valid(schema),
+  asDevice,
+  (async c => {
+    const db = drizzle(c.env.DB)
+    const who = c.get("who")
+    const [found] = await rowsWhere(db, eq(pins.id, c.req.param("id")!))
+    if (!found || found.reports >= HIDE)
+      return c.notFound()
+    if (byHost && found.row.person !== who.person)
+      return c.text("Not your event", 403)
+    return run(c, found.row, who, db)
+  }) as MiddlewareHandler<Worker, string, Body<S>>
+] as const
 
 const Device = v.object({ device: ID })
-const PinId = valid(v.object({ id: ID }), "param")
 const Index = v.pipe(v.number(), v.integer(), v.minValue(0))
 
 // Going, or not, once there's a time, taking a spot where there are spots, if one's left
-social.post("/api/pins/:id/going", on("pins"), limited, PinId, valid(v.object({ ...Device.entries, going: v.boolean() })), asDevice, onPin(false, async (c, row, who, db) => {
-  if (isUnsetRow(row))
+social.post("/api/pins/:id/going", on("pins"), limited, ...onPin(v.object({ ...Device.entries, going: v.boolean() }), false, async (c, row, who, db) => {
+  if (isUnset(row))
     return c.text("The time's still to pick", 409)
-  const { going: wants } = await c.req.json<{ going: boolean }>()
+  const { going: wants } = c.req.valid("json")
   if (!wants)
     await db.delete(going).where(and(eq(going.pin, row.id), eq(going.device, who.device)))
   else
@@ -290,9 +309,9 @@ social.post("/api/pins/:id/going", on("pins"), limited, PinId, valid(v.object({ 
 
 // A mark on a time, or none, which says the time works for this device; with a push subscription, so it's asked
 // "Going?" if the host sets that time
-social.post("/api/pins/:id/marks", on("pins"), limited, PinId, valid(v.object({ ...Device.entries, time: Index, marked: v.boolean(), subscription: v.optional(Subscription) })), asDevice, onPin(false, async (c, row, who, db) => {
-  const { time, marked, subscription } = await c.req.json<{ time: number, marked: boolean, subscription?: Subscription }>()
-  if (!isUnsetRow(row))
+social.post("/api/pins/:id/marks", on("pins"), limited, ...onPin(v.object({ ...Device.entries, time: Index, marked: v.boolean(), subscription: v.optional(Subscription) }), false, async (c, row, who, db) => {
+  const { time, marked, subscription } = c.req.valid("json")
+  if (!isUnset(row))
     return c.text("The time's set", 409)
   if (time >= row.times.length)
     return c.text("No such time", 400)
@@ -322,9 +341,9 @@ const ask = async (env: Env, db: Db, pin: Pin) => {
 }
 
 // The host sets one of the times, which makes it an ordinary event, and asks whoever marked it
-social.post("/api/pins/:id/set", on("pins"), limited, PinId, valid(v.object({ ...Device.entries, time: Index })), asDevice, onPin(true, async (c, row, who, db) => {
-  const { time } = await c.req.json<{ time: number }>()
-  if (!isUnsetRow(row))
+social.post("/api/pins/:id/set", on("pins"), limited, ...onPin(v.object({ ...Device.entries, time: Index }), true, async (c, row, who, db) => {
+  const { time } = c.req.valid("json")
+  if (!isUnset(row))
     return c.text("The time's set", 409)
   if (time >= row.times.length)
     return c.text("No such time", 400)
@@ -332,6 +351,40 @@ social.post("/api/pins/:id/set", on("pins"), limited, PinId, valid(v.object({ ..
   const pin = (await readPin(db, row.id, who))!
   await ask(c.env, db, pin)
   return c.json(pin)
+}))
+
+// The host edits what an event says, its spots, who can find it, and its times, checked as when it was made. Times as
+// they were change nothing of its marks, its set time or who's going. One time makes it an ordinary event at that
+// time, keeping who's going; several are to pick from again, each mark kept where its time is, and nobody going.
+// Spots never drop below those going, checked by each statement of the batch, so a Going taken meanwhile can't be
+// overrun
+social.put("/api/pins/:id", on("pins"), limited, ...onPin(EditedPin, true, async (c, row, who, db) => {
+  const { device: _, times: given, spots = null, ...edited } = c.req.valid("json")
+  const times = sortedTimes(given)
+  const was = timesToEdit(row)
+  const isSame = times.length === was.length && times.every((time, i) => isSameTime(time, was[i]))
+  const refused = await refusal(c, db, who, isSame ? undefined : times, edited.visibility, Date.now())
+  if (refused)
+    return refused
+  const isPicking = !isSame && times.length > 1
+  /** Each mark's time kept to pick from, by its index before and after */
+  const kept = isPicking ? row.times.flatMap((time, before) => { const after = times.findIndex(other => isSameTime(time, other)); return after < 0 ? [] : [[before, after] as const] }) : []
+  const fits = spots === null || isPicking ? sql`1` : sql`(select count(*) from ${going} where ${going.pin} = ${row.id}) <= ${spots}`
+  const [updated] = await db.batch([
+    db.update(pins)
+      .set({ ...edited, spots, ...!isSame && (isPicking ? { ...spanOf(times), times, chosen: null } : { ...times[0], times: [], chosen: null }) })
+      .where(and(eq(pins.id, row.id), fits)).returning({ id: pins.id }),
+    ...isSame ? [] : isPicking ? [
+      db.delete(marks).where(and(eq(marks.pin, row.id), notInArray(marks.time, kept.map(([before]) => before)))),
+      // Moved by way of negative indices, as no two of a device's marks may be on one time midway
+      ...kept.some(([before, after]) => before !== after) ? [
+        db.update(marks).set({ time: sql`-1 - case ${marks.time} ${sql.join(kept.map(([before, after]) => sql`when ${before} then ${after}`), sql` `)} end` }).where(eq(marks.pin, row.id)),
+        db.update(marks).set({ time: sql`-1 - ${marks.time}` }).where(and(eq(marks.pin, row.id), lt(marks.time, 0)))
+      ] : [],
+      db.delete(going).where(eq(going.pin, row.id))
+    ] : [db.delete(marks).where(and(eq(marks.pin, row.id), fits))]
+  ])
+  return updated.length ? c.json(await readPin(db, row.id, who)) : c.text("More are going than that", 409)
 }))
 
 /** Everything of a pin, dropped together */
@@ -345,12 +398,12 @@ const dropPins = (db: Db, where: SQL) => {
   ] as const
 }
 
-social.delete("/api/pins/:id", on("pins"), PinId, valid(Device), asDevice, onPin(true, async (c, row, _, db) => {
+social.delete("/api/pins/:id", on("pins"), ...onPin(Device, true, async (c, row, _, db) => {
   await db.batch(dropPins(db, eq(pins.id, row.id)))
   return c.body(null, 204)
 }))
 
-social.post("/api/pins/:id/reports", on("pins"), limited, PinId, valid(Device), asDevice, onPin(false, async (c, row, who, db) => {
+social.post("/api/pins/:id/reports", on("pins"), limited, ...onPin(Device, false, async (c, row, who, db) => {
   await db.insert(reports).values({ pin: row.id, device: who.device }).onConflictDoNothing()
   const [{ n }] = await db.select({ n: sql<number>`count(*)` }).from(reports).where(eq(reports.pin, row.id))
   return c.json({ hidden: n >= HIDE })

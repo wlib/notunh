@@ -35,7 +35,7 @@ Bus samples are one gzipped row per source per minute polled (`src/transit/obser
 | `GET /api/rooms/:day[/:space]` | public; says more to a verified device asking as itself | A day's bookings from 25Live, of the map's rooms or one of them ([courses.md](courses.md#rooms-to-book)) |
 | `GET /api/push/key`, `PUT`/`DELETE /api/reminders/:id`, `DELETE /api/push/devices/:device` | device | [reminders.md](reminders.md#routes) |
 | `GET /api/pins?day=…&days=…`, `/api/pins/:id`, `/p/:id`, `/map/<page>`, `/map/card/<page>` | public; says more to the device asking as itself | The public pins on a day or some days from it, one, and a shared page headed with what it's of, and its card ([deploying.md](deploying.md#search-and-sharing)) |
-| `POST /api/pins`, `POST /api/pins/:id/{marks,set,going,reports}`, `DELETE /api/pins/:id` | device | Make, mark a time, set the time (host), go, report, delete (host) |
+| `POST /api/pins`, `PUT /api/pins/:id`, `POST /api/pins/:id/{marks,set,going,reports}`, `DELETE /api/pins/:id` | device | Make, edit (host), mark a time, set the time (host), go, report, delete (host) |
 | `POST /api/link`, `GET`/`POST /api/link/:code` | device | A code to link devices, its standing, its approval |
 | `POST /api/email`, `POST /api/email/verify` | device | A code emailed to a UNH address, and its check, which may join the device to the address's person |
 | `GET /api/me` | device | Who the device is |

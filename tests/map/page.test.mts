@@ -33,7 +33,7 @@ const aPage: fc.Arbitrary<Page> = fc.oneof(
   fc.record({ kind: fc.constant("place" as const), name: aText }),
   fc.record({ kind: fc.constant("parking" as const), place: fc.option(aText, { nil: undefined }), ...parking }).map(withoutNone),
   fc.record({ kind: fc.constant("area" as const), id: aText, ...parking }).map(withoutNone),
-  fc.record({ kind: fc.constantFrom("stop" as const, "bus" as const), id: aText }),
+  fc.record({ kind: fc.constantFrom("stop" as const, "bus" as const, "edit" as const), id: aText }),
   fc.record({ kind: fc.constant("new" as const), place: fc.option(aText, { nil: undefined }) }).map(withoutNone),
   fc.record({ kind: fc.constant("program" as const), slug: fc.option(aText, { nil: undefined }), course: fc.option(aText, { nil: undefined }) }).map(withoutNone),
   fc.record({ kind: fc.constantFrom("directions" as const, "you" as const, "buses" as const) })

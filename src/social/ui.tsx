@@ -2,12 +2,14 @@
 
 // What an event made here shows wherever its page is, on the map (src/map/ui/Pages.tsx) and at its link (pin.tsx):
 // Going, a count of the spots where there are some; the times to pick while its time is unset, each with one mark,
-// "this time works for me", or for its host, Set; and its foot, where the host deletes it and anyone else reports it
+// "this time works for me", or for its host, Set; and its foot, where the host edits or deletes it and anyone else
+// reports it
 
 import { type Pin } from "./event.mts"
 import { goingWords, isFull } from "./marks.mts"
 import * as api from "./browser/api.mts"
 import { Count, DayTimeRange } from "../shell/intl.tsx"
+import { urlOf } from "../map/link.mts"
 
 /** Does something with the pin, for its page to show what comes back, or the Worker's refusal */
 export type Act = (f: () => Promise<Pin | void>) => () => void
@@ -45,8 +47,11 @@ export const Times = ({ pin, act }: { pin: Pin, act: Act }) =>
     <p class="muted">{pin.yours ? "Whoever marked the time you set is asked if they're going." : "The host sets one. If you marked it, you'll be asked if you're going."}</p>
   </section>
 
-/** Delete, for the host, once they've said so again, or Report, for anyone else, as a quiet link in the page's foot */
-export const Moderate = ({ pin, act, onGone, onReported }: { pin: Pin, act: Act, onGone: () => void, onReported: (hidden: boolean) => void }) => {
+/**
+ * Quiet links in the page's foot: for the host, Edit, which is the map's page for it, opened in place where the page
+ * is the map's, and Delete, done once they've said so again; for anyone else, Report
+ */
+export const Moderate = ({ pin, act, onEdit, onGone, onReported }: { pin: Pin, act: Act, onEdit?: () => void, onGone: () => void, onReported: (hidden: boolean) => void }) => {
   if (!pin.yours)
     return <button type="button" class="link" onclick={act(async () => onReported((await api.report(pin.id)).hidden))}>Report</button>
   // Asked over everything, Escape and a tap outside keeping it as Keep does
@@ -62,7 +67,9 @@ export const Moderate = ({ pin, act, onGone, onReported }: { pin: Pin, act: Act,
     </dialog>
   return (
     <>
-      <button type="button" class="link" onclick={() => { ask.returnValue = ""; ask.showModal() }}>Delete this event</button>
+      <a class="link" href={urlOf({ kind: "edit", id: pin.id })} onclick={onEdit && ((event: MouseEvent) => { event.preventDefault(); onEdit() })}>Edit</a>
+      {" · "}
+      <button type="button" class="link" onclick={() => { ask.returnValue = ""; ask.showModal() }}>Delete</button>
       {ask}
     </>
   )

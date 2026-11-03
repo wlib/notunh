@@ -4,17 +4,18 @@
 // place the map knows, searched as you type, and where exactly in it, a day with a start and an end, picked from chips
 // over the native pickers, up to two more times for people to mark (src/social/marks.mts), details, how many spots,
 // and whether everyone on campus can find it, which takes a verified UNH email. Posted, it's kept by the Worker and
-// opens as its page
+// opens as its page. Editing one is the same form, filled with the event as it is, its times as its host sees them
 
-import { r } from "bruh/reactive"
-import { MAX_SPOTS, MAX_TIMES, SHORT, LONG, type Time as Window, placeNames } from "../../social/event.mts"
+import { type Reactive, r } from "bruh/reactive"
+import { type Pin, MAX_SPOTS, MAX_TIMES, SHORT, LONG, type Time as Window, placeNames } from "../../social/event.mts"
+import { isUnset, timesToEdit } from "../../social/marks.mts"
 import * as api from "../../social/browser/api.mts"
 import { randomBase64Url } from "../../shared/base64url.mts"
 import { HOUR, addDays, atClock, hhmm, localDay } from "../../shared/time.mts"
 import { ClockTime } from "../../shell/intl.tsx"
 import { capture } from "../../shell/usage.tsx"
 import { state } from "../state/map.mts"
-import { DayChips, Head, PickChip } from "./Pages.tsx"
+import { DayChips, Head, PickChip, learn } from "./Pages.tsx"
 import { verified } from "./You.tsx"
 
 /** How many of the places matching what's typed are offered */
@@ -83,10 +84,10 @@ const Where = ({ chosen }: { chosen?: string }) => {
  * on the clock as they read. Moving the start moves the end with it, keeping how long it is. Hidden, it's disabled, so
  * the form has none of it
  */
-const When = ({ hidden, start, label = "When" }: { hidden?: ReturnType<typeof r<boolean>>, start: number, label?: string }) => {
-  const day = r(localDay(start))
-  const from = r(hhmm(start))
-  const to = r(hhmm(start + HOUR))
+const When = ({ hidden, time, label = "When" }: { hidden?: Reactive<boolean>, time: Window, label?: string }) => {
+  const day = r(localDay(time.start))
+  const from = r(hhmm(time.start))
+  const to = r(hhmm(time.end))
   /** An "HH:MM" on the day picked, as a moment to show */
   const at = (clock: string) =>
     new Date(atClock(day.value, clock))
@@ -131,13 +132,19 @@ const windowsOf = (data: FormData): Window[] => {
   })
 }
 
-export const NewEventView = ({ place }: { place?: string }) => {
+/** A new event, at a place if one's given, or one of yours to edit, as the Worker has it */
+export const NewEventView = ({ place, pin }: { place?: string, pin?: Pin }) => {
   const problem = r<string>()
   const isSending = r(false)
-  /** Times beyond the first offered, for people to mark */
-  const more = r(0)
+  /** The event's id, made here once, so posting it again after a failure is the same event */
+  const id = pin?.id ?? randomBase64Url(16)
   const start = Math.ceil(Date.now() / HOUR) * HOUR + HOUR
-  const isPublic = r(false)
+  /** The times filled in: the event's as its host edits them, or the hour after next */
+  const filled = pin ? timesToEdit(pin) : [{ start, end: start + HOUR }]
+  /** Times beyond the first offered, for people to mark */
+  const more = r(filled.length - 1)
+  const isPublic = r(pin?.visibility === "public")
+  const save = pin ? api.editPin : api.makePin
 
   const form: HTMLFormElement =
     <form class="new-event" onsubmit={event => {
@@ -149,8 +156,8 @@ export const NewEventView = ({ place }: { place?: string }) => {
         return problem.value = "An event needs a day, a start and an end."
       isSending.value = true
       problem.value = undefined
-      api.makePin({
-        id:          randomBase64Url(16),
+      save({
+        id,
         title:       String(data.get("title")),
         description: String(data.get("description")),
         place:       String(data.get("place")),
@@ -159,10 +166,16 @@ export const NewEventView = ({ place }: { place?: string }) => {
         spots,
         visibility:  isPublic.peek() ? "public" : "link"
       }).then(
-        pin => {
-          capture("pin_made", { times: times.length, spots: spots !== undefined, public: pin.visibility === "public" })
+        saved => {
+          capture(pin ? "pin_edited" : "pin_made", { times: times.length, spots: spots !== undefined, public: saved.visibility === "public" })
+          learn(id, saved)
           void state.refreshPins()
-          state.go({ kind: "event", id: pin.id })
+          // Its page, in the form's place in the history, so Back never returns to a form that would post it again;
+          // an edit's is the page it was opened over
+          if (pin)
+            state.done({ kind: "event", id })
+          else
+            state.amend({ kind: "event", id })
         },
         (error: Error) => {
           problem.value = error.message
@@ -170,18 +183,24 @@ export const NewEventView = ({ place }: { place?: string }) => {
         }
       )
     }}>
-      <Head title="New event" />
-      <label class="field"><span>What</span><input name="title" type="text" required maxlength={SHORT} placeholder="Tennis, anyone?" /></label>
-      <Where chosen={place} />
-      <label class="field"><span>Where exactly</span><input name="where" type="text" maxlength={SHORT} placeholder="Court 5, room 164, behind the MUB" /></label>
-      <When start={start} />
-      {/* Kept while hidden, so a time picked stays picked as another is added, each a day later to start */}
-      {Array.from({ length: MAX_TIMES - 1 }, (_, i) => <When hidden={r(() => more.value <= i)} start={atClock(addDays(localDay(start), i + 1), hhmm(start))} label="Another time" />)}
-      {r(() => more.value < MAX_TIMES - 1 && <button type="button" class="more" onclick={() => more.value++}>+ Another time</button>)}
-      {r(() => more.value > 0 && <p class="muted">People mark the times that work, and you set one.</p>)}
-      <label class="field"><span>Details</span><textarea name="description" rows={2} maxlength={LONG} placeholder="Any level. I have spare balls." /></label>
+      <Head title={pin ? "Edit event" : "New event"} />
+      <label class="field"><span>What</span><input name="title" type="text" required maxlength={SHORT} placeholder="Tennis, anyone?" value={pin?.title} /></label>
+      <Where chosen={pin?.place ?? place} />
+      <label class="field"><span>Where exactly</span><input name="where" type="text" maxlength={SHORT} placeholder="Court 5, room 164, behind the MUB" value={pin?.where} /></label>
+      <When time={filled[0]} />
+      {/* Kept while hidden, so a time picked stays picked as another is added, each a day after the first to start */}
+      {Array.from({ length: MAX_TIMES - 1 }, (_, i) => {
+        const later = atClock(addDays(localDay(filled[0].start), i + 1), hhmm(filled[0].start))
+        return <When hidden={r(() => more.value <= i)} time={filled[i + 1] ?? { start: later, end: later + HOUR }} label="Another time" />
+      })}
+      <p class="more-times">
+        {r(() => more.value < MAX_TIMES - 1 && <button type="button" class="more" onclick={() => more.value++}>+ Another time</button>)}
+        {r(() => more.value > 0 && <button type="button" class="more" onclick={() => more.value--}>− Remove a time</button>)}
+      </p>
+      {r(() => more.value > 0 && <p class="muted">{pin && !isUnset(pin) ? "To pick again: people mark the times that work, and you set one; nobody's going until then." : "People mark the times that work, and you set one."}</p>)}
+      <label class="field"><span>Details</span><textarea name="description" rows={2} maxlength={LONG} placeholder="Any level. I have spare balls.">{pin?.description}</textarea></label>
       <div class="field-row">
-        <label class="field"><span>Spots</span><input name="spots" type="number" inputmode="numeric" min="1" max={String(MAX_SPOTS)} placeholder="No limit" /></label>
+        <label class="field"><span>Spots</span><input name="spots" type="number" inputmode="numeric" min="1" max={String(MAX_SPOTS)} placeholder="No limit" value={pin?.spots?.toString()} /></label>
         <div class="field">
           <span>Who can find it</span>
           <div class="segmented" role="group" aria-label="Who can find it">
@@ -191,7 +210,7 @@ export const NewEventView = ({ place }: { place?: string }) => {
         </div>
       </div>
       {r(() => problem.value && <p class="notice" role="alert">{problem.value}</p>)}
-      <button type="submit" class="button primary" disabled={isSending}>Post it</button>
+      <button type="submit" class="button primary" disabled={isSending}>{pin ? "Save" : "Post it"}</button>
       {r(() => !verified.value && <p class="muted">Everyone on campus can find it once your UNH email is verified, in You.</p>)}
     </form>
   return form

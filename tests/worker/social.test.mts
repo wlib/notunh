@@ -10,7 +10,8 @@ import { app } from "../../worker/api.mts"
 import type { Env } from "../../worker/env.mts"
 import { HIDE, MAX_PINS_A_DAY } from "../../worker/social.mts"
 import type { Message } from "../../worker/mail.mts"
-import type { Pin, Time } from "../../src/social/event.mts"
+import { type Pin, type Time, PINS_AHEAD } from "../../src/social/event.mts"
+import { addDays } from "../../src/shared/time.mts"
 import { type Ask, askOf } from "../../src/social/ask.mts"
 import { parseCode, shown } from "../../src/social/link.mts"
 import { d1 } from "./d1.mts"
@@ -327,6 +328,12 @@ test("a six-digit code sent to a UNH address verifies the person who typed it ba
   const listed = await (await anyone(`/api/pins?day=${day}`)).json() as Pin[]
   expect(listed.map(({ id }) => id)).toEqual([pin.id])
   expect(listed[0]).not.toHaveProperty("yours")
+  // Asked for from the day before, it's listed only once the days asked for reach its own
+  const before = addDays(day, -1)
+  expect(await (await anyone(`/api/pins?day=${before}&days=1`)).json()).toEqual([])
+  expect((await (await anyone(`/api/pins?day=${before}&days=2`)).json() as Pin[]).map(({ id }) => id)).toEqual([pin.id])
+  expect((await anyone(`/api/pins?day=${day}&days=0`)).status).toBe(400)
+  expect((await anyone(`/api/pins?day=${day}&days=${PINS_AHEAD + 1}`)).status).toBe(400)
   // A sixth guess is one too many, so a fresh code is needed
   await ana.ask("POST", "/api/email", { address: "ana.b@wildcats.unh.edu" })
   for (let i = 0; i < 5; i++)

@@ -45,9 +45,9 @@ export const pin = (id: string) =>
 export const bookedOn = (day: Day, space?: string) =>
   read(`/api/rooms/${day}${space === undefined ? "" : `/${space}`}`, Booked)
 
-/** The public pins on a Durham day */
-export const pinsOn = (day: string) =>
-  read(`/api/pins?day=${day}`, v.array(Pin)).then(pins => pins ?? [])
+/** The public pins on some Durham days from one */
+export const pinsFrom = (day: string, days: number) =>
+  read(`/api/pins?day=${day}&days=${days}`, v.array(Pin)).then(pins => pins ?? [])
 
 /** An event as made: one time, or up to three to pick from */
 export type NewPin = Pick<Pin, "id" | "title" | "description" | "place" | "where" | "times" | "spots" | "visibility">

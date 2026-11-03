@@ -116,8 +116,9 @@ const DayRows = ({ day, events }: DayList<Event | Pin>) => {
 const Later = () => {
   const days = r(WEEK)
   return r(() => {
-    const listed = upcoming(state.events.value.events, nowMs(), days.value)
-    const all = upcoming(state.events.value.events, nowMs(), days.value + WEEK * 3)
+    const events = [...state.events.value.events, ...state.pins.value]
+    const listed = upcoming(events, nowMs(), days.value)
+    const all = upcoming(events, nowMs(), days.value + WEEK * 3)
     return <>
       {listed.map(day => <DayRows {...day} />)}
       {all.length > listed.length && <button type="button" class="more" onclick={() => days.value += WEEK}>Later ›</button>}

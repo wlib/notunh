@@ -4,7 +4,7 @@
 
 import { r, watch } from "bruh/reactive"
 import type { DerivativeNode } from "bruh/reactive"
-import { type Event, type EventsData, type Pin, placeOf, today as todayOf } from "../../social/event.mts"
+import { type Event, type EventsData, type Pin, PINS_AHEAD, placeOf, today as todayOf } from "../../social/event.mts"
 import { isUnset } from "../../social/marks.mts"
 import * as api from "../../social/browser/api.mts"
 import type { Place } from "../../places/search.mts"
@@ -16,12 +16,12 @@ import type { Own } from "../../shell/state.mts"
 export type Placed = { event: Event, place: Place }
 
 export const createToday = ({ events, gazetteer, now }: Pick<MapData, "events" | "gazetteer"> & { now: DerivativeNode<number> }, own: Own) => {
-  /** The public pins the Worker lists for today, as last heard; none until it answers, and none while offline */
+  /** The public pins the Worker lists from today for the weeks the home shows, as last heard; none until it answers, and none while offline */
   const listed = r<Pin[]>([])
 
-  /** Asks the Worker for today's public pins, keeping what it had if that fails */
+  /** Asks the Worker for the public pins from today, keeping what it had if that fails */
   const refresh = () =>
-    api.pinsOn(today.peek()).then(pins => listed.value = pins, () => {})
+    api.pinsFrom(today.peek(), PINS_AHEAD).then(pins => listed.value = pins, () => {})
 
   // Once as the map loads, and again each day
   own(watch([today], () => void refresh()))
@@ -35,5 +35,5 @@ export const createToday = ({ events, gazetteer, now }: Pick<MapData, "events" |
     return place ? [{ event, place }] : []
   }))
 
-  return { todayList: list, todayPlaced: placed, refreshPins: refresh }
+  return { todayList: list, todayPlaced: placed, pins: listed, refreshPins: refresh }
 }

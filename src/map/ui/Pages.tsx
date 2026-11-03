@@ -69,9 +69,9 @@ const pinOf = (id: string) => {
   return pins.get(id)!
 }
 
-/** An event by its id, or another calendar's id for it, if it's one of the build's or on today's list, as it is there, so its page shows at once */
+/** An event by its id, or another calendar's id for it, if it's one of the build's or a public pin listed, as it is there, so its page shows at once */
 const listedEvent = (id: string): Event | Pin | undefined =>
-  [...state.todayList.peek(), ...state.events.peek().events].find(event => event.id === id || event.also?.includes(id))
+  [...state.pins.peek(), ...state.events.peek().events].find(event => event.id === id || event.also?.includes(id))
 
 /** Minutes after midnight on Durham's clock as a range, "2:10 – 3:30 PM", as the registrar's patterns are */
 export const Hours = ({ start, end }: Pick<Meeting, "start" | "end">) =>
@@ -596,7 +596,7 @@ export const EventResults = ({ query }: { query: DerivativeNode<string> }) =>
     if (!words.length)
       return null
     const now = nowMs()
-    const events = [...new Map([...state.events.value.events, ...state.todayList.value].map(event => [event.id, event])).values()]
+    const events = [...new Map([...state.events.value.events, ...state.pins.value].map(event => [event.id, event])).values()]
     const found = events
       .filter(event => event.end + LINGER > now && words.every(word => `${event.title} ${event.place ?? ""} ${event.where}`.toLocaleLowerCase().includes(word)))
       .sort((a, b) => a.start - b.start)

@@ -9,16 +9,18 @@ import { startMap } from "./state/map.mts"
 import { AppTitle } from "../shell/ui.tsx"
 import { Home } from "./ui/Home.tsx"
 import { open as openReminder, topUpClasses } from "./ui/Remind.tsx"
-import { PageView } from "./ui/Pages.tsx"
+import { PageView, placeNamed } from "./ui/Pages.tsx"
 import { Status } from "./ui/Buses.tsx"
 import { isAsked } from "./ui/You.tsx"
 import { RideSuggestion } from "./ui/BusView.tsx"
+import { editing } from "./ui/Search.tsx"
 import { makeSheet, raise } from "./ui/sheet.mts"
 import { capture } from "../shell/usage.tsx"
 import { distinct } from "../shell/state.mts"
 import { isSameView } from "./link.mts"
 import { nameAt } from "../places/gazetteer.mts"
 import { coarseName } from "../places/coarse.mts"
+import type { Place } from "../places/search.mts"
 import { localDay, localHour, weekday } from "../shared/time.mts"
 import { type Kept, type Reminder, firstRide, replanned } from "../reminders/reminder.mts"
 import { kept, loadKept, replan } from "./state/reminders.mts"
@@ -150,14 +152,32 @@ void loadKept().then(async () => {
     await replan(plannedAgain)
 })
 
+/** The planner's field being typed in as the map was touched, which a spot tapped then is for ("Search or tap the map") */
+let picking: typeof editing.value
+mapElement.addEventListener("pointerdown", () => picking = editing.peek(), { capture: true })
+/** The spot a tap last dropped a pin at, as named once that's known, while it's where the trip goes */
+let dropped: Place | undefined
+/** Done with the field typed in, and its keyboard */
+const doneTyping = () =>
+  (document.activeElement as HTMLElement | null)?.blur()
+
 createMap(
   mapElement,
   panel,
   state,
   tap => {
+    const shown = page.peek()
+    // In directions, the field being typed in as the map was touched, which whatever's tapped then is for
+    const field = shown?.kind === "directions" && (picking === "from" || picking === "to") ? picking : undefined
+    if (tap.kind === "place" && field) {
+      const place = placeNamed(tap.name)
+      const end = field === "from" ? from : to
+      if (place)
+        end.value = place
+      doneTyping()
+    }
     // A place tapped opens its page, as its marker, its outline and a search for it all do; a stop or a bus its own
-    if (tap.kind === "place") {
-      const shown = page.peek()
+    else if (tap.kind === "place") {
       if (shown?.kind !== "place" || shown.name !== tap.name)
         state.go({ kind: "place", name: tap.name })
       capture("place_opened")
@@ -167,15 +187,33 @@ createMap(
     else if (tap.kind === "bus")
       state.go({ kind: "bus", id: tap.id })
     else {
-      // A spot tapped is where the trip's going, or where it's from while that's yet to be said in directions, named
-      // for what the map shows there once that's known
-      const end = page.peek()?.kind === "directions" && to.peek() && !from.peek() ? from : to
-      end.value = tap.place
-      nameAt(state.gazetteer.peek(), tap.place, tap.hints).then(name => {
-        if (name && end.peek() === tap.place)
-          end.value = { ...tap.place, name }
+      // A spot tapped is one end of the trip only when asked for: the end whose field was being typed in, else a pin
+      // dropped there, the trip's way there, from the home alone. Anywhere else it puts away what the map marks, the
+      // page's place or the pin dropped, as tapping off something does, and leaves a page without one be
+      if (!field && shown) {
+        const isDropped = shown.kind === "directions" && dropped !== undefined && to.peek() === dropped
+        if (isDropped) {
+          to.value = dropped = undefined
+          state.by.value = undefined
+        }
+        if (isDropped || state.focus.peek())
+          state.back()
+        return
+      }
+      const end = field === "from" ? from : to
+      const place = tap.place
+      end.value = place
+      if (end === to)
+        dropped = place
+      doneTyping()
+      nameAt(state.gazetteer.peek(), place, tap.hints).then(name => {
+        if (name && end.peek() === place) {
+          end.value = { ...place, name }
+          if (dropped === place)
+            dropped = end.peek()
+        }
       }, () => {})
-      if (page.peek()?.kind !== "directions")
+      if (shown?.kind !== "directions")
         state.go({ kind: "directions" })
     }
   }

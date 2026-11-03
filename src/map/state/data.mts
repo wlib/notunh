@@ -9,6 +9,7 @@ import { Places } from "../../places/buildings.mts"
 import { Gazetteer } from "../../places/gazetteer.mts"
 import { createPlaceSearch } from "../../places/search.mts"
 import { CHAPTERS, aliasesOf, isPlaced } from "../../places/chapters.mts"
+import { otherNames } from "../../social/aliases.mts"
 import { CAMPUS } from "../../places/durham.mts"
 import { loadStyle } from "../basemap/style.mts"
 import { TilesManifest } from "../basemap/tiles.mts"
@@ -20,8 +21,8 @@ import { MenusIndex } from "../../dining/menus.mts"
 import { NO_ROOMS, RoomsData } from "../../courses/bookings.mts"
 import { latest } from "../../shell/build.mts"
 
-/** The other names of the places that go by more than one: the chapters' houses, by their letters and nicknames */
-const ALIASES = new Map(CHAPTERS.filter(isPlaced).map(chapter => [chapter.name, aliasesOf(chapter)]))
+/** The chapters' houses by their letters and nicknames, which places go by besides what people call them (aliases.mts) */
+const NICKNAMES = CHAPTERS.filter(isPlaced).flatMap(chapter => aliasesOf(chapter).map(alias => [alias, chapter.name] as const))
 
 /**
  * The bundled data, loaded, each swapped for a newer build's as it comes, which everything derived from it follows.
@@ -53,14 +54,15 @@ export const loadMapData = async () => {
   const buildings = r(() => places.value.buildings)
   const walks = r(() => createWalks(feed.value.stops, graph.value, gazetteer.value))
 
-  /** Places by name, laundry and dining first, then the stops buses pick up at, then the rest of Durham */
+  /** Places by name and by what people call them, laundry and dining first, then the stops buses pick up at, then the rest of Durham */
   const searchPlaces = r(() => {
     const boardable = boardableStops(feed.value)
-    return createPlaceSearch([
+    const all = [
       ...buildings.value.map(({ lat, lon, name }) => ({ lat, lon, name })),
       ...feed.value.stops.filter((_, i) => boardable.has(i)).map(({ lat, lon, name }) => ({ lat, lon, name })),
       ...gazetteer.value.map(({ name, at: [lon, lat] }) => ({ lat, lon, name }))
-    ], CAMPUS, ALIASES)
+    ]
+    return createPlaceSearch(all, CAMPUS, otherNames(all.map(({ name }) => name), NICKNAMES))
   })
   return { feed, model, tiles, style, gazetteer, buildings, walks, searchPlaces, events, rooms, coursesIndex, prereqsIndex, parking, menus }
 }

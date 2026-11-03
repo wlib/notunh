@@ -1,8 +1,10 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { readFile } from "node:fs/promises"
-import { ALIASES, placeMatcher } from "../../src/social/aliases.mts"
+import { ALIASES, NICKNAMES, otherNames, placeMatcher, shortNames } from "../../src/social/aliases.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
+import { createPlaceSearch } from "../../src/places/search.mts"
+import { CAMPUS } from "../../src/places/durham.mts"
 
 const gazetteer: Gazetteer = JSON.parse(await readFile(new URL("../fixtures/data/src/map/gazetteer.json", import.meta.url), "utf8"))
 const names = gazetteer.places.map(place => place.name)
@@ -51,4 +53,62 @@ test("any gazetteer name or alias is found in any text around it, and text witho
   fc.assert(fc.property(filler, text => {
     expect(match(text)).toBeUndefined()
   }))
+})
+
+// What people type for places on campus, and the place each means
+const TYPED: [string, string][] = [
+  ["MUB",         "Memorial Union Building"],
+  ["mub",         "Memorial Union Building"],
+  ["HRC",         "Hamel Rec Center"],
+  ["hamel",       "Hamel Rec Center"],
+  ["hoco",        "Holloway Commons"],
+  ["philly",      "Philbrook Hall"],
+  ["philbrook",   "Philbrook Hall"],
+  ["stillings",   "Stillings Hall"],
+  ["paul",        "Paul College"],
+  ["PCBE",        "Paul College"],
+  ["pcac",        "Paul Creative Arts Center"],
+  ["kingsbury",   "Kingsbury Hall"],
+  ["parsons",     "Parsons Hall"],
+  ["rudman",      "Rudman Hall"],
+  ["morse",       "Morse Hall"],
+  ["the whitt",   "Whittemore Center Arena"],
+  ["whitt",       "Whittemore Center Arena"],
+  ["t-hall",      "Thompson Hall"],
+  ["t hall",      "Thompson Hall"],
+  ["thompson",    "Thompson Hall"],
+  ["field house", "Field House"],
+  ["lundholm",    "Field House"],
+  ["dimond",      "Dimond Library"],
+  ["ham smith",   "Hamilton Smith Hall"]
+]
+
+const search = createPlaceSearch(gazetteer.places.map(({ name, at: [lon, lat] }) => ({ lat, lon, name })), CAMPUS, otherNames(names))
+
+test.each(TYPED)("%s finds %s first", (typed, name) => {
+  expect(search(typed)[0]?.name).toBe(name)
+})
+
+test("a hall or library is known by its first word, and nothing else is", () => {
+  expect(shortNames(["Morse Hall", "Dimond Library", "Hamilton Smith Hall", "Thompson Hall Lawn", "Field House"]))
+    .toEqual([["Morse", "Morse Hall"], ["Dimond", "Dimond Library"]])
+})
+
+test("every name an alias is given for is a place's, and every alias of the table is given", () => {
+  const others = otherNames(names)
+  for (const name of others.keys())
+    expect(names).toContain(name)
+  for (const [alias, name] of [...Object.entries(ALIASES), ...Object.entries(NICKNAMES)])
+    expect(others.get(name), alias).toContain(alias)
+  for (const aliases of others.values())
+    expect(new Set(aliases).size).toBe(aliases.length)
+  expect(otherNames(["Somewhere Else"], [["Elsewhere", "Somewhere Else"], ["Nowhere", "Not A Place"]])).toEqual(new Map([["Somewhere Else", ["Elsewhere"]]]))
+})
+
+test("a nickname is searched by but never read in an event's text, where it means something else", () => {
+  expect(match("Philly cheesesteak night in HoCo")).toBe("Holloway Commons")
+  expect(match("Talk by Dr. Paul Smith")).toBeUndefined()
+  expect(match("St. Paul, Minn.")).toBeUndefined()
+  for (const name of Object.values(NICKNAMES))
+    expect(names).toContain(name)
 })

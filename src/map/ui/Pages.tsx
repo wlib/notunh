@@ -12,7 +12,7 @@
 // which never make it free
 
 import type { BruhChild } from "bruh/browser"
-import { type DerivativeNode, type SourceNode, r } from "bruh/reactive"
+import { type DerivativeNode, type Reactive, type SourceNode, r, watch } from "bruh/reactive"
 import type { Page } from "../link.mts"
 import { urlOf } from "../link.mts"
 import { state } from "../state/map.mts"
@@ -36,7 +36,7 @@ import { boardableStops } from "../../transit/feed.mts"
 import { distance } from "../../geo/projection.mts"
 import { walkSeconds } from "../../routing/walks.mts"
 import { type Occurrence, type Visit, thereBy, visitOf } from "../../shared/visit.mts"
-import { clockOf, daysBetween, localDay, localMinutes, nextAt } from "../../shared/time.mts"
+import { type Day as CalendarDay, addDays, clockOf, daysBetween, localDay, localMinutes, nextAt } from "../../shared/time.mts"
 import type { Place } from "../../places/search.mts"
 import { type Chapter, chapterNamed } from "../../places/chapters.mts"
 import { servicesAt } from "../../places/services.mts"
@@ -81,6 +81,65 @@ export const Hours = ({ start, end }: Pick<Meeting, "start" | "end">) =>
 export const DayName = ({ day }: { day: string }) => {
   const away = daysBetween(localDay(nowMs()), day)
   return away >= 0 && away < 2 ? <>{relativeDay(away)}</> : <Day of={day} weekday="short" />
+}
+
+/**
+ * A chip saying what's picked with the native picker laid invisibly over it, so a tap anywhere on it opens the
+ * picker, which shows the value given whatever was picked in it before. Named, it's a form's field
+ */
+export const PickChip = ({ type, name, label, value, min, max, isPressed, onpick, children }: {
+  type: "date" | "time", name?: string, label: string, value: Reactive<string>, min?: string, max?: string,
+  isPressed?: Reactive<boolean>, onpick: (value: string) => void, children: BruhChild
+}) => {
+  const input: HTMLInputElement =
+    <input
+      type={type}
+      name={name}
+      min={min}
+      max={max}
+      aria-label={label}
+      onclick={() => input.showPicker?.()}
+      // What's picked is taken as it may be, and the field shows what that made of it, as iOS's Reset empties it
+      onchange={() => {
+        onpick(input.value)
+        input.value = value.peek()
+      }}
+    />
+  watch([value], () => {
+    input.value = value.value
+  })
+  return <label class="chip pick" aria-pressed={isPressed && r(() => isPressed.value ? "true" : "false")}>{children}{input}</label>
+}
+
+/** Today, tomorrow, or any other day up to a last, as chips, the other day picked natively; named, it's a form's field */
+export const DayChips = ({ day, last, name, onpick }: { day: SourceNode<CalendarDay>, last?: CalendarDay, name?: string, onpick?: () => void }) => {
+  const today = localDay(nowMs())
+  const tomorrow = addDays(today, 1)
+  const pick = (picked: CalendarDay) => {
+    day.value = picked
+    onpick?.()
+  }
+  return (
+    <div class="chips days" role="group" aria-label="Day">
+      {[today, tomorrow].map(shown =>
+        <button type="button" class="chip" aria-pressed={r(() => day.value === shown ? "true" : "false")} onclick={() => pick(shown)}>
+          <DayName day={shown} />
+        </button>
+      )}
+      <PickChip
+        type="date"
+        name={name}
+        label="Other day"
+        value={day}
+        min={today}
+        max={last}
+        isPressed={r(() => day.value > tomorrow)}
+        onpick={picked => pick(picked && picked >= today ? picked : today)}
+      >
+        {r(() => day.value > tomorrow ? <DayName day={day.value} /> : "Other day")}
+      </PickChip>
+    </div>
+  )
 }
 
 /** When an occurrence is: "Today 2:10 – 3:30 PM", "Thu 2:10 – 3:30 PM" */

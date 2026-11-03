@@ -16,6 +16,7 @@ src/map/gtfs.json
 src/map/gtfs.zip
 src/map/walk.json
 src/map/gazetteer.json
+src/map/parking.json
 src/map/model.json
 src/map/places.json
 src/map/tiles.json

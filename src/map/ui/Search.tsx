@@ -179,6 +179,11 @@ const PlaceInput = ({ field, label, placeholder }: { field: Field, label?: strin
   start()
   const place = field === "search" ? undefined : state[field]
   const isEditing = r(() => editing.value === field)
+  /** What the field shows, typed or the place's name, which Clear is offered for */
+  const shown = r("")
+  const show = (text: string) => {
+    input.value = shown.value = text
+  }
 
   const input: HTMLInputElement =
     <input
@@ -201,9 +206,9 @@ const PlaceInput = ({ field, label, placeholder }: { field: Field, label?: strin
       onblur={() => {
         if (editing.peek() === field)
           editing.value = undefined
-        input.value = place?.peek()?.name ?? ""
+        show(place?.peek()?.name ?? "")
       }}
-      oninput={() => query.value = input.value}
+      oninput={() => query.value = shown.value = input.value}
       onkeydown={event => {
         const count = options.peek().length
         if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -221,7 +226,7 @@ const PlaceInput = ({ field, label, placeholder }: { field: Field, label?: strin
   if (place)
     watch([place], () => {
       if (editing.peek() !== field)
-        input.value = place.value?.name ?? ""
+        show(place.value?.name ?? "")
     })
 
   // Back from a page opened from search's results is back in the search, as it was typed, once the page has gone
@@ -234,7 +239,7 @@ const PlaceInput = ({ field, label, placeholder }: { field: Field, label?: strin
       // Once the home shows again, as a hidden field can't take focus
       setTimeout(() => {
         input.focus()
-        input.value = query.value = text
+        show(query.value = text)
       })
     })
 
@@ -242,17 +247,22 @@ const PlaceInput = ({ field, label, placeholder }: { field: Field, label?: strin
     <label class={field === "search" ? "search-field" : "place-input"}>
       {field === "search" ? <Icon name="search" /> : <span class="place-label">{label}</span>}
       {input}
-      {place && r(() => place.value &&
+      {r(() => shown.value &&
         <button
           type="button"
           class="clear"
-          aria-label={`Clear ${label!.toLowerCase()}`}
-          onpointerdown={event => event.preventDefault()}
+          aria-label={`Clear ${(label ?? "search").toLowerCase()}`}
+          // Keeps focus in the field, so clearing what's typed doesn't blur it first. On mousedown, as WebKit sends no
+          // click at all for a touch whose pointerdown is called off
+          onmousedown={event => event.preventDefault()}
           onclick={() => {
-            place.value = undefined
-            // A time to be there by goes with where, so it's cleared along
-            if (field === "to")
-              state.by.value = undefined
+            if (place) {
+              place.value = undefined
+              // A time to be there by goes with where, so it's cleared along
+              if (field === "to")
+                state.by.value = undefined
+            }
+            show(query.value = "")
             input.focus()
           }}
         >

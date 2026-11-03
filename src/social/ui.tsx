@@ -45,11 +45,28 @@ export const Times = ({ pin, act }: { pin: Pin, act: Act }) =>
     <p class="muted">{pin.yours ? "Whoever marked the time you set is asked if they're going." : "The host sets one. If you marked it, you'll be asked if you're going."}</p>
   </section>
 
-/** Delete, for the host, or Report, for anyone else, as a quiet link in the page's foot */
-export const Moderate = ({ pin, act, onGone, onReported }: { pin: Pin, act: Act, onGone: () => void, onReported: (hidden: boolean) => void }) =>
-  pin.yours
-    ? <button type="button" class="link" onclick={act(async () => { if (confirm("Delete this event?")) { await api.deletePin(pin.id); onGone() } })}>Delete this event</button>
-    : <button type="button" class="link" onclick={act(async () => onReported((await api.report(pin.id)).hidden))}>Report</button>
+/** Delete, for the host, once they've said so again, or Report, for anyone else, as a quiet link in the page's foot */
+export const Moderate = ({ pin, act, onGone, onReported }: { pin: Pin, act: Act, onGone: () => void, onReported: (hidden: boolean) => void }) => {
+  if (!pin.yours)
+    return <button type="button" class="link" onclick={act(async () => onReported((await api.report(pin.id)).hidden))}>Report</button>
+  // Asked over everything, Escape and a tap outside keeping it as Keep does
+  const ask: HTMLDialogElement =
+    <dialog class="confirm" onclick={event => event.target === ask && ask.close()} onclose={() => ask.returnValue === "delete" && act(async () => { await api.deletePin(pin.id); onGone() })()}>
+      <form method="dialog">
+        <p>Delete this event?</p>
+        <div class="confirm-actions">
+          <button type="submit" value="keep" class="button" autofocus>Keep</button>
+          <button type="submit" value="delete" class="button primary">Delete</button>
+        </div>
+      </form>
+    </dialog>
+  return (
+    <>
+      <button type="button" class="link" onclick={() => { ask.returnValue = ""; ask.showModal() }}>Delete this event</button>
+      {ask}
+    </>
+  )
+}
 
 /** What Share says it did: the story image is shared or saved, and the link copied for a Link sticker */
 export const SHARED = { shared: "Link copied. In Instagram, add a Link sticker and paste.", downloaded: "Image saved and link copied. In Instagram, add a Link sticker and paste." }

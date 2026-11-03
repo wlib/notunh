@@ -799,10 +799,12 @@ const ScheduledNow = ({ name }: { name: string }) =>
  * for UNH's, where it's from, as a line in the foot
  */
 const EventView = ({ id }: { id: string }) => {
-  const found = r<Event | Pin | null | undefined>(listedEvent(id))
+  const listed = listedEvent(id)
+  const found = r<Event | Pin | null | undefined>(listed)
   const offset = r(0)
-  // Any other, a pin as the Worker has it, or none
-  if (!found.peek())
+  // A pin as the Worker tells this device, whether it's yours or you're going, which no list says, shown once it
+  // answers in place of the listed one; any other, as the Worker has it, or none
+  if (!listed || listed.source === "pin")
     void pinOf(id).then(event => found.value = event ?? null)
   const act: Act = f => () => {
     notice.value = undefined

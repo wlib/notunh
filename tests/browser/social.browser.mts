@@ -461,6 +461,9 @@ test("a code emailed to a UNH address verifies this device once typed back, whic
   await expect(page.getByRole("heading", { name: "AI club" })).toBeVisible()
   await page.goto(fixture.origin + "/map/")
   await expect(page.getByRole("list", { name: localDay(tomorrow) }).locator(".row", { hasText: "AI club" })).toBeVisible()
+  // Opened from the list, it's still its host's to delete
+  await page.getByRole("list", { name: localDay(tomorrow) }).locator(".row", { hasText: "AI club" }).click()
+  await expect(page.getByRole("button", { name: "Delete this event" })).toBeVisible()
 })
 
 test("a permit set on one of two linked devices reaches the other, and comes back to one whose storage was cleared, by its cookie", async ({ page, browser, fixture }) => {

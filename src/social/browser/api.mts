@@ -17,10 +17,16 @@ const Me = v.object({ person: v.string(), verified: v.nullable(v.string()) })
 const Link = v.object({ code: v.string(), expires: v.number() })
 const Linked = v.object({ linked: v.boolean(), expires: v.number() })
 
+/** A request to the Worker, or an error saying it couldn't be reached, in words a page shows as they are */
+const reach = (path: string, init?: RequestInit) =>
+  fetch(path, init).catch(() => {
+    throw new Error(navigator.onLine ? "Couldn't reach notunh." : "You're offline.")
+  })
+
 /** A command as this device, with its secret, to a route, or an error saying what the Worker refused it for */
 const command = async <T,>(method: "POST" | "PUT" | "DELETE", path: string, body: Record<string, unknown>, schema?: v.GenericSchema<unknown, T>): Promise<T> => {
   const { id, secret } = await device()
-  const response = await fetch(path, {
+  const response = await reach(path, {
     method,
     headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
     body:    JSON.stringify({ device: id, ...body })
@@ -30,11 +36,11 @@ const command = async <T,>(method: "POST" | "PUT" | "DELETE", path: string, body
   return schema ? readJson(response, schema) : undefined as T
 }
 
-/** A read as this device, if it has asked anything before, so a pin says what this device has to do with it */
+/** A read as this device, if it has asked anything before, so a pin says what this device has to do with it; none for a 404 */
 const read = async <T,>(path: string, schema: v.GenericSchema<unknown, T>): Promise<T | undefined> => {
   const kept = await deviceKept().catch(() => undefined)
   const query = kept ? `${path.includes("?") ? "&" : "?"}device=${encodeURIComponent(kept.id)}` : ""
-  const response = await fetch(path + query, { headers: kept ? { authorization: `Bearer ${kept.secret}` } : {} })
+  const response = await reach(path + query, { headers: kept ? { authorization: `Bearer ${kept.secret}` } : {} })
   return response.status === 404 ? undefined : readJson(response, schema)
 }
 
@@ -49,13 +55,14 @@ export const bookedOn = (day: Day, space?: string) =>
 export const pinsFrom = (day: string, days: number) =>
   read(`/api/pins?day=${day}&days=${days}`, v.array(Pin)).then(pins => pins ?? [])
 
-/** An event as made, or edited by its host: one time, or up to three to pick from */
+/** An event as its host gives it, made or edited: one time, or up to three to pick from */
 export type NewPin = Pick<Pin, "id" | "title" | "description" | "place" | "where" | "times" | "spots" | "visibility">
 
+/** Makes an event under the id the device made, so the same again is the same event */
 export const makePin = (made: NewPin) =>
   command("POST", "/api/pins", made, Pin)
 
-/** The host's edit of an event, refused where it would leave fewer spots than are taken */
+/** Edits an event of this device's, refused where fewer spots than are going would be left */
 export const editPin = ({ id, ...edited }: NewPin) =>
   command("PUT", `/api/pins/${encodeURIComponent(id)}`, edited, Pin)
 

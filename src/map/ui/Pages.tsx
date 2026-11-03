@@ -12,7 +12,7 @@
 // its classes, which never make it free
 
 import type { BruhChild } from "bruh/browser"
-import { type DerivativeNode, type Reactive, type SourceNode, r, watch } from "bruh/reactive"
+import { type DerivativeNode, type Reactive, type SourceNode, r, untrack, watch } from "bruh/reactive"
 import type { Page } from "../link.mts"
 import { urlOf } from "../link.mts"
 import { state } from "../state/map.mts"
@@ -61,17 +61,15 @@ import { NewEvent } from "./Home.tsx"
 /** A notice for the page shown, like a link copied */
 const notice = r<string>()
 
-/** The pins opened that aren't on today's list, each read from the Worker once */
-const pins = new Map<string, Promise<Pin | undefined>>()
-const pinOf = (id: string) => {
-  if (!pins.has(id))
-    pins.set(id, social.pin(id).catch(() => undefined))
-  return pins.get(id)!
-}
+/**
+ * Each pin as the Worker last told this device of it, whether it's yours, going, and what you marked included, which
+ * no list says: what its page shows at once while it asks again, and what Edit opens
+ */
+const known = new Map<string, Pin>()
 
-/** A pin as the Worker answered this device for making or editing it, in place of what was read before */
-export const keptPin = (pin: Pin) =>
-  void pins.set(pin.id, Promise.resolve(pin))
+/** What the Worker answered of a pin, kept; none for one gone */
+export const learn = (id: string, pin: Pin | undefined) =>
+  pin ? known.set(id, pin) : known.delete(id)
 
 /** An event by its id, or another calendar's id for it, if it's one of the build's or a public pin listed, as it is there, so its page shows at once */
 const listedEvent = (id: string): Event | Pin | undefined =>
@@ -803,20 +801,31 @@ const ScheduledNow = ({ name }: { name: string }) =>
  * reporting it; for UNH's, where it's from, as a line in the foot
  */
 const EventView = ({ id }: { id: string }) => {
-  const listed = listedEvent(id)
-  const found = r<Event | Pin | null | undefined>(listed)
+  const found = r<Event | Pin | null | undefined>(known.get(id) ?? listedEvent(id))
+  const problem = r<string>()
   const offset = r(0)
-  // A pin as the Worker tells this device, whether it's yours or you're going, which no list says, shown once it
-  // answers in place of the listed one; any other, as the Worker has it, or none
-  if (!listed || listed.source === "pin")
-    void pinOf(id).then(event => found.value = event ?? null)
+  /** What the Worker says of the pin now, shown and kept; none for one gone */
+  const told = (pin: Pin | undefined) => {
+    found.value = pin ?? null
+    learn(id, pin)
+  }
+  // A pin is asked for afresh, as what's known or listed may be stale, and a list never says whose it is or who's
+  // going; so is an id no list has, which may be a link-only pin's. One of UNH's is as listed
+  const shown = found.peek()
+  if (!shown || shown.source === "pin")
+    social.pin(id).then(told, (error: Error) => problem.value = error.message)
+  // What comes back is shown, and the home's list asked again, as a time set or an event hidden changes it
   const act: Act = f => () => {
     notice.value = undefined
-    f().then(result => result && (found.value = result), (error: Error) => notice.value = error.message)
+    f().then(result => {
+      if (result)
+        told(result)
+      void state.refreshPins()
+    }, (error: Error) => notice.value = error.message)
   }
   return r(() => {
     if (found.value === undefined)
-      return <p class="muted">Loading the event…</p>
+      return <p class="muted">{problem.value ?? "Loading the event…"}</p>
     if (found.value === null)
       return <Missing what="This event is gone." why="It may have ended, or been taken down." />
     const event = found.value
@@ -850,21 +859,27 @@ const EventView = ({ id }: { id: string }) => {
           {visit && <LinkLine to={parkingFor(visit)}>Parking</LinkLine>}
           {!pin && <LinkLine href={event.url}>{calendarOf(event)?.name ?? "Source"}</LinkLine>}
         </div>
-        {pin && <p class="view-foot muted"><Moderate pin={pin} act={act} onEdit={() => state.go({ kind: "edit", id })} onGone={() => found.value = null} onReported={hidden => notice.value = hidden ? "Reported, and hidden." : "Reported."} /></p>}
+        {pin && <p class="view-foot muted"><Moderate pin={pin} act={act} onEdit={() => state.go({ kind: "edit", id })} onGone={() => told(undefined)} onReported={hidden => notice.value = hidden ? "Reported, and hidden." : "Reported."} /></p>}
       </>
     )
   })
 }
 
-/** An event of yours to edit, as the Worker tells this device, in the new event's form */
+/** An event of yours to edit, in the new event's form, as the Worker last told this device of it, else as it tells it now */
 const EditEventView = ({ id }: { id: string }) => {
-  const found = r<Pin | null>()
-  void pinOf(id).then(pin => found.value = pin?.yours ? pin : null)
-  return r(() =>
-    found.value === undefined ? <p class="muted">Loading the event…</p> :
-    found.value === null      ? <Missing what="Not your event." why="Only its host can edit it." /> :
-                                <NewEventView pin={found.value} />
-  )
+  const found = r<Pin | null | undefined>(known.get(id))
+  const problem = r<string>()
+  if (!found.peek())
+    social.pin(id).then(pin => found.value = pin ?? null, (error: Error) => problem.value = error.message)
+  return r(() => {
+    const pin = found.value
+    return (
+      pin === undefined ? <p class="muted">{problem.value ?? "Loading the event…"}</p> :
+      // The form follows the clock on its own, as the new event's does, never remade by it
+      pin?.yours        ? untrack(() => <NewEventView pin={pin} />) :
+                          <Missing what="Not your event." why="Only its host can edit it." />
+    )
+  })
 }
 
 /** The kinds of page that read the courses as they open, so those load as the page does */

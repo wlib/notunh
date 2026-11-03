@@ -85,6 +85,13 @@ export const createPage = (own: Own) => {
     show(next)
   }
 
+  /**
+   * Leaves a page that's done, as a form saved is: Back to the page it was opened over, or, for one opened at its own
+   * link, with the page given in its place
+   */
+  const done = (next?: Page) =>
+    depth() > 0 ? back() : amend(next)
+
   /** Back to what was shown before, the search it was opened from with what was typed, or to the map from a page this visit opened at */
   const back = () => {
     const { search } = entry()
@@ -102,5 +109,5 @@ export const createPage = (own: Own) => {
   addEventListener("popstate", () => show(pageOf(globalThis.location.pathname, globalThis.location.search), scrolls[depth()] ?? 0), { signal: following.signal })
   own(() => following.abort())
 
-  return { page, name, focus, focusAt, backTo, searching, resumed, scrolled, scrollTo, go, amend, back }
+  return { page, name, focus, focusAt, backTo, searching, resumed, scrolled, scrollTo, go, amend, done, back }
 }

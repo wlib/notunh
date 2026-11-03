@@ -1,7 +1,7 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import type { Pin, Time } from "../../src/social/event.mts"
-import { goingWords, isFull, isUnset, sortedTimes, spanOf } from "../../src/social/marks.mts"
+import { goingWords, isFull, isSameTime, isUnset, sortedTimes, spanOf, timesToEdit } from "../../src/social/marks.mts"
 import { askOf, askTag, askedId, askUrl, showAsk } from "../../src/social/ask.mts"
 
 const NOW = Date.UTC(2026, 9, 7, 16)
@@ -17,6 +17,18 @@ test("an event's time is to pick while it offers times and none is set, and neve
 
 test("an official event, with no times of its own, is never to pick", () =>
   expect(isUnset({ id: "x", title: "T", start: 0, end: 1, where: "", source: "presence", url: "" })).toBe(false)
+)
+
+test("a host edits the times to pick from while the time's to pick, else the one it's at, as the Worker's row says it too", () =>
+  fc.assert(fc.property(times, fc.option(fc.nat(2), { nil: undefined }), fc.boolean(), (offered, chosen, asRow) => {
+    const picking = offered.length > 1 && chosen === undefined
+    const at = picking ? spanOf(offered) : offered[Math.min(chosen ?? 0, offered.length - 1)]
+    const pin = { ...at, times: picking || chosen !== undefined ? offered : [], chosen: asRow ? chosen ?? null : chosen }
+    const shown = timesToEdit(pin)
+    expect(shown).toEqual(isUnset(pin) ? offered : [at])
+    expect(shown.every((time, i) => isSameTime(time, shown[i]))).toBe(true)
+    expect(isSameTime(at, { ...at, end: at.end + 1 })).toBe(false)
+  }))
 )
 
 test("times are kept earliest first, and the window while one's to pick spans every one", () =>

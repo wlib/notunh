@@ -130,6 +130,15 @@ body {
     opacity 250ms;
 }
 
+/* A page swiped back follows the finger by translate alone, and let go slides off or back in a moment */
+.panel.swiping {
+  user-select: none;
+}
+
+.panel.settling .view {
+  transition: translate 200ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
 /* Down to just the header, leaving the map */
 .panel-body {
   transition: opacity 250ms;
@@ -394,6 +403,13 @@ body {
   background: none;
   font: inherit;
   font-weight: 600;
+}
+
+/* Adding a time to a new event, and taking the last away, on one line */
+.more-times {
+  display: flex;
+  gap: 1.25rem;
+  margin: 0;
 }
 
 /* Directions (ui/Directions.tsx): where from and where to, and when, with the suggestions or the ways there under them */

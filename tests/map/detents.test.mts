@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { DETENTS, FLICK, type Heights, STILL_MS, landing, owner, placed, releaseVelocity, travelOf } from "../../src/map/detents.mts"
+import { DETENTS, EDGE, FLICK, type Heights, STILL_MS, canSwipeBack, landing, owner, placed, releaseVelocity, swipesBack, travelOf } from "../../src/map/detents.mts"
 
 /** Heights in order, lowered under half under tall, as a phone's sheet has them, or with half as tall as tall, as the keyboard leaves it */
 const heights: fc.Arbitrary<Heights> = fc.tuple(fc.integer({ min: 40, max: 200 }), fc.integer({ min: 1, max: 600 }), fc.integer({ min: 0, max: 600 }))
@@ -51,21 +51,45 @@ test("a finger that rested before lifting isn't flicking, however fast it moved 
 
 const move = fc.record({ dx: fc.integer({ min: -300, max: 300 }), dy: fc.integer({ min: -300, max: 300 }) })
 
-test("a touch's first move gives it to the sheet, but for a pull up at tall with more to show, or a sideways one", () => {
-  fc.assert(fc.property(fc.boolean(), fc.boolean(), move, (isTall, canScroll, { dx, dy }) => {
-    const whose = owner({ isTall, canScroll, dx, dy })
+test("a touch's first move gives it to the sheet, but for a pull up at tall with more to show, or a sideways one, which is the page's to swipe back where it may be, else the content's", () => {
+  fc.assert(fc.property(fc.boolean(), fc.boolean(), fc.boolean(), move, (isTall, canScroll, canGoBack, { dx, dy }) => {
+    const whose = owner({ isTall, canScroll, canGoBack, dx, dy })
     if (Math.abs(dx) > Math.abs(dy))
-      expect(whose).toBe("content")
+      expect(whose).toBe(dx > 0 && canGoBack ? "back" : "content")
     else if (!isTall)
       expect(whose).toBe("sheet")
     else
       expect(whose).toBe(dy < 0 && canScroll ? "content" : "sheet")
+    // A vertical move is never a swipe back, and a move left never is
+    if (dy !== 0 && Math.abs(dy) >= Math.abs(dx) || dx < 0)
+      expect(whose).not.toBe("back")
   }))
   // Below tall the sheet moves whichever way, however far the content's scrolled; at tall, pulled down, so does it
-  expect(owner({ isTall: false, canScroll: true, dx: 0, dy: -40 })).toBe("sheet")
-  expect(owner({ isTall: true, canScroll: true, dx: 0, dy: 40 })).toBe("sheet")
-  expect(owner({ isTall: true, canScroll: true, dx: 0, dy: -40 })).toBe("content")
-  expect(owner({ isTall: true, canScroll: false, dx: 0, dy: -40 })).toBe("sheet")
+  expect(owner({ isTall: false, canScroll: true, canGoBack: true, dx: 0, dy: -40 })).toBe("sheet")
+  expect(owner({ isTall: true, canScroll: true, canGoBack: true, dx: 0, dy: 40 })).toBe("sheet")
+  expect(owner({ isTall: true, canScroll: true, canGoBack: true, dx: 0, dy: -40 })).toBe("content")
+  expect(owner({ isTall: true, canScroll: false, canGoBack: true, dx: 0, dy: -40 })).toBe("sheet")
+  expect(owner({ isTall: true, canScroll: false, canGoBack: true, dx: 40, dy: 10 })).toBe("back")
+  expect(owner({ isTall: true, canScroll: false, canGoBack: false, dx: 40, dy: 10 })).toBe("content")
+})
+
+test("a touch may swipe back only with a page shown, off the screen's left edge, and off anything that scrolls sideways", () => {
+  fc.assert(fc.property(fc.boolean(), fc.integer({ min: 0, max: 400 }), fc.boolean(), (hasPage, x, inScroller) => {
+    expect(canSwipeBack({ hasPage, x, inScroller })).toBe(hasPage && !inScroller && x >= EDGE)
+  }))
+  expect(canSwipeBack({ hasPage: true, x: EDGE - 1, inScroller: false })).toBe(false)
+  expect(canSwipeBack({ hasPage: true, x: EDGE, inScroller: false })).toBe(true)
+})
+
+test("a swipe let go goes back from a third of the way across, or flicked that way from anywhere, and never from a move left", () => {
+  fc.assert(fc.property(fc.integer({ min: 200, max: 800 }), fc.integer({ min: -800, max: 800 }), fc.double({ min: -8, max: 8, noNaN: true }), (width, dx, velocity) => {
+    const goes = swipesBack(width, dx, velocity)
+    expect(goes).toBe(dx > 0 && (dx >= width / 3 || velocity >= FLICK))
+    if (dx <= 0)
+      expect(goes).toBe(false)
+    if (dx >= width / 3)
+      expect(goes).toBe(true)
+  }))
 })
 
 /** A sheet's heights, how far its content can scroll, and where a drag found it: an extent, and a scroll position */

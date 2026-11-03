@@ -95,5 +95,5 @@ api.pin(id).then(
     if (isAnswering && !isUnset(found) && !found.isGoing)
       act(() => api.setGoing(found.id, true))()
   },
-  (error: Error) => notice.value = navigator.onLine ? error.message : "You're offline."
+  (error: Error) => notice.value = error.message
 )

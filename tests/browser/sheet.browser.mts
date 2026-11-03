@@ -1,8 +1,9 @@
 // The map's sheet on a phone holds still: searching lays its suggestions over the week without taking it away or
 // changing the sheet's size, and the sheet keeps its height from page to page, Directions and Back included, unless
 // it's dragged. A trip's ends are marked only on its directions. A page opens at once, and Back, the sheet's or the
-// browser's, returns to the list it was opened from scrolled as it was. The camera following only the page shown is
-// tested in tests/map/camera.test.mts and page.test.mts, as the fixtures' map never loads, having no tiles
+// browser's, returns to the list it was opened from scrolled as it was; so does a swipe to the right, which the page
+// follows. The camera following only the page shown is tested in tests/map/camera.test.mts and page.test.mts, as the
+// fixtures' map never loads, having no tiles
 
 import { test as base, expect, devices, type Page } from "@playwright/test"
 import { type Fixture, open, startFixture } from "./fixture.mts"
@@ -480,4 +481,109 @@ test("a flick moves the sheet one detent on, and let go after a rest it settles 
   const high = (await page.locator(".grabber").boundingBox())!
   await flick(page, x, high.y + high.height / 2, 40)
   await holds(page, half)
+})
+
+/** How far across the page shown is this instant, in px, mid-swipe included */
+const acrossNow = (page: Page) =>
+  page.evaluate(() => Math.round(parseFloat(getComputedStyle(document.querySelector(".view")!).translate.split(" ")[0]) || 0))
+
+/** A finger across the screen, to the right by some px, as finger is up or down it */
+const sideways = async (page: Page, x: number, y: number, by: number, { steps = 10, rest = 150, onStep }: { steps?: number, rest?: number, onStep?: (step: number) => Promise<unknown> } = {}) => {
+  const cdp = test.info().project.name === "chromium" ? await page.context().newCDPSession(page) : undefined
+  const touch = (type: "touchStart" | "touchMove" | "touchEnd", at: number) =>
+    cdp!.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x: at, y }] })
+  if (cdp)
+    await touch("touchStart", x)
+  else {
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+  }
+  for (let step = 1; step <= steps; step++) {
+    const at = x + by * step / steps
+    await (cdp ? touch("touchMove", at) : page.mouse.move(at, y))
+    await onStep?.(step)
+  }
+  if (rest)
+    await page.waitForTimeout(rest)
+  await (cdp ? touch("touchEnd", x + by) : page.mouse.up())
+  if (cdp)
+    await cdp.detach()
+}
+
+test("a swipe to the right takes a page back, following the finger, to the page it was opened over or home from the first; a short one springs back; the left edge, fields and a row that scrolls sideways are left alone; and a vertical drag still moves the sheet", async ({ page, fixture }) => {
+  test.slow()
+  await withEvent(page, Date.now())
+  await open(page, fixture.origin, "/map/")
+  const half = await sheetHeight(page)
+  /** Left of the middle, on the page's heading, which is text and nothing else's to scroll */
+  const x = 60
+  const y = async (heading: string) => {
+    const box = (await page.getByRole("heading", { name: heading }).boundingBox())!
+    return box.y + box.height / 2
+  }
+  await page.getByRole("list", { name: "Now" }).getByRole("button", { name: /Honors Drop In Advising/ }).tap()
+  await expect(page.getByRole("heading", { name: "Honors Drop In Advising" })).toBeVisible()
+  await page.locator(".lines").getByRole("button", { name: /Huddleston Hall/ }).tap()
+  await expect(page.getByRole("heading", { name: "Huddleston Hall" })).toBeVisible()
+
+  // The page follows the finger, and let go far enough across, goes Back to the event it was opened from
+  const seen: number[] = []
+  await sideways(page, x, await y("Huddleston Hall"), 240, { onStep: async () => seen.push(await acrossNow(page)) })
+  expect(seen.filter(across => across > 0).length).toBeGreaterThan(3)
+  for (let i = 1; i < seen.length; i++)
+    expect(seen[i]).toBeGreaterThanOrEqual(seen[i - 1])
+  await expect(page.getByRole("heading", { name: "Honors Drop In Advising" })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/map/event/${HONORS}$`))
+  expect(await acrossNow(page)).toBe(0)
+  await holds(page, half)
+
+  // A short one springs back, the page still shown where it rests
+  const event = "Honors Drop In Advising"
+  await sideways(page, x, await y(event), 40)
+  await expect(page.getByRole("heading", { name: event })).toBeVisible()
+  await expect.poll(() => acrossNow(page)).toBe(0)
+  // From the screen's left edge, Safari's own swipe back, nothing happens
+  await sideways(page, 8, await y(event), 240)
+  await expect(page.getByRole("heading", { name: event })).toBeVisible()
+  // A vertical drag on the page is the sheet's still, which stays tall through what follows
+  await finger(page, 195, await y(event), -300)
+  const tall = await sheetHeight(page)
+  expect(tall).toBeGreaterThan(half + 100)
+  await expect(page.getByRole("heading", { name: event })).toBeVisible()
+
+  // Again, it's the home the event was opened from
+  await sideways(page, x, await y(event), 240)
+  await expect(page.locator(".agenda")).toBeVisible()
+  await expect(page).toHaveURL(/\/map\/$/)
+  await holds(page, tall)
+  // On the home there's nothing to go back to: a swipe on its text does nothing
+  await sideways(page, x, await y("Now"), 240)
+  await expect(page.locator(".agenda")).toBeVisible()
+  await expect(page).toHaveURL(/\/map\/$/)
+  await holds(page, tall)
+
+  // The first page this visit opened goes home, as its Back does
+  await page.goto(fixture.origin + "/map/place/Kingsbury+Hall")
+  await expect(page.getByRole("heading", { name: "Kingsbury Hall" })).toBeVisible()
+  await sideways(page, x, await y("Kingsbury Hall"), 240)
+  await expect(page.locator(".agenda")).toBeVisible()
+  await expect(page).toHaveURL(/\/map\/$/)
+
+  // On a phone narrow enough that the day chips scroll sideways, a swipe on them scrolls them, and one on a field is
+  // the field's; one on the form elsewhere goes home
+  await page.setViewportSize({ width: 250, height: 844 })
+  await page.goto(fixture.origin + "/map/new")
+  await expect(page.getByRole("heading", { name: "New event" })).toBeVisible()
+  const days = page.locator(".view .days").first()
+  await days.evaluate(element => element.scrollLeft = 60)
+  const chips = (await days.boundingBox())!
+  await sideways(page, 40, chips.y + chips.height / 2, 120)
+  await expect(page.getByRole("heading", { name: "New event" })).toBeVisible()
+  const what = (await page.getByLabel("What").boundingBox())!
+  await sideways(page, 40, what.y + what.height / 2, 120)
+  await expect(page.getByRole("heading", { name: "New event" })).toBeVisible()
+  const legend = (await page.locator(".when-fields legend").first().boundingBox())!
+  await sideways(page, 40, legend.y + legend.height / 2, 120)
+  await expect(page.locator(".agenda")).toBeVisible()
+  await expect(page).toHaveURL(/\/map\/$/)
 })

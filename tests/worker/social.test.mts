@@ -13,7 +13,7 @@ import { HIDE, MAX_PINS_A_DAY } from "../../worker/social.mts"
 import type { Message } from "../../worker/mail.mts"
 import { type Pin, type Time, PINS_AHEAD } from "../../src/social/event.mts"
 import { addDays } from "../../src/shared/time.mts"
-import { isUnset, sortedTimes, spanOf } from "../../src/social/marks.mts"
+import { sortedTimes, spanOf, timesToEdit } from "../../src/social/marks.mts"
 import { type Ask, askOf } from "../../src/social/ask.mts"
 import { parseCode, shown } from "../../src/social/link.mts"
 import { d1 } from "./d1.mts"
@@ -229,7 +229,7 @@ test("only the host sets the time, once, from any of the host's devices", () =>
 /** What a pin's host edits: what it was made with, its times as the form shows them, and anything changed */
 const editOf = (pin: Pin, changes: Record<string, unknown> = {}) => ({
   title: pin.title, description: pin.description, place: pin.place, where: pin.where, spots: pin.spots, visibility: pin.visibility,
-  times: isUnset(pin) ? pin.times : [{ start: pin.start, end: pin.end }],
+  times: timesToEdit(pin),
   ...changes
 })
 
@@ -274,6 +274,20 @@ test("only the host edits an event, from any of the host's devices, and what's e
     expect(read.spots).toBe(changes.spots)
   }), { numRuns: 25 })
 )
+
+test("an edit's times are checked as a pin's are where they're new, so one under way for a day is still its host's to word", async () => {
+  const { device } = worker()
+  const ana = device("ana")
+  const pin = await made(ana)
+  vi.setSystemTime(NOW + 2 * 86_400_000)
+  try {
+    expect(await edited(ana, pin, { title: "Tennis, still" })).toMatchObject({ title: "Tennis, still", start: pin.start })
+    expect((await edit(ana, pin, { times: [{ start: pin.start - 3_600_000, end: pin.end }] })).status).toBe(400)
+  }
+  finally {
+    vi.setSystemTime(NOW)
+  }
+})
 
 test("an edit is checked as a pin is made, listing it takes a verified address, and a pin gone or hidden isn't edited", async () => {
   const { device, sent } = worker()

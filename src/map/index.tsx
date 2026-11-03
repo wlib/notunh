@@ -80,7 +80,7 @@ const mapElement = <div class="map" /> as HTMLElement
 const panel = <Panel /> as HTMLElement
 document.getElementById("app")!.replaceChildren(mapElement, panel)
 
-const sheet = makeSheet(panel, grabber, header, body)
+const sheet = makeSheet(panel, grabber, header, body, { hasPage: () => isPage.peek(), back: state.back })
 // How far down the page shown is, for the history to keep as another opens over it
 body.addEventListener("scroll", () => state.scrolled.value = sheet.scrolled(), { passive: true })
 // A page opened starts at its top, and one returned to is where it was left, once the views swapped in have rendered

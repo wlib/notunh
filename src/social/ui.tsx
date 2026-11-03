@@ -48,8 +48,8 @@ export const Times = ({ pin, act }: { pin: Pin, act: Act }) =>
   </section>
 
 /**
- * Edit and Delete, for the host, Delete once they've said so again, or Report, for anyone else, as quiet links in the
- * page's foot. Edit is the map's page for it, opened in place where the page is the map's
+ * Quiet links in the page's foot: for the host, Edit, which is the map's page for it, opened in place where the page
+ * is the map's, and Delete, done once they've said so again; for anyone else, Report
  */
 export const Moderate = ({ pin, act, onEdit, onGone, onReported }: { pin: Pin, act: Act, onEdit?: () => void, onGone: () => void, onReported: (hidden: boolean) => void }) => {
   if (!pin.yours)
@@ -69,7 +69,7 @@ export const Moderate = ({ pin, act, onEdit, onGone, onReported }: { pin: Pin, a
     <>
       <a class="link" href={urlOf({ kind: "edit", id: pin.id })} onclick={onEdit && ((event: MouseEvent) => { event.preventDefault(); onEdit() })}>Edit</a>
       {" · "}
-      <button type="button" class="link" onclick={() => { ask.returnValue = ""; ask.showModal() }}>Delete this event</button>
+      <button type="button" class="link" onclick={() => { ask.returnValue = ""; ask.showModal() }}>Delete</button>
       {ask}
     </>
   )

@@ -9,7 +9,7 @@ import { join } from "node:path"
 import { test as base, expect, devices, type Browser, type Page } from "@playwright/test"
 import { type Fixture, type Worker, SHOTS, open, shoot, startFixture, startWorker } from "./fixture.mts"
 import { pinPath } from "../../src/social/event.mts"
-import { atClock, hhmm, localDay } from "../../src/shared/time.mts"
+import { addDays, atClock, hhmm, localDay } from "../../src/shared/time.mts"
 import { jsx } from "bruh/server"
 import { PAGES } from "../../src/shell/pages.mts"
 
@@ -450,6 +450,17 @@ test("a code emailed to a UNH address verifies this device once typed back, whic
   await page.goto(fixture.origin + "/map/")
   await expect(page.getByRole("list", { name: "Now" }).locator(".row", { hasText: "Open mic" })).toBeVisible()
   await shoot(page, "today-with-pin")
+  // And one for tomorrow, under tomorrow's heading
+  const tomorrow = atClock(addDays(localDay(Date.now()), 1), "18:00")
+  await page.getByRole("button", { name: "New event" }).click()
+  await page.getByRole("button", { name: "Everyone", exact: true }).click()
+  await page.getByLabel("What").fill("AI club")
+  await page.locator("input[name=place]").fill("Memorial Union Building")
+  await fillWhen(page, 0, tomorrow)
+  await page.getByRole("button", { name: "Post it" }).click()
+  await expect(page.getByRole("heading", { name: "AI club" })).toBeVisible()
+  await page.goto(fixture.origin + "/map/")
+  await expect(page.getByRole("list", { name: localDay(tomorrow) }).locator(".row", { hasText: "AI club" })).toBeVisible()
 })
 
 test("a permit set on one of two linked devices reaches the other, and comes back to one whose storage was cleared, by its cookie", async ({ page, browser, fixture }) => {

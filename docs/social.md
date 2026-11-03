@@ -32,7 +32,7 @@ The result is `src/map/events.json`, a map data file like the timetable; a gener
 
 ## On the map
 
-`src/map/state/today.mts` joins the build's events with the public pins the Worker lists for today (`GET /api/pins?day=`). Each place with something on today is one marker (`events` in `src/map/render/layers.mts`), labelled by what's on: "Tennis · till 3:00 PM" filled while on, "Soccer · 3:00 PM" outlined before. A marker opens the place's page; a row opens the event's, `/map/event/<id>`, whose Directions plans getting there by its start (`planVisit` in `src/map/state/trip.mts`), and whose Remind and parking are the visit's. A pin whose time is still to pick says "To pick" and isn't drawn. The week's later days list the build's events only.
+`src/map/state/today.mts` joins the build's events with the public pins the Worker lists for the four weeks from today (`GET /api/pins?day=&days=`). Each place with something on today is one marker (`events` in `src/map/render/layers.mts`), labelled by what's on: "Tennis · till 3:00 PM" filled while on, "Soccer · 3:00 PM" outlined before. A marker opens the place's page; a row opens the event's, `/map/event/<id>`, whose Directions plans getting there by its start (`planVisit` in `src/map/state/trip.mts`), and whose Remind and parking are the visit's. A pin whose time is still to pick says "To pick" and isn't drawn. The days to come list both.
 
 ## Pins
 
@@ -106,7 +106,7 @@ Unbound, as in Previews, the message is logged and nothing sent. `wrangler dev` 
 
 ## Budget
 
-At a few hundred users a day: the home asks `GET /api/pins?day=` once a map load (say 2,000), pin pages are opened from links (say 1,000, a page and a read each), commands are a few hundred, a link code polls 60 times, and sync is a request a load, return or write for a device with anything saved or a cookie (say 3,000). Under 10,000 requests and a few thousand D1 writes a day, beside the crons' 3,000: a sliver of Workers Paid's 10 million requests and 50 million rows written a month, and mail within Email Service's 3,000. D1 holds everything; one pin per id and one mark per device per time are primary keys, and the last spot is one conditional insert, so no Durable Object is needed.
+At a few hundred users a day: the home asks `GET /api/pins?day=&days=` once a map load (say 2,000), pin pages are opened from links (say 1,000, a page and a read each), commands are a few hundred, a link code polls 60 times, and sync is a request a load, return or write for a device with anything saved or a cookie (say 3,000). Under 10,000 requests and a few thousand D1 writes a day, beside the crons' 3,000: a sliver of Workers Paid's 10 million requests and 50 million rows written a month, and mail within Email Service's 3,000. D1 holds everything; one pin per id and one mark per device per time are primary keys, and the last spot is one conditional insert, so no Durable Object is needed.
 
 ## Left out on purpose
 

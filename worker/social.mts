@@ -14,7 +14,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { type SQL, and, eq, gt, inArray, isNotNull, lt, sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/d1"
 import * as v from "valibot"
-import { type Pin, LINGER, LONG, MAX_SPOTS, MAX_TIMES, SHORT, isOn, pinPath } from "../src/social/event.mts"
+import { type Pin, LINGER, LONG, MAX_SPOTS, MAX_TIMES, PINS_AHEAD, SHORT, isOn, pinPath } from "../src/social/event.mts"
 import { isUnset, sortedTimes, spanOf } from "../src/social/marks.mts"
 import { askOf } from "../src/social/ask.mts"
 import { LINK_TTL, codeOf, parseCode } from "../src/social/link.mts"
@@ -238,15 +238,15 @@ social.post("/api/pins", on("pins"), limited, valid(NewPin), asDevice, async c =
   return c.json(await readPin(db, made.id, who), 201)
 })
 
-// The public pins on a Durham day, soonest first
-social.get("/api/pins", on("pins"), valid(v.object({ day: Day }), "query"), async c => {
+// The public pins on a Durham day, or on some days from it, soonest first
+social.get("/api/pins", on("pins"), valid(v.object({ day: Day, days: v.optional(v.pipe(v.string(), v.digits(), v.transform(Number), v.minValue(1), v.maxValue(PINS_AHEAD)), "1") }), "query"), async c => {
   const db = drizzle(c.env.DB)
-  const { day } = c.req.valid("query")
+  const { day, days } = c.req.valid("query")
   const now = Date.now()
-  const found = (await rowsWhere(db, and(eq(pins.visibility, "public"), lt(pins.start, dayStart(day) + DAY), gt(pins.end, dayStart(day) - LINGER))!))
+  const found = (await rowsWhere(db, and(eq(pins.visibility, "public"), lt(pins.start, dayStart(day) + days * DAY), gt(pins.end, dayStart(day) - LINGER))!))
     .filter(({ reports }) => reports < HIDE)
   const counts = await marksOf(db, found.map(({ row }) => row))
-  const listed = found.map(({ row, going }) => pinOf(row, counts.get(row.id)!, going)).filter(pin => isOn(pin, day, now)).sort((a, b) => a.start - b.start)
+  const listed = found.map(({ row, going }) => pinOf(row, counts.get(row.id)!, going)).filter(pin => isOn(pin, day, now, days)).sort((a, b) => a.start - b.start)
   return c.json(listed, 200, { "cache-control": "no-store" })
 })
 

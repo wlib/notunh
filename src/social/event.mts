@@ -103,8 +103,8 @@ export type Pin = v.InferOutput<typeof Pin>
 export const LINGER = 2 * 3_600_000
 
 /** Whether an event is on a Durham day, which may be 23 or 25 hours long, and not long over as of now */
-export const isOn = (event: Event, day: string, now: number) =>
-  event.end + LINGER > now && event.start < dayStart(addDays(day, 1)) && event.end >= dayStart(day)
+export const isOn = (event: Event, day: string, now: number, days = 1) =>
+  event.end + LINGER > now && event.start < dayStart(addDays(day, days)) && event.end >= dayStart(day)
 
 /** The events on today's list as of now, soonest first */
 export const today = <E extends Event>(events: readonly E[], now: number) =>
@@ -112,6 +112,9 @@ export const today = <E extends Event>(events: readonly E[], now: number) =>
 
 /** How many days after today a week's list looks: the home's, a place's, and the map's shell's */
 export const WEEK = 7
+
+/** How many days from today the public pins are asked for, the most the home's list shows before Later's asked again */
+export const PINS_AHEAD = 4 * WEEK
 
 /** A day to come and what's on it, soonest first, as the home's list has the days after today */
 export type DayList<E extends Event = Event> = { day: Day, events: E[] }

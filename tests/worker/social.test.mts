@@ -1,8 +1,9 @@
 /// <reference types="node" />
 // The social routes (worker/social.mts): each command as a device by its secret, what anyone reads back, and the
 // rules: idempotent pins, marks idempotent per device, nobody going before the host sets a time, only the host sets
-// it and deletes, setting asks those who marked that time and nobody else, spots fill, two reports hide, linking
-// moves a device and its pins, codes verify a UNH address, and public pins take one
+// it, edits and deletes, an edit keeps marks on times kept and spots above those going, setting asks those who marked
+// that time and nobody else, spots fill, two reports hide, linking moves a device and its pins, codes verify a UNH
+// address, and public pins take one
 
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
@@ -12,6 +13,7 @@ import { HIDE, MAX_PINS_A_DAY } from "../../worker/social.mts"
 import type { Message } from "../../worker/mail.mts"
 import { type Pin, type Time, PINS_AHEAD } from "../../src/social/event.mts"
 import { addDays } from "../../src/shared/time.mts"
+import { isUnset, sortedTimes, spanOf } from "../../src/social/marks.mts"
 import { type Ask, askOf } from "../../src/social/ask.mts"
 import { parseCode, shown } from "../../src/social/link.mts"
 import { d1 } from "./d1.mts"
@@ -221,6 +223,151 @@ test("only the host sets the time, once, from any of the host's devices", () =>
     expect((await setTime(host, pin, (chosen + 1) % 3)).status).toBe(409)
   }), { numRuns: 20 })
 )
+
+//#region Editing
+
+/** What a pin's host edits: what it was made with, its times as the form shows them, and anything changed */
+const editOf = (pin: Pin, changes: Record<string, unknown> = {}) => ({
+  title: pin.title, description: pin.description, place: pin.place, where: pin.where, spots: pin.spots, visibility: pin.visibility,
+  times: isUnset(pin) ? pin.times : [{ start: pin.start, end: pin.end }],
+  ...changes
+})
+
+const edit = (who: Device, pin: Pin, changes: Record<string, unknown> = {}) =>
+  who.ask("PUT", `/api/pins/${pin.id}`, editOf(pin, changes))
+
+const edited = async (who: Device, pin: Pin, changes: Record<string, unknown> = {}) => {
+  const response = await edit(who, pin, changes)
+  expect(response.status, await response.clone().text()).toBe(200)
+  return await response.json() as Pin
+}
+
+/** What a host may change an event to: text, a place, one to three times within the coming weeks, spots or none */
+const anEdit = fc.record({
+  title: fc.string({ minLength: 1, maxLength: 80 }).filter(text => text.trim() !== ""),
+  description: fc.string({ maxLength: 500 }),
+  place: fc.string({ minLength: 1, maxLength: 80 }).filter(text => text.trim() !== ""),
+  where: fc.string({ maxLength: 80 }),
+  spots: fc.option(fc.integer({ min: 1, max: 99 }), { nil: undefined }),
+  times: fc.array(fc.tuple(fc.integer({ min: 0, max: 24 * 28 }), fc.integer({ min: 1, max: 6 })), { minLength: 1, maxLength: 3 })
+    .map(times => times.map(([hours, long]) => ({ start: soon() + hours * 3_600_000, end: soon() + (hours + long) * 3_600_000 })))
+})
+
+test("only the host edits an event, from any of the host's devices, and what's edited is what anyone reads back", () =>
+  fc.assert(fc.asyncProperty(anEdit, fc.nat(1), async (changes, by) => {
+    const { device, anyone } = worker()
+    const [phone, laptop, bo] = [device("phone"), device("laptop"), device("bo")]
+    const pin = await made(phone, { times: timesOf(2), spots: 5 })
+    const { code } = await (await laptop.ask("POST", "/api/link", {})).json() as { code: string }
+    await phone.ask("POST", `/api/link/${code}`, {})
+    expect((await edit(bo, pin, changes)).status).toBe(403)
+    const host = [phone, laptop][by]
+    const saved = await edited(host, pin, changes)
+    const read = await (await anyone(`/api/pins/${pin.id}`)).json() as Pin
+    expect({ ...saved, yours: undefined, isGoing: undefined, marked: undefined }).toEqual({ ...read, yours: undefined, isGoing: undefined, marked: undefined })
+    expect(saved.yours).toBe(true)
+    const times = sortedTimes(changes.times)
+    expect(read).toMatchObject({
+      title: changes.title.trim(), description: changes.description.trim(), place: changes.place.trim(), where: changes.where.trim(),
+      times: times.length > 1 ? times : [], ...spanOf(times)
+    })
+    expect(read.spots).toBe(changes.spots)
+  }), { numRuns: 25 })
+)
+
+test("an edit is checked as a pin is made, listing it takes a verified address, and a pin gone or hidden isn't edited", async () => {
+  const { device, sent } = worker()
+  const [ana, bo, cy] = [device("ana"), device("bo"), device("cy")]
+  const pin = await made(ana)
+  const refused = async (changes: Record<string, unknown>, status: number) =>
+    expect((await edit(ana, pin, changes)).status, JSON.stringify(changes)).toBe(status)
+  await refused({ title: "" }, 400)
+  await refused({ title: "x".repeat(81) }, 400)
+  await refused({ description: "x".repeat(501) }, 400)
+  await refused({ times: [{ start: soon(), end: soon() - 1 }] }, 400)
+  await refused({ times: [{ start: NOW - 2 * 86_400_000, end: NOW }] }, 400)
+  await refused({ times: [] }, 400)
+  await refused({ times: timesOf(4) }, 400)
+  await refused({ place: undefined }, 400)
+  await refused({ spots: 0 }, 400)
+  await refused({ visibility: "public" }, 403)
+  await ana.ask("POST", "/api/email", { address: "ana@unh.edu" })
+  await ana.ask("POST", "/api/email/verify", { address: "ana@unh.edu", code: sent[0].subject.slice(0, 6) })
+  expect(await edited(ana, pin, { visibility: "public" })).toMatchObject({ visibility: "public" })
+  // Edits aren't pins made, so they're not counted as those are
+  for (let i = 0; i < MAX_PINS_A_DAY; i++)
+    await edited(ana, pin, { title: `Tennis ${i}` })
+  await bo.ask("POST", `/api/pins/${pin.id}/reports`, {})
+  await cy.ask("POST", `/api/pins/${pin.id}/reports`, {})
+  expect((await edit(ana, pin)).status).toBe(404)
+  expect((await ana.ask("PUT", "/api/pins/no-such-pin-at-all", editOf(pin))).status).toBe(404)
+})
+
+test("spots never drop below those going, and an edit refused for it changes nothing", async () => {
+  const { device } = worker()
+  const [ana, bo, cy] = [device("ana"), device("bo"), device("cy")]
+  const pin = await made(ana, { spots: 4 })
+  for (const who of [bo, cy])
+    await who.ask("POST", `/api/pins/${pin.id}/going`, { going: true })
+  const refused = await edit(ana, pin, { spots: 1, title: "Squash" })
+  expect(refused.status).toBe(409)
+  expect(await refused.text()).toBe("More are going than that")
+  expect(await (await ana.ask("GET", `/api/pins/${pin.id}`)).json()).toMatchObject({ title: "Tennis", spots: 4, going: 2 })
+  expect(await edited(ana, pin, { spots: 2 })).toMatchObject({ spots: 2, going: 2 })
+  expect((await device("dee").ask("POST", `/api/pins/${pin.id}/going`, { going: true })).status).toBe(409)
+  const unlimited = await edited(ana, pin, { spots: undefined })
+  expect(unlimited).not.toHaveProperty("spots")
+  // Moved to another time, those going still are
+  expect(await edited(ana, pin, { times: [{ start: soon() + 86_400_000, end: soon() + 90_000_000 }] })).toMatchObject({ going: 2, start: soon() + 86_400_000 })
+})
+
+test("times edited keep each mark on its time where that's kept and drop the rest, and are to pick from again", () =>
+  fc.assert(fc.asyncProperty(
+    fc.array(fc.subarray([0, 1, 2]), { minLength: 3, maxLength: 3 }), fc.subarray([0, 1, 2]), fc.integer({ min: 0, max: 3 }),
+    async (marked, keep, adding) => {
+      const { host, people, pin, times } = await picking(3, 3)
+      for (const [who, marks] of marked.entries())
+        for (const time of marks)
+          await mark(people[who], pin, time, true)
+      // New times, each half an hour off the hour, so none is one of those offered before
+      const added = Array.from({ length: Math.min(adding, 3 - keep.length) }, (_, i) => ({ start: soon() - 1_800_000 + 4 * i * 3_600_000, end: soon() + 4 * i * 3_600_000 }))
+      const given = [...keep.map(i => times[i]), ...added]
+      fc.pre(given.length > 1 && !(keep.length === 3 && added.length === 0))
+      const saved = await edited(host, pin, { times: given })
+      const now = sortedTimes(given)
+      const indexOf = (time: Time) => now.findIndex(({ start, end }) => start === time.start && end === time.end)
+      expect(saved.times).toEqual(now)
+      expect(saved).not.toHaveProperty("chosen")
+      expect(saved.marks).toEqual(now.map(time => {
+        const was = times.findIndex(({ start }) => start === time.start)
+        return was < 0 || !keep.includes(was) ? 0 : marked.filter(marks => marks.includes(was)).length
+      }))
+      for (const [who, marks] of marked.entries())
+        expect((await (await people[who].ask("GET", `/api/pins/${pin.id}`)).json() as Pin).marked)
+          .toEqual(marks.filter(i => keep.includes(i)).map(i => indexOf(times[i])).sort((a, b) => a - b))
+    }
+  ), { numRuns: 30 })
+)
+
+test("a set time edited away clears it, one time makes an ordinary event keeping who's going, and times as they were change nothing", async () => {
+  const { host, people: [bo, cy], pin, times } = await picking(3, 2)
+  await mark(bo, pin, 1, true)
+  const set = await (await setTime(host, pin, 1)).json() as Pin
+  await bo.ask("POST", `/api/pins/${pin.id}/going`, { going: true })
+  // Times as the host sees them, the one set, change nothing but what's said
+  expect(await edited(host, set, { title: "Chess" })).toMatchObject({ title: "Chess", chosen: 1, times, marks: [0, 1, 0], going: 1 })
+  // Another one time, which makes it an ordinary event at that time, with who's going still going
+  const moved = await edited(host, pin, { times: [times[2]] })
+  expect(moved).toMatchObject({ times: [], marks: [], ...times[2], going: 1 })
+  expect(moved).not.toHaveProperty("chosen")
+  // Several again are to pick from, so nobody's going, and Going waits for the host to set one
+  const reopened = await edited(host, moved, { times: [times[0], times[2]] })
+  expect(reopened).toMatchObject({ times: [times[0], times[2]], marks: [0, 0], going: 0 })
+  expect((await cy.ask("POST", `/api/pins/${pin.id}/going`, { going: true })).status).toBe(409)
+  expect(await (await mark(cy, pin, 1, true)).json()).toMatchObject({ marks: [0, 1] })
+})
+
+//#endregion
 
 afterEach(() => {
   vi.unstubAllGlobals()

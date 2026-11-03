@@ -18,7 +18,7 @@ const Link = v.object({ code: v.string(), expires: v.number() })
 const Linked = v.object({ linked: v.boolean(), expires: v.number() })
 
 /** A command as this device, with its secret, to a route, or an error saying what the Worker refused it for */
-const command = async <T,>(method: "POST" | "DELETE", path: string, body: Record<string, unknown>, schema?: v.GenericSchema<unknown, T>): Promise<T> => {
+const command = async <T,>(method: "POST" | "PUT" | "DELETE", path: string, body: Record<string, unknown>, schema?: v.GenericSchema<unknown, T>): Promise<T> => {
   const { id, secret } = await device()
   const response = await fetch(path, {
     method,
@@ -49,11 +49,15 @@ export const bookedOn = (day: Day, space?: string) =>
 export const pinsFrom = (day: string, days: number) =>
   read(`/api/pins?day=${day}&days=${days}`, v.array(Pin)).then(pins => pins ?? [])
 
-/** An event as made: one time, or up to three to pick from */
+/** An event as made, or edited by its host: one time, or up to three to pick from */
 export type NewPin = Pick<Pin, "id" | "title" | "description" | "place" | "where" | "times" | "spots" | "visibility">
 
 export const makePin = (made: NewPin) =>
   command("POST", "/api/pins", made, Pin)
+
+/** The host's edit of an event, refused where it would leave fewer spots than are taken */
+export const editPin = ({ id, ...edited }: NewPin) =>
+  command("PUT", `/api/pins/${encodeURIComponent(id)}`, edited, Pin)
 
 /** Going, or not, once the time is set; refused with "Full" when every spot is taken */
 export const setGoing = (id: string, going: boolean) =>

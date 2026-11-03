@@ -1,15 +1,15 @@
 /** @jsxImportSource bruh/browser */
 
-// The pages the sheet shows over the home, each at a link of its own (link.mts): a section, which leads with its
-// next meeting; an instructor, with their next scheduled class and their week; a room, whether it's free and what's
-// booked and scheduled there (Rooms.tsx); a course, with what it needs and unlocks, the programs naming it, and its
-// sections, the next term's too; a place, with what's on there, the stop beside it and its own facts; an event, with
-// Going for one made here; parking near a place, and a parking area (Parking.tsx); a program, a planning view of its
-// own (Program.tsx); a stop and a bus (StopView.tsx, BusView.tsx); directions (Directions.tsx); a new event
-// (NewEvent.tsx); you (You.tsx); and the buses (Buses.tsx). Each offers Directions and Remind for the visit it leads
-// with, which need nothing saved, and where to park for it, and says where it is, which the map marks. What's said of
-// a person is their scheduled teaching from the registrar's sections, and of a room 25Live doesn't book its classes,
-// which never make it free
+// The pages the sheet shows over the home, each at a link of its own (link.mts): a section, which leads with its next
+// meeting; an instructor, with their next scheduled class and their week; a room, whether it's free and what's booked
+// and scheduled there (Rooms.tsx); a course, with what it needs and unlocks, the programs naming it, and its sections,
+// the next term's too; a place, with what's on there, the stop beside it and its own facts; an event, with Going for
+// one made here; parking near a place, and a parking area (Parking.tsx); a program, a planning view of its own
+// (Program.tsx); a stop and a bus (StopView.tsx, BusView.tsx); directions (Directions.tsx); a new event, or one of
+// yours to edit (NewEvent.tsx); you (You.tsx); and the buses (Buses.tsx). Each offers Directions and Remind for the
+// visit it leads with, which need nothing saved, and where to park for it, and says where it is, which the map marks.
+// What's said of a person is their scheduled teaching from the registrar's sections, and of a room 25Live doesn't book
+// its classes, which never make it free
 
 import type { BruhChild } from "bruh/browser"
 import { type DerivativeNode, type Reactive, type SourceNode, r, watch } from "bruh/reactive"
@@ -68,6 +68,10 @@ const pinOf = (id: string) => {
     pins.set(id, social.pin(id).catch(() => undefined))
   return pins.get(id)!
 }
+
+/** A pin as the Worker answered this device for making or editing it, in place of what was read before */
+export const keptPin = (pin: Pin) =>
+  void pins.set(pin.id, Promise.resolve(pin))
 
 /** An event by its id, or another calendar's id for it, if it's one of the build's or a public pin listed, as it is there, so its page shows at once */
 const listedEvent = (id: string): Event | Pin | undefined =>
@@ -795,8 +799,8 @@ const ScheduledNow = ({ name }: { name: string }) =>
 
 /**
  * An event: when and where, Directions and Remind for getting there by its start, and for one made here, its
- * description, Going, the times to pick while its time is unset, its story to share, and deleting or reporting it;
- * for UNH's, where it's from, as a line in the foot
+ * description, Going, the times to pick while its time is unset, its story to share, and editing, deleting or
+ * reporting it; for UNH's, where it's from, as a line in the foot
  */
 const EventView = ({ id }: { id: string }) => {
   const listed = listedEvent(id)
@@ -846,10 +850,21 @@ const EventView = ({ id }: { id: string }) => {
           {visit && <LinkLine to={parkingFor(visit)}>Parking</LinkLine>}
           {!pin && <LinkLine href={event.url}>{calendarOf(event)?.name ?? "Source"}</LinkLine>}
         </div>
-        {pin && <p class="view-foot muted"><Moderate pin={pin} act={act} onGone={() => found.value = null} onReported={hidden => notice.value = hidden ? "Reported, and hidden." : "Reported."} /></p>}
+        {pin && <p class="view-foot muted"><Moderate pin={pin} act={act} onEdit={() => state.go({ kind: "edit", id })} onGone={() => found.value = null} onReported={hidden => notice.value = hidden ? "Reported, and hidden." : "Reported."} /></p>}
       </>
     )
   })
+}
+
+/** An event of yours to edit, as the Worker tells this device, in the new event's form */
+const EditEventView = ({ id }: { id: string }) => {
+  const found = r<Pin | null>()
+  void pinOf(id).then(pin => found.value = pin?.yours ? pin : null)
+  return r(() =>
+    found.value === undefined ? <p class="muted">Loading the event…</p> :
+    found.value === null      ? <Missing what="Not your event." why="Only its host can edit it." /> :
+                                <NewEventView pin={found.value} />
+  )
 }
 
 /** The kinds of page that read the courses as they open, so those load as the page does */
@@ -889,6 +904,7 @@ export const PageView = ({ page }: { page: Page }) => {
         page.kind === "bus"        ? <BusView id={page.id} /> :
         page.kind === "directions" ? <DirectionsView /> :
         page.kind === "new"        ? <NewEventView place={page.place} /> :
+        page.kind === "edit"       ? <EditEventView id={page.id} /> :
         page.kind === "you"        ? <YouView /> :
         page.kind === "buses"      ? <BusesView /> :
                                      <EventView id={page.id} />}

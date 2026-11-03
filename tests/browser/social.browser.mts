@@ -1,8 +1,8 @@
 // The social layer on a phone, against the Worker's app served from Node (tests/worker/serve.mts): today's list
 // plans a trip by an event's start; an event made here opens for anyone and counts them going, of its spots;
 // sharing makes a story image; an event of times to pick takes marks, its host sets one, and those who marked it
-// are asked "Going?"; a code links two devices; and an emailed code verifies an address. Screenshots go to
-// NOTUNH_SHOTS when it's set
+// are asked "Going?"; its host edits it; a code links two devices; and an emailed code verifies an address.
+// Screenshots go to NOTUNH_SHOTS when it's set
 
 import { readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
@@ -464,6 +464,69 @@ test("a code emailed to a UNH address verifies this device once typed back, whic
   // Opened from the list, it's still its host's to delete
   await page.getByRole("list", { name: localDay(tomorrow) }).locator(".row", { hasText: "AI club" }).click()
   await expect(page.getByRole("button", { name: "Delete this event" })).toBeVisible()
+})
+
+test("an event's host edits it, its title and time, and sees it changed on its page and in the home's list, and a guest sees no Edit", async ({ page, browser, fixture }) => {
+  // Two devices' pages, drawn in software beside the other tests
+  test.slow()
+  // Verified, so the event is listed on the home for everyone
+  await openMap(page, fixture.origin)
+  await page.getByRole("button", { name: "You", exact: true }).click()
+  await page.getByLabel("UNH email").fill("cy@unh.edu")
+  await page.getByRole("button", { name: "Send code" }).click()
+  await expect(page.getByText("Code sent to cy@unh.edu")).toBeVisible()
+  const mail = await (await fetch(`${worker!.origin}/__mail`)).json() as { subject: string }
+  await page.getByLabel("Code from the email").fill(mail.subject.slice(0, 6))
+  await page.getByRole("button", { name: "Confirm" }).click()
+  await expect(page.getByText("Verified as")).toBeVisible()
+  await page.getByRole("button", { name: "Back to Map" }).click()
+  await page.getByRole("button", { name: "New event" }).click()
+  await page.getByRole("button", { name: "Everyone", exact: true }).click()
+  await page.getByLabel("What").fill("Frisbee")
+  await page.locator("input[name=place]").fill("Thompson Hall")
+  const tomorrow = atClock(addDays(localDay(Date.now()), 1), "16:00")
+  await fillWhen(page, 0, tomorrow)
+  await page.getByRole("button", { name: "Post it" }).click()
+  await expect(page.getByRole("heading", { name: "Frisbee" })).toBeVisible()
+  const id = decodeURIComponent(new URL(page.url()).pathname.split("/").at(-1)!)
+
+  // Edit opens the form as the event is, which saves as edited, back on its page
+  await page.getByRole("link", { name: "Edit" }).click()
+  await expect(page).toHaveURL(new RegExp(`/map/edit/${id}$`))
+  await expect(page.getByRole("heading", { name: "Edit event" })).toBeVisible()
+  await expect(page.getByLabel("What")).toHaveValue("Frisbee")
+  await expect(page.locator("input[name=place]")).toHaveValue("Thompson Hall")
+  await expect(page.locator("input[name=day]").first()).toHaveValue(localDay(tomorrow))
+  await expect(page.locator("input[name=start]").first()).toHaveValue("16:00")
+  await expect(page.getByRole("button", { name: "Everyone", exact: true })).toHaveAttribute("aria-pressed", "true")
+  await page.getByLabel("What").fill("Ultimate frisbee")
+  const later = atClock(localDay(tomorrow), "18:30")
+  await fillWhen(page, 0, later)
+  if (SHOTS) {
+    await page.getByRole("heading", { name: "Edit event" }).scrollIntoViewIfNeeded()
+    await shoot(page, "event-edit")
+  }
+  await page.getByRole("button", { name: "Save" }).click()
+  await expect(page).toHaveURL(new RegExp(`/map/event/${id}$`))
+  await expect(page.getByRole("heading", { name: "Ultimate frisbee" })).toBeVisible()
+  await expect(page.locator(".view-when")).toContainText(/6:30/)
+
+  // On the home's list as edited
+  await page.goto(fixture.origin + "/map/")
+  const row = page.getByRole("list", { name: localDay(tomorrow) }).locator(".row", { hasText: "Ultimate frisbee" })
+  await expect(row).toBeVisible()
+  await expect(row).toContainText(/6:30/)
+
+  // Someone else sees the edit, and no Edit of their own, on the map or at the link
+  const other = await stranger(browser)
+  const guest = await other.newPage()
+  await open(guest, fixture.origin, `/map/event/${id}`)
+  await expect(guest.getByRole("heading", { name: "Ultimate frisbee" })).toBeVisible()
+  await expect(guest.getByRole("link", { name: "Edit" })).toHaveCount(0)
+  await open(guest, fixture.origin, pinPath(id))
+  await expect(guest.getByRole("heading", { name: "Ultimate frisbee" })).toBeVisible()
+  await expect(guest.getByRole("link", { name: "Edit" })).toHaveCount(0)
+  await other.close()
 })
 
 test("a permit set on one of two linked devices reaches the other, and comes back to one whose storage was cleared, by its cookie", async ({ page, browser, fixture }) => {

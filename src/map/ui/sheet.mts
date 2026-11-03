@@ -1,10 +1,14 @@
 // The panel as a bottom sheet on phones, at one of three heights to drag or tap between: down to just its header to
 // leave the map, about half the screen, or taller for long directions. It's also lifted above the on-screen keyboard,
-// which iOS draws over the page rather than making room for
+// which iOS draws over the page rather than making room for, and the page kept from scrolling under it
 //
 // Each detent is a height of its own, whatever the page shown: what's in the sheet never sizes it, so going from a
 // long page to a short one, a field's suggestions coming and going, or a trip being planned leaves it where it was.
 // Only a drag, the grabber, or something new asking a lowered sheet up moves it
+//
+// It's dragged by its grabber or header, from anywhere when there's nothing to scroll, and from its content pulled down
+// while that's scrolled to its top, as the sheet is all there is left to pull down then; pulled up, the content scrolls
+// as ever. Let go, it lands as src/map/detents.mts says: a flick goes on one detent, else the nearest
 //
 // It only ever moves by translate, which the compositor handles on its own. While dragged or sliding between detents,
 // its box is the taller of the heights involved, slid down to show the right amount. Once still, the box is swapped
@@ -14,10 +18,10 @@
 // lists, and is scrolled there as it grows, unless it's touched first
 
 import { r, watch } from "bruh/reactive"
+import { type Detent, landing, releaseVelocity } from "../detents.mts"
 
-export type Detent = "lowered" | "half" | "tall"
-
-export const detent = r<Detent>("half")
+// The sheet's alone: everything else asks for what it wants of it below
+const detent = r<Detent>("half")
 
 /** Brings a lowered sheet back up, for something new in it to show */
 export const raise = () => {
@@ -25,8 +29,16 @@ export const raise = () => {
     detent.value = "half"
 }
 
-// How long a flick carries on at the speed it was let go, to judge where it's headed
-const FLICK_MS = 150
+/** Takes the sheet as tall as it goes, for a view that wants the room */
+export const expand = () => {
+  detent.value = "tall"
+}
+
+/** Lowers the sheet to its header, or brings it back up: what the grabber does */
+const toggle = () => {
+  detent.value = detent.peek() === "lowered" ? "half" : "lowered"
+}
+
 // px, less movement than this is a tap
 const SLOP = 6
 // rem of the map always left above a tall sheet
@@ -73,6 +85,13 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   // The grabber only shows when the panel is a sheet
   const isSheet = () => grabber.offsetParent !== null
 
+  /** A field to bring into sight once the sheet's at rest, as the keyboard has come up under it */
+  let reveal: Element | undefined
+  const revealField = () => {
+    reveal?.scrollIntoView({ block: "nearest" })
+    reveal = undefined
+  }
+
   /** Lays the sheet out at rest for its detent: a box of that height, which only lowered keeps a translate on */
   const rest = () => {
     if (!isSheet())
@@ -86,6 +105,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     panel.scrollTop = scroll
     set("--sheet-drop", lowered ? Math.max(0, box() - loweredExtent()) : 0)
     panel.classList.toggle("fits", panel.scrollHeight <= panel.clientHeight)
+    revealField()
   }
 
   /** Slides to the detent from wherever the sheet is now, mid-slide included, and rests once there */
@@ -167,10 +187,14 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   // Anything taking focus in the sheet, like a field, needs it up
   panel.addEventListener("focusin", raise)
 
-  // Dragged to any height between lowered and tall, by the grabber or the header, or anywhere when there's nothing to
-  // scroll. Tapping the grabber or the header toggles it, and taps on anything else are left alone
+  // Dragged to any height between lowered and tall, by the grabber or the header, from anywhere when there's nothing
+  // to scroll, and from the content pulled down while it's scrolled to its top. Tapping the grabber or the header
+  // toggles it, and taps on anything else are left alone. A touch only becomes a drag once it's moved, so a tap
+  // changes nothing about the sheet, and a field never starts one: what it opens, a keyboard or a picker, is placed by
+  // where the field is as it's touched
+  let touched: { x: number, y: number, at: number, isHandle: boolean, isContent: boolean, isClaimed: boolean } | undefined
   let drag: {
-    y: number, from: number, extent: number, at: number, velocity: number, isHandle: boolean,
+    y: number, from: number, extent: number, at: number, velocity: number,
     box: number, scroll: number, scrolled: number, content: number, lowered: number, half: number, tall: number
   } | undefined
 
@@ -182,28 +206,24 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     return clamped
   }
 
-  panel.addEventListener("pointerdown", event => {
-    const target = event.target as Element
-    // Links and fields keep the pointer; so do buttons in the header, which is otherwise a handle
-    if (!isSheet() || target.closest("a, input"))
-      return
-    const isHandle = target.closest(".grabber, .panel-header") !== null && !target.closest("button:not(.grabber)")
-    if (!isHandle && !panel.classList.contains("fits"))
-      return
+  /** Takes the sheet up from where it is, laid out to move anywhere between lowered and tall, as a drag from a height */
+  const grab = (y: number, at: number) => {
     const { half, tall } = caps()
     const content = panel.scrollHeight
     const from = floor() - panel.getBoundingClientRect().top
     const scrolled = panel.scrollTop - translated(header)
     panel.classList.remove("moving")
+    // A mouse dragging by the content would select text along the way
+    panel.classList.add("dragging")
+    getSelection()?.removeAllRanges()
     set("--sheet-max", Math.max(half, tall))
     const height = box()
     drag = {
-      y: event.clientY,
+      y,
       from,
       extent: from,
-      at: event.timeStamp,
+      at,
       velocity: 0,
-      isHandle,
       box: height,
       scroll: panel.scrollTop,
       scrolled,
@@ -213,43 +233,90 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
       tall: height
     }
     show(from)
-    // Anything else is only held once it's a drag, as a click goes to whatever holds the pointer when it's let go
+    return drag
+  }
+
+  /**
+   * Whether a touch on the content, first moved this way, is the sheet's to drag, which its first move decides for
+   * good: only pulled down, with the content still at its top, and not sideways. Any other way, the content's own
+   */
+  const claim = (x: number, y: number) => {
+    if (!touched || touched.isClaimed)
+      return
+    const dx = x - touched.x
+    const dy = y - touched.y
+    if (dx === 0 && dy === 0)
+      return
+    if (dy > 0 && dy >= Math.abs(dx) && panel.scrollTop <= 0)
+      touched.isClaimed = true
+    else
+      touched = undefined
+  }
+
+  panel.addEventListener("pointerdown", event => {
+    // Another finger mid-drag changes nothing
+    if (drag)
+      return
+    const target = event.target as Element
+    touched = undefined
+    // Fields keep the pointer, and a question asked does; so do buttons in the header, which is otherwise a handle
+    if (!isSheet() || target.closest("input, textarea, select, dialog"))
+      return
+    const isHandle = target.closest(".grabber, .panel-header") !== null && !target.closest("button:not(.grabber)")
+    const isContent = !isHandle && !panel.classList.contains("fits")
+    // Content scrolled down is left to scroll back up
+    if (isContent && panel.scrollTop > 0)
+      return
+    touched = { x: event.clientX, y: event.clientY, at: event.timeStamp, isHandle, isContent, isClaimed: !isContent }
+    // A handle holds the pointer from the start, so a drag up off the sheet still moves it; anything else only once
+    // it's a drag, as a click goes to whatever holds the pointer when it's let go
     if (isHandle)
       panel.setPointerCapture(event.pointerId)
   })
 
+  // The browser would scroll the content for a touch pulling it, and take the touch from the sheet to do so, so
+  // one that's the sheet's is kept from it. Its first move, before pointermove has heard of it, may be the one
+  // that claims it
+  panel.addEventListener("touchmove", event => {
+    const { clientX, clientY } = event.changedTouches[0]
+    claim(clientX, clientY)
+    if (drag || touched?.isClaimed)
+      event.preventDefault()
+  }, { passive: false })
+
   panel.addEventListener("pointermove", event => {
-    if (!drag)
+    claim(event.clientX, event.clientY)
+    if (!touched)
       return
-    if (!panel.hasPointerCapture(event.pointerId)) {
-      if (Math.abs(event.clientY - drag.y) < SLOP)
+    if (!drag) {
+      if (Math.abs(event.clientY - touched.y) < SLOP)
         return
       panel.setPointerCapture(event.pointerId)
     }
-    const extent = show(drag.from - (event.clientY - drag.y))
-    drag.velocity = (extent - drag.extent) / Math.max(1, event.timeStamp - drag.at)
-    drag.extent = extent
-    drag.at = event.timeStamp
+    // From where and when it was touched, so the first move's speed is over the time since, not an instant
+    const held = drag ?? grab(touched.y, touched.at)
+    const extent = show(held.from - (event.clientY - held.y))
+    held.velocity = (extent - held.extent) / Math.max(1, event.timeStamp - held.at)
+    held.extent = extent
+    held.at = event.timeStamp
   })
 
   const release = (event: PointerEvent) => {
-    if (!drag)
+    const wasTouched = touched
+    touched = undefined
+    if (!drag) {
+      // A tap on the grabber or the header toggles it
+      if (wasTouched?.isHandle && event.type === "pointerup")
+        toggle()
       return
-    const { from, extent, velocity, isHandle, lowered, half, tall } = drag
+    }
+    const { extent, at, lowered, half, tall } = drag
+    const velocity = releaseVelocity(drag.velocity, event.timeStamp - at)
     drag = undefined
+    panel.classList.remove("dragging")
 
     const current = detent.peek()
-    let next = current
-    if (event.type !== "pointercancel") {
-      if (Math.abs(extent - from) >= SLOP) {
-        // The nearest height to where it's headed
-        const headed = extent + velocity * FLICK_MS
-        const heights: [Detent, number][] = [["half", half], ["lowered", lowered], ["tall", tall]]
-        next = heights.reduce((a, b) => Math.abs(b[1] - headed) < Math.abs(a[1] - headed) ? b : a)[0]
-      }
-      else if (isHandle)
-        next = current === "lowered" ? "half" : "lowered"
-    }
+    const next = event.type === "pointercancel" ? current : landing({ lowered, half, tall }, extent, velocity)
     // A new detent slides there when it's watched, so only staying put needs the slide back
     if (next === current)
       move()
@@ -262,17 +329,33 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   // Pointers toggle it on release, so a click only toggles from the keyboard
   grabber.addEventListener("click", event => {
     if (event.detail === 0)
-      detent.value = detent.peek() === "lowered" ? "half" : "lowered"
+      toggle()
   })
+
+  // The page never scrolls, but iOS scrolls it anyway to show a field the keyboard would cover, and can leave it
+  // scrolled once the keyboard's gone, drawing everything fixed away from where its taps land. The sheet lifts the
+  // field above the keyboard itself, so the page goes straight back
+  addEventListener("scroll", () => {
+    // Unless zoomed in, where panning about is what scrolls it
+    if ((scrollX || scrollY) && (window.visualViewport?.scale ?? 1) <= 1)
+      window.scrollTo(0, 0)
+  }, { passive: true })
 
   // The keyboard covers the bottom of the layout viewport, by however much the visual viewport doesn't reach
   const viewport = window.visualViewport
   if (viewport) {
     const lift = () => {
       const isTyping = document.activeElement?.matches("input, textarea") ?? false
-      keyboard = isTyping ? Math.max(0, innerHeight - viewport.height - viewport.offsetTop) : 0
+      const covered = isTyping ? Math.max(0, innerHeight - viewport.height - viewport.offsetTop) : 0
+      const isNew = covered !== keyboard
+      keyboard = covered
       set("--keyboard", keyboard)
       settle()
+      // The field typed in, in sight above the keyboard once the sheet's at rest there, now or after its slide
+      if (isNew && isTyping && panel.contains(document.activeElement))
+        reveal = document.activeElement!
+      if (!panel.classList.contains("moving"))
+        revealField()
     }
     // Once per frame, as the viewport reports every step of the keyboard or toolbar animating, and focus has
     // only settled on its new element once its events are over

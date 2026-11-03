@@ -36,7 +36,7 @@ The result is `src/map/events.json`, a map data file like the timetable; a gener
 
 ## Pins
 
-Made from **+ New event**, the last row of today on the home, or **+ New event here** on a place's page: `/map/new/<place>` (`src/map/ui/NewEvent.tsx`). What, where (a place the map knows, searched as typed), where exactly, a day with start and end, up to two more times (**+ Another time**), details, **spots**, and Link only or Everyone. The device makes the pin's id, so a retry is the same pin. Posted, it opens as `/map/event/<id>`, with Going, the times to mark or set, Share, and Delete or Report (`src/social/ui.tsx`, shared with `/p/`).
+Made from **+ New event**, the last row of today on the home, or **+ New event here** on a place's page: `/map/new/<place>` (`src/map/ui/NewEvent.tsx`). What, where (a place the map knows, searched as typed), where exactly, a day (Today, Tomorrow, or another) with a start and an end, each a chip over its native picker, the end keeping its length as the start moves, up to two more times (**+ Another time**), details, **spots**, and Link only or Everyone. The device makes the pin's id, so a retry is the same pin. Posted, it opens as `/map/event/<id>`, with Going, the times to mark or set, Share, and Delete, asked again in a dialog over the page, or Report (`src/social/ui.tsx`, shared with `/p/`).
 
 `/p/<id>` (`p/index.html.tsx`, `src/social/pin.tsx`) is the light page a shared link opens, with no account or install: place, time, **Directions**, **Going** (a count, never a list), **Share**, linking to the map's page. The Worker puts the pin in its head for previews ([deploying.md](deploying.md#search-and-sharing)); the page fills in the rest from `GET /api/pins/:id`.
 

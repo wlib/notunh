@@ -7,7 +7,7 @@
 
 import { type Space, type Standing, isFreeFor } from "./bookings.mts"
 import { roomKey } from "./rooms.mts"
-import { placeFinder } from "../social/aliases.mts"
+import { placeFinder, shortNames } from "../social/aliases.mts"
 import { fuzzySearch, latinize } from "../shared/fuzzy.mts"
 import { addDays, atClock, localDay, nextAt } from "../shared/time.mts"
 
@@ -77,7 +77,7 @@ export type FoundSpace = { space: Space, standing: Standing }
 
 /** Finds the building some text names, by the gazetteer's name, a calendar's alias, or a hall's or library's first word ("Dimond"), and the text left */
 const buildingFinder = (places: readonly string[]) => {
-  const find = placeFinder(places, places.flatMap(place => /^\S+ (Hall|Library)$/.test(place) ? [[place.split(" ")[0], place] as const] : []))
+  const find = placeFinder(places, shortNames(places))
   return (text: string): { place?: string, rest: string } => {
     const found = find(text)
     return found ? { place: found.place, rest: text.replace(found.found, " ").replace(/\s+/g, " ").trim() } : { rest: text }

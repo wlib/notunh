@@ -28,24 +28,29 @@ export type Ranking = { near?: Point, uses?: (place: Place) => number }
 const searchable = (text: string) =>
   latinize(spellGreek(text))
 
+/** Text as an exact match compares it: case, spaces and punctuation aside, so "t hall", "T-Hall" and "THall" are one */
+const keyOf = (text: string) =>
+  searchable(text).toLowerCase().replace(/[^\p{L}\p{N}]/gu, "")
+
 /**
  * Searches things by their names, each by any of its own: every thing found, once, best first, and whether one of its
- * names is just what's searched, case aside
+ * names is just what's searched, case, spaces and punctuation aside. Those named just so come first, found whether or
+ * not the fuzzy search finds them, as it may not for a short name like "MUB" among longer ones
  */
 export const createNameSearch = (namesOf: readonly (readonly string[])[]) => {
   const rows = namesOf.flatMap((names, index) => names.map(name => ({ index, name: searchable(name) })))
   const names = rows.map(({ name }) => name)
-  const lower = names.map(name => name.toLowerCase())
+  const byKey = new Map<string, Set<number>>()
+  for (const { index, name } of rows)
+    byKey.set(keyOf(name), (byKey.get(keyOf(name)) ?? new Set()).add(index))
   return (query: string) => {
     const needle = searchable(query.trim())
     if (!needle)
       return []
-    const exact = needle.toLowerCase()
-    const found = new Map<number, boolean>()
-    for (const { index: row } of fuzzySearch(names, needle)) {
-      const { index } = rows[row]
-      found.set(index, found.get(index) || lower[row] === exact)
-    }
+    const found = new Map<number, boolean>([...byKey.get(keyOf(needle)) ?? []].map(index => [index, true]))
+    for (const { index: row } of fuzzySearch(names, needle))
+      if (!found.has(rows[row].index))
+        found.set(rows[row].index, false)
     return [...found].map(([index, isExact]) => ({ index, isExact }))
   }
 }

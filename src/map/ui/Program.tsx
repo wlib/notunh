@@ -27,7 +27,7 @@ import { Count, Counted, List } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import type { Page } from "../link.mts"
 import { state } from "../state/map.mts"
-import { detent } from "./sheet.mts"
+import { expand } from "./sheet.mts"
 import { Group } from "./Courses.tsx"
 import { Go, Head, Line, LinkLine, Row as RowView } from "./Pages.tsx"
 
@@ -366,7 +366,7 @@ const Loaded = ({ program, page }: { program: Program, page: DerivativeNode<Prog
 export const ProgramView = ({ page }: { page: ProgramPage }) => {
   state.wantPrograms()
   // A planning view, as tall as the sheet goes
-  detent.value = "tall"
+  expand()
   const asked = shown(page)
   if (!page.slug)
     return <Picker course={page.course} />

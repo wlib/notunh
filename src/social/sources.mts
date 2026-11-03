@@ -9,7 +9,7 @@ import * as v from "valibot"
 import { type Event, SHORT } from "./event.mts"
 import { deduped } from "./sport.mts"
 import { usable } from "../shared/json.mts"
-import { type Day, addDays, atClock } from "../shared/time.mts"
+import { DAY, type Day, addDays, atClock, hhmm, localDay } from "../shared/time.mts"
 
 /** Text as it's shown: tags and entities dropped, space squeezed, cut to a length */
 export const plain = (html: string, max = SHORT) =>
@@ -23,6 +23,15 @@ export const plain = (html: string, max = SHORT) =>
     .slice(0, max)
 
 export type Matcher = (text: string) => string | undefined
+
+/**
+ * A series' first session, given its first start and its last end, as some calendars write one: the end's time of day
+ * on the start's day, or the next day's when that's no later, as a dance that ends at midnight does
+ */
+const firstSession = (start: number, end: number) => {
+  const sameDay = atClock(localDay(start), hhmm(end))
+  return sameDay > start ? sameDay : atClock(addDays(localDay(start), 1), hhmm(end))
+}
 
 /** Where the build keeps the events, as scripts/map/events.mts writes them */
 export const EVENTS = "src/map/events.json"
@@ -40,17 +49,26 @@ const PresenceEvent = v.object({
 
 export const PRESENCE = "https://api.presence.io/unh/v1/events"
 
-/** Presence's events, from the JSON its API answers */
+/**
+ * How long a Presence event may be and still be one stretch, like a two-day expo. Longer, it's a club's weekly meeting
+ * written as its first session's start and its last's end, like 7 PM on 5 November to 8 PM on 12 November, which
+ * would otherwise list it as on all week
+ */
+const SPAN = 2 * DAY
+
+/** Presence's events, from the JSON its API answers, one longer than a span read as its first session */
 export const fromPresence = (json: unknown, match: Matcher): Event[] =>
   v.parse(usable(PresenceEvent), json).flatMap(event => {
     if (event.isVirtualEventLink)
       return []
     const where = plain(event.location ?? "")
+    const start = Date.parse(event.startDateTimeUtc)
+    const end = Date.parse(event.endDateTimeUtc)
     return [{
       id:     `presence:${event.uri}`,
       title:  plain(event.eventName),
-      start:  Date.parse(event.startDateTimeUtc),
-      end:    Date.parse(event.endDateTimeUtc),
+      start,
+      end:    end - start > SPAN ? firstSession(start, end) : end,
       place:  match(where),
       where,
       source: "presence",
@@ -195,10 +213,8 @@ const sessionOf = (start: string, end: string) => {
   const [startDay, startClock] = start.split(" ")
   const [endDay, endClock] = end.split(" ")
   const from = atClock(startDay, startClock.slice(0, 5))
-  if (endDay === startDay)
-    return { start: from, end: atClock(endDay, endClock.slice(0, 5)), single: true }
-  const sameDay = atClock(startDay, endClock.slice(0, 5))
-  return { start: from, end: sameDay > from ? sameDay : atClock(addDays(startDay, 1), endClock.slice(0, 5)), single: false }
+  const to = atClock(endDay, endClock.slice(0, 5))
+  return endDay === startDay ? { start: from, end: to, single: true } : { start: from, end: firstSession(from, to), single: false }
 }
 
 /**

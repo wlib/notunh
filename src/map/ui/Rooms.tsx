@@ -22,7 +22,7 @@ import { ClockTime, Counted, List } from "../../shell/intl.tsx"
 import { capture } from "../../shell/usage.tsx"
 import { nowMs } from "./common.tsx"
 import { Group } from "./Courses.tsx"
-import { CLASSES_ONLY, DayName, Facts, Go, Head, LinkLine, Row, Source, Span, directions, focusOn, placeNamed, sectionPage, share, withCourses } from "./Pages.tsx"
+import { CLASSES_ONLY, DayChips, DayName, Facts, Go, Head, LinkLine, Row, Source, Span, directions, focusOn, placeNamed, sectionPage, share, withCourses } from "./Pages.tsx"
 import { verified } from "./You.tsx"
 
 /** How a room stands, as a row's time column says it: "Free" over "till 3:00 PM" */
@@ -97,28 +97,7 @@ const SpaceView = ({ space, where }: { space: Space, where: string }) => {
         <button type="button" class={isRec ? "button primary" : "button"} onclick={() => directions(placeNamed(space.place), space.where)}>Directions</button>
         <button type="button" class="button" onclick={() => share(space.where)}>Share</button>
       </div>
-      <div class="chips days" role="group" aria-label="Day">
-        {[today, addDays(today, 1)].map(shown =>
-          <button type="button" class="chip" aria-pressed={r(() => day.value === shown ? "true" : "false")} onclick={() => { day.value = shown; refresh() }}>
-            <DayName day={shown} />
-          </button>
-        )}
-        <label class="chip pick" aria-pressed={r(() => day.value > addDays(today, 1) ? "true" : "false")}>
-          {r(() => day.value > addDays(today, 1) ? <DayName day={day.value} /> : "Other day")}
-          <input
-            type="date"
-            min={today}
-            max={addDays(today, ASK_AHEAD)}
-            value={r(() => day.value)}
-            onclick={(event: MouseEvent) => (event.currentTarget as HTMLInputElement).showPicker?.()}
-            onchange={(event: Event) => {
-              const picked = (event.currentTarget as HTMLInputElement).value
-              day.value = picked && picked >= today ? picked : today
-              refresh()
-            }}
-          />
-        </label>
-      </div>
+      <DayChips day={day} last={addDays(today, ASK_AHEAD)} onpick={refresh} />
       {r(() => {
         const shown = day.value
         const known = state.roomsOn(shown)

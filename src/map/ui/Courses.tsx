@@ -27,9 +27,12 @@ import { DayName, Row, SectionRow, directions, roomOf, sectionPage } from "./Pag
 const blur = () =>
   (document.activeElement as HTMLElement | null)?.blur()
 
-/** A group of search's results, labelled, kept from taking focus from the field so a tap doesn't end the search first */
+/**
+ * A group of search's results, labelled, kept from taking focus from the field so a tap doesn't end the search first:
+ * on mousedown, as WebKit sends no click for a touch whose pointerdown is called off
+ */
 export const Group = ({ label, children }: { label: string, children?: BruhChild }) =>
-  <section class="found" aria-label={label} onpointerdown={(event: PointerEvent) => event.preventDefault()} onclick={blur}>
+  <section class="found" aria-label={label} onmousedown={(event: MouseEvent) => event.preventDefault()} onclick={blur}>
     <h3 class="eyebrow">{label}</h3>
     <ul class="rows">{children}</ul>
   </section>

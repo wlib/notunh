@@ -65,6 +65,36 @@ test("an entry of a shape not known is left out rather than failing the rest", (
   expect(fromAthletics("BEGIN:VCALENDAR\nBEGIN:VEVENT\nSUMMARY:No times\nLOCATION:Durham\\, N.H.\\, Wildcat Stadium\nEND:VEVENT\nEND:VCALENDAR", match)).toEqual([])
 })
 
+test("a Presence event written from a weekly meeting's first start to its last end is its first session, at its place", () => {
+  // As Wildcat Link listed the Genealogy Club's, 7 to 8 PM on Thursday 5 November 2026, ending a week on
+  const [dna] = fromPresence([{
+    uri:              "strawberry-dna-extraction-2",
+    eventName:        "Strawberry DNA Extraction",
+    location:         "MUB 334",
+    startDateTimeUtc: "2026-11-06T00:00:00Z",
+    endDateTimeUtc:   "2026-11-13T01:00:00Z"
+  }], match)
+  expect(dna).toMatchObject({ start: Date.parse("2026-11-06T00:00:00Z"), end: Date.parse("2026-11-06T01:00:00Z"), place: "Memorial Union Building", where: "MUB 334" })
+  // A day and more, like Ocean Discovery Day, is as written
+  expect(presence.find(event => event.title === "Ocean Discovery Day")!.end - presence.find(event => event.title === "Ocean Discovery Day")!.start).toBe(30.5 * 3_600_000)
+})
+
+test("a Presence event is kept as written up to two days, and past that is a session of under a day from its start", () =>
+  fc.assert(fc.property(fc.integer({ min: Date.UTC(2026, 0, 1), max: Date.UTC(2028, 0, 1) }), fc.integer({ min: 1, max: 30 * 24 * 60 }), (start, minutes) => {
+    const iso = (ms: number) => new Date(ms).toISOString()
+    const end = start + minutes * 60_000
+    const [read] = fromPresence([{ uri: "x", eventName: "X", startDateTimeUtc: iso(start), endDateTimeUtc: iso(end) }], match)
+    const at = Date.parse(iso(start))
+    expect(read.start).toBe(at)
+    if (end - start <= 2 * 86_400_000)
+      expect(read.end).toBe(Date.parse(iso(end)))
+    else {
+      expect(read.end).toBeGreaterThan(at)
+      expect(read.end - at).toBeLessThanOrEqual(25 * 3_600_000)
+    }
+  }))
+)
+
 const event = (overrides: Partial<Event> = {}): Event =>
   ({ id: "x", title: "T", start: 0, end: 1, where: "", source: "pin", url: "", ...overrides })
 

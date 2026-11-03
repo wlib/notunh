@@ -107,3 +107,13 @@ test("a place is found once however many of its names match", () => {
   expect(names(search("sig"))).toEqual(["Sigma Chi", "Sigma Beta"])
   expect(names(search("ΣΧ"))).toEqual(["Sigma Chi"])
 })
+
+test("a name typed exactly is found first with any case, spacing or punctuation, however short among longer ones", () =>
+  fc.assert(fc.property(gazetteer, fc.constantFrom("", " ", "-", "."), (all, gap) => {
+    // A short name of a few capitals, as people call a building by its initials
+    const short = all.map(name => name.split(" ").map(word => word[0]).join(""))
+    const search = createPlaceSearch(all.map(name => place(name)), CENTER, new Map([[all[0], [short[0]]]]))
+    const typed = short[0].toLowerCase().split("").join(gap)
+    expect(names(search(typed))[0]).toBe(all[0])
+  }), { numRuns: 40 })
+)

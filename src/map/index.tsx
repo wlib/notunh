@@ -3,7 +3,7 @@
 import "../shell/index.mts"
 import "./index.css"
 
-import { r, watch } from "bruh/reactive"
+import { r, untrack, watch } from "bruh/reactive"
 import { createMap } from "./render/map.mts"
 import { startMap } from "./state/map.mts"
 import { AppTitle } from "../shell/ui.tsx"
@@ -61,7 +61,11 @@ const Panel = () =>
     {header}
     <RideSuggestion />
     <div hidden={isPage}><Home /></div>
-    {r(() => shownPage.value && <PageView page={shownPage.value} />)}
+    {/* Only another page replaces the one shown: what a view reads as it's made, like the clock, is its own to follow */}
+    {r(() => {
+      const page = shownPage.value
+      return page && untrack(() => <PageView page={page} />)
+    })}
   </aside>
 
 const mapElement = <div class="map" /> as HTMLElement

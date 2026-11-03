@@ -88,6 +88,54 @@ const makePin = async (page: Page, title: string, { place = "Thompson Hall", mor
 const stranger = (browser: Browser) =>
   browser.newContext({ ...phone, proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" } })
 
+test("the new-event form finds a place by what people call it, taking the first found once Where is left, and keeps what's typed as the clock moves on", async ({ page, fixture }) => {
+  await page.clock.install()
+  await openMap(page, fixture.origin)
+  await page.getByRole("button", { name: "New event" }).tap()
+  const where = page.locator("input[name=place]")
+  const exactly = page.getByLabel("Where exactly")
+  await page.getByLabel("What").fill("Pickup frisbee")
+
+  // Typed as people say it, the building is offered first, and a tap takes it and leaves the field
+  await where.tap()
+  await where.pressSequentially("mub")
+  await expect(page.getByRole("option").first()).toHaveText("Memorial Union Building")
+  await page.getByRole("option", { name: "Memorial Union Building" }).tap()
+  await expect(where).toHaveValue("Memorial Union Building")
+  await expect(where).not.toBeFocused()
+  await expect(page.getByRole("option")).toHaveCount(0)
+
+  // Filled on slowly, over a few of the clock's ticks, everything stays as typed and picked
+  await exactly.fill("by the steps")
+  await page.getByRole("button", { name: "Tomorrow" }).first().tap()
+  await page.clock.runFor(60_000)
+  await expect(page.getByLabel("What")).toHaveValue("Pickup frisbee")
+  await expect(where).toHaveValue("Memorial Union Building")
+  await expect(exactly).toHaveValue("by the steps")
+  await expect(page.getByRole("button", { name: "Tomorrow" }).first()).toHaveAttribute("aria-pressed", "true")
+
+  // A nickname typed whole is its place once the field is left, by Enter, which posts nothing, or by a tap elsewhere,
+  // and nothing the map knows leaves the field empty
+  const elsewhere = page.getByLabel("What")
+  await where.fill("hoco")
+  await where.press("Enter")
+  await expect(where).toHaveValue("Holloway Commons")
+  await expect(page).toHaveURL(/\/map\/new$/)
+  await where.fill("t-hall")
+  await elsewhere.tap()
+  await expect(where).toHaveValue("Thompson Hall")
+  await where.fill("nowhere at all")
+  await elsewhere.tap()
+  await expect(where).toHaveValue("")
+
+  // Posted, the event is at the place taken
+  await where.fill("Philly")
+  await elsewhere.tap()
+  await page.getByRole("button", { name: "Post it" }).tap()
+  await expect(page).toHaveURL(/\/map\/event\/[\w-]+$/)
+  await expect(page.locator(".view")).toContainText("Philbrook Hall · by the steps")
+})
+
 test("today's list opens an event's page, whose Directions plans a trip to its place by its start", async ({ page, fixture }) => {
   // Mid-morning today, so the events after it are today's whatever the time this runs
   const base = atClock(localDay(Date.now()), "10:00")

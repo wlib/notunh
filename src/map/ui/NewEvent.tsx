@@ -20,11 +20,19 @@ import { verified } from "./You.tsx"
 /** How many of the places matching what's typed are offered */
 const OFFERED = 6
 
-/** A place the map knows, searched by name as it's typed, with the names matching offered under the field */
+/**
+ * A place the map knows, searched as it's typed, by its name and by what people call it, with the places matching
+ * offered under the field. One tapped is taken; so is the first offered once the field is left, by Enter or a tap
+ * elsewhere, so "mub" is the Memorial Union Building, and nothing the map knows leaves the field empty
+ */
 const Where = ({ chosen }: { chosen?: string }) => {
   const query = r(chosen ?? "")
-  const picked = r(chosen)
   const isOpen = r(false)
+  // Of the places a pin can be at, as the map's search finds them
+  const matching = r(() => {
+    const names = new Set(placeNames(state.gazetteer.value))
+    return state.searchPlaces.value(query.value).map(({ name }) => name).filter(name => names.has(name)).slice(0, OFFERED)
+  })
   const input: HTMLInputElement =
     <input
       name="place"
@@ -34,28 +42,39 @@ const Where = ({ chosen }: { chosen?: string }) => {
       placeholder="A building or a named spot"
       value={query.peek()}
       onfocus={() => isOpen.value = true}
-      onblur={() => { isOpen.value = false; input.value = picked.peek() ?? "" }}
-      // A name typed whole is picked as it would be from the list
-      oninput={() => { query.value = input.value; picked.value = placeNames(state.gazetteer.peek()).find(name => name === input.value.trim()) }}
+      onblur={() => {
+        isOpen.value = false
+        input.value = query.value = matching.peek()[0] ?? ""
+      }}
+      oninput={() => query.value = input.value}
+      onkeydown={event => {
+        if (event.key === "Enter") {
+          event.preventDefault()
+          input.blur()
+        }
+      }}
     />
-  const matching = r(() => {
-    const text = query.value.trim().toLocaleLowerCase()
-    const names = placeNames(state.gazetteer.value)
-    return (text ? names.filter(name => name.toLocaleLowerCase().includes(text)) : []).slice(0, OFFERED)
-  })
   return (
-    <label class="field">
-      <span>Where</span>
-      {input}
-      {r(() => isOpen.value && !picked.value && matching.value.length > 0 &&
-        <ul class="suggestions" role="listbox" aria-label="Places">
-          {matching.value.map(name =>
-            // Kept from taking focus from the field on mousedown, as WebKit sends no click for a touch whose pointerdown is called off
-            <li role="option" onmousedown={event => event.preventDefault()} onclick={() => { picked.value = name; input.value = query.value = name; input.blur() }}>{name}</li>
-          )}
-        </ul>
-      )}
-    </label>
+    <div class="field where">
+      <label>
+        <span>Where</span>
+        {input}
+      </label>
+      {r(() => {
+        if (!isOpen.value || !matching.value.length)
+          return
+        const list =
+          <ul class="suggestions" role="listbox" aria-label="Places">
+            {matching.value.map(name =>
+              // Kept from taking focus from the field on mousedown, as WebKit sends no click for a touch whose pointerdown is called off
+              <li role="option" onmousedown={event => event.preventDefault()} onclick={() => { query.value = name; input.blur() }}>{name}</li>
+            )}
+          </ul> as HTMLElement
+        // Under a field low in the sheet, the list is past its edge until the sheet is scrolled to it
+        requestAnimationFrame(() => list.scrollIntoView({ block: "nearest" }))
+        return list
+      })}
+    </div>
   )
 }
 
@@ -64,7 +83,7 @@ const Where = ({ chosen }: { chosen?: string }) => {
  * on the clock as they read. Moving the start moves the end with it, keeping how long it is. Hidden, it's disabled, so
  * the form has none of it
  */
-const When = ({ hidden, start }: { hidden?: ReturnType<typeof r<boolean>>, start: number }) => {
+const When = ({ hidden, start, label = "When" }: { hidden?: ReturnType<typeof r<boolean>>, start: number, label?: string }) => {
   const day = r(localDay(start))
   const from = r(hhmm(start))
   const to = r(hhmm(start + HOUR))
@@ -77,7 +96,7 @@ const When = ({ hidden, start }: { hidden?: ReturnType<typeof r<boolean>>, start
     `${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`
   return (
     <fieldset class="field when-fields" hidden={hidden} disabled={hidden}>
-      <legend>When</legend>
+      <legend>{label}</legend>
       <DayChips day={day} name="day" />
       <div class="chips when-times">
         <PickChip type="time" name="start" label="Start" value={from} onpick={picked => {
@@ -157,7 +176,7 @@ export const NewEventView = ({ place }: { place?: string }) => {
       <label class="field"><span>Where exactly</span><input name="where" type="text" maxlength={SHORT} placeholder="Court 5, room 164, behind the MUB" /></label>
       <When start={start} />
       {/* Kept while hidden, so a time picked stays picked as another is added, each a day later to start */}
-      {Array.from({ length: MAX_TIMES - 1 }, (_, i) => <When hidden={r(() => more.value <= i)} start={atClock(addDays(localDay(start), i + 1), hhmm(start))} />)}
+      {Array.from({ length: MAX_TIMES - 1 }, (_, i) => <When hidden={r(() => more.value <= i)} start={atClock(addDays(localDay(start), i + 1), hhmm(start))} label="Another time" />)}
       {r(() => more.value < MAX_TIMES - 1 && <button type="button" class="more" onclick={() => more.value++}>+ Another time</button>)}
       {r(() => more.value > 0 && <p class="muted">People mark the times that work, and you set one.</p>)}
       <label class="field"><span>Details</span><textarea name="description" rows={2} maxlength={LONG} placeholder="Any level. I have spare balls." /></label>

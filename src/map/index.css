@@ -933,8 +933,14 @@ body {
   resize: vertical;
 }
 
-/* The places matching what's typed for Where, over whatever's under the field */
-.field .suggestions {
+/* Where: its label, and the places matching what's typed over whatever's under the field, outside the label so a tap
+   on one doesn't focus the field again */
+.where > label {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.where .suggestions {
   position: absolute;
   inset: 100% 0 auto;
   z-index: 2;

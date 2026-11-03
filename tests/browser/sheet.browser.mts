@@ -47,8 +47,12 @@ const sheetHeight = async (page: Page) => {
 /** How far down the sheet's content is scrolled, once it's still */
 const scrollOf = async (page: Page) => {
   await page.waitForFunction(() => !document.querySelector(".panel")!.classList.contains("moving"))
-  return page.evaluate(() => Math.round(document.querySelector(".panel")!.scrollTop))
+  return scrollNow(page)
 }
+
+/** How far down the sheet's content is scrolled this instant, mid-drag included */
+const scrollNow = (page: Page) =>
+  page.evaluate(() => Math.round(document.querySelector(".panel-body")!.scrollTop))
 
 /** Two frames on, by when the sheet has heard of anything that moved it or its content, as it hears of a finger */
 const framesOn = (page: Page) =>
@@ -95,10 +99,18 @@ test("searching lays suggestions over the week, keeping the sheet's size, and cl
   await expect(page.getByRole("list", { name: "Now" })).toContainText("Honors Drop In Advising")
   await holds(page, height)
 
-  // And dismissed after typing, too
+  // The keyboard put away, what's typed and its suggestions stay, to be read with the room that leaves
   await search.fill("Kings")
+  await search.blur()
+  await expect(page.getByRole("option", { name: "Kingsbury Hall", exact: true })).toBeVisible()
+  await expect(search).toHaveValue("Kings")
+  await holds(page, height)
+
+  // Escape puts them away
+  await search.focus()
   await page.keyboard.press("Escape")
   await expect(week).toBeVisible()
+  await expect(search).toHaveValue("")
   await holds(page, height)
 })
 
@@ -293,70 +305,150 @@ const flick = async (page: Page, x: number, y: number, by: number) => {
   }
 }
 
-test("pulled down on its content at the top, the sheet comes down; scrolled down, or pulled up, the content is left to scroll", async ({ page, fixture }) => {
-  // Many drags, each a slow round trip in Chromium drawing the map in software alongside the other tests
+/**
+ * A finger on the screen: a real touch through CDP in Chromium, which the browser would scroll the content for unless
+ * the sheet keeps it, and the mouse in WebKit, which makes no touches from script. Pressed at a point, moved in steps,
+ * each step a function's chance to look, and lifted after resting a moment or at once
+ */
+const finger = async (page: Page, x: number, y: number, by: number, { steps = 10, rest = 150, onStep }: { steps?: number, rest?: number, onStep?: (step: number) => Promise<unknown> } = {}) => {
+  const cdp = test.info().project.name === "chromium" ? await page.context().newCDPSession(page) : undefined
+  const touch = (type: "touchStart" | "touchMove" | "touchEnd", at: number) =>
+    cdp!.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y: at }] })
+  if (cdp)
+    await touch("touchStart", y)
+  else {
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+  }
+  for (let step = 1; step <= steps; step++) {
+    const at = y + by * step / steps
+    await (cdp ? touch("touchMove", at) : page.mouse.move(x, at))
+    await onStep?.(step)
+  }
+  if (rest)
+    await page.waitForTimeout(rest)
+  await (cdp ? touch("touchEnd", y + by) : page.mouse.up())
+  if (cdp)
+    await cdp.detach()
+}
+
+test("a pull up from half moves the sheet to tall and runs on into scrolling the content, and a pull down from in the content runs back to its top and on into lowering the sheet", async ({ page, fixture }) => {
+  test.slow()
+  await withWeeks(page, Date.now())
+  await open(page, fixture.origin, "/map/")
+  await expect(page.locator(".agenda .row").first()).toBeVisible()
+  const half = await sheetHeight(page)
+  const tallest = await page.evaluate(() => document.querySelector("#app")!.clientHeight - 4 * parseFloat(getComputedStyle(document.documentElement).fontSize))
+  const x = 195
+  const grabber = page.locator(".grabber")
+  const header = page.locator(".panel-header")
+  const headerTop = async () => Math.round((await header.boundingBox())!.y)
+
+  // Up from the content at half: the sheet first, the content still at its top, then at tall the content scrolls,
+  // the grabber and header staying put above it throughout
+  const seen: { height: number, scroll: number }[] = []
+  await finger(page, x, 800, -700, { steps: 14, onStep: async () => seen.push({ height: await sheetNow(page), scroll: await scrollNow(page) }) })
+  const rising = seen.filter(({ height }) => height < tallest - 1)
+  expect(rising.length).toBeGreaterThan(3)
+  for (const { scroll } of rising)
+    expect(scroll).toBe(0)
+  for (let i = 1; i < seen.length; i++) {
+    expect(seen[i].height).toBeGreaterThanOrEqual(seen[i - 1].height)
+    expect(seen[i].scroll).toBeGreaterThanOrEqual(seen[i - 1].scroll)
+  }
+  const tall = await sheetHeight(page)
+  expect(tall).toBeGreaterThan(half + 100)
+  const scrolled = await scrollOf(page)
+  expect(scrolled).toBeGreaterThan(200)
+  expect(await headerTop()).toBeLessThan(120)
+  await expect(grabber).toBeInViewport()
+
+  // Down from in the content at tall: the content back to its top, the sheet tall throughout, then the sheet down
+  const fell: { height: number, scroll: number }[] = []
+  await finger(page, x, 300, 500, { steps: 14, onStep: async () => fell.push({ height: await sheetNow(page), scroll: await scrollNow(page) }) })
+  const scrolling = fell.filter(({ scroll }) => scroll > 0)
+  expect(scrolling.length).toBeGreaterThan(2)
+  for (const { height } of scrolling)
+    expect(height).toBe(tall)
+  const lowering = fell.filter(({ height }) => height < tall - 1)
+  expect(lowering.length).toBeGreaterThan(2)
+  for (const { scroll } of lowering)
+    expect(scroll).toBe(0)
+  await holds(page, half)
+  expect(await scrollOf(page)).toBe(0)
+
+  // Scrolled down at half, the grabber and header haven't moved, a pull down is the sheet's still, and the content
+  // keeps its place until it's lowered
+  const top = await headerTop()
+  await page.locator(".panel-body").evaluate(element => element.scrollTop = 300)
+  await framesOn(page)
+  expect(await headerTop()).toBe(top)
+  await expect(grabber).toBeInViewport()
+  let midway = 0
+  await finger(page, x, 700, 120, { onStep: async step => { if (step === 10) midway = await scrollNow(page) } })
+  expect(midway).toBe(300)
+  await holds(page, half)
+})
+
+test("a flick down on the content at its top lowers the sheet, and at tall a pull up is the content's own scroll", async ({ page, fixture }) => {
   test.slow()
   await withWeeks(page, Date.now())
   await open(page, fixture.origin, "/map/")
   const panel = page.locator(".panel")
   await expect(page.locator(".agenda .row").first()).toBeVisible()
-  await expect(panel).not.toHaveClass(/fits/)
   const half = await sheetHeight(page)
-  const header = (await page.locator(".panel-header").boundingBox())!
-  const x = header.x + header.width / 2
-  const content = header.y + header.height + 60
+  const x = 195
 
-  // Pulled down from the top, it follows the finger, and rests lowered once let go
-  await page.mouse.move(x, content)
-  await page.mouse.down()
-  await page.mouse.move(x, content + 200, { steps: 10 })
-  expect(await sheetNow(page)).toBeLessThan(half - 150)
-  await page.waitForTimeout(150)
-  await page.mouse.up()
-  const lowered = await sheetHeight(page)
-  expect(lowered).toBeLessThan(half - 150)
+  // Flicked down from the top, it comes down one detent
+  for (let attempt = 0; attempt < 12 && await sheetHeight(page) === half; attempt++)
+    await finger(page, x, 650, 120, { steps: 2, rest: 0 })
   await expect(panel).toHaveClass(/lowered/)
   expect(await scrollOf(page)).toBe(0)
-
-  // Back up by its grabber
   await page.locator(".grabber").tap()
   await holds(page, half)
 
-  // Pulled up at the top, the content's own: the sheet stays
-  await drag(page, x, content + 100, -100)
-  await holds(page, half)
+  // At tall, with more to show, a pull up on the content scrolls it: real touches alone scroll in Chromium, and
+  // WebKit makes none from script
+  const grabber = (await page.locator(".grabber").boundingBox())!
+  await finger(page, grabber.x + grabber.width / 2, grabber.y + grabber.height / 2, -(844 - half) * 0.8)
+  const tall = await sheetHeight(page)
+  expect(tall).toBeGreaterThan(half + 100)
+  if (test.info().project.name === "chromium") {
+    await finger(page, x, 700, -300)
+    await holds(page, tall)
+    expect(await scrollOf(page)).toBeGreaterThan(100)
+  }
 
-  // Scrolled down, a pull down is the content's too
-  await panel.evaluate(element => element.scrollTop = 300)
-  await framesOn(page)
-  await drag(page, x, content, 200)
-  await holds(page, half)
-  expect(await scrollOf(page)).toBe(300)
-
-  // A touch's first move decides, and the browser is kept from scrolling only for one that's the sheet's. WebKit
-  // makes no Touch from script, so Chromium alone checks
+  // Whose a touch is, its first move decides, and the browser is kept from scrolling only for one that's the
+  // sheet's: at tall, a pull up with more to show is the content's, and a pull down or a sideways move is not kept.
+  // WebKit makes no Touch from script, so Chromium alone checks
   if (test.info().project.name !== "chromium")
     return
-  const prevented = (dy: number) => page.evaluate(({ x, y, dy }) => {
+  const prevented = (dx: number, dy: number) => page.evaluate(({ x, y, dx, dy }) => {
     const target = document.elementFromPoint(x, y)!
-    const touch = (clientY: number) => new Touch({ identifier: 1, target, clientX: x, clientY })
-    const fire = (type: string, clientY: number) => {
-      const event = new TouchEvent(type, { touches: [touch(clientY)], changedTouches: [touch(clientY)], bubbles: true, cancelable: true })
+    const touch = (clientX: number, clientY: number) => new Touch({ identifier: 1, target, clientX, clientY })
+    const fire = (type: string, clientX: number, clientY: number) => {
+      const event = new TouchEvent(type, { touches: [touch(clientX, clientY)], changedTouches: [touch(clientX, clientY)], bubbles: true, cancelable: true })
       target.dispatchEvent(event)
       return event.defaultPrevented
     }
     target.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 9, pointerType: "touch", isPrimary: true, clientX: x, clientY: y, bubbles: true }))
-    fire("touchstart", y)
-    const isPrevented = fire("touchmove", y + dy)
+    fire("touchstart", x, y)
+    const isPrevented = fire("touchmove", x + dx, y + dy)
     target.dispatchEvent(new PointerEvent("pointercancel", { pointerId: 9, pointerType: "touch", bubbles: true }))
-    fire("touchend", y + dy)
+    fire("touchend", x + dx, y + dy)
     return isPrevented
-  }, { x, y: content, dy })
-  expect(await prevented(3)).toBe(false)
-  await panel.evaluate(element => element.scrollTop = 0)
-  await framesOn(page)
-  expect(await prevented(-3)).toBe(false)
-  expect(await prevented(3)).toBe(true)
+  }, { x, y: 500, dx, dy })
+  expect(await prevented(0, -3)).toBe(false)
+  expect(await prevented(0, 3)).toBe(true)
+  expect(await prevented(8, 3)).toBe(false)
+  await holds(page, tall)
+  // Below tall, either way is the sheet's
+  await page.locator(".grabber").tap()
+  await page.locator(".grabber").tap()
+  await holds(page, half)
+  expect(await prevented(0, -3)).toBe(true)
+  expect(await prevented(0, 3)).toBe(true)
   await holds(page, half)
 })
 

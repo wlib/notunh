@@ -200,10 +200,15 @@ const PlaceInput = ({ field, label, placeholder }: { field: Field, label?: strin
       aria-activedescendant={r(() => isEditing.value ? optionId(active.value) : undefined)}
       onfocus={() => {
         editing.value = field
-        query.value = ""
+        // A trip's end shows its place's name, which isn't a search; the home's search shows what it's searching
+        query.value = field === "search" ? input.value : ""
         input.select()
       }}
       onblur={() => {
+        // The home's search keeps what's typed and its results as the keyboard goes away, so they can be scrolled
+        // with the room that leaves; Clear and Escape put them away, and a page opened from them takes them
+        if (field === "search" && input.value.trim() && !state.page.peek())
+          return
         if (editing.peek() === field)
           editing.value = undefined
         show(place?.peek()?.name ?? "")
@@ -217,8 +222,11 @@ const PlaceInput = ({ field, label, placeholder }: { field: Field, label?: strin
         }
         else if (event.key === "Enter")
           choose(options.peek()[active.peek()])
-        else if (event.key === "Escape")
+        else if (event.key === "Escape") {
+          if (field === "search")
+            query.value = shown.value = input.value = ""
           input.blur()
+        }
       }}
     />
 

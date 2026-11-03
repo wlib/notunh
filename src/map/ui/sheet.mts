@@ -6,9 +6,14 @@
 // long page to a short one, a field's suggestions coming and going, or a trip being planned leaves it where it was.
 // Only a drag, the grabber, or something new asking a lowered sheet up moves it
 //
-// It's dragged by its grabber or header, from anywhere when there's nothing to scroll, and from its content pulled down
-// while that's scrolled to its top, as the sheet is all there is left to pull down then; pulled up, the content scrolls
-// as ever. Let go, it lands as src/map/detents.mts says: a flick goes on one detent, else the nearest
+// Its grabber and header stay put; only the body below them scrolls. Dragging and scrolling are one motion, as a
+// phone's own sheets have them: below tall, a pull anywhere moves the sheet, and a pull up that reaches tall runs on
+// into scrolling the body; at tall, the body scrolls as ever when pulled up, and pulled down it's taken back to its
+// top and the sheet comes down after, in the one pull. Its first move decides whose a touch is (owner in
+// src/map/detents.mts), as the browser would otherwise scroll the body and take the touch for good. A pull up at tall
+// is left to the browser, which scrolls it as it does anything, with its own momentum; a pull the sheet owns moves the
+// scroll position itself, and flung, carries on by itself. Let go, it lands as src/map/detents.mts says: a flick goes
+// on one detent, else the nearest
 //
 // It only ever moves by translate, which the compositor handles on its own. While dragged or sliding between detents,
 // its box is the taller of the heights involved, slid down to show the right amount. Once still, the box is swapped
@@ -18,7 +23,7 @@
 // lists, and is scrolled there as it grows, unless it's touched first
 
 import { r, watch } from "bruh/reactive"
-import { type Detent, landing, releaseVelocity } from "../detents.mts"
+import { type Detent, type Owner, landing, owner, placed, releaseVelocity, travelOf } from "../detents.mts"
 
 // The sheet's alone: everything else asks for what it wants of it below
 const detent = r<Detent>("half")
@@ -45,14 +50,23 @@ const SLOP = 6
 const MAP_LEFT = 4
 // How long a scroll position asked for waits for the content to grow long enough to reach it
 const REACH_MS = 3000
+// What a flung scroll keeps of its speed each ms, as a phone's own lists slow
+const DECAY = 0.998
+// px/ms, slower than which a flung scroll has stopped
+const STOPPED = 0.02
 
 const px = (value: number) => `${value}px`
 
 /** How far down an element's translate currently has it, mid-transition included */
 const translated = (element: Element) => parseFloat(getComputedStyle(element).translate.split(" ")[1] ?? "0")
 
-export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTMLElement) => {
+/**
+ * The sheet, of the panel, its grabber and header, which stay put, and its body, which scrolls, holding the content
+ * as its one child
+ */
+export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTMLElement, body: HTMLElement) => {
   const app = panel.parentElement!
+  const content = body.firstElementChild as HTMLElement
   /** px of the screen's bottom the keyboard covers */
   let keyboard = 0
   /** px the content is translated down by, to stay put on screen while the box around it grows or shrinks */
@@ -66,14 +80,18 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     return { half, tall: Math.max(half, room - MAP_LEFT * rem) }
   }
 
-  /** px of the panel that show when lowered: its header, and the padding below that clears the home indicator */
+  /** px of the panel that show when lowered: its header, and the room below that clears the home indicator */
   const loweredExtent = () =>
-    header.offsetTop + header.offsetHeight + parseFloat(getComputedStyle(panel).paddingBottom)
+    header.offsetTop + header.offsetHeight + parseFloat(getComputedStyle(body).paddingBottom)
 
   /** Where the sheet's bottom edge sits, above the keyboard */
   const floor = () => app.getBoundingClientRect().bottom - keyboard
+  /** How much of the sheet shows now, mid-motion included */
+  const extentNow = () => floor() - panel.getBoundingClientRect().top
   /** The box's height, to the fraction of a px that offsetHeight rounds away */
   const box = () => panel.getBoundingClientRect().height
+  /** How far the body can scroll */
+  const maxScroll = () => Math.max(0, body.scrollHeight - body.clientHeight)
 
   const set = (name: string, value: number) => panel.style.setProperty(name, px(value))
   // Every child's style depends on the shift, so it's only touched when it changes
@@ -98,13 +116,12 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
       return
     const { half, tall } = caps()
     const lowered = detent.peek() === "lowered"
-    const scroll = lowered ? 0 : panel.scrollTop - shift
+    const scroll = lowered ? 0 : body.scrollTop - shift
     panel.classList.remove("moving")
     set("--sheet-max", detent.peek() === "tall" ? tall : half)
     shiftTo(0)
-    panel.scrollTop = scroll
+    body.scrollTop = scroll
     set("--sheet-drop", lowered ? Math.max(0, box() - loweredExtent()) : 0)
-    panel.classList.toggle("fits", panel.scrollHeight <= panel.clientHeight)
     revealField()
   }
 
@@ -114,15 +131,15 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
       return
     const { half, tall } = caps()
     const to = detent.peek()
-    const content = panel.scrollHeight
-    const from = floor() - panel.getBoundingClientRect().top
+    const length = body.scrollHeight
+    const from = extentNow()
     const cap = to === "lowered" ? loweredExtent() : to === "tall" ? tall : half
     // Where the content is on screen, as the scroll position that would put it there
-    const scrolled = panel.scrollTop - translated(header)
+    const scrolled = body.scrollTop - translated(content)
     panel.classList.remove("moving")
     set("--sheet-max", Math.max(from, cap))
     const height = box()
-    const scroll = panel.scrollTop
+    const scroll = body.scrollTop
     // The box is as tall as either end of the slide
     const extent = Math.min(height, cap)
     set("--sheet-drop", height - from)
@@ -132,7 +149,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     panel.classList.add("moving")
     set("--sheet-drop", height - extent)
     // The content stays where it is unless the box can't hold that scroll position, as when it shows more
-    shiftTo(scroll - (to === "lowered" ? 0 : Math.min(scrolled, content - extent)))
+    shiftTo(scroll - (to === "lowered" ? 0 : Math.min(scrolled, length - (extent - body.offsetTop))))
     // A slide that's cut short or retargeted rejects, and the one that replaces it rests instead
     Promise.all(panel.getAnimations().map(animation => animation.finished)).then(rest, () => {})
   }
@@ -141,7 +158,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   const settle = () => panel.classList.contains("moving") ? move() : rest()
 
   /** px the content is scrolled down, mid-slide too */
-  const scrolled = () => panel.scrollTop - shift
+  const scrolled = () => body.scrollTop - shift
 
   /** A scroll position asked for, until the content's scrolled there or it's given up on */
   let wanted: { top: number, until: number } | undefined
@@ -150,7 +167,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
       wanted = undefined
     if (!wanted)
       return
-    panel.scrollTop = wanted.top + shift
+    body.scrollTop = wanted.top + shift
     // A fraction of a px short is there
     if (scrolled() > wanted.top - 1)
       wanted = undefined
@@ -160,95 +177,120 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     wanted = { top, until: performance.now() + REACH_MS }
     reach()
   }
+
+  /** A scroll flung by a drag the sheet owned, carrying on by itself as a phone's own lists do, slowing until it stops */
+  let flinging = 0
+  const fling = (velocity: number) => {
+    let speed = velocity
+    let top = body.scrollTop
+    let last = performance.now()
+    const step = (now: number) => {
+      const elapsed = now - last
+      last = now
+      top += speed * elapsed
+      speed *= DECAY ** elapsed
+      body.scrollTop = top
+      if (Math.abs(speed) > STOPPED && top > 0 && top < maxScroll())
+        flinging = requestAnimationFrame(step)
+    }
+    flinging = requestAnimationFrame(step)
+  }
+  // Anything else moving the content takes over from a scroll asked for or flung
   for (const type of ["pointerdown", "wheel", "keydown"])
-    panel.addEventListener(type, () => wanted = undefined, { passive: true })
+    panel.addEventListener(type, () => {
+      wanted = undefined
+      cancelAnimationFrame(flinging)
+    }, { passive: true })
 
   watch([detent], () => {
     panel.classList.toggle("lowered", detent.value === "lowered")
     grabber.setAttribute("aria-label", detent.value === "lowered" ? "Raise the panel" : "Lower the panel")
     move()
   })
-  // The room it has changing sets it at its detent again, and what it shows changing size only says whether there's
-  // anything to scroll. The sheet's own slides resize it too, and rest after them anyway
+  // The room it has changing sets it at its detent again, and what it shows changing size is scrolled on to where
+  // that was asked to be. The sheet's own slides resize it too, and rest after them anyway
   const resized = new ResizeObserver(() => {
     if (!drag && !panel.classList.contains("moving"))
       rest()
     reach()
   })
-  for (const element of [app, panel, header])
+  for (const element of [app, panel, header, content])
     resized.observe(element)
-  const observeShown = () => {
-    for (const child of panel.children)
-      resized.observe(child)
-  }
-  new MutationObserver(observeShown).observe(panel, { childList: true })
-  observeShown()
 
   // Anything taking focus in the sheet, like a field, needs it up
   panel.addEventListener("focusin", raise)
+  // The header draws a line under itself once the body has scrolled beneath it
+  body.addEventListener("scroll", () => panel.classList.toggle("scrolled", body.scrollTop > 0), { passive: true })
 
-  // Dragged to any height between lowered and tall, by the grabber or the header, from anywhere when there's nothing
-  // to scroll, and from the content pulled down while it's scrolled to its top. Tapping the grabber or the header
-  // toggles it, and taps on anything else are left alone. A touch only becomes a drag once it's moved, so a tap
-  // changes nothing about the sheet, and a field never starts one: what it opens, a keyboard or a picker, is placed by
-  // where the field is as it's touched
-  let touched: { x: number, y: number, at: number, isHandle: boolean, isContent: boolean, isClaimed: boolean } | undefined
+  // Dragged to any height between lowered and tall, and on into scrolling the body, by the grabber or the header, or
+  // by the content when its first move makes the touch the sheet's. Tapping the grabber or the header toggles it,
+  // and taps on anything else are left alone. A touch only becomes a drag once it's moved, so a tap changes nothing
+  // about the sheet, and a field never starts one: what it opens, a keyboard or a picker, is placed by where the
+  // field is as it's touched
+  let touched: { x: number, y: number, at: number, isHandle: boolean, owner?: Owner } | undefined
+  /**
+   * A drag in hand: the finger's last y and when, how fast its travel is changing, and the sheet as the drag found
+   * it, laid out in a box as tall as tall, with its travel from there and its furthest (travelOf in detents.mts)
+   */
   let drag: {
-    y: number, from: number, extent: number, at: number, velocity: number,
-    box: number, scroll: number, scrolled: number, content: number, lowered: number, half: number, tall: number
+    y: number, at: number, velocity: number, travel: number, visible: number,
+    box: number, base: number, most: number, maxScroll: number, lowered: number, half: number, tall: number
   } | undefined
 
-  const show = (extent: number) => {
-    const { box, scroll, scrolled, content, lowered, tall } = drag!
-    const clamped = Math.min(tall, Math.max(lowered, extent))
-    set("--sheet-drop", box - clamped)
-    shiftTo(scroll - Math.min(scrolled, content - clamped))
-    return clamped
+  /** Shows the sheet and its content at a travel, kept within the drag's, and says where that was kept */
+  const show = (travel: number) => {
+    const held = drag!
+    held.travel = Math.min(held.most, Math.max(held.lowered, travel))
+    const { extent, scrollTop } = placed(held, held.travel, held.base, held.maxScroll)
+    set("--sheet-drop", held.box - extent)
+    // The content shows no further down than its end, scrolled no further than fills what shows of the body, and the
+    // box being taller than that shows, the browser may hold it short of there, which the shift makes up
+    const visible = Math.min(scrollTop, Math.max(0, body.scrollHeight - (extent - body.offsetTop)))
+    if (visible !== held.visible)
+      body.scrollTop = held.visible = visible
+    shiftTo(body.scrollTop - visible)
+    return held.travel
   }
 
-  /** Takes the sheet up from where it is, laid out to move anywhere between lowered and tall, as a drag from a height */
-  const grab = (y: number, at: number) => {
+  /**
+   * Takes the sheet up from where it is, laid out to move anywhere between lowered and tall and, by its content, to
+   * scroll on past it; by its handle it goes no further than tall, and leaves the content scrolled as it is
+   */
+  const grab = (y: number, at: number, isHandle: boolean) => {
     const { half, tall } = caps()
-    const content = panel.scrollHeight
-    const from = floor() - panel.getBoundingClientRect().top
-    const scrolled = panel.scrollTop - translated(header)
+    const extent = extentNow()
+    const scrolled = body.scrollTop - translated(content)
     panel.classList.remove("moving")
     // A mouse dragging by the content would select text along the way
     panel.classList.add("dragging")
     getSelection()?.removeAllRanges()
     set("--sheet-max", Math.max(half, tall))
     const height = box()
-    drag = {
-      y,
-      from,
-      extent: from,
-      at,
-      velocity: 0,
-      box: height,
-      scroll: panel.scrollTop,
-      scrolled,
-      content,
-      lowered: loweredExtent(),
-      half,
-      tall: height
-    }
+    const lowered = loweredExtent()
+    const most = maxScroll()
+    // At tall to the fraction of a px that a rect can be off by is at tall
+    const { from, base, most: furthest } =
+      isHandle ? { from: extent, base: scrolled, most: height } : travelOf({ lowered, tall: height }, extent >= height - 1 ? height : extent, scrolled, most)
+    drag = { y, at, velocity: 0, travel: from, visible: NaN, box: height, base, most: furthest, maxScroll: most, lowered, half, tall: height }
     show(from)
     return drag
   }
 
   /**
-   * Whether a touch on the content, first moved this way, is the sheet's to drag, which its first move decides for
-   * good: only pulled down, with the content still at its top, and not sideways. Any other way, the content's own
+   * Whose a touch on the content is, which its first move decides for good: the sheet's, or else the content's own,
+   * which the browser scrolls as it would anything
    */
   const claim = (x: number, y: number) => {
-    if (!touched || touched.isClaimed)
+    if (!touched || touched.owner)
       return
     const dx = x - touched.x
     const dy = y - touched.y
     if (dx === 0 && dy === 0)
       return
-    if (dy > 0 && dy >= Math.abs(dx) && panel.scrollTop <= 0)
-      touched.isClaimed = true
+    const isTall = extentNow() >= caps().tall - 1
+    const canScroll = body.scrollTop < maxScroll() - 1
+    if (owner({ isTall, canScroll, dx, dy }) === "sheet")
+      touched.owner = "sheet"
     else
       touched = undefined
   }
@@ -263,11 +305,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     if (!isSheet() || target.closest("input, textarea, select, dialog"))
       return
     const isHandle = target.closest(".grabber, .panel-header") !== null && !target.closest("button:not(.grabber)")
-    const isContent = !isHandle && !panel.classList.contains("fits")
-    // Content scrolled down is left to scroll back up
-    if (isContent && panel.scrollTop > 0)
-      return
-    touched = { x: event.clientX, y: event.clientY, at: event.timeStamp, isHandle, isContent, isClaimed: !isContent }
+    touched = { x: event.clientX, y: event.clientY, at: event.timeStamp, isHandle, owner: isHandle ? "sheet" : undefined }
     // A handle holds the pointer from the start, so a drag up off the sheet still moves it; anything else only once
     // it's a drag, as a click goes to whatever holds the pointer when it's let go
     if (isHandle)
@@ -280,7 +318,7 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
   panel.addEventListener("touchmove", event => {
     const { clientX, clientY } = event.changedTouches[0]
     claim(clientX, clientY)
-    if (drag || touched?.isClaimed)
+    if (drag || touched?.owner === "sheet")
       event.preventDefault()
   }, { passive: false })
 
@@ -294,10 +332,11 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
       panel.setPointerCapture(event.pointerId)
     }
     // From where and when it was touched, so the first move's speed is over the time since, not an instant
-    const held = drag ?? grab(touched.y, touched.at)
-    const extent = show(held.from - (event.clientY - held.y))
-    held.velocity = (extent - held.extent) / Math.max(1, event.timeStamp - held.at)
-    held.extent = extent
+    const held = drag ?? grab(touched.y, touched.at, touched.isHandle)
+    const was = held.travel
+    const travel = show(was + held.y - event.clientY)
+    held.velocity = (travel - was) / Math.max(1, event.timeStamp - held.at)
+    held.y = event.clientY
     held.at = event.timeStamp
   })
 
@@ -310,13 +349,17 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
         toggle()
       return
     }
-    const { extent, at, lowered, half, tall } = drag
+    const { travel, at, lowered, half, tall } = drag
     const velocity = releaseVelocity(drag.velocity, event.timeStamp - at)
     drag = undefined
     panel.classList.remove("dragging")
 
     const current = detent.peek()
-    const next = event.type === "pointercancel" ? current : landing({ lowered, half, tall }, extent, velocity)
+    // Let go in the body's scroll, the sheet is tall and the scroll carries on; else it lands among the detents
+    const isScrolled = travel > tall
+    const next = event.type === "pointercancel" ? current : isScrolled ? "tall" : landing({ lowered, half, tall }, travel, velocity)
+    if (isScrolled && event.type !== "pointercancel")
+      fling(velocity)
     // A new detent slides there when it's watched, so only staying put needs the slide back
     if (next === current)
       move()

@@ -54,27 +54,35 @@ const header =
     </button>
   </header> as HTMLElement
 
-// The home stays put beneath a page, hidden, so the search and the week are as they were once Back returns to them
+// The body, all of the panel that scrolls, under its grabber and header. The home stays put beneath a page, hidden,
+// so the search and the week are as they were once Back returns to them
+const body =
+  <div class="panel-body">
+    <div class="panel-content">
+      <RideSuggestion />
+      <div hidden={isPage}><Home /></div>
+      {/* Only another page replaces the one shown: what a view reads as it's made, like the clock, is its own to follow */}
+      {r(() => {
+        const page = shownPage.value
+        return page && untrack(() => <PageView page={page} />)
+      })}
+    </div>
+  </div> as HTMLElement
+
 const Panel = () =>
   <aside class="panel">
     {grabber}
     {header}
-    <RideSuggestion />
-    <div hidden={isPage}><Home /></div>
-    {/* Only another page replaces the one shown: what a view reads as it's made, like the clock, is its own to follow */}
-    {r(() => {
-      const page = shownPage.value
-      return page && untrack(() => <PageView page={page} />)
-    })}
+    {body}
   </aside>
 
 const mapElement = <div class="map" /> as HTMLElement
 const panel = <Panel /> as HTMLElement
 document.getElementById("app")!.replaceChildren(mapElement, panel)
 
-const sheet = makeSheet(panel, grabber, header)
+const sheet = makeSheet(panel, grabber, header, body)
 // How far down the page shown is, for the history to keep as another opens over it
-panel.addEventListener("scroll", () => state.scrolled.value = sheet.scrolled(), { passive: true })
+body.addEventListener("scroll", () => state.scrolled.value = sheet.scrolled(), { passive: true })
 // A page opened starts at its top, and one returned to is where it was left, once the views swapped in have rendered
 watch([state.scrollTo], () => queueMicrotask(() => sheet.scrollTo(state.scrollTo.peek().top)))
 // Something new to show brings the sheet back up

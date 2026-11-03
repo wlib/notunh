@@ -29,3 +29,40 @@ export const landing = (heights: Heights, extent: number, velocity: number): Det
     return DETENTS.findLast(detent => heights[detent] < extent) ?? "lowered"
   return DETENTS.reduce((a, b) => Math.abs(heights[b] - extent) < Math.abs(heights[a] - extent) ? b : a)
 }
+
+/** Whose a touch is: the sheet's to drag, or the content's to scroll */
+export type Owner = "sheet" | "content"
+
+/**
+ * Whose a touch on the content is, which its first move decides for good. Below tall, the sheet's, either way: it's
+ * what moves until it's tall, and only then does the content scroll. At tall, pulled up with more to show, the
+ * content's, scrolling as it does anywhere; pulled down, the sheet's, which takes the content back to its top and
+ * then comes down, all in the one pull. Sideways is the content's, for whatever in it scrolls that way
+ */
+export const owner = ({ isTall, canScroll, dx, dy }: { isTall: boolean, canScroll: boolean, dx: number, dy: number }): Owner =>
+  Math.abs(dx) > Math.abs(dy) ? "content" :
+  isTall && dy < 0 && canScroll ? "content" :
+                                  "sheet"
+
+/** Where a drag has put the sheet and its content, in px: how much of the sheet shows, and how far down the content is */
+export type Placed = { extent: number, scrollTop: number }
+
+const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value))
+
+/**
+ * Where a drag's travel, px up from nothing, has the sheet and its content, as one: the sheet, up to tall, and on past
+ * that the content scrolled from where it was, so a pull up from half runs on into the list, and a pull down from in
+ * the list runs back to its top and on into lowering the sheet. A drag starting below tall keeps the content where it
+ * was until the sheet is tall; one starting at tall has its scroll as travel already made
+ */
+export const placed = (heights: Pick<Heights, "lowered" | "tall">, travel: number, base: number, maxScroll: number): Placed => ({
+  extent:    clamp(travel, heights.lowered, heights.tall),
+  scrollTop: clamp(base + Math.max(0, travel - heights.tall), 0, maxScroll)
+})
+
+/** Where a drag's travel starts, and its furthest, for a sheet showing this much with its content scrolled this far */
+export const travelOf = (heights: Pick<Heights, "lowered" | "tall">, extent: number, scrollTop: number, maxScroll: number) => {
+  const isTall = extent >= heights.tall
+  const base = isTall ? 0 : scrollTop
+  return { from: isTall ? heights.tall + scrollTop : extent, base, most: heights.tall + Math.max(0, maxScroll - base) }
+}

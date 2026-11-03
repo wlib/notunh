@@ -776,7 +776,7 @@ const ScheduledNow = ({ name }: { name: string }) =>
       return null
     return (
       <details class="view-group">
-        <summary><span class="eyebrow">Classes now · <Counted value={under.length} one="room" other="rooms" /></span></summary>
+        <summary><span class="eyebrow">Classes now · <Counted value={under.length} one="room" other="rooms" /></span><span class="row-state" aria-hidden="true">›</span></summary>
         <ul class="rows">{under.map(({ term, section, meeting, event, also }) => {
           const then = courses.schedule.on({ room: meeting.where }, localDay(at)).find(({ event: later }) => later.start >= event.end)
           return (

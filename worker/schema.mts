@@ -1,6 +1,7 @@
 // Every table in the Worker's D1 database, which `npm run db:generate` writes worker/migrations from. Instants are
 // epoch milliseconds
 
+import { sql } from "drizzle-orm"
 import { customType, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core"
 import type { Kind, Status, Machine } from "../src/laundry/infer.mts"
 import type { Time } from "../src/social/event.mts"
@@ -198,7 +199,11 @@ export const state = sqliteTable("state", {
   value:  text({ mode: "json" }).notNull(),
   at:     integer().notNull(),
   by:     text().notNull()
-}, table => [primaryKey({ columns: [table.person, table.key] })])
+}, table => [
+  primaryKey({ columns: [table.person, table.key] }),
+  // A calendar feed is asked for by its token alone (calendar.mts), so the one key whose value names its person is indexed by it
+  index("state_feed").on(table.value).where(sql`${table.key} = 'calendar-feed'`)
+])
 
 /** Who's going to a pin with a time, by device: a count to everyone, never a list */
 export const going = sqliteTable("going", {

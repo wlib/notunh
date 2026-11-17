@@ -16,13 +16,15 @@ import { type DerivativeNode, type Reactive, type SourceNode, r, untrack, watch 
 import type { Page } from "../link.mts"
 import { urlOf } from "../link.mts"
 import { state } from "../state/map.mts"
-import { type CourseEvent, type Meeting, type Section, type Term, KINDS, codeOf, courseOf, registrarUrl, standing } from "../../courses/course.mts"
+import { type CourseEvent, type Meeting, type Section, type Term, KINDS, codeOf, courseOf, meets, registrarUrl, standing } from "../../courses/course.mts"
 import type { Courses } from "../../courses/browser/terms.mts"
 import { type Person, nextTeaching } from "../../courses/people.mts"
 import { mailto } from "../../courses/email.mts"
 import { type Dated, datedFrom, daysOf, isSaved, keyOf, patternsOf } from "../../courses/saved.mts"
 import { reqsOf } from "../../programs/prereqs.mts"
 import { type Event, type Pin, LINGER, WEEK, calendarOf, placeOf, upcoming, whereOf } from "../../social/event.mts"
+import { calendarPath } from "../../social/calendar.mts"
+import { slugIn } from "../../social/curated.mts"
 import { isUnset } from "../../social/marks.mts"
 import { gathered } from "../../social/sport.mts"
 import { askOf } from "../../social/ask.mts"
@@ -56,6 +58,7 @@ import { DirectionsView } from "./Directions.tsx"
 import { NewEventView } from "./NewEvent.tsx"
 import { YouView } from "./You.tsx"
 import { BusesView } from "./Buses.tsx"
+import { CalendarLine } from "./Calendars.tsx"
 import { RoomView, SpacesHere } from "./Rooms.tsx"
 import { NewEvent } from "./Home.tsx"
 import { About, PhotoCredits, Photos, Rating } from "./Profile.tsx"
@@ -387,6 +390,7 @@ const SectionView = ({ courses, term, section }: { courses: Courses, term: Term,
             </div>
           )
         })}
+        {meets(section) && <CalendarLine path={calendarPath("section", term.code, section.crn)} subscribe={calendarPath("section", term.code, section.crn)} />}
         <Needs code={courseOf(section)} />
         <Line label="Seats, restrictions"><a class="go" href={registrarUrl(term.code, section.crn)} target="_blank" rel="noopener">Course Search ›</a></Line>
         {place && <LinkLine to={{ kind: "place", name: place }}>{place}</LinkLine>}
@@ -817,6 +821,8 @@ const ScheduledNow = ({ name }: { name: string }) =>
  * reporting it; for UNH's, where it's from, as a line in the foot
  */
 const EventView = ({ id }: { id: string }) => {
+  /** The curated series it's a session of, if it's one's */
+  const series = slugIn(id)
   const found = r<Event | Pin | null | undefined>(known.get(id) ?? listedEvent(id))
   const problem = r<string>()
   const offset = r(0)
@@ -873,6 +879,7 @@ const EventView = ({ id }: { id: string }) => {
         <div class="lines">
           {event.place && <LinkLine to={{ kind: "place", name: event.place }}>{event.place}</LinkLine>}
           {visit && <LinkLine to={parkingFor(visit)}>Parking</LinkLine>}
+          {!unset && <CalendarLine path={calendarPath("event", id)} subscribe={series && calendarPath("series", series)} />}
           {!pin && <LinkLine href={event.url}>{calendarOf(event)?.name ?? "Source"}{event.checked && <> · checked <Day of={event.checked} month="short" day="numeric" /></>}</LinkLine>}
         </div>
         {pin && <p class="view-foot muted"><Moderate pin={pin} act={act} onEdit={() => state.go({ kind: "edit", id })} onGone={() => told(undefined)} onReported={hidden => notice.value = hidden ? "Reported, and hidden." : "Reported."} /></p>}

@@ -11,18 +11,16 @@
 
 import { Hono } from "hono/tiny"
 import type { Context } from "hono"
-import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { type Page, pageOf, viewOf } from "../src/map/link.mts"
-import { type Resolved, type Site, CONTEXTS, OF_SOMETHING, UNLISTED, eventResolved, resolve } from "../src/map/site.mts"
+import { type Resolved, CONTEXTS, OF_SOMETHING, UNLISTED, eventResolved, resolve } from "../src/map/site.mts"
 import { type Preview, describe } from "../src/social/preview.mts"
 import { pinPath } from "../src/social/event.mts"
 import { pathOf, roomAtSlug, roomSummary } from "../src/laundry/rooms.mts"
 import { type Head, type Summary, headOf, unlisted, withHead, withSummary } from "../src/shell/served.tsx"
 import { breadcrumbsOf, eventDataOf, trailTo } from "../src/shell/structured.mts"
 import { NAME, SITE, imageOf } from "../src/shell/pages.mts"
-import { readJson } from "../src/shared/json.mts"
 import type { Env } from "./env.mts"
-import { dataOf, siteBuild } from "./site.mts"
+import { siteOf } from "./site.mts"
 import { publicPin } from "./social.mts"
 import { LOOK, render } from "./card.mts"
 
@@ -40,18 +38,6 @@ const PAGE_CACHE = "public, max-age=60"
 const CARD_CACHE = { current: "public, max-age=31536000, immutable", stale: "public, max-age=600" }
 
 //#region What a page is of
-
-/** The site's data, as the map page served now names it, read from the Worker's own assets */
-const siteOf = (env: Env): Site => ({
-  named: async <T,>(name: string, schema: StandardSchemaV1<unknown, T>) => {
-    const path = (await siteBuild(env.ASSETS)).data[name]
-    if (!path)
-      throw new Error(`The map page names no ${name}`)
-    return dataOf(env.ASSETS, path, response => readJson(response, schema, path))
-  },
-  file: <T,>(path: string, schema: StandardSchemaV1<unknown, T>) =>
-    dataOf(env.ASSETS, path, response => readJson(response, schema, path))
-})
 
 /** A page that couldn't be read, which is logged */
 const UNREAD = Symbol("unread")

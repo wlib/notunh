@@ -14,9 +14,14 @@ const test = base.extend<{ fixture: Fixture }>({
   }
 })
 
-/** Every file of ours the page's head names, its data and its code, the code it loads later included, by path */
+/**
+ * Every file of ours the page's head names, its data and its code, the code it loads later included, by path; but a
+ * polyfill for what this browser has of its own, which is never fetched (src/shell/manifest.mts)
+ */
 const namedOf = (page: Page) =>
-  page.evaluate(() => [...document.head.querySelectorAll("link[href^='/assets/'], script[src^='/assets/']")].map(tag => tag.getAttribute("href") ?? tag.getAttribute("src")!))
+  page.evaluate(() => [...document.head.querySelectorAll<HTMLElement>("link[href^='/assets/'], script[src^='/assets/']")]
+    .filter(tag => !(tag.dataset.for && tag.dataset.for in globalThis))
+    .map(tag => tag.getAttribute("href") ?? tag.getAttribute("src")!))
 
 /** Waits until the worker controls the page and keeps the page itself, so it has staged all the page names */
 const staged = async (page: Page, path: string) => {

@@ -7,6 +7,8 @@ import { type Build, buildOf } from "../src/shell/manifest.mts"
 import { readJson } from "../src/shared/json.mts"
 import { getOrCreate } from "../src/shared/group.mts"
 import { SITE } from "../src/shell/pages.mts"
+import type { Site } from "../src/map/site.mts"
+import type { Env } from "./env.mts"
 
 /** Each data file read, by its path, for the release last seen */
 const read = new Map<string, Promise<unknown>>()
@@ -40,3 +42,9 @@ export const named = async <T,>(assets: Fetcher, name: string, schema: StandardS
     throw new Error(`The map page names no ${name}`)
   return dataOf(assets, path, response => readJson(response, schema, path))
 }
+
+/** The site's data, as the map page served now names it, read from the Worker's own assets */
+export const siteOf = (env: Env): Site => ({
+  named: <T,>(name: string, schema: StandardSchemaV1<unknown, T>) => named(env.ASSETS, name, schema),
+  file:  <T,>(path: string, schema: StandardSchemaV1<unknown, T>) => dataOf(env.ASSETS, path, response => readJson(response, schema, path))
+})

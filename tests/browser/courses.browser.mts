@@ -116,7 +116,7 @@ test("a section saved is your next class in Yours and in You's week, once whiche
   const week = page.getByLabel("Your week")
   await expect(week.locator(".week-class")).toHaveCount(3)
   await expect(week).toContainText("N113")
-  await page.getByRole("button", { name: "Add to calendar" }).scrollIntoViewIfNeeded()
+  await page.getByRole("button", { name: "Subscribe" }).scrollIntoViewIfNeeded()
   await shoot(page, "my-courses")
 
   // A pair cross-listed with each other, pasted, is one class

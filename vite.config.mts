@@ -28,6 +28,13 @@ const packageChunk = (id: string, { getModuleInfo }: Rollup.ManualChunkMeta) => 
   }
 }
 
+/**
+ * Packages only an engine without a global needs (src/shared/temporal.mts), by the global: named in a page's head as a
+ * polyfill for it, which no browser fetches for being named, and which the service worker keeps only where the
+ * global is missing (src/shell/manifest.mts)
+ */
+const POLYFILLS: Record<string, string> = { "temporal-polyfill": "Temporal" }
+
 // Where the pages are built, for the service worker to be built beside them
 let outDir = "dist"
 
@@ -109,7 +116,10 @@ export default defineConfig({
           const stems = chunks.flatMap(({ modules }) => Object.keys(modules).flatMap(id => id.match(/\/([^/?]+)\.[cm]?[jt]s\?(?:shared)?worker/)?.[1] ?? []))
           const workers = Object.values(bundle).filter(output => output.type === "asset" && stems.some(stem => output.fileName.match(`/${stem}-[\\w-]+\\.js$`)))
           return [...chunks.filter(later => !initial.has(later)), ...workers]
-            .map(({ fileName }) => ({ tag: "link", attrs: { rel: "prefetch", href: `/${fileName}` }, injectTo: "head" }))
+            .map(({ fileName }) => {
+              const polyfills = Object.entries(POLYFILLS).find(([name]) => fileName.includes(`/${name}-`))?.[1]
+              return { tag: "link", attrs: polyfills ? { rel: "polyfill", href: `/${fileName}`, "data-for": polyfills } : { rel: "prefetch", href: `/${fileName}` }, injectTo: "head" as const }
+            })
         }
       }
     },

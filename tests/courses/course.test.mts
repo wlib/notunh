@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { letterOf } from "../../src/courses/calendar.mts"
+import { type Calendar, LETTERS } from "../../src/courses/calendar.mts"
 import { type Section, activeTerms, meetingKeys, occurrences, onDay, standing, termOf } from "../../src/courses/course.mts"
 import { createSchedule, dedupe } from "../../src/courses/rooms.mts"
 import { addDays, atClock, localDay, localMinutes, weekday } from "../../src/shared/time.mts"
@@ -25,6 +25,10 @@ test("the import is whole: every row a section, each CRN once, in-person meeting
   expect(fall.fetched).toBeLessThan(fall.built)
   expect(fall).toMatchObject({ code: "202610", name: "Fall 2026", from: "2026-08-31", to: "2026-12-14" })
 })
+
+/** The weekday a day's classes follow, as the registrar letters them: its own, or the one it's swapped to */
+const letterOf = (calendar: Pick<Calendar, "swaps">, day: string, weekday: number) =>
+  calendar.swaps[day] ?? LETTERS[weekday]
 
 test("an occurrence falls on a listed weekday, or the weekday the day follows, within the meeting's dates, never on a no-class day, soonest first", () =>
   fc.assert(fc.property(aSection, aDay, (section, day) => {

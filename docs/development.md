@@ -5,7 +5,7 @@ Node 24+. Every `*.html.tsx` is a page (vite-plugin-bruh): `/` (`index.html.tsx`
 ## Layout
 
 ```
-src/shared/       Pure helpers for pages, Worker, and scripts: Durham time, the learned-model fold, hashing, visits, sync merge
+src/shared/       Pure helpers for pages, Worker, and scripts: Durham time, Temporal, recurrence rules, iCalendar, the learned-model fold, hashing, visits, sync merge
 src/geo/          Projections, lines in meters, boxes, map matching
 src/places/       Gazetteer, place search, Photon, laundry and dining buildings
 src/transit/      The GTFS timetable and route shapes
@@ -15,7 +15,7 @@ src/transit/      The GTFS timetable and route shapes
 src/routing/      Walking network, walks, the trip planner
 src/reminders/    Reminders, watches and class queues; browser/ keeps them and talks to the Worker
 src/social/       Events and pins: the shape, the calendars' readers, marks, links, the story image, the /p/ page
-src/courses/      Sections, the academic calendar, instructors, rooms, saved sections, the calendar file
+src/courses/      Sections, the academic calendar, instructors, rooms, saved sections, calendar files, imported calendars
 src/programs/     The catalog's prerequisites and programs, and a program's graph
 src/parking/      Parking areas' rules and the verdict for a stay
 src/shell/        Shared page shell: <head>, theme, Intl, polling, release manifests, data loading, state and sync
@@ -44,7 +44,7 @@ shared ← transit/observations ┴─ ← transit/inference ← transit/models 
 - Every boundary (upstream APIs, data files, Worker request bodies) is a [Valibot](https://valibot.dev) schema, which also gives its type. Upstream answers keep the items that fit, so an upstream change shows less rather than garbage.
 - Positions are `[lon, lat]` or `{ lat, lon }`. Boxes are `[west, south, east, north]`. Distances are meters on cheap-ruler's projection, made only in `src/geo/projection.mts`.
 - Instants crossing a boundary are epoch milliseconds. Times compared with the timetable are schedule seconds from the service day's start. The location model uses epoch seconds internally.
-- A calendar day is a `Day`, `YYYY-MM-DD` in Durham. Weekdays count from Monday.
+- A calendar day is a `Day`, `YYYY-MM-DD` in Durham. Weekdays count from Monday. What recurs is a rule, and its days and times are Temporal's ([recurrence.md](recurrence.md)).
 - Bytes flow as async iterables of `Uint8Array`. Anything a page or the Worker reads is gzip (Safari 16.4's `DecompressionStream` has no zstd); only the observations archive, read by scripts alone, is zstd.
 
 ## Scripts

@@ -1,7 +1,8 @@
 // Every static member and global object property the app uses, like AbortSignal.any or navigator.wakeLock,
 // against MDN's compatibility data for the oldest browsers in package.json. Neither TypeScript nor the build's
 // syntax lowering knows which browsers have which APIs. Anything used as `thing?.member` checks for itself, so
-// it's left alone
+// it's left alone, and so is Temporal where it's the one src/shared/temporal.mts gives, the engine's own or the
+// polyfill's
 
 import { test, expect } from "vitest"
 import { readFileSync, globSync } from "node:fs"
@@ -73,12 +74,13 @@ const tooOld = (compat: CompatStatement) =>
 test("the app only uses APIs every supported browser has, or checks for them first", () => {
   const problems: string[] = []
   for (const file of globSync("src/**/*.{mts,tsx}")) {
-    const lines = readFileSync(file, "utf8").split("\n")
-    lines.forEach((line, i) => {
+    const source = readFileSync(file, "utf8")
+    const isTemporalGiven = file === "src/shared/temporal.mts" || /^import \{[^}]*\bTemporal\b[^}]*\} from "[./]+\/(shared\/)?temporal\.mts"$/m.test(source)
+    source.split("\n").forEach((line, i) => {
       // Comments only mention APIs
       const code = /^\s*(\/\/|\/?\*)/.test(line) ? "" : line.replace(/\s\/\/\s.*$/, "")
       for (const [, receiver, member, check] of code.matchAll(/(?<![\w.$])([A-Za-z]\w*)\??\.([A-Za-z]\w*)(\?\.)?/g)) {
-        const compat = !check && compatOf(receiver, member)
+        const compat = !check && !(receiver === "Temporal" && isTemporalGiven) && compatOf(receiver, member)
         const browsers = compat ? tooOld(compat) : []
         if (browsers.length)
           problems.push(`${file}:${i + 1} ${receiver}.${member} isn't in ${browsers.join(", ")}`)

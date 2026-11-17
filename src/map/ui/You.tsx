@@ -1,7 +1,7 @@
 /** @jsxImportSource bruh/browser */
 
 // You, a page from the button in the search: what's yours, and who this device is to the Worker. My courses, the
-// sections saved as a week and a list (Courses.tsx); a UNH email, verified by a code, which lets you list events on
+// sections saved as a week and a list (Courses.tsx); My calendar, the calendars imported here (Calendars.tsx); a UNH email, verified by a code, which lets you list events on
 // everyone's map, and gets your things back on a device that's lost them; and your devices, linked by a code one
 // shows and another approves, which shares one identity, and your things (src/shell/sync.mts), between them. A code
 // emailed is typed back, or the email's link opens here with a Confirm button, which is what consumes it, so a mail
@@ -14,6 +14,7 @@ import { encode, pathOf } from "../../social/qr.mts"
 import { capture } from "../../shell/usage.tsx"
 import { sync } from "../../shell/sync.mts"
 import { state } from "../state/map.mts"
+import { MyCalendar } from "./Calendars.tsx"
 import { MyCourses } from "./Courses.tsx"
 import { Head } from "./Pages.tsx"
 
@@ -207,11 +208,12 @@ const Email = () => {
   )
 }
 
-/** You: this device, your courses, your UNH email, and your devices */
+/** You: this device, your courses, your calendars, your UNH email, and your devices */
 export const YouView = () => <>
   <Head title="You" />
   <p class="view-facts">{r(() => verified.value ? <>This device · <strong>{verified.value}</strong></> : "This device · no account")}</p>
   <MyCourses />
+  <MyCalendar />
   <Email />
   <Devices />
 </>

@@ -9,6 +9,7 @@ import { type CoursesIndex, type Term, type TermEntry, TermFile, activeTerms, te
 import { createPeople } from "../people.mts"
 import { createCourseSearch } from "../search.mts"
 import { createSchedule } from "../rooms.mts"
+import { loadTemporal } from "../../shared/temporal.mts"
 import { dayStart, localDay } from "../../shared/time.mts"
 import { jsonOf, loadImmutable } from "../../shell/load.mts"
 import { today } from "../../shell/lifecycle.mts"
@@ -16,9 +17,17 @@ import { distinct, isSameList } from "../../shell/state.mts"
 
 const TERM = jsonOf(TermFile)
 
-/** A term's sections, loaded however many tries it takes (loadImmutable), joined with its entry in the index */
-const loadTerm = async (index: CoursesIndex, entry: TermEntry, options: { signal?: AbortSignal, onError?: (error: unknown) => void } = {}): Promise<Term> =>
-  termOf(index, entry, await loadImmutable(entry.file, TERM, options))
+/**
+ * A term's sections, loaded however many tries it takes (loadImmutable), joined with its entry in the index; and
+ * Temporal with them, which every question of when a section meets is asked through (src/shared/temporal.mts)
+ */
+const loadTerm = async (index: CoursesIndex, entry: TermEntry, options: { signal?: AbortSignal, onError?: (error: unknown) => void } = {}): Promise<Term> => {
+  const [file] = await Promise.all([loadImmutable(entry.file, TERM, options), loadTemporal().catch(error => {
+    options.onError?.(error)
+    throw error
+  })])
+  return termOf(index, entry, file)
+}
 
 /** The terms of an index that are yet to start and aren't live yet, as a course's page shows the next term's sections */
 export const laterTerms = (index: CoursesIndex, now: number) => {

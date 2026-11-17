@@ -11,7 +11,7 @@ import { Hono } from "hono/tiny"
 import type { Context, MiddlewareHandler } from "hono"
 import { sValidator } from "@hono/standard-validator"
 import type { StandardSchemaV1 } from "@standard-schema/spec"
-import { type SQL, and, eq, gt, inArray, isNotNull, lt, notInArray, sql } from "drizzle-orm"
+import { type SQL, and, eq, gt, inArray, isNotNull, lt, notInArray, or, sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/d1"
 import * as v from "valibot"
 import { type Pin, type Time, LINGER, LONG, MAX_SPOTS, MAX_TIMES, PINS_AHEAD, SHORT, isOn, pinPath } from "../src/social/event.mts"
@@ -27,7 +27,7 @@ import { Subscription, push } from "./push.mts"
 import { vapidOf } from "./reminders.mts"
 import { devices, emails, going, links, marks, pins, reports, state } from "./schema.mts"
 import { type Credential, cookieOf, credentialFrom } from "./session.mts"
-import { Entries, isSynced } from "../src/shared/sync.mts"
+import { type Key, Entries, FEED, isSynced } from "../src/shared/sync.mts"
 
 type Worker = { Bindings: Env, Variables: { who: Who, credential: Credential } }
 
@@ -65,7 +65,7 @@ const on = (feature: Feature): MiddlewareHandler<Worker> => async (c, next) =>
   c.env.SOCIAL_OFF?.split(/[\s,]+/).includes(feature) ? c.text(`${{ pins: "Events are", link: "Linking devices is", email: "Email verification is", sync: "Keeping your things is" }[feature]} off for now`, 503) : next()
 
 /** Only so many commands a minute from one address, by the Rate Limiting binding where it's bound */
-const limited: MiddlewareHandler<Worker> = async (c, next) => {
+export const limited: MiddlewareHandler<Worker> = async (c, next) => {
   const address = c.req.header("cf-connecting-ip")
   if (c.env.RATE_LIMIT && address && !(await c.env.RATE_LIMIT.limit({ key: address })).success)
     return c.text("Too much from here at once; try again in a minute", 429)
@@ -576,6 +576,27 @@ export const isVerifiedAsker = async (c: Asking) => {
 /** A pin anyone may read by its id, or none for an id that isn't one, or a pin gone or hidden */
 export const publicPin = (db: D1Database, id: string) =>
   v.is(ID, id) ? readPin(drizzle(db), id, undefined) : Promise.resolve(undefined)
+
+/**
+ * The pins of a person's with a time, not long over or hidden: those they made, and those any of their devices is
+ * going to, for their calendar feed (calendar.mts)
+ */
+export const pinsOf = async (db: D1Database, person: string, now: number): Promise<Pin[]> => {
+  const theirs = drizzle(db).select({ pin: going.pin }).from(going).innerJoin(devices, eq(devices.id, going.device)).where(eq(devices.person, person))
+  const found = await rowsWhere(drizzle(db), and(or(eq(pins.person, person), inArray(pins.id, theirs)), gt(pins.end, now - LINGER))!)
+  return found.filter(({ row, reports }) => reports < HIDE && !isUnset(row)).map(({ row, going }) => pinOf(row, [], going))
+}
+
+/**
+ * The person whose calendar feed a token names, if it names one: the one kept as theirs (src/shared/sync.mts). The
+ * key is written into the query as it is in the index's own condition, which SQLite only matches against a constant
+ */
+export const personOfFeed = async (db: D1Database, token: string) =>
+  (await drizzle(db).select({ person: state.person }).from(state).where(and(sql`${state.key} = ${sql.raw(`'${FEED}'`)}`, eq(state.value, token))))[0]?.person
+
+/** What a person keeps under a key that's theirs, or none */
+export const kept = async (db: D1Database, person: string, key: Key): Promise<unknown> =>
+  (await drizzle(db).select({ value: state.value }).from(state).where(and(eq(state.person, person), eq(state.key, key))))[0]?.value
 
 /** Drops pins long over, with everything of theirs, and codes expired, as the nightly prune */
 export const pruneSocial = (db: ReturnType<typeof drizzle>, now: number) =>

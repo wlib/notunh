@@ -1,0 +1,70 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:icalendar-ruby
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Sam Student Calendar (Canvas)
+X-WR-CALDESC:Calendar events for the user\, Sam Student
+BEGIN:VEVENT
+DTSTAMP:20261101T120000Z
+UID:event-calendar-event-98765
+DTSTART:20261103T190000Z
+DTEND:20261103T202000Z
+CLASS:PUBLIC
+LOCATION:Kingsbury N343
+SEQUENCE:0
+SUMMARY:Lecture [CS518.01-FA26]
+URL:https://mycourses.unh.edu/calendar?include_contexts=course_12345&month=1
+ 1&year=2026#calendar_event_98765
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261101T120000Z
+UID:event-calendar-event-98766
+DTSTART:20261105T190000Z
+DTEND:20261105T202000Z
+CLASS:PUBLIC
+LOCATION:Kingsbury N343
+SEQUENCE:0
+SUMMARY:Lecture [CS518.01-FA26]
+URL:https://mycourses.unh.edu/calendar?include_contexts=course_12345&month=1
+ 1&year=2026#calendar_event_98766
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261101T120000Z
+UID:event-assignment-1234567
+DTSTART;VALUE=DATE:20261106
+DTEND;VALUE=DATE:20261106
+CLASS:PUBLIC
+DESCRIPTION:Submit one PDF\; late work loses 10% a day.\n\nSee the rubric\,
+  then start early.
+SEQUENCE:0
+SUMMARY:Homework 7 [CS518.01-FA26]
+URL:https://mycourses.unh.edu/calendar?include_contexts=course_12345&month=1
+ 1&year=2026#assignment_1234567
+X-ALT-DESC;FMTTYPE=text/html:<p>Submit one PDF; late work loses 10% a day.</
+ p>
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261101T120000Z
+UID:event-assignment-1234570
+DTSTART:20261114T045900Z
+DTEND:20261114T045900Z
+CLASS:PUBLIC
+SEQUENCE:0
+SUMMARY:Lab report 4 [CHEM403.L02-FA26]
+URL:https://mycourses.unh.edu/calendar?include_contexts=course_12399&month=1
+ 1&year=2026#assignment_1234570
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261101T120000Z
+UID:event-calendar-event-98801
+DTSTART:20261112T220000Z
+DTEND:20261112T230000Z
+CLASS:PUBLIC
+LOCATION:Dimond Library 352
+SEQUENCE:0
+SUMMARY:Exam review session [PSYC401.02-FA26]
+URL:https://mycourses.unh.edu/calendar?include_contexts=course_12412&month=1
+ 1&year=2026#calendar_event_98801
+END:VEVENT
+END:VCALENDAR

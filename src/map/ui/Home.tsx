@@ -1,7 +1,7 @@
 /** @jsxImportSource bruh/browser */
 
 // The home, under the search: the week as one list. Yours first, when you have anything: your next saved class
-// (state/courses.mts), the reminders set on this phone (Remind.tsx) and the trips saved here (state/trip.mts), each a
+// (state/courses.mts), the next thing in the calendars you've imported (state/calendars.mts), the reminders set on this phone (Remind.tsx) and the trips saved here (state/trip.mts), each a
 // row that opens its page or plans its trip. Then what's on now, later today (state/today.mts), with making an event
 // of your own as the last row of today, and each day to come under its own heading (src/social/event.mts), a week at
 // a time. While the search is typed in, its suggestions lie over the list (Search.tsx), which stays as it was beneath
@@ -10,6 +10,7 @@
 import { r } from "bruh/reactive"
 import { type DayList, type Event, type Pin, WEEK, upcoming } from "../../social/event.mts"
 import { codeOf, courseOf } from "../../courses/course.mts"
+import { isClassAt } from "../../courses/imported.mts"
 import { daysBetween, localDay, nextAt } from "../../shared/time.mts"
 import { ClockTime, Day, relativeDay } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
@@ -40,6 +41,24 @@ const NextClass = () =>
     )
   })
 
+/** The next thing in the calendars imported here, as a row, unless it's your next class, which is told as that */
+const NextImport = () =>
+  r(() => {
+    const next = state.nextImport.value
+    const lesson = state.nextClass.value
+    if (!next || lesson && isClassAt(next, lesson.section, lesson.event.start))
+      return null
+    const { event, start, match: { found, place } } = next
+    return (
+      <Row
+        time={localDay(start) === localDay(nowMs()) ? <ClockTime at={new Date(start)} /> : <><DayName day={localDay(start)} /><small><ClockTime at={new Date(start)} /></small></>}
+        what={event.title}
+        sub={event.where || place || "Your calendar"}
+        onclick={() => state.go(found ? sectionPage(found.term, found.section) : place ? { kind: "place", name: place } : { kind: "you" })}
+      />
+    )
+  })
+
 /** The trips saved here, each a row that plans getting there by its time from where you are, or forgets it */
 const Goals = () =>
   r(() => state.goals.value.map(goal =>
@@ -60,17 +79,19 @@ const Goals = () =>
     />
   ))
 
-/** Yours: the next class, the reminders and the saved trips, as one list, when there's any */
+/** Yours: the next class and the next thing in your calendars, the sooner first, the reminders and the saved trips, as one list, when there's any */
 const Yours = () => {
   const list: HTMLUListElement =
     <ul class="rows" aria-label="Yours">
-      <NextClass />
+      {r(() => state.nextImport.value && state.nextClass.value && state.nextImport.value.start < state.nextClass.value.event.start
+        ? <><NextImport /><NextClass /></>
+        : <><NextClass /><NextImport /></>)}
       <Reminders />
       <Goals />
     </ul>
   return (
     <section class="yours">
-      {r(() => (state.nextClass.value || state.goals.value.length > 0 || currentReminders.value.length > 0) && <h2 class="eyebrow">Yours</h2>)}
+      {r(() => (state.nextClass.value || state.nextImport.value || state.goals.value.length > 0 || currentReminders.value.length > 0) && <h2 class="eyebrow">Yours</h2>)}
       {list}
     </section>
   )

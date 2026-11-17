@@ -2,11 +2,23 @@
   {
     "title": "Russian Conversation Hour",
     "where": "Murkland G10 Lounge",
-    "days": ["Fri"],
-    "start": "14:00",
-    "end": "15:00",
-    "from": "2026-08-31",
-    "until": "2026-12-14",
+    "sessions": [
+      {
+        "rule": {
+          "of": {
+            "weekly": [
+              "Fri"
+            ]
+          },
+          "between": [
+            "2026-08-31",
+            "2026-12-14"
+          ]
+        },
+        "start": "14:00",
+        "end": "15:00"
+      }
+    ],
     "url": "https://cola.unh.edu/languages-literatures-cultures/opportunities/language-conversation-groups",
     "passage": "Russian Conversation Hour: 2-3pm every Friday in the Murkland G10 Lounge",
     "checked": "2026-11-16"
@@ -14,12 +26,22 @@
   {
     "title": "Chinese Tea Hour",
     "where": "Murkland G10 Lounge",
-    "days": [],
-    "dates": ["2026-09-16", "2026-09-30", "2026-10-14", "2026-10-28", "2026-11-11", "2026-12-02"],
-    "start": "15:00",
-    "end": "16:00",
-    "from": "2026-08-31",
-    "until": "2026-12-14",
+    "sessions": [
+      {
+        "rule": {
+          "on": [
+            "2026-09-16",
+            "2026-09-30",
+            "2026-10-14",
+            "2026-10-28",
+            "2026-11-11",
+            "2026-12-02"
+          ]
+        },
+        "start": "15:00",
+        "end": "16:00"
+      }
+    ],
     "url": "https://cola.unh.edu/languages-literatures-cultures/opportunities/language-conversation-groups",
     "passage": "Chinese Tea Hour: 3-4pm every other Wednesday in the Murkland G10 Lounge 9/16, 9/30, 10/14, 10/28, 11/11, 12/2",
     "checked": "2026-11-16"
@@ -27,25 +49,30 @@
   {
     "title": "Le Café Français",
     "where": "Murkland 210 lounge",
-    "days": [],
-    "dates": ["2026-09-29", "2026-10-27", "2026-12-01"],
-    "start": "12:40",
-    "end": "13:40",
-    "from": "2026-08-31",
-    "until": "2026-12-14",
-    "url": "https://cola.unh.edu/languages-literatures-cultures/opportunities/language-conversation-groups",
-    "passage": "Le Café Français: alternating 12:40-1:40 Tuesdays and 3:40-4:40 Thursdays in Murkland 210 lounge Tuesdays: 9/29, 10/27, 12/01; Thursdays: 9/17, 10/15, 11/12",
-    "checked": "2026-11-16"
-  },
-  {
-    "title": "Le Café Français",
-    "where": "Murkland 210 lounge",
-    "days": [],
-    "dates": ["2026-09-17", "2026-10-15", "2026-11-12"],
-    "start": "15:40",
-    "end": "16:40",
-    "from": "2026-08-31",
-    "until": "2026-12-14",
+    "sessions": [
+      {
+        "rule": {
+          "on": [
+            "2026-09-29",
+            "2026-10-27",
+            "2026-12-01"
+          ]
+        },
+        "start": "12:40",
+        "end": "13:40"
+      },
+      {
+        "rule": {
+          "on": [
+            "2026-09-17",
+            "2026-10-15",
+            "2026-11-12"
+          ]
+        },
+        "start": "15:40",
+        "end": "16:40"
+      }
+    ],
     "url": "https://cola.unh.edu/languages-literatures-cultures/opportunities/language-conversation-groups",
     "passage": "Le Café Français: alternating 12:40-1:40 Tuesdays and 3:40-4:40 Thursdays in Murkland 210 lounge Tuesdays: 9/29, 10/27, 12/01; Thursdays: 9/17, 10/15, 11/12",
     "checked": "2026-11-16"
@@ -53,12 +80,17 @@
   {
     "title": "Sustainability Fellowship Networking & Info Session",
     "where": "Rudman Hall G89",
-    "days": [],
-    "dates": ["2026-11-18"],
-    "start": "15:30",
-    "end": "16:30",
-    "from": "2026-11-18",
-    "until": "2026-11-18",
+    "sessions": [
+      {
+        "rule": {
+          "on": [
+            "2026-11-18"
+          ]
+        },
+        "start": "15:30",
+        "end": "16:30"
+      }
+    ],
     "url": "https://www.unh.edu/sustainability/sustainability-fellowships",
     "passage": "November 18, 2026, 3:30 - 4:30 p.m. In-Person Student Networking & Info Session Rudman G89",
     "checked": "2026-11-16"
@@ -66,12 +98,18 @@
   {
     "title": "Spring 2027 Career & Internship Fair",
     "where": "Memorial Union Building",
-    "days": [],
-    "dates": ["2027-02-23", "2027-02-24"],
-    "start": "11:00",
-    "end": "15:00",
-    "from": "2027-02-23",
-    "until": "2027-02-24",
+    "sessions": [
+      {
+        "rule": {
+          "on": [
+            "2027-02-23",
+            "2027-02-24"
+          ]
+        },
+        "start": "11:00",
+        "end": "15:00"
+      }
+    ],
     "url": "https://www.unh.edu/career/career-events/career-internship-fair/employer-logistics",
     "passage": "February 23 & 24| 11AM - 3PM | Memorial Union Building",
     "checked": "2026-11-16"

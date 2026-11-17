@@ -4,9 +4,11 @@
 // sections of each other's cross-list in the same room at the same time are one class, under the first by CRN with
 // the others in `also`
 
-import { type Calendar, letterOf } from "./calendar.mts"
-import { type CourseEvent, type Meeting, type Section, type Term, eventOf, fallsOn, meetingKeys } from "./course.mts"
-import { type Day, localDay, weekday } from "../shared/time.mts"
+import type { Calendar } from "./calendar.mts"
+import { type CourseEvent, type Meeting, type Section, type Term, eventOf, meetingKeys, sessionOf } from "./course.mts"
+import { occursOn } from "../shared/recur.mts"
+import { plainDay } from "../shared/temporal.mts"
+import { type Day, localDay } from "../shared/time.mts"
 
 /** One class at a place: a dated meeting with its section and meeting, and the sections cross-listed into it */
 export type Scheduled = { term: Term, section: Section, meeting: Meeting, event: CourseEvent, also: Section[] }
@@ -58,9 +60,9 @@ export const createSchedule = (terms: readonly Term[], calendar: Calendar) => {
 
   /** The classes there on a day that pass a test, each once, in an order */
   const scheduled = (where: Where, day: Day, keep: (event: CourseEvent) => boolean, order: (a: Scheduled, b: Scheduled) => number) => {
-    const letter = letterOf(calendar, day, weekday(day))
+    const falls = occursOn(plainDay(day))
     return dedupe(entriesAt(where)
-      .filter(({ meeting }) => fallsOn(meeting, calendar, day, letter))
+      .filter(({ meeting }) => falls(sessionOf(meeting, calendar).rule))
       .map(({ term, section, meeting, key }) => ({ term, section, meeting, event: eventOf(term, section, meeting, key, day), also: [] as Section[] }))
       .filter(({ event }) => keep(event))
       .sort(order))

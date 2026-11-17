@@ -39,6 +39,9 @@ Bus samples are one gzipped row per source per minute polled (`src/transit/obser
 | `POST /api/pins`, `PUT /api/pins/:id`, `POST /api/pins/:id/{marks,set,going,reports}`, `DELETE /api/pins/:id` | device | Make, edit (host), mark a time, set the time (host), go, report, delete (host) |
 | `POST /api/link`, `GET`/`POST /api/link/:code` | device | A code to link devices, its standing, its approval |
 | `POST /api/email`, `POST /api/email/verify` | device | A code emailed to a UNH address, and its check, which may join the device to the address's person |
+| `GET /api/calendar/{event/<id>,series/<slug>,section/<term>/<crn>}.ics` | public | A calendar file of an event, a curated series, or a section's meetings ([recurrence.md](recurrence.md#calendars-out)) |
+| `GET /api/calendar/feed/<token>.ics` | the token | A person's feed, their saved sections and the events they host or go to, by the token kept as theirs; any other is 404 |
+| `POST /api/calendar/fetch` `{ url }` | public, rate limited | Someone's own calendar feed, fetched for a browser that CORS keeps from it and handed straight back; only a public https host by name, nothing kept or logged ([recurrence.md](recurrence.md#a-calendar-in)) |
 | `GET /api/me` | device | Who the device is |
 | `POST /api/state` `{ device, entries }` | device | Your things written since last asked; answers all kept for the person ([storage.md](storage.md#your-things-kept-for-you)) |
 | `GET /api/session` | cookie | The device's id and secret, for a browser whose storage lost them; 401 without |

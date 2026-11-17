@@ -1,12 +1,13 @@
 // Leads: passages on UNH's own pages that say when something happens, as "Russian Conversation Hour: 2-3pm every
 // Friday in the Murkland G10 Lounge" does, which none of the calendars tell (sources.mts). scripts/leads.mts crawls
-// the pages and writes what's left for someone to judge into curated.json (curated.mts). Each passage is a sentence
-// or a list item of a page's <main> that states a time of day (when.mts), with a guess of its days, times and place
-// beside it. Then what isn't one is left out, cheapest first: by its page's
-// address, by its wording, as a class meeting, and as what a calendar already tells. What someone made of each
-// passage (Seen) and what robots.txt lets a crawler read are here too. Pure
+// the pages and writes the leads for someone to judge into curated.json (curated.mts). A passage is a sentence or a
+// list item of a page's <main>; one that states a time of day (when.mts) is a lead, with its days, times and place as
+// read beside it, unless it's left out, cheapest first: by its page's address, by its wording, as a class meeting, or
+// as what a calendar already tells. What someone made of each passage (Seen) and what robots.txt lets a crawler read
+// are here too. Pure
 
 import * as v from "valibot"
+import { LETTERS } from "../courses/calendar.mts"
 import type { Section } from "../courses/course.mts"
 import type { Event } from "./event.mts"
 import { type Matcher, plain } from "./sources.mts"
@@ -23,24 +24,27 @@ const CHROME = /<(script|style|noscript|nav|header|footer|form|svg|button)\b[\s\
 const BLOCK = /<\/?(?:p|li|tr|td|th|h[1-6]|div|section|article|dd|dt|br|ul|ol|table|blockquote)\b[^>]*>/gi
 
 /** An address someone's mail goes to, and a phone number, which a lead never carries */
-const MAIL = /[^\s<>()"@]+@[\w-]+(\.[\w-]+)+/g
+const MAIL  = /[^\s<>()"@]+@[\w-]+(\.[\w-]+)+/g
 const PHONE = /(\(\d{3}\)\s?|\b\d{3}[-.\s])\d{3}[-.]\d{4}\b/g
 
 /** A sentence's end: a stop and space before a capital, not after "a.m." or "p.m." */
 const SENTENCE = /(?<=[a-z0-9)][.!?])(?<![ap]\.m\.)\s+(?=[A-Z])/
 
+/** A page's <main>, which is all of it that's read, or none where it has none */
+export const mainOf = (html: string) =>
+  html.match(/<main\b[\s\S]*?<\/main>/i)?.[0]
+
 /**
- * The passages of a page's <main>, or none where it has none: each block's sentences, under the last heading before
- * them, addresses and phone numbers dropped. A list item is one passage, however many sentences
+ * The passages of a page's <main>: each block's sentences, under the last heading before them, addresses and phone
+ * numbers dropped. A list item is one passage, however many sentences
  */
 export const passagesOf = (html: string, url: string): Passage[] => {
-  const main = html.match(/<main\b[\s\S]*?<\/main>/i)?.[0]
-  if (!main)
-    return []
   const passages: Passage[] = []
   let heading = ""
-  for (const part of main.replace(CHROME, " ").split(/(<(?:h[1-6]|li)\b[^>]*>[\s\S]*?<\/(?:h[1-6]|li)>)/i)) {
-    const blocks = part.split(BLOCK).map(block => plain(block, 2000).replace(MAIL, "(address)").replace(PHONE, "(phone)")).filter(block => /\w{2}/.test(block))
+  for (const part of (mainOf(html) ?? "").replace(CHROME, " ").split(/(<(?:h[1-6]|li)\b[^>]*>[\s\S]*?<\/(?:h[1-6]|li)>)/i)) {
+    const blocks = part.split(BLOCK)
+      .map(block => plain(block, 2000).replace(MAIL, "(address)").replace(PHONE, "(phone)"))
+      .filter(block => /\w{2}/.test(block))
     if (/^<h/i.test(part))
       heading = blocks.join(" ")
     else
@@ -104,15 +108,12 @@ export const wordingExcluded = (text: string, when: When, subjects: ReadonlySet<
     (DEADLINE.test(text) && !when.times.some(({ end }) => end) ? "a deadline" : undefined)
 }
 
-/** The registrar's weekday letters, Monday first */
-const LETTERS = "MTWRFSU"
-
-/** "HH:MM" as minutes after midnight */
-const minutes = (time: string) =>
-  +time.slice(0, 2) * 60 + +time.slice(3)
-
 /** How near two starts must be to be the same thing, in minutes */
 const NEAR = 15
+
+/** Whether one of a passage's times starts near a time of day, in minutes after midnight */
+const startsNear = ({ times }: When, minutes: number) =>
+  times.some(({ start }) => Math.abs(+start.slice(0, 2) * 60 + +start.slice(3) - minutes) <= NEAR)
 
 /**
  * The class a passage tells, if it does: a section meeting in the room it names ("Murkland 210") on one of its
@@ -120,14 +121,12 @@ const NEAR = 15
  * building isn't the same, as a lounge down the hall from a class isn't
  */
 export const classOf = (text: string, when: When, place: string | undefined, sections: readonly Section[], today: Day) => {
-  if (!place || !when.days.length)
+  if (!place)
     return
-  const starts = when.times.map(({ start }) => minutes(start))
   const words = new Set(text.split(/\W+/))
   return sections.find(section => section.meetings.some(meeting =>
     meeting.place === place && meeting.to >= today && words.has(meeting.where.split(" ").at(-1)!) &&
-    when.days.some(day => meeting.days.includes(LETTERS[day])) &&
-    starts.some(start => Math.abs(start - meeting.start) <= NEAR)))
+    when.days.some(day => meeting.days.includes(LETTERS[day])) && startsNear(when, meeting.start)))
 }
 
 /**
@@ -137,11 +136,9 @@ export const classOf = (text: string, when: When, place: string | undefined, sec
 export const listedAs = (when: When, place: string | undefined, events: readonly Event[]) => {
   if (!place)
     return
-  const starts = when.times.map(({ start }) => minutes(start))
   return events.find(event => {
     const day = localDay(event.start)
-    const start = localMinutes(event.start)
-    return event.place === place && starts.some(time => Math.abs(time - start) <= NEAR) &&
+    return event.place === place && startsNear(when, localMinutes(event.start)) &&
       (when.days.includes(weekday(day)) || when.dates.includes(day))
   })
 }
@@ -170,7 +167,7 @@ export const scoreOf = (text: string, when: When, place: string | undefined, tod
 /** A lead: a passage, what it says of when and where, how likely it is to be something to go to */
 export type Lead = Passage & { when: When, place?: string, score: number }
 
-/** Why a passage isn't a lead, as its verdict is kept */
+/** A passage left out, and why */
 type Left = Passage & { reason: string }
 
 /** What leaves a passage out, beyond its page and wording: the classes meeting, and what the calendars already tell */
@@ -182,9 +179,9 @@ export const leadsOf = (passages: readonly Passage[], match: Matcher, known: Kno
     const when = whenOf(passage.text, today)
     if (!when)
       return []
-    const worded = wordingExcluded(passage.text, when, known.subjects) ?? (HOURS_HEADING.test(passage.heading) ? "hours a place is open" : undefined)
-    if (worded)
-      return [{ ...passage, reason: worded }]
+    const worded = wordingExcluded(passage.text, when, known.subjects)
+    if (worded || HOURS_HEADING.test(passage.heading))
+      return [{ ...passage, reason: worded ?? "hours a place is open" }]
     const place = match(passage.text) ?? match(passage.heading)
     const section = classOf(passage.text, when, place, known.sections, today)
     if (section)
@@ -233,6 +230,8 @@ export const robotsAllows = (robots: string, path: string) => {
         rules.push({ allow: /^allow$/i.test(field), path: value })
     }
   }
-  const decides = rules.filter(rule => ruleOf(rule.path).test(path)).sort((a, b) => b.path.length - a.path.length || Number(b.allow) - Number(a.allow))[0]
+  const [decides] = rules
+    .filter(rule => ruleOf(rule.path).test(path))
+    .sort((a, b) => b.path.length - a.path.length || Number(b.allow) - Number(a.allow))
   return decides?.allow ?? true
 }

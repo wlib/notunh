@@ -13,19 +13,22 @@ import { dirname } from "node:path"
 import { setTimeout } from "node:timers/promises"
 import { fileURLToPath } from "node:url"
 import * as v from "valibot"
-import { CoursesIndex, type Section, TermFile, activeTerms } from "../src/courses/course.mts"
+import { COURSES, CoursesIndex, type Section, TermFile, activeTerms } from "../src/courses/course.mts"
 import { Gazetteer } from "../src/places/gazetteer.mts"
 import { placeMatcher } from "../src/social/aliases.mts"
 import { Curated, fromCurated } from "../src/social/curated.mts"
 import { EventsData } from "../src/social/event.mts"
-import { type Lead, Seen, TERM_DAYS, leadsOf, pageExcluded, passagesOf, robotsAllows } from "../src/social/leads.mts"
+import { type Lead, Seen, TERM_DAYS, leadsOf, mainOf, pageExcluded, passagesOf, robotsAllows } from "../src/social/leads.mts"
+import { EVENTS, plain } from "../src/social/sources.mts"
 import { whenText } from "../src/social/when.mts"
 import { contentHash } from "../src/shared/hash.mts"
-import { plain } from "../src/social/sources.mts"
 import { type Day, localDay } from "../src/shared/time.mts"
 import { REPO } from "./files.mts"
 
-/** The sections crawled, each a host and the path its pages are under: student life, languages, the library, Campus Rec, the arena, and the offices students drop in on */
+/**
+ * The sections crawled, each a host and the path its pages are under: student life, languages, the library, Campus
+ * Rec, the arena, and the offices students drop in on
+ */
 const SEEDS = [
   "https://students.unh.edu/",
   "https://cola.unh.edu/languages-literatures-cultures",
@@ -56,22 +59,28 @@ const HEADERS = { "user-agent": "notunh/1 (+https://notunh.app)" }
 /** Files that aren't pages */
 const NOT_HTML = /\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|gif|svg|webp|mp[34]|zip|ics|xml|json|css|js)$/i
 
-/** Answers that mean a host doesn't want us: a limit, a challenge in place of the page, or a sign-in. A page refused (403) is left alone, its host not */
-const LIMITED = [429, 503]
+/**
+ * Answers that mean a host doesn't want us: a limit, a challenge in place of the page, or a sign-in. A page refused
+ * (403) is left alone, its host not
+ */
+const LIMITED   = [429, 503]
 const CHALLENGE = /cf-chl|Just a moment\.\.\./
+const SIGN_IN   = /\/(login|signin|saml|shibboleth|idp|cas)\b|login\.|idp\.|sso\./i
 
 /** What a host's robots.txt is taken to say when it can't be read for its own fault: nobody may read anything */
 const NOBODY = "User-agent: *\nDisallow: /"
-const SIGN_IN = /\/(login|signin|saml|shibboleth|idp|cas)\b|login\.|idp\.|sso\./i
 
 const inRepo = (path: string) =>
   fileURLToPath(new URL(path, REPO))
 
 const CACHE = inRepo("node_modules/.cache/notunh-leads/pages.json")
-const SEEN = inRepo("leads-seen.json")
-const OUT = inRepo("leads.md")
+const SEEN  = inRepo("leads-seen.json")
+const OUT   = inRepo("leads.md")
 
-/** A page as the last run read it: what it answered to ask again by, its title, <main>, links, and when it was published */
+/**
+ * A page as the last run read it: what it answered to ask again by, its title, <main>, links, and when it was
+ * published
+ */
 type Page = { etag?: string, modified?: string, title: string, main: string, links: string[], published?: Day }
 
 const readJson = async (path: string) =>
@@ -133,7 +142,8 @@ const pageOf = async (address: string): Promise<Page | undefined> => {
   if (!response || !answered || SIGN_IN.test(answered.host + answered.pathname))
     return
   const html = response.headers.get("content-type")?.includes("text/html") ? await response.text() : ""
-  if (LIMITED.includes(response.status) || CHALLENGE.test(html) && !/<main\b/i.test(html)) {
+  const main = mainOf(html)
+  if (LIMITED.includes(response.status) || CHALLENGE.test(html) && !main) {
     console.warn(`${url.host} answered ${response.status} to ${address}, so it's left alone`)
     unwelcome.add(url.host)
     return
@@ -147,7 +157,7 @@ const pageOf = async (address: string): Promise<Page | undefined> => {
     ...etag && { etag },
     ...modified && { modified },
     title: titleOf(html),
-    main:  html.match(/<main\b[\s\S]*?<\/main>/i)?.[0] ?? "",
+    main:  main ?? "",
     links: linksOf(html, answered),
     ...published && { published }
   }
@@ -200,12 +210,12 @@ await writeFile(CACHE, JSON.stringify(Object.fromEntries(pages)))
 // and the passages judged before
 const gazetteer = v.parse(Gazetteer, await readJson(inRepo("src/map/gazetteer.json")))
 const match = placeMatcher(gazetteer.places.map(place => place.name))
-const index = v.parse(CoursesIndex, await readJson(inRepo("src/courses/courses.json")))
+const index = v.parse(CoursesIndex, await readJson(inRepo(COURSES)))
 const sections: Section[] = []
 for (const term of activeTerms(index.terms, Date.now(), TERM_DAYS))
   sections.push(...v.parse(TermFile, await readJson(inRepo(`public${term.file}`))).sections)
 const events = [
-  ...v.parse(EventsData, await readJson(inRepo("src/map/events.json"))).events,
+  ...v.parse(EventsData, await readJson(inRepo(EVENTS))).events,
   ...fromCurated(v.parse(Curated, await readJson(inRepo("src/social/curated.json"))), today, TERM_DAYS, match)
 ]
 const known = { subjects: new Set(sections.map(({ subject }) => subject)), sections, events }
@@ -216,7 +226,10 @@ const all = process.argv.includes("--all")
 const hashOf = async (text: string) =>
   (await contentHash(text.replace(/\s+/g, " ").trim())).slice(0, 16)
 
-const found: { url: string, title: string, leads: (Lead & { hash: string })[] }[] = []
+/** A lead with its passage's name in leads-seen.json */
+type Hashed = Lead & { hash: string }
+
+const found: { url: string, title: string, leads: Hashed[] }[] = []
 const reasons = new Map<string, number>()
 const listed = new Set<string>()
 let stated = 0
@@ -227,7 +240,7 @@ for (const [url, page] of pages) {
     reasons.set(excluded, (reasons.get(excluded) ?? 0) + 1)
     continue
   }
-  const leads: (Lead & { hash: string })[] = []
+  const leads: Hashed[] = []
   for (const lead of leadsOf(passagesOf(page.main, url), match, known, today)) {
     stated++
     if ("reason" in lead) {

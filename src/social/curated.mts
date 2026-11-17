@@ -4,20 +4,20 @@
 // so. Each runs from a day until a day, usually its term's, so one nobody checks again ends on its own. Pure
 
 import * as v from "valibot"
-import { type Event, SHORT } from "./event.mts"
+import { type Event, SHORT, Text } from "./event.mts"
 import type { Matcher } from "./sources.mts"
+import { WEEKDAYS } from "./when.mts"
 import { type Day, Day as DaySchema, addDays, atClock, weekday } from "../shared/time.mts"
 
+/** A time of day, "HH:MM", as atClock takes it */
 const Clock = v.pipe(v.string(), v.regex(/^([01]\d|2[0-3]):[0-5]\d$/))
-
-export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const
 
 export const Series = v.pipe(
   v.object({
     /** What it is, as its page names it: "Russian Conversation Hour" */
-    title:   v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(SHORT)),
+    title:   v.pipe(Text(SHORT), v.minLength(1)),
     /** Where, as its page writes it, which places it on the map: "Murkland G10 Lounge" */
-    where:   v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(SHORT)),
+    where:   v.pipe(Text(SHORT), v.minLength(1)),
     /** The weekdays it's on, or none where it's on the dates it names */
     days:    v.array(v.picklist(WEEKDAYS)),
     /** The days it's on where it isn't every week, as "every other Wednesday" is, each named on its page */
@@ -46,9 +46,11 @@ const slugOf = (title: string) =>
   title.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
 
 /** The series' sessions over some Durham days from one as events, each at its place where its where names one */
-export const fromCurated = (series: readonly Series[], from: Day, days: number, match: Matcher): Event[] =>
-  series.flatMap(one => Array.from({ length: days }, (_, i) => addDays(from, i))
-    .filter(day => day >= one.from && day <= one.until && (one.dates?.includes(day) || one.days.includes(WEEKDAYS[weekday(day)])))
+export const fromCurated = (series: readonly Series[], from: Day, days: number, match: Matcher): Event[] => {
+  const listed = Array.from({ length: days }, (_, i) => addDays(from, i))
+  return series.flatMap(one => listed
+    .filter(day => day >= one.from && day <= one.until)
+    .filter(day => one.dates?.includes(day) || one.days.includes(WEEKDAYS[weekday(day)]))
     .map(day => ({
       id:      `curated:${slugOf(one.title)}-${day}-${one.start.replace(":", "")}`,
       title:   one.title,
@@ -60,3 +62,4 @@ export const fromCurated = (series: readonly Series[], from: Day, days: number, 
       url:     one.url,
       checked: one.checked
     })))
+}

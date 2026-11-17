@@ -1,16 +1,18 @@
-// Each calendar's answer read into events (event.mts): Presence (Wildcat Link) as its JSON, 25Live Publisher as its
-// JSON, Athletics' Sidearm ICS, and sport clubs' events as DSE Rec's JSON. Pure, so scripts/map/events.mts fetches
-// and the tests read fixtures. Entries of a shape not known here are left out rather than failing the night's build
-// (usable in src/shared/json.mts), as is anything online, cancelled or postponed, staff training, a deadline, away
-// games, and Manchester's. Places are matched by placeMatcher (aliases.mts) over the venue, then the description for
-// calendar-only 25Live entries, whose venue is in prose
+// Each calendar's answer read into events (event.mts): Presence (Wildcat Link) as its JSON, its clubs' weekly
+// meetings among them, 25Live Publisher as its JSON, Athletics' Sidearm ICS, sport clubs' events as DSE Rec's JSON,
+// and Campus Rec's programs as its Fusion pages. Pure, so scripts/map/events.mts fetches and the tests read fixtures.
+// Entries of a shape not known here are left out rather than failing the night's build (usable in
+// src/shared/json.mts), as is anything online, cancelled or postponed, staff training, a deadline, away games, and
+// Manchester's. Places are matched by placeMatcher (aliases.mts) over the venue, then the description for
+// calendar-only 25Live entries, whose venue is in prose. Times written in words, as a club's meeting time and an
+// offering's title are, are read by when.mts
 
 import * as v from "valibot"
 import { type Event, SHORT } from "./event.mts"
 import { deduped } from "./sport.mts"
 import { usable } from "../shared/json.mts"
-import { whenOf } from "./when.mts"
-import { DAY, type Day, addDays, atClock, hhmm, localDay, weekday } from "../shared/time.mts"
+import { MONTH, datesOf, timesOf, whenOf } from "./when.mts"
+import { DAY, type Day, HOUR, addDays, atClock, hhmm, localDay, weekday } from "../shared/time.mts"
 
 /** Text as it's shown: tags and entities dropped, space squeezed, cut to a length */
 export const plain = (html: string, max = SHORT) =>
@@ -34,8 +36,15 @@ const firstSession = (start: number, end: number) => {
   return sameDay > start ? sameDay : atClock(addDays(localDay(start), 1), hhmm(end))
 }
 
+/** A local time with no offset, "2026-11-18T18:15:00" or "2026-10-26 17:15:00", as an instant on Durham's clock */
+const localAt = (local: string) =>
+  atClock(local.slice(0, 10), local.slice(11, 16))
+
 /** Where the build keeps the events, as scripts/map/events.mts writes them */
 export const EVENTS = "src/map/events.json"
+
+/** Weeks the build lists, from today: asked of 25Live and DSE Rec, and told of clubs' meetings and curated series */
+export const WEEKS = 3
 
 //#region Presence
 
@@ -88,29 +97,34 @@ const PresenceClub = v.object({
 })
 
 /** The longest a meeting is, longer being a place's hours */
-const LONGEST = 4 * 3_600_000
+const LONGEST = 4 * HOUR
 
-/** Meeting times that don't say a club meets every week, or that aren't a club's: "Bi-weekly", "Selected Thursdays", "TBD", an office's hours */
+/**
+ * Meeting times that don't say a club meets every week, or that aren't a club's: "Bi-weekly", "Selected Thursdays",
+ * "TBD", an office's hours
+ */
 const NOT_WEEKLY = /bi-?weekly|every other|alternat|select|certain|some |occasional|month|first|second|third|fourth|last|tb[ad]|var(y|ies)|office hours/i
 
 /**
  * Wildcat Link's clubs' weekly meetings on some days, from the JSON its API answers for its clubs: one each day of a
- * weekday a club's meeting time names, where it names one weekday or more and one time ("Tuesdays from 5:00-6:00 PM",
- * "Mondays @ 7:30 PM", which has no end and so is told as starting then). Only the meeting fields are read, never a
- * club's description, which names its members
+ * weekday a club's meeting time names, where it names weekdays, one time and no date ("Tuesdays from 5:00-6:00 PM",
+ * or "Mondays @ 7:30 PM", which has no end and so is told as starting then). Only the meeting fields are read, never
+ * a club's description, which names its members
  */
 export const fromPresenceClubs = (json: unknown, days: readonly Day[], match: Matcher): Event[] =>
   v.parse(usable(PresenceClub), json).flatMap(club => {
     const text = club.regularMeetingTime ?? ""
     const when = days.length ? whenOf(text, days[0]) : undefined
-    const [{ start, end = start }] = when?.times ?? [{ start: "" }]
-    // Every weekday or longer than a meeting is an office's hours: "Monday-Friday, 9AM-4PM"
-    if (!when?.days.length || when.times.length !== 1 || when.dates.length || NOT_WEEKLY.test(text) || when.days.length >= 5 || atClock(days[0], end) - atClock(days[0], start) > LONGEST)
+    if (!when?.days.length || when.times.length !== 1 || when.dates.length || NOT_WEEKLY.test(text))
+      return []
+    const [{ start, end = start }] = when.times
+    // Every weekday, or longer than a meeting, is an office's hours: "Monday-Friday, 9AM-4PM"
+    if (when.days.length >= 5 || atClock(days[0], end) - atClock(days[0], start) > LONGEST)
       return []
     const where = plain(club.regularMeetingLocation ?? "")
     return days.filter(day => when.days.includes(weekday(day))).map(day => ({
       id:     `presence:${club.uri}/meeting/${day}`,
-      title:  plain(`${plain(club.name, 200)} meeting`),
+      title:  plain(`${club.name} meeting`),
       start:  atClock(day, start),
       end:    atClock(day, end),
       place:  match(where),
@@ -254,11 +268,10 @@ const OFF = /cancel|disapprov|declin|reject|denied/
  * midnight does. A tournament over a weekend is read as its first day by the same rule
  */
 const sessionOf = (start: string, end: string) => {
-  const [startDay, startClock] = start.split(" ")
-  const [endDay, endClock] = end.split(" ")
-  const from = atClock(startDay, startClock.slice(0, 5))
-  const to = atClock(endDay, endClock.slice(0, 5))
-  return endDay === startDay ? { start: from, end: to, single: true } : { start: from, end: firstSession(from, to), single: false }
+  const from = localAt(start)
+  const to = localAt(end)
+  const single = end.slice(0, 10) === start.slice(0, 10)
+  return { start: from, end: single ? to : firstSession(from, to), single }
 }
 
 /**
@@ -303,16 +316,16 @@ export const fromDserec = (json: unknown, match: Matcher): Event[] => {
 
 /**
  * Campus Rec's programs read as events: Outdoor Adventures' trips, the Mendums Pond shuttle, open skating, group
- * exercise classes, certification courses. Its index lists programs by classification, each classification's page
- * listing its own; those of classifications that aren't for going to are left out. Signing up takes UNH's sign-in, so
- * each links to its program's page
+ * exercise classes, certification courses. Its index names its classifications, and each classification's page lists
+ * its programs. A program is scheduled by calendar, in sessions, or by offerings each semester; both are read as
+ * sessions, which recEvents makes events. Signing up takes UNH's sign-in, so each links to its program's page
  */
 const FUSION = "https://crec.unh.edu/Program"
 
 /** Campus Rec's index of programs, which names its classifications */
 export const REC_INDEX = FUSION
 
-/** Classifications that aren't things to go to: staff training, birthday parties, passes, and sport clubs, which DSE Rec tells */
+/** Classifications that aren't for going to: staff training, birthday parties, passes, and DSE Rec's sport clubs */
 const NOT_PROGRAMS = ["Staff Trainings", "Birthday Parties", "Outdoor Pool Passes", "Sport Clubs"]
 
 /** The index's classifications, by id, those for going to */
@@ -337,14 +350,13 @@ export const programUrl = (program: string) =>
 export const offeringsUrl = (program: string, semester: string) =>
   `${FUSION}/GetOfferingsForSemester?semesterId=${semester}&programId=${program}`
 
-/** A program's sessions on its calendar, as its page asks for them when it's scheduled by calendar rather than by offering */
+/** A program's sessions on its calendar, as its page asks for them where it's scheduled by calendar */
 export const instancesUrl = (program: string) =>
   `${FUSION}/GetProgramInstances?programID=${program}`
 
 /**
- * A program's name, its semesters by id and name ("Fall 2026"), its description, and whether it's scheduled by
- * calendar, as Open Skate is, its sessions asked for by instancesUrl, rather than in offerings each semester, from its
- * page
+ * A program, from its page: its name, its semesters by id and name ("Fall 2026"), its description, and whether it's
+ * scheduled by calendar, as Open Skate is, rather than by offerings each semester
  */
 export const programOf = (html: string) => {
   const name = plain(html.match(/<h1 class="progTitle">([^<]*)/)?.[1] ?? "")
@@ -356,58 +368,90 @@ export const programOf = (html: string) => {
   return { name, semesters, description, byCalendar: scheduled !== undefined && scheduled === byCalendar }
 }
 
+/** A program as its sessions are read: its id, and its name and description as programOf reads them */
 type Program = { id: string, name: string, description: string }
 
-/** "10am", "11:30am", "4:30 pm" as "HH:MM" */
-const clock24 = (hours: string, minutes = "00", meridiem: string) =>
-  `${String(+hours % 12 + (/p/i.test(meridiem) ? 12 : 0)).padStart(2, "0")}:${minutes}`
-
-/** A Durham day from its year, month and date as written */
-const dayOf = (year: string, month: number | string, date: string) =>
-  `${year}-${String(month).padStart(2, "0")}-${date.padStart(2, "0")}` as Day
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+/**
+ * One session of a program to sign up for, as both of Fusion's schedules come to: its own id, its title, its window,
+ * its room as shown, the spots left, and when signing up closes
+ */
+type Session = { id: string, title: string, start: number, end: number, room?: string, left: number, closes?: number }
 
 /**
- * A window on a day from the times written in some text: "10am-4:30pm", "6:00 - 8:00 PM", "9:00 AM - 8:00 PM", or a
- * departure alone, "11:30am", an hour long. A start with no meridiem has its end's, unless that puts it after the end
+ * Campus Rec's own names for its rooms, which name no building: its studios, kitchen and MAC courts are in the Hamel
+ * Rec Center, its rink the Whittemore Center's
  */
-const windowOf = (day: Day, text: string) => {
-  const [, h1, m1, a1, h2, m2, a2] = text.match(/\b(\d{1,2})(?::(\d\d))?\s*(am|pm)?\s*[-–]\s*(\d{1,2})(?::(\d\d))?\s*(am|pm)\b/i) ?? text.match(/\b(\d{1,2})(?::(\d\d))?\s*(am|pm)\b/i) ?? []
-  if (!h1)
+const REC_ROOMS: [RegExp, string][] = [[/^Studio \d|Demonstration Kitchen|^MAC /, "Hamel Rec Center"], [/^Ice Rink$/, "Whittemore Center"]]
+
+/**
+ * A program's sessions as events, those with spots left, placed by their title or room, else where the program says
+ * it meets ("Meeting location: Hamel Recreation Center", "held at Swasey Indoor Pool")
+ */
+const recEvents = (sessions: Session[], program: Program, match: Matcher): Event[] => {
+  const meets = program.description.match(/(?:meet(?:ing location)?|held)\s*(?:at|:)\s*(?:the\s+)?([^.,]+)/i)?.[1] ?? ""
+  return sessions.flatMap(({ id, title, start, end, room = "", left, closes }) => {
+    if (left < 1)
+      return []
+    const building = REC_ROOMS.find(([pattern]) => pattern.test(room))?.[1] ?? ""
+    const place = match(title) ?? match(room) ?? match(building) ?? match(meets)
+    return [{
+      id:     `rec:${id}`,
+      title:  plain(title),
+      start,
+      end,
+      place,
+      where:  (room !== place ? room : "") || (place ? "" : plain(meets) || program.name),
+      source: "rec",
+      url:    programUrl(program.id),
+      left,
+      ...closes !== undefined && { closes }
+    }]
+  })
+}
+
+/** A meridiem or noon, as written */
+const WRITTEN = /\d\s*[ap]\.?\s*m\b|\bnoon\b/i
+
+/**
+ * A window on a day from the time some text states (when.mts): its first range, "10am-4:30pm" or "6:00 - 8:00 PM",
+ * else its one time alone, as a departure's is, "11:30am", an hour long
+ */
+const windowOf = (day: Day | undefined, text: string) => {
+  const [time, ...others] = timesOf(text).times
+  // A program's times are told as written, never guessed: "(10-4:30)" names no meridiem, so no time
+  if (!day || !time || !time.end && others.length || !WRITTEN.test(text))
     return
-  let start = atClock(day, clock24(h1, m1, a1 ?? a2))
-  const end = h2 ? atClock(day, clock24(h2, m2, a2)) : start + 3_600_000
-  if (!a1 && start >= end)
-    start = atClock(day, clock24(h1, m1, "am"))
-  return end > start ? { start, end } : undefined
+  const start = atClock(day, time.start)
+  return { start, end: time.end ? atClock(day, time.end) : start + HOUR }
 }
 
 /**
- * An offering's day and times, from its title as Campus Rec writes them, "Saturday 11/7 (10am-4:30pm): Pancakes on
- * Mt. Major" or "Saturday 9/5 11:30am Departure", in a semester's year, else from the first row of its schedule,
+ * An offering's window, from its title as Campus Rec writes them, "Saturday 11/7 (10am-4:30pm): Pancakes on Mt. Major"
+ * or "Saturday 9/5 11:30am Departure", in a semester's year, else from the first row of its schedule, with its room,
  * "Fri, Nov 20 2026" at "6:00 - 8:00 PM" in the Swasey Indoor Pool: a course over several days, or every Tuesday and
  * Thursday for four weeks, is read as its first session, as signing up for it is for all of it
  */
 const scheduledOf = (title: string, year: string, card: string) => {
-  const date = title.match(/\b(\d{1,2})\/(\d{1,2})\b/)
+  const date = title.match(/\b\d{1,2}\/\d{1,2}\b/)
+  // Its date written with the semester's year, "11/7/2026", is read as any date is
   if (date)
-    return windowOf(dayOf(year, date[1], date[2]), title.slice(date.index))
+    return windowOf(datesOf(`${date[0]}/${year}`)[0], title.slice(date.index))
   const [, row] = card.match(/<tr class="regular-occurrence"[^>]*>([\s\S]*?)<\/tr>/) ?? []
   const cell = (name: string) => plain(row?.match(new RegExp(`<td class="?${name}"?>([^<]*)`))?.[1] ?? "")
-  const [, month, day, rowYear] = cell("schedule-until").match(/^\w{3}, (\w{3}) (\d{1,2}) (\d{4})/) ?? []
-  const index = MONTHS.indexOf(month)
-  const window = index < 0 ? undefined : windowOf(dayOf(rowYear, index + 1, day), cell("time-column"))
+  const [day] = datesOf(cell("schedule-until").match(/^\w{3}, \w{3} \d{1,2} \d{4}/)?.[0] ?? "")
+  const window = windowOf(day, cell("time-column"))
   return window && { ...window, room: cell("location-column") }
 }
 
+/** The dates a title starts with where they're in words: "November 20th, 21st, 22nd" */
+const DATES_FIRST = new RegExp(String.raw`^(?:${MONTH})\.? \d{1,2}(st|nd|rd|th)?(,\s*\d{1,2}(st|nd|rd|th)?)*\s+`)
+
 /** What an offering is, its title without when it is or who leads it: "Pancakes on Mt. Major", else the program's name */
 const whatOf = (title: string, program: string) => {
-  const what = title
+  const undated = title
     .replace(/^.*?\b\d{1,2}\/\d{1,2}(\s*-\s*\d{1,2}\/\d{1,2})?\b\s*(\([^)]*\))?\s*:?\s*/, "")
-    // Its dates where the title starts with them: "November 20th, 21st, 22nd"
-    .replace(new RegExp(`^(${MONTHS.join("|")})[a-z]* \\d{1,2}(st|nd|rd|th)?(,\\s*\\d{1,2}(st|nd|rd|th)?)*\\s+`), "")
-    .replace(/\b\d{1,2}(:\d\d)?\s*(am|pm)?\s*-\s*\d{1,2}(:\d\d)?\s*(am|pm)\b\s*|\b\d{1,2}(:\d\d)?\s*(am|pm)\b\s*/gi, "")
+    .replace(DATES_FIRST, "")
+  const what = timesOf(undated).rest
     // Its leaders, whom Campus Rec names, aren't what it is: "- Liv and Elise", "with Liv and Tessa"
     .replace(/\s+(-|with)\s+[A-Z][a-z]+(\s+(and|&)\s+[A-Z][a-z]+)*\s*$/, "")
     .trim()
@@ -418,56 +462,33 @@ const whatOf = (title: string, program: string) => {
 
 /** "until Wed, Nov 4 2026 at 12:00 AM", when signing up for an offering closes, on Durham's clock */
 const closesOf = (card: string) => {
-  const [, month, date, year, hours, minutes, meridiem] = card.match(/until \w{3}, (\w{3}) (\d{1,2}) (\d{4}) at (\d{1,2}):(\d\d) ([AP]M)/) ?? []
-  const index = MONTHS.indexOf(month)
-  return index < 0 ? undefined : atClock(dayOf(year, index + 1, date), clock24(hours, minutes, meridiem))
-}
-
-/** Campus Rec's own names for its rooms, which name no building: its studios, kitchen and MAC courts are in the Hamel Rec Center, its rink the Whittemore Center's */
-const REC_ROOMS: [RegExp, string][] = [[/^Studio \d|Demonstration Kitchen|^MAC /, "Hamel Rec Center"], [/^Ice Rink$/, "Whittemore Center"]]
-
-/** One session of a program to sign up for, as both of Fusion's schedules come to: its own id, title, window, room, and spots left */
-type Session = { id: string, title: string, start: number, end: number, room: string, left: number, closes?: number }
-
-/**
- * A program's sessions as events, those with spots left, placed by their title or room, else where the program says
- * it meets ("Meeting location: Hamel Recreation Center", "held at Swasey Indoor Pool")
- */
-const recEvents = (sessions: Session[], program: Program, match: Matcher): Event[] => {
-  const meets = program.description.match(/(?:meet(?:ing location)?|held)\s*(?:at|:)\s*(?:the\s+)?([^.,]+)/i)?.[1] ?? ""
-  return sessions.flatMap(({ id, title, start, end, room, left, closes }) => {
-    if (left < 1)
-      return []
-    const place = match(title) ?? match(room) ?? match(REC_ROOMS.find(([pattern]) => pattern.test(room))?.[1] ?? "") ?? match(meets)
-    return [{
-      id:     `rec:${id}`,
-      title:  plain(title),
-      start,
-      end,
-      place,
-      where:  plain(room !== place ? room : "") || (place ? "" : plain(meets) || program.name),
-      source: "rec",
-      url:    programUrl(program.id),
-      left,
-      ...closes !== undefined && { closes }
-    }]
-  })
+  const until = card.match(/until \w{3}, (\w{3} \d{1,2} \d{4} at \d{1,2}:\d\d [AP]M)/)?.[1] ?? ""
+  const [day] = datesOf(until)
+  const [time] = timesOf(until).times
+  return day && time ? atClock(day, time.start) : undefined
 }
 
 /**
  * A program's offerings in a semester as events, from the cards its page loads: those not cancelled with a day and
  * time in their title or schedule (scheduledOf)
  */
-export const fromRecOfferings = (html: string, program: Program, semester: string, match: Matcher): Event[] =>
-  recEvents(html.split(/(?=<div class="offering-card)/).slice(1).flatMap(card => {
+export const fromRecOfferings = (html: string, program: Program, semester: string, match: Matcher): Event[] => {
+  const year = semester.match(/\d{4}/)?.[0] ?? ""
+  return recEvents(html.split(/(?=<div class="offering-card)/).slice(1).flatMap((card): Session[] => {
     const id = card.match(/data-offering-id="([0-9a-f-]{36})"/)?.[1]
     const title = plain(card.match(/<h3 class="card-title">([^<]*)/)?.[1] ?? "", 500)
-    const when = scheduledOf(title, semester.match(/\d{4}/)?.[0] ?? "", card)
+    const when = scheduledOf(title, year, card)
     if (!id || !when || /^cancel/i.test(title))
       return []
-    const closes = closesOf(card)
-    return [{ room: "", ...when, id, title: whatOf(title, program.name), left: Number(card.match(/(\d+) Spots? available/i)?.[1] ?? 0), ...closes !== undefined && { closes } }]
+    return [{
+      ...when,
+      id,
+      title:  whatOf(title, program.name),
+      left:   Number(card.match(/(\d+) Spots? available/i)?.[1] ?? 0),
+      closes: closesOf(card)
+    }]
   }), program, match)
+}
 
 const Appointment = v.object({
   ID:               v.pipe(v.string(), v.uuid()),
@@ -479,14 +500,10 @@ const Appointment = v.object({
   ClassSize:        v.number()
 })
 
-/** A local "2026-11-18T18:15:00" as an instant */
-const localAt = (local: string) =>
-  atClock(local.slice(0, 10) as Day, local.slice(11, 16))
-
 /**
  * A program's sessions on its calendar as events, as Open Skate and group exercise classes are scheduled, from the
- * appointments its page reads them from: one session each, the appointment's id shared by its series, so each is told
- * by its id and start
+ * appointments its page reads them from, on the local clock: one session each, the appointment's id shared by its
+ * series, so each is told by its id and start
  */
 export const fromRecInstances = (html: string, program: Program, match: Matcher): Event[] => {
   const json = plain(html.match(/id="ApptInfo"[^>]*value="([^"]*)"/)?.[1] ?? "[]", Infinity)

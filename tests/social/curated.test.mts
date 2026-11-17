@@ -4,7 +4,8 @@ import { readFile } from "node:fs/promises"
 import * as v from "valibot"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { Curated, type Series, WEEKDAYS, fromCurated } from "../../src/social/curated.mts"
+import { Curated, type Series, fromCurated } from "../../src/social/curated.mts"
+import { WEEKDAYS } from "../../src/social/when.mts"
 import { addDays, atClock, localDay, weekday } from "../../src/shared/time.mts"
 
 const gazetteer: Gazetteer = JSON.parse(await readFile(new URL("../fixtures/data/src/map/gazetteer.json", import.meta.url), "utf8"))

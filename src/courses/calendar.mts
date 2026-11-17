@@ -102,12 +102,13 @@ export const fromLive25 = (json: unknown, fetched: number): Calendar => {
 }
 
 /**
- * The days of some from a day that classes meet on, as clubs meet then too: within a term that's begun, before its last
+ * Those of some days from a day that classes meet on, as clubs do too: within a term that's begun, not past its last
  * day of classes where the calendar names one, and not a day without classes
  */
-export const classDays = (calendar: Pick<Calendar, "noClass" | "terms">, from: Day, days: number) =>
-  Array.from({ length: days }, (_, i) => addDays(from, i)).filter(day =>
-    !calendar.noClass.includes(day) && Object.values(calendar.terms).some(({ start, end }) => start && start <= day && (!end || day <= end)))
+export const classDays = ({ noClass, terms }: Pick<Calendar, "noClass" | "terms">, from: Day, days: number) =>
+  Array.from({ length: days }, (_, i) => addDays(from, i))
+    .filter(day => Object.values(terms).some(({ start, end }) => start && start <= day && (!end || day <= end)))
+    .filter(day => !noClass.includes(day))
 
 /** The weekday a day's classes follow: its own, 0 for Monday, or the one it's swapped to */
 export const letterOf = (calendar: Pick<Calendar, "swaps">, day: Day, weekday: number): Letter =>

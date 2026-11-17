@@ -6,7 +6,7 @@ import type { Event } from "../../src/social/event.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
 import { classOf, leadsOf, listedAs, pageExcluded, passagesOf, robotsAllows, scoreOf, wordingExcluded } from "../../src/social/leads.mts"
-import { whenOf } from "../../src/social/when.mts"
+import { timesOf, whenOf } from "../../src/social/when.mts"
 import { addDays, atClock, daysBetween, localDay, weekday } from "../../src/shared/time.mts"
 
 const gazetteer: Gazetteer = JSON.parse(await readFile(new URL("../fixtures/data/src/map/gazetteer.json", import.meta.url), "utf8"))
@@ -47,10 +47,21 @@ test("a range with one meridiem reads its start by its end's, unless that starts
   expect(whenOf("Open from midnight on Fridays", today)?.times).toEqual([{ start: "00:00" }])
   // A meridiem is "am" or "pm", not an "a" or a "p" alone
   expect(whenOf("Groups of 3-4 people meet on Friday", today)).toBeUndefined()
-  // Neither a word that starts like a month nor a day no month has is a date
+  // A range past midnight is two times, its start the evening's where only its end says which half of the day
+  expect(whenOf("Late Skate: Fridays 10pm-1am", today)?.times).toEqual([{ start: "22:00" }, { start: "01:00" }])
+  expect(whenOf("Late Skate: Fridays 9-1am", today)?.times).toEqual([{ start: "21:00" }, { start: "01:00" }])
+  // Neither a word that starts like a month, nor a day no month has, nor a year of three digits is a date
   expect(whenOf("Marketing 10 on Tuesdays 3-4pm", today)?.dates).toEqual([])
   expect(whenOf("Tea on 2/30 from 3-4pm", today)?.dates).toEqual([])
+  expect(whenOf("Tea on 10/28/202 from 3-4pm", today)?.dates).toEqual([])
 })
+
+test("the times a text states are a range that ends after it starts, else two times, and the rest is the text without them", () =>
+  fc.assert(fc.property(written, written, fc.constantFrom("-", "–", " to "), (from, to, dash) => {
+    const { times, rest } = timesOf(`Tea ${from.text}${dash}${to.text} Fridays`)
+    expect(times).toEqual(from.clock < to.clock ? [{ start: from.clock, end: to.clock }] : [{ start: from.clock }, { start: to.clock }])
+    expect(rest).toBe(from.clock < to.clock ? "Tea  Fridays" : `Tea ${dash} Fridays`)
+  })))
 
 test("text stating no time of day is no lead, nor a time alone with no day, date or end, nor numbers alone", () => {
   fc.assert(fc.property(fc.integer({ min: 0, max: 12 }), fc.integer({ min: 0, max: 12 }), fc.constantFrom("grades", "won", "Gr", "Mondays"), (a, b, word) => {

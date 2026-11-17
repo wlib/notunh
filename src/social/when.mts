@@ -1,13 +1,14 @@
-// What a line of text says of when, as UNH's pages and clubs write it: "Russian Conversation Hour: 2-3pm every
-// Friday", "Tuesdays from 5:00-6:00 PM", "Mondays @ 7:30 PM", "12:40-1:40 Tuesdays", "every Thursday at noon",
-// "Monday–Friday", "9/16, 9/30", "Nov. 4th". Our own patterns, shaped to how they're written rather than general: a
-// range's start takes its end's meridiem unless that puts it after the end, bare numbers ("grades 1-6") aren't
-// times, and a date without its year is in the year nearest the day it's read on. Read by the lead scanner
-// (leads.mts) and the clubs' meeting times (sources.mts). Pure
+// What a line of text says of when, as UNH's pages, its clubs and Campus Rec write it: "Russian Conversation Hour:
+// 2-3pm every Friday", "Tuesdays from 5:00-6:00 PM", "Mondays @ 7:30 PM", "12:40-1:40 Tuesdays", "every Thursday at
+// noon", "Monday–Friday", "9/16, 9/30", "Nov. 4th". Our own patterns, shaped to how they're written rather than
+// general: a range's start takes its end's meridiem unless that puts it after the end, bare numbers ("grades 1-6")
+// aren't times, and a date without its year is in the year nearest the day it's read on. The one reader of times, for
+// the lead scanner (leads.mts), the clubs' meeting times and Campus Rec's offerings (sources.mts). Pure
 
 import { type Day, addDays, daysBetween } from "../shared/time.mts"
 
-const DAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+/** The weekdays as they're kept and shown, Monday first, as weekday() counts them */
+export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const
 
 /** A weekday as written, "Tuesdays", "Thurs.", "Fri", capitalized, or "weekdays" and "weekends" */
 const WEEKDAY = /\b(?:(Mon|Tue|Tues|Wed|Weds|Thu|Thur|Thurs|Fri|Sat|Sun)(?:day)?s?\b\.?|(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)s?\b|(weekday|weekend)s\b)/g
@@ -21,10 +22,13 @@ const RANGE = new RegExp(String.raw`(?<![\d/:])(?:${TIME}|(noon))\s*(?:-|–|—
 /** A time alone, which says it's a time: "at noon", "7pm", "7:30" */
 const SINGLE = new RegExp(String.raw`(?<![\d/:])(?:(\d{1,2})(?::([0-5]\d))?\s*([ap])\.?\s*m\b\.?|(\d{1,2}):([0-5]\d)(?![\d/])|\b(noon|midnight)\b)`, "gi")
 
+/** A month as written, "November", "Nov", "Sept" */
+export const MONTH = "Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?"
+
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
 
-/** A date, "9/16", "10/28/2026", "November 20", "Nov. 4th" */
-const DATE = /(?<![\d/])(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?![\d/])|\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?/g
+/** A date, "9/16", "10/28/26", "10/28/2026", "November 20", "Nov. 4th", "Nov 20 2026" */
+const DATE = new RegExp(String.raw`(?<![\d/])(\d{1,2})\/(\d{1,2})(?:\/(\d{4}|\d\d))?(?![\d/])|\b(${MONTH})\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?`, "g")
 
 /** Wording that says it's again and again */
 const RECURRING = /\b(every|each|weekly|biweekly|monthly|alternating|every other|ongoing|all semester|throughout the semester)\b|\b(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)days\b/i
@@ -37,58 +41,57 @@ const at = (hours: number, minutes: number, meridiem?: string) =>
 const guessed = (hours: number) =>
   hours >= 8 && hours <= 11 ? "a" : "p"
 
-/** A time of day a passage names, "HH:MM", and its end where it names one */
+/** A time of day a text states, "HH:MM", and its end where it states one */
 export type Window = { start: string, end?: string }
 
 /** What a passage says of when: its weekdays (0 Monday), its times, its dates, and whether it's again and again */
 export type When = { days: number[], times: Window[], dates: Day[], recurring: boolean }
 
-/** A date as written, in the year that puts it nearest a day, as a page names the coming term's dates without one */
-const dateOf = (month: number, date: number, year: number | undefined, near: Day): Day | undefined => {
-  if (month < 1 || month > 12 || date < 1 || date > 31)
-    return
-  const of = (y: number) => `${y}-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}` as Day
-  const y = +near.slice(0, 4)
-  const day = year ? of(year < 100 ? 2000 + year : year) : [y - 1, y, y + 1].map(of).sort((a, b) => Math.abs(daysBetween(near, a)) - Math.abs(daysBetween(near, b)))[0]
-  // Not "February 30"
-  return addDays(day, 0) === day ? day : undefined
-}
-
-/** What a passage says of when, as of a day, or none where it states no time of day with a day, a date or an end */
-export const whenOf = (text: string, today: Day): When | undefined => {
-  const times: Window[] = []
-  const covered: [number, number][] = []
+/**
+ * The times of day a text states, its ranges before its times alone, each in the order written, and the rest of the
+ * text without them. A range that doesn't end after it starts, "10pm-1am", runs past midnight, and is read as two
+ * times
+ */
+export const timesOf = (text: string) => {
+  const found: { from: number, to: number, time: Window }[] = []
   for (const match of text.matchAll(RANGE)) {
     const [, h1, m1, a1, noon1, h2, m2, a2, noon2] = match
     // Numbers alone, "grades 1-6", "won 4-0", aren't times
-    if (!a1 && !a2 && !m1 && !m2 && !noon1 && !noon2)
+    if (!a1 && !a2 && !m1 && !m2 && !noon1 && !noon2 || +h1 > 12 || +h2 > 12)
       continue
-    const end = noon2 && (noon2.toLowerCase() === "noon" ? "12:00" : "24:00")
     const endMeridiem = a2 ?? (noon2 ? undefined : guessed(+h2))
-    const endAt = end ?? at(+h2, +(m2 ?? 0), endMeridiem)
-    let startAt = noon1 ? "12:00" : at(+h1, +(m1 ?? 0), a1 ?? endMeridiem ?? guessed(+h1))
+    const end = noon2 ? (noon2.toLowerCase() === "noon" ? "12:00" : "24:00") : at(+h2, +(m2 ?? 0), endMeridiem)
+    let start = noon1 ? "12:00" : at(+h1, +(m1 ?? 0), a1 ?? endMeridiem ?? guessed(+h1))
     // "11-1pm" starts in the morning, as a start after its end would
-    if (!noon1 && !a1 && startAt >= endAt)
-      startAt = at(+h1, +(m1 ?? 0), "a")
-    if (+h1 > 12 || +h2 > 12 || startAt >= endAt)
-      continue
-    times.push({ start: startAt, end: endAt })
-    covered.push([match.index, match.index + match[0].length])
+    if (!noon1 && !a1 && start >= end)
+      start = at(+h1, +(m1 ?? 0), "a")
+    if (start < end)
+      found.push({ from: match.index, to: match.index + match[0].length, time: { start, end } })
+    // "9-1am" starts in the evening, which its start alone wouldn't say; its end is read below, as a time alone
+    else if (!noon1 && !a1 && a2)
+      found.push({ from: match.index, to: match.index + h1.length + (m1 ? 3 : 0), time: { start: at(+h1, +(m1 ?? 0), "p") } })
   }
   for (const match of text.matchAll(SINGLE)) {
-    if (covered.some(([from, to]) => match.index >= from && match.index < to))
+    const [, h, m, a, bare, bareMinutes, word] = match
+    if (found.some(({ from, to }) => match.index >= from && match.index < to) || +(h ?? bare ?? 0) > 12)
       continue
-    const [, h, m, a, h24, m24, word] = match
-    if (word)
-      times.push({ start: word.toLowerCase() === "noon" ? "12:00" : "00:00" })
-    else if (h && +h <= 12)
-      times.push({ start: at(+h, +(m ?? 0), a) })
-    else if (h24 && +h24 <= 12)
-      times.push({ start: at(+h24, +m24, guessed(+h24)) })
+    const start =
+      word ? (word.toLowerCase() === "noon" ? "12:00" : "00:00") :
+      h    ? at(+h, +(m ?? 0), a) :
+      at(+bare, +bareMinutes, guessed(+bare))
+    found.push({ from: match.index, to: match.index + match[0].length, time: { start } })
   }
+  return {
+    times: found.sort((a, b) => +!a.time.end - +!b.time.end || a.from - b.from).map(({ time }) => time),
+    rest:  found.sort((a, b) => b.from - a.from).reduce((rest, { from, to }) => rest.slice(0, from) + rest.slice(to), text)
+  }
+}
+
+/** The weekdays a text names (0 Monday), each once, in order: "Tuesdays", "weekends", each day of "Monday–Friday" */
+const weekdaysOf = (text: string) => {
   const named = [...text.matchAll(WEEKDAY)].map(match => {
     const [, short, long, span] = match
-    const days = span ? (span.toLowerCase() === "weekday" ? [0, 1, 2, 3, 4] : [5, 6]) : [DAY_NAMES.indexOf((short ?? long).slice(0, 3).toLowerCase())]
+    const days = span ? (span === "weekday" ? [0, 1, 2, 3, 4] : [5, 6]) : [WEEKDAYS.findIndex(day => (short ?? long).startsWith(day))]
     return { days, from: match.index, to: match.index + match[0].length }
   })
   // "Monday–Friday", "Mon through Thu": each day between
@@ -98,15 +101,35 @@ export const whenOf = (text: string, today: Day): When | undefined => {
       for (let day = first; day !== next.days[0]; day = (day + 1) % 7)
         named[i].days.push(day)
   }
-  const days = [...new Set(named.flatMap(({ days }) => days))].sort()
-  const dates = [...text.matchAll(DATE)].flatMap(([, month, date, year, name, dateNamed, namedYear]) => {
-    const day = name
-      ? dateOf(MONTHS.indexOf(name.slice(0, 3).toLowerCase()) + 1, +dateNamed, namedYear ? +namedYear : undefined, today)
-      : dateOf(+month, +date, year ? +year : undefined, today)
-    return day ? [day] : []
+  return [...new Set(named.flatMap(({ days }) => days))].sort()
+}
+
+/**
+ * The dates a text names, none of them a day no month has, as "February 30". One written without its year is in the
+ * year that puts it nearest a day, as a page names the coming term's dates, or left out where no day is given
+ */
+export const datesOf = (text: string, near?: Day) =>
+  [...text.matchAll(DATE)].flatMap(([, monthNumber, dateNumbered, yearNumbered, name, dateNamed, yearNamed]): Day[] => {
+    const month = name ? MONTHS.indexOf(name.slice(0, 3).toLowerCase()) + 1 : +monthNumber
+    const date = +(dateNamed ?? dateNumbered)
+    const year = +(yearNamed ?? yearNumbered ?? 0)
+    if (month < 1 || month > 12 || date < 1 || date > 31)
+      return []
+    const of = (y: number): Day =>
+      [String(y).padStart(4, "0"), String(month).padStart(2, "0"), String(date).padStart(2, "0")].join("-")
+    const nearest = (to: Day) =>
+      [-1, 0, 1].map(i => of(+to.slice(0, 4) + i))
+        .sort((a, b) => Math.abs(daysBetween(to, a)) - Math.abs(daysBetween(to, b)))[0]
+    const day = year ? of(year < 100 ? 2000 + year : year) : near && nearest(near)
+    return day && addDays(day, 0) === day ? [day] : []
   })
-  const ranged = times.some(({ end }) => end)
-  if (!times.length || !(ranged || days.length || dates.length))
+
+/** What a passage says of when, as of a day, or none where it states no time of day with a day, a date or an end */
+export const whenOf = (text: string, today: Day): When | undefined => {
+  const { times } = timesOf(text)
+  const days = weekdaysOf(text)
+  const dates = datesOf(text, today)
+  if (!times.length || !(times.some(({ end }) => end) || days.length || dates.length))
     return
   return { days, times, dates, recurring: RECURRING.test(text) }
 }
@@ -114,7 +137,7 @@ export const whenOf = (text: string, today: Day): When | undefined => {
 /** What a lead was read as, for someone to check: "Fri · 14:00–15:00 · 9/16, 9/30" */
 export const whenText = ({ days, times, dates }: When) =>
   [
-    days.map(day => DAY_NAMES[day][0].toUpperCase() + DAY_NAMES[day].slice(1)).join(", "),
+    days.map(day => WEEKDAYS[day]).join(", "),
     times.map(({ start, end }) => end ? `${start}–${end}` : start).join(", "),
     dates.join(", ")
   ].filter(Boolean).join(" · ")

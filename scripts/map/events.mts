@@ -1,8 +1,8 @@
 // Fetches UNH's public event calendars into src/map/events.json, one request each, as the inputs are made nightly
 // (scripts/data.mts): Presence (Wildcat Link) whole, as it answers the past month and what's upcoming; 25Live
 // Publisher a week at a time, as it answers at most 200 entries; Wildcat Link's clubs, whose weekly meetings are told
-// on the class days of the academic calendar the courses step read (scripts/data.mts); Athletics' ICS whole; sport clubs' events from DSE
-// Rec, the same weeks in one page, from the JSON its own pages ask for, without our User-Agent; and Campus Rec's
+// on the class days of the academic calendar the courses step read; Athletics' ICS whole; sport clubs' events from
+// DSE Rec, the same weeks in one page, from the JSON its own pages ask for, without our User-Agent; and Campus Rec's
 // programs, found by classification, each program's page then its sessions or its offerings in each of its
 // semesters. Only events are asked of DSE, never its rosters or members. The series only UNH's pages tell, kept by
 // hand (src/social/curated.mts), join them over the same weeks. Each is read into the one event shape
@@ -16,20 +16,17 @@ import { fileURLToPath } from "node:url"
 import { getJson } from "../../src/shared/json.mts"
 import type { Event, EventsData } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { ATHLETICS, EVENTS, PRESENCE, PRESENCE_CLUBS, REC_INDEX, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromRecInstances, fromRecOfferings, instancesUrl, live25Url, merged, offeringsUrl, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
+import { ATHLETICS, EVENTS, PRESENCE, PRESENCE_CLUBS, REC_INDEX, WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromRecInstances, fromRecOfferings, instancesUrl, live25Url, merged, offeringsUrl, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { Curated, fromCurated } from "../../src/social/curated.mts"
 import curated from "../../src/social/curated.json" with { type: "json" }
 import { addDays, localDay } from "../../src/shared/time.mts"
-import { CoursesIndex, COURSES } from "../../src/courses/course.mts"
+import { COURSES, CoursesIndex } from "../../src/courses/course.mts"
 import { classDays } from "../../src/courses/calendar.mts"
 import { STAGED, exists, writeInput } from "../files.mts"
 
 /** Who's asking, as the Worker says it too (worker/collect.mts) */
 const HEADERS = { "user-agent": "notunh/1 (+https://notunh.app)" }
-
-/** Weeks of 25Live and DSE Rec fetched, from this one */
-const WEEKS = 3
 
 /** A 25Live week's URL, from a Durham day */
 const weekUrl = (day: string) =>
@@ -78,6 +75,14 @@ const calendar = await calendarIn(new URL(COURSES, STAGED)) ?? await calendarIn(
 const meetings = fromPresenceClubs(organizations, calendar ? classDays(calendar, today, 7 * WEEKS) : [], match)
 
 const series = fromCurated(v.parse(Curated, curated), today, 7 * WEEKS, match)
-const events = merged([fromPresence(presence, match), meetings, fromAthletics(athletics, match), fromDserec(clubs, match), ...weeks.map(week => from25Live(week, match)), ...programs, series], now)
+const events = merged([
+  fromPresence(presence, match),
+  meetings,
+  fromAthletics(athletics, match),
+  fromDserec(clubs, match),
+  ...weeks.map(week => from25Live(week, match)),
+  ...programs,
+  series
+], now)
 await writeInput(EVENTS, JSON.stringify({ fetched: now, events } satisfies EventsData) + "\n")
 console.log(`${events.length} events, ${events.filter(event => event.place).length} placed`)

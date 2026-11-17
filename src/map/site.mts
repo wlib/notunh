@@ -64,9 +64,13 @@ export const notOver = (now: number) =>
 const sectionUrl = (term: Pick<Term, "code">, crn: string) =>
   urlOf({ kind: "section", term: term.code, crn })
 
+/** A day as the day a page was last checked is said: "Nov 16" */
+const checkedDay = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" })
+
 /** An event's, at its place where the map knows it */
 export const eventResolved = (event: Event | Pin, place?: GazetteerPlace): Resolved => {
   const calendar = calendarOf(event)
+  const checked = event.checked && `checked ${checkedDay.format(Date.parse(`${event.checked}T12:00:00Z`))}`
   return {
     preview: eventPreview(event),
     parts:   [
@@ -74,7 +78,7 @@ export const eventResolved = (event: Event | Pin, place?: GazetteerPlace): Resol
         ? { heading: "Where", items: [{ text: place.name, href: urlOf({ kind: "place", name: place.name }), ...event.where && event.where !== place.name && { detail: event.where } }] }
         : { heading: "Where", lines: [whereOf(event)] },
       ...("description" in event && event.description ? [{ heading: "About", lines: [event.description] }] : []),
-      ...calendar ? [{ heading: "Listed on", items: [{ text: calendar.name, href: event.url, ...event.checked && { detail: `checked ${new Date(`${event.checked}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` } }] }] : []
+      ...calendar ? [{ heading: "Listed on", items: [{ text: calendar.name, href: event.url, ...checked && { detail: checked } }] }] : []
     ],
     event,
     place

@@ -36,7 +36,8 @@ export const CALENDARS: Record<Exclude<Source, "pin" | "course">, { name: string
 export const calendarOf = ({ source }: Pick<Event, "source">) =>
   source === "pin" || source === "course" ? undefined : CALENDARS[source]
 
-const Text = (max: number) =>
+/** Text as it's kept: trimmed, to a length */
+export const Text = (max: number) =>
   v.pipe(v.string(), v.trim(), v.maxLength(max))
 
 export const Event = v.object({

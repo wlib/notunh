@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises"
 import * as v from "valibot"
 import { type Event, Event as EventSchema, EventsData } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromRecInstances, fromRecOfferings, merged, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
+import { WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromRecInstances, fromRecOfferings, merged, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
 import { addDays, atClock, hhmm, localDay, weekday } from "../../src/shared/time.mts"
 import { classDays, fromLive25 } from "../../src/courses/calendar.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
@@ -127,9 +127,9 @@ test("merging keeps each id once, in order of start, dropping what ended before 
 
 test("the fixture's events file is what the build would make of the fixtures, and reads as events data", async () => {
   const file = v.parse(EventsData, JSON.parse(await readFile(new URL("../fixtures/data/src/map/events.json", import.meta.url), "utf8")))
-  const series = fromCurated(v.parse(Curated, JSON.parse(await fixture("curated.json"))), localDay(file.fetched), 21, match)
+  const series = fromCurated(v.parse(Curated, JSON.parse(await fixture("curated.json"))), localDay(file.fetched), 7 * WEEKS, match)
   const calendar = fromLive25(JSON.parse(await readFile(new URL("../fixtures/courses/25live.json", import.meta.url), "utf8")), file.fetched)
-  const meetings = fromPresenceClubs(rawOrganizations, classDays(calendar, localDay(file.fetched), 21), match)
+  const meetings = fromPresenceClubs(rawOrganizations, classDays(calendar, localDay(file.fetched), 7 * WEEKS), match)
   expect(file.events).toEqual(merged([presence, meetings, live, athletics, clubs, offerings, sessions, series], 0))
 })
 
@@ -312,19 +312,38 @@ const written = fc.record({ hour: fc.integer({ min: 1, max: 12 }), minute: fc.co
     clock: `${String(hour % 12 + (pm ? 12 : 0)).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
   }))
 
+/** An offering's card as Campus Rec's page loads it, with spots left */
+const card = (title: string) =>
+  `<div class="list-wrapper"><div class="offering-card" data-offering-id="00000000-0000-4000-8000-000000000001"><h3 class="card-title">${title}</h3><p>3 Spots available</p></div>`
+
+/** The windows an offering by a title is read as, in fall 2026: one, or none where it isn't an event */
+const windowsOf = (title: string) =>
+  fromRecOfferings(card(title), program, "Fall 2026", match).map(({ start, end }) => [start, end])
+
 test("an offering's title with bare hours reads its start by its end's meridiem, or the morning before it", () => {
-  const card = (times: string) => `<div class="list-wrapper"><div class="offering-card" data-offering-id="00000000-0000-4000-8000-000000000001"><h3 class="card-title">Sunday 11/8 (${times}): Hike</h3><p>3 Spots available</p></div>`
-  expect(fromRecOfferings(card("9-11am"), program, "Fall 2026", match)).toEqual([expect.objectContaining({ start: atClock("2026-11-08", "09:00"), end: atClock("2026-11-08", "11:00") })])
-  expect(fromRecOfferings(card("11-1pm"), program, "Fall 2026", match)).toEqual([expect.objectContaining({ start: atClock("2026-11-08", "11:00"), end: atClock("2026-11-08", "13:00") })])
-  expect(fromRecOfferings(card("2-4pm"), program, "Fall 2026", match)).toEqual([expect.objectContaining({ start: atClock("2026-11-08", "14:00"), end: atClock("2026-11-08", "16:00") })])
+  expect(windowsOf("Sunday 11/8 (9-11am): Hike")).toEqual([[atClock("2026-11-08", "09:00"), atClock("2026-11-08", "11:00")]])
+  expect(windowsOf("Sunday 11/8 (11-1pm): Hike")).toEqual([[atClock("2026-11-08", "11:00"), atClock("2026-11-08", "13:00")]])
+  expect(windowsOf("Sunday 11/8 (2-4pm): Hike")).toEqual([[atClock("2026-11-08", "14:00"), atClock("2026-11-08", "16:00")]])
+  // A program's times aren't guessed: none written with a meridiem is no window
+  expect(windowsOf("Sunday 11/8 (10-4:30): Hike")).toEqual([])
+  expect(windowsOf("Sunday 11/8 7:30 Departure")).toEqual([])
+})
+
+test("an offering's departure alone is an hour long, named for its program; two times, or a day no month has, are no window", () => {
+  expect(fromRecOfferings(card("Saturday 9/5 11:30am Departure"), program, "Fall 2026", match)).toEqual([
+    expect.objectContaining({ title: program.name, start: atClock("2026-09-05", "11:30"), end: atClock("2026-09-05", "12:30") })
+  ])
+  expect(windowsOf("Saturday 9/5 9am Departure, back by 5pm")).toEqual([])
+  expect(windowsOf("Friday 12/4 (9pm-1am): Late Climb")).toEqual([])
+  expect(windowsOf("Monday 11/31 (9-11am): Hike")).toEqual([])
 })
 
 test("an offering's title gives its day and window however the times are written, and what it is without who leads it", () =>
   fc.assert(fc.property(day, written, written, fc.constantFrom("-", " - ", "–"), (on, from, to, dash) => {
     const [, month, date] = on.split("-").map(Number)
-    const card = `<div class="list-wrapper"><div class="offering-card" data-offering-id="00000000-0000-4000-8000-000000000001"><h3 class="card-title">Saturday ${month}/${date} (${from.text}${dash}${to.text}): Hike - Sam and Brady</h3><p>3 Spots available</p></div>`
+    const title = `Saturday ${month}/${date} (${from.text}${dash}${to.text}): Hike - Sam and Brady`
     const [start, end] = [atClock(on, from.clock), atClock(on, to.clock)]
-    expect(fromRecOfferings(card, program, on.slice(0, 4), match)).toEqual(end > start ? [expect.objectContaining({ title: "Hike", start, end, left: 3 })] : [])
+    expect(fromRecOfferings(card(title), program, on.slice(0, 4), match)).toEqual(end > start ? [expect.objectContaining({ title: "Hike", start, end, left: 3 })] : [])
   })))
 
 //#region Clubs

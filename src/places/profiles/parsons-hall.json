@@ -1,0 +1,148 @@
+{
+  "name": "Parsons Hall",
+  "aliases": [
+    "Parsons"
+  ],
+  "place": "Parsons Hall",
+  "category": "academic",
+  "use": "Chemistry teaching and research labs, chemistry library, University Instrumentation Center, Iddles Auditorium",
+  "built": 1968,
+  "builtText": "1965–68 (E/W wings 1965; lecture and classroom wings incl. Iddles Auditorium by 1968); archives index says 1966",
+  "architect": "Alonzo J. Harriman Associates; builder Harvey Construction",
+  "style": "1960s modern: long low brick wings with a columned concrete entrance portico",
+  "status": "in-use",
+  "renovations": [
+    {
+      "what": "1970s solar heating added (no longer used; panels remain)",
+      "major": false,
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "year": 2011,
+      "what": "Major renovation of ~120,000 of 146,224 gsf (EYP design, Gilbane CM), under way from May 2009: new teaching/research labs, Instrumentation Center, sprinklers",
+      "major": true,
+      "src": [
+        "hp_eyp",
+        "hp_09"
+      ]
+    },
+    {
+      "year": 2014,
+      "what": "1,800 sq ft Advanced Technology Imaging Facility; transmission electron microscope moved in from Kendall Hall (JM Coull, Port City Architecture)",
+      "major": false,
+      "src": [
+        "nerej"
+      ]
+    },
+    {
+      "year": 2020,
+      "what": "Iddles Wing (13,000 sq ft): two lecture halls, two classrooms, corridors, new HVAC, student commons, new storefront entrance (Chapman; Harriman A/E)",
+      "major": false,
+      "src": [
+        "hp_20"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Designed by Alonzo J. Harriman Associates and built by Harvey Construction for chemistry; construction began 1965 and finished 1968 with the lecture wings and Iddles Auditorium.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "Solar heating added in the 1970s is no longer used, but the panels remain on the roof.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "EYP was selected to redesign 120,000 sq ft of the 146,224 gsf building with Gilbane as construction manager.",
+      "src": [
+        "hp_eyp"
+      ]
+    },
+    {
+      "text": "The Iddles Wing had not been substantially renovated in 50 years before its 2020 project.",
+      "src": [
+        "hp_20"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Parsons_Hall%2C_UNH.jpg/1280px-Parsons_Hall%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Parsons_Hall,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Entrance portico and long two-story brick wing behind pines",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "hc2": {
+      "title": "The many study spots at UNH (2018-03)",
+      "publisher": "Her Campus UNH",
+      "url": "https://www.hercampus.com/school/unh/many-study-spots-unh/",
+      "accessed": "2026-11-04"
+    },
+    "hp_eyp": {
+      "title": "EYP to design renovations at UNH",
+      "publisher": "High-Profile",
+      "url": "https://www.high-profile.com/eyp-to-design-renovations-at-unh/",
+      "accessed": "2026-11-04"
+    },
+    "hp_09": {
+      "title": "Renovations underway at UNH",
+      "publisher": "High-Profile",
+      "url": "https://www.high-profile.com/renovations-underway-at-unh/",
+      "accessed": "2026-11-04"
+    },
+    "hp_20": {
+      "title": "Chapman GC for UNH Renovation (Mar 2020)",
+      "publisher": "High-Profile",
+      "url": "https://www.high-profile.com/chapman-gc-for-unh-renovation/",
+      "accessed": "2026-11-04"
+    },
+    "nerej": {
+      "title": "JM Coull completes UNH's Advanced Technology Imaging Facility",
+      "publisher": "New England Real Estate Journal",
+      "url": "https://nerej.com/jm-coull-completes-unh-s-advanced-technology-imaging-facility",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 5,
+    "condition": 7,
+    "function": 8,
+    "character": 4,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "Long, low 1960s brick chemistry wings with a concrete portico, largely renovated from 2009 into modern labs.",
+  "notes": "Photo (2013) shows a low, long brick-and-precast wing with ribbon windows and rooftop solar tanks, behind a concrete-columned glass entrance; plain 1960s institutional. Completion of the 2009 renovation (~2011) and the ATIF date (2014) come from the old row; opened pages give no completion dates. The 2020 Iddles work is inferred from the Mar 2020 award article (summer schedule); completion not confirmed. Only one licensed photo.",
+  "judgeNotes": "Photo shows a plain institutional wing among pines."
+}

@@ -1,0 +1,97 @@
+{
+  "name": "Woodside Apartments",
+  "aliases": [
+    "Woodside",
+    "Undergraduate Apartment Complex"
+  ],
+  "place": "Woodside Building ABC",
+  "category": "residence",
+  "use": "Upper-division and 19+ apartments: 99 two-bedroom, four-person units in buildings A–R (392–400 students)",
+  "built": 1983,
+  "builtText": "opened fall 1983",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2025,
+      "what": "Mechanical-room ventilation upgrades put out to bid (July 2025)",
+      "major": false,
+      "src": [
+        "s4"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Opened in fall 1983 as the first undergraduate apartment complex on campus; called the Undergraduate Apartment Complex until a student naming contest in the early 1990s.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Buildings A through R each hold four or six two-bedroom apartments with living-room furniture, full kitchen appliances and 1 to 1½ baths.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "The complex has a community center with mailroom, on-site parking, laundry and an outdoor volleyball court, in a forested area near the Whittemore Center.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "UNH's packing list for Woodside suggests bringing a fan; no A/C or elevator is listed.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Woodside Apartments",
+      "url": "https://www.unh.edu/housing/facility/woodside-apartments"
+    },
+    {
+      "label": "UNH Library: residence hall histories",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Woodside Apartments (hall page)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/woodside-apartments",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Woodside Dorm Reviews",
+      "publisher": "RoomSurf",
+      "url": "https://www.roomsurf.com/dorm-reviews/unh/woodside/816",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "UNH Woodside Mechanical Room Ventilation Upgrades (bid notice, published 2025-07-29)",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/7158197-unh-woodside-mechanical-room-ventilation-upgrades&find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 5,
+    "condition": 4,
+    "function": 7,
+    "character": 3,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "1983 gabled brick apartment clusters in the woods, the first undergraduate apartments: practical, no A/C, slow maintenance.",
+  "notes": "One record covers all notunh parts (Woodside Building ABC, DEF, GHI, JKL, LMN, OPQ and the Woodside Community Building). UNH says 'buildings A through R' while notunh groups only through Q; check the map. Housing page gives both 392 (complex size) and 400/99 apartments (description) and 98 four-person units in its table. Architect unknown. Ventilation work is a bid notice only. Old row said residents may not bring A/C units; not re-verified. Photos: low two-storey brown-brick buildings with hipped shingle roofs in pine woods around a lawn and sand volleyball court; plain, domestic, pleasant setting. No licensed photo found (searched the Commons category tree under 'University of New Hampshire' and 'Durham, New Hampshire', Commons file search by name, Commons geosearch at the building's coordinates, and Openverse/Flickr CC).",
+  "judgeNotes": "Reference photos show modest brick blocks."
+}

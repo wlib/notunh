@@ -1,0 +1,94 @@
+{
+  "name": "Hitchcock Hall",
+  "place": "Hitchcock Hall",
+  "category": "residence",
+  "use": "Traditional residence hall in the Upper Quad (525 students across Hitchcock, Randall and Devine)",
+  "built": 1959,
+  "builtText": "Completed and occupied fall 1959; dedicated April 24, 1960",
+  "architect": "Irving W. Hersey Associates (builder Blanchard Stebbins, Inc.)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Designed by Irving W. Hersey Associates, built by Blanchard Stebbins, occupied in fall 1959 as a men's dorm and dedicated April 24, 1960 to Leon W. Hitchcock, electrical engineering professor 1910-1956.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Houses three single-gender floor communities (male first floor, female second and third), a large lounge and a courtyard; address 5 Quad Way.",
+      "src": [
+        "h_hitchcock"
+      ]
+    },
+    {
+      "text": "Part of the linked Upper Quad with Hitchcock, Randall and Devine (525 students in all), with an elevator, kitchen, laundry and indoor bike storage; no air conditioning is listed.",
+      "src": [
+        "h_hitchcock"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Hitchcock_Hall%2C_UNH_1.jpg/1280px-Hitchcock_Hall%2C_UNH_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Hitchcock_Hall,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Four-storey brick gable end with clock-style oculus, from Quad Way",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Hitchcock_Hall%2C_UNH_2.jpg/1280px-Hitchcock_Hall%2C_UNH_2.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Hitchcock_Hall,_UNH_2.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Entrance with white portico seen across the tree-shaded Upper Quad lawn",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Hitchcock Hall",
+      "url": "https://www.unh.edu/housing/facility/hitchcock-hall-upper-quad"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "arch_res": {
+      "title": "Student Residences",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "h_hitchcock": {
+      "title": "Hitchcock Hall (Upper Quad)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/hitchcock-hall-upper-quad",
+      "accessed": "2026-11-04"
+    },
+    "s19a": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 4,
+    "condition": 4,
+    "function": 6,
+    "character": 4,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "1959 Upper Quad hall: conservative four-storey brick with a white portico among pines; no A/C, but the quad is liked.",
+  "notes": "Photos (2013) show a four-storey red-brick block with a gabled end, white-framed sash windows and a small classical entry portico, set among mature pines. Conservative and plain, not modernist as the old row inferred. No interior photos. No renovation found. The Hersey and Blanchard Stebbins credits are from the archives.",
+  "judgeNotes": "Photos confirm a tidy, plain building."
+}

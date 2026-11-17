@@ -1,0 +1,72 @@
+{
+  "name": "Randall Hall",
+  "place": "Randall Hall",
+  "category": "residence",
+  "use": "Traditional residence hall in the Upper Quad (525 students across Hitchcock, Randall and Devine)",
+  "built": 1959,
+  "builtText": "Built 1958-August 1959; dedicated April 24, 1960",
+  "architect": "Irving W. Hersey Associates (builder Blanchard Stebbins, Inc.)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Built with Hitchcock Hall by Irving W. Hersey Associates and Blanchard Stebbins; construction ran from 1958 to August 1959 and it was dedicated April 24, 1960 to trustee Frank W. Randall (class of 1907).",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Four floors in the middle of the Upper Quad; a first-floor lounge and a large second-floor study lounge with full kitchen and fireplace. Address 7 Quad Way.",
+      "src": [
+        "h_randall"
+      ]
+    },
+    {
+      "text": "Part of the linked Upper Quad with Hitchcock, Randall and Devine (525 students in all), with an elevator, kitchen, laundry and indoor bike storage; no air conditioning is listed.",
+      "src": [
+        "h_randall"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Randall Hall",
+      "url": "https://www.unh.edu/housing/facility/randall-hall-upper-quad"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "arch_res": {
+      "title": "Student Residences",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "h_randall": {
+      "title": "Randall Hall (Upper Quad)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/randall-hall-upper-quad",
+      "accessed": "2026-11-04"
+    },
+    "s19a": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 4,
+    "condition": 4,
+    "function": 6,
+    "character": 4,
+    "reputation": 6
+  },
+  "confidence": "low",
+  "verdict": "The middle hall of the 1959 Upper Quad: plain brick, a good study lounge, no A/C.",
+  "notes": "No licensed photo of Randall specifically; Hitchcock 02 (Commons) may show part of the linked Upper Quad, but I could not tell which wing. The archives reference photo is a wide, low-resolution view of a long brick block. No renovation found.",
+  "judgeNotes": "Low-resolution archives photo only."
+}

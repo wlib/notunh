@@ -1,0 +1,167 @@
+{
+  "name": "Paul Creative Arts Center",
+  "aliases": [
+    "PCAC",
+    "Paul Arts"
+  ],
+  "place": "Paul Creative Arts Center",
+  "category": "arts",
+  "use": "Art & Art History, Music, Theatre & Dance; Johnson Theatre (667 seats), black box (Hennessy) theatre, recital rooms, studios",
+  "built": 1960,
+  "builtText": "1957–60 (authorized 1957; dedicated Oct 13–15, 1960)",
+  "architect": "Shepley, Bulfinch, Richardson and Abbott (principal Jean-Paul Carlhian); builder Harvey Construction",
+  "style": "Mid-century modern; plain geometric brick forms on an E-shaped plan",
+  "status": "in-use",
+  "statusNote": "Three-year life-safety renovation (alarms, sprinklers) 2025–2027",
+  "renovations": [
+    {
+      "what": "Music wing extension built a few years after 1960 to designs by the original architects",
+      "major": true,
+      "src": [
+        "pcac"
+      ]
+    },
+    {
+      "year": 2018,
+      "what": "First-floor music wing shut and fully refurbished after mold",
+      "major": false,
+      "src": [
+        "pcac2"
+      ]
+    },
+    {
+      "year": 2025,
+      "what": "Three-year life-safety project begun: new fire alarm throughout and sprinklers throughout; Hennessy Theatre done summer 2025, Johnson Theatre next, music wing from summer 2026 (Charters Brothers)",
+      "major": false,
+      "src": [
+        "pcac5"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Designed by Shepley, Bulfinch, Richardson and Abbott, with Jean-Paul Carlhian as principal architect, on an E-shaped plan with north and south wings joined by a central theatre/recital block.",
+      "src": [
+        "pcac"
+      ]
+    },
+    {
+      "text": "Isabel and Harriet Paul gave $800,000 of the $2.5 million cost, then the largest gift in UNH history.",
+      "src": [
+        "pcac"
+      ]
+    },
+    {
+      "text": "Dedicated October 13–15, 1960; built by Harvey Construction.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "Facilities include a 667-seat proscenium theatre, a black box theatre, two recital rooms, practice rooms and art studios.",
+      "src": [
+        "pcac"
+      ]
+    },
+    {
+      "text": "Campus master plans of 2004 and 2012 called an improved arts center a pressing need; a full renovation was estimated at $40–50 million in 2019.",
+      "src": [
+        "pcac2"
+      ]
+    },
+    {
+      "text": "In 2019 the building had no air conditioning and poor air circulation; mold forced a full refurbishment of the first-floor music wing in 2018.",
+      "src": [
+        "pcac2"
+      ]
+    },
+    {
+      "text": "Until 2025 the building relied on its original 1960 fire alarm and only partial sprinklers; a three-year life-safety project began in summer 2025.",
+      "src": [
+        "pcac5"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Paul_Creative_Arts_Center%2C_UNH_1.jpg/1280px-Paul_Creative_Arts_Center%2C_UNH_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Paul_Creative_Arts_Center,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Entrance block and brick fly tower from the road",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Paul_Creative_Arts_Center%2C_UNH_2.jpg/1280px-Paul_Creative_Arts_Center%2C_UNH_2.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Paul_Creative_Arts_Center,_UNH_2.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Theatre volume in brick among trees",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "About PCAC (history)",
+      "url": "https://cola.unh.edu/paul-creative-arts-center/about-pcac"
+    },
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "pcac2": {
+      "title": "Spaulding renovations looming over PCAC (2019-09)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2019/09/spaulding-renovation-threatens-paul-creative-arts-centers-fate",
+      "accessed": "2026-11-04"
+    },
+    "pcac5": {
+      "title": "Three-year life safety construction project underway at PCAC (2025-12)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2025/12/ddngvtwcutgi",
+      "accessed": "2026-11-04"
+    },
+    "tour": {
+      "title": "Take a Self-Guided Tour of UNH",
+      "publisher": "UNH",
+      "url": "https://www.unh.edu/tipsguides/take-self-guided-tour-unh",
+      "accessed": "2026-11-04"
+    },
+    "pcac": {
+      "title": "About PCAC",
+      "publisher": "UNH College of Liberal Arts",
+      "url": "https://cola.unh.edu/paul-creative-arts-center/about-pcac",
+      "accessed": "2026-11-04"
+    },
+    "card": {
+      "title": "Durham, NH: Paul Creative Arts Center (postcard)",
+      "publisher": "Carthalia (andreas-praefcke.de)",
+      "url": "https://andreas-praefcke.de/carthalia/usa/usa_durham_paulcenter.htm",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 4,
+    "condition": 3,
+    "function": 3,
+    "character": 6,
+    "reputation": 3
+  },
+  "confidence": "high",
+  "verdict": "1960 SBRA arts centre with a patterned-brick fly tower; no A/C, a mold history and faculty who say it trails high schools.",
+  "notes": "Photos (2013) show modest red-brick wings, a tall windowless brick fly tower with patterned brickwork, a gabled timber-clad theatre end; competent but plain; low-rise wings. A vintage postcard (card) gives 735 theatre seats versus 667 today. Museum of Art closure (Jan 2024, per old row) not re-verified here. Whether A/C has been added since 2019 is unconfirmed; the 2025 article mentions only fire systems. Old row's claim of accessibility work by Charters Brothers not verified. Ceiling height and daylight unknown.",
+  "judgeNotes": "Photos show modest brick wings and a strong fly tower. Function and reputation low on faculty and student complaints."
+}

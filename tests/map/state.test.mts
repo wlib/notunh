@@ -33,7 +33,7 @@ const FEED: FeedData = {
 }
 
 // As the map's page names them in development
-const DATA = { ...Object.fromEntries(["gtfs", "model", "walk", "gazetteer", "tiles", "style", "places", "events", "rooms"].map(name => [name, `/src/map/${name}.json`])), courses: "/src/courses/courses.json", prereqs: "/src/programs/prereqs.json", parking: "/src/parking/parking.json", menus: "/src/dining/menus.json" }
+const DATA = { ...Object.fromEntries(["gtfs", "model", "walk", "gazetteer", "tiles", "style", "places", "events", "rooms"].map(name => [name, `/src/map/${name}.json`])), courses: "/src/courses/courses.json", prereqs: "/src/programs/prereqs.json", parking: "/src/parking/parking.json", menus: "/src/dining/menus.json", profiles: "/src/map/profiles.json" }
 const BUILDINGS = places.buildings as Building[]
 const PARKING = { sources: { zones: NOON, parkMobile: NOON, osm: NOON }, built: NOON, areas: [{ id: "B", name: "B Lot", permits: ["faculty"], always: false, osm: [], at: [-70.93, 43.13] }] }
 

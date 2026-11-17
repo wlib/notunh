@@ -19,6 +19,7 @@ import { NO_PREREQS, PrereqsIndex } from "../../programs/prereqs.mts"
 import { NO_PARKING, ParkingData } from "../../parking/sources.mts"
 import { MenusIndex } from "../../dining/menus.mts"
 import { NO_ROOMS, RoomsData } from "../../courses/bookings.mts"
+import { NO_PROFILES, Profiles, searchNamesOf } from "../../places/profiles.mts"
 import { latest } from "../../shell/build.mts"
 
 /** The chapters' houses by their letters and nicknames, which places go by besides what people call them (aliases.mts) */
@@ -29,7 +30,7 @@ const NICKNAMES = CHAPTERS.filter(isPlaced).flatMap(chapter => aliasesOf(chapter
  * The map works without a model or today's events, so it starts with an empty one of either that can't load
  */
 export const loadMapData = async () => {
-  const [feed, model, network, gazetteerData, tiles, style, places, events, rooms, coursesIndex, prereqsIndex, parking, menus] = await Promise.all([
+  const [feed, model, network, gazetteerData, tiles, style, places, events, rooms, coursesIndex, prereqsIndex, parking, menus, profiles] = await Promise.all([
     latest("gtfs", loadFeed),
     latest("model", Model, emptyModel),
     latest("walk", WalkData),
@@ -47,14 +48,19 @@ export const loadMapData = async () => {
     latest("prereqs", PrereqsIndex, () => NO_PREREQS),
     latest("parking", ParkingData, () => NO_PARKING),
     // The dining halls' hours, for their places' pages; the map works without them
-    latest("menus", MenusIndex, (): MenusIndex => ({ fetched: 0, halls: [], hours: {}, diets: [], contains: [], days: {}, search: "", files: [] }))
+    latest("menus", MenusIndex, (): MenusIndex => ({ fetched: 0, halls: [], hours: {}, diets: [], contains: [], days: {}, search: "", files: [] })),
+    // Buildings' profiles, for their places' pages and search; the map works without them
+    latest("profiles", Profiles, () => NO_PROFILES)
   ])
   const graph = r(() => loadGraph(network.value))
   const gazetteer = r(() => gazetteerData.value.places)
   const buildings = r(() => places.value.buildings)
   const walks = r(() => createWalks(feed.value.stops, graph.value, gazetteer.value))
 
-  /** Places by name and by what people call them, laundry and dining first, then the stops buses pick up at, then the rest of Durham */
+  /**
+   * Places by name and by what people call them, profiled buildings by their other names too, laundry and dining
+   * first, then the stops buses pick up at, then the rest of Durham
+   */
   const searchPlaces = r(() => {
     const boardable = boardableStops(feed.value)
     const all = [
@@ -62,9 +68,9 @@ export const loadMapData = async () => {
       ...feed.value.stops.filter((_, i) => boardable.has(i)).map(({ lat, lon, name }) => ({ lat, lon, name })),
       ...gazetteer.value.map(({ name, at: [lon, lat] }) => ({ lat, lon, name }))
     ]
-    return createPlaceSearch(all, CAMPUS, otherNames(all.map(({ name }) => name), NICKNAMES))
+    return createPlaceSearch(all, CAMPUS, otherNames(all.map(({ name }) => name), [...NICKNAMES, ...searchNamesOf(profiles.value)]))
   })
-  return { feed, model, tiles, style, gazetteer, buildings, walks, searchPlaces, events, rooms, coursesIndex, prereqsIndex, parking, menus }
+  return { feed, model, tiles, style, gazetteer, buildings, walks, searchPlaces, events, rooms, coursesIndex, prereqsIndex, parking, menus, profiles }
 }
 
 export type MapData = Awaited<ReturnType<typeof loadMapData>>

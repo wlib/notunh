@@ -1,0 +1,77 @@
+{
+  "name": "Health and Wellness",
+  "aliases": [
+    "Health & Wellness Center",
+    "The Wellness Center",
+    "Health Services Center"
+  ],
+  "place": "Health Services",
+  "category": "student-life",
+  "use": "Student health centre: Health & Wellness, Psychological and Counseling Services (PACS) and Student Accessibility Services (SAS)",
+  "built": 1989,
+  "builtText": "Built 1989; name made official January 1990",
+  "style": "Late-1980s brick postmodern (from photo)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Campus health services were first in Hood House; the current Health Services Center was built in 1989 and its name made official on January 25, 1990.",
+      "src": [
+        "arch_adm"
+      ]
+    },
+    {
+      "text": "Health & Wellness, PACS and Student Accessibility Services are now together in the Wellness Center building at 4 Pettee Brook Lane.",
+      "src": [
+        "hw"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Health_Services_Center%2C_UNH.jpg/1280px-Health_Services_Center%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Health_Services_Center,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Brick gabled facade with tall narrow windows and a covered walkway sign",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Health & Wellness",
+      "url": "https://www.unh.edu/health/"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life"
+    }
+  ],
+  "sources": {
+    "arch_adm": {
+      "title": "Administrative and Campus Life Buildings",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life",
+      "accessed": "2026-11-04"
+    },
+    "hw": {
+      "title": "Health & Wellness",
+      "publisher": "UNH Health & Wellness",
+      "url": "https://www.unh.edu/health/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 5,
+    "condition": 5,
+    "function": 7,
+    "character": 3,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "Modest 1989 gabled brick clinic now housing health, counselling and accessibility services together.",
+  "notes": "Photo shows a two-storey red-brick building with steep gabled roofs, tall narrow windows and a small gabled entrance canopy, partly hidden by a large tree: competent and modest. Notunh name 'Health Services' is dated; UNH now calls it the Health & Wellness Center / Wellness Center. I found no date for when PACS and SAS moved in, no architect, no renovation history and no student reviews of the building.",
+  "judgeNotes": "Photo shows a competent small brick building; little else documented."
+}

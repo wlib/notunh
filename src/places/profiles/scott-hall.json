@@ -1,0 +1,80 @@
+{
+  "name": "Scott Hall",
+  "aliases": [
+    "Fishbowl"
+  ],
+  "place": "Scott Hall",
+  "category": "residence",
+  "use": "Residence hall, 112 students, first-year and upper-division",
+  "built": 1932,
+  "builtText": "completed 1932",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Completed in 1932 and named for Clarence Watkins Scott, who taught history at the university from 1879 to 1930.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH Housing calls it arguably the most picturesque residence hall, with its classic design and sprawling lawn.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Small hall of 112 students at 36 Ballard Street, with a lounge, kitchen and a mural.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Accessibility features include an accessible ground-floor bathroom, an automatic exterior door opener and roll-in building access; no elevator or A/C is listed.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Scott Hall",
+      "url": "https://www.unh.edu/housing/facility/scott-hall"
+    },
+    {
+      "label": "UNH Library: residence hall histories",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Scott Hall (hall page)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/scott-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Ranking of UNH Dorms and Residence Halls (published 2024-12-04)",
+      "publisher": "Society19",
+      "url": "https://www.society19.com/ranking-unh-dorms-residence-halls/amp/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 5,
+    "condition": 4,
+    "function": 5,
+    "character": 6,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "1932 Georgian hall with a columned portico and a front lawn Housing calls the most picturesque; no A/C or elevator.",
+  "notes": "Old row's architect (Huddleston) is NOT stated by the archives page; left null. Old row's 1933 Wikipedia date, 1990s modernization report and 2023 TNH vandalism story were not re-verified. No renovation found. The 'Fishbowl' alias is unverified. Photos: three-and-a-half-storey red-brick Georgian-style block with a white columned entry portico, balustraded terrace and stair; lounge has crown moulding, French doors and tall double-hung windows, ordinary ceiling height, worn carpet and dated furniture. No licensed photo found (searched the Commons category tree under 'University of New Hampshire' and 'Durham, New Hampshire', Commons file search by name, Commons geosearch at the building's coordinates, and Openverse/Flickr CC).",
+  "judgeNotes": "Reference photos show handsome but conventional brick; exterior down a point from the old run's 7."
+}

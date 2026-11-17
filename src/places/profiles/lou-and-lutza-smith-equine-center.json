@@ -1,0 +1,102 @@
+{
+  "name": "Lou and Lutza Smith Equine Center",
+  "aliases": [
+    "Smith Equine Center",
+    "UNH Equine Facilities",
+    "Tirrell Horse Barn",
+    "W.C. Skoglund Indoor Arena"
+  ],
+  "place": "Tirrell Light Horse Stable",
+  "category": "research-farm",
+  "use": "UNH equine program: boarding barns, labs, artificial-insemination rooms, classrooms, conference space and two student apartments; with the adjacent Tirrell barn and Skoglund indoor arena",
+  "built": 1980,
+  "builtText": "1980 (Smith Equine Center); Tirrell barn and Skoglund arena dates not found",
+  "status": "in-use",
+  "statusNote": "Complex: Smith Equine Center (1980), Tirrell barn and Skoglund arena",
+  "facts": [
+    {
+      "text": "The Smith Equine Center was built in 1980 and includes barns, classroom and laboratory space, offices, a conference center, treatment rooms and a run-in shed.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It is named for Lou and Lutza Smith; Lou founded and ran Rockingham Park race track in Salem, N.H.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH's equine facilities comprise the 40-stall Tirrell Horse Barn with turnout and pasture, the W.C. Skoglund indoor riding arena (160 by 90 feet), a USEA-recognized cross-country course, and the Smith Equine Center.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Two student apartments at the stable let students live on site and help run it.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "The facilities sit on the main campus, about a 10-minute walk from the campus center.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "The cross-country course is in the wooded part of Woodman Horticultural Research Farm.",
+      "src": [
+        "s4"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "COLSA: Equine Facilities",
+      "url": "https://colsa.unh.edu/facility/equine-facilities"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Equine Facilities",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/facility/equine-facilities",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Facilities",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/facilities",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Woodman Horticultural Research Farm",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/facility/woodman-horticultural-research-farm",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 3,
+    "condition": 5,
+    "function": 7,
+    "character": 5,
+    "reputation": 6
+  },
+  "confidence": "low",
+  "verdict": "The equine program's barns, indoor arena and classroom on campus; working agricultural buildings.",
+  "notes": "This record covers a complex. notunh splits it into 'Tirrell Light Horse Stable', 'Skoglund Livestock Activities Center' and 'Light Horse Classroom'; COLSA calls the arena the 'W.C. Skoglund indoor riding arena'. I couldn't confirm which notunh outline is the 1980 Smith Equine Center building. The judge may prefer notunh's name, or separate records for the Tirrell barn and Skoglund arena. Construction dates for Tirrell and Skoglund, the architect and any renovation history weren't found. No licensed photo found on Commons, Openverse or Flickr. The reference photos show a plain, low, metal-roofed stable and a rural setting. No public reviews found.",
+  "judgeNotes": "Reference photos show long barns and paddocks; which outline is the 1980 building is unconfirmed. Exterior and interior cut by two from the old run: these are working barns, not architecture, and the evidence is thin."
+}

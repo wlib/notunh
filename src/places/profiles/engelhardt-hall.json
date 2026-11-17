@@ -1,0 +1,84 @@
+{
+  "name": "Engelhardt Hall",
+  "place": "Engelhardt Hall",
+  "category": "residence",
+  "use": "Small traditional residence hall, 111 students; Lower Quad; alcohol- and drug-free hall ('Ehardt')",
+  "built": 1946,
+  "builtText": "Built 1946; dedicated June 14, 1947",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Dedicated June 14, 1947 and named for Fred Engelhardt, UNH president 1937-1944, who oversaw Pettee Hall's construction and the Field House's completion.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Built 1946; one of the three Lower Quad halls with Engelhardt, Gibbs and Hunter.",
+      "src": [
+        "arch_idx",
+        "h_engelhardt"
+      ]
+    },
+    {
+      "text": "Hall of 111 students at 12 Quad Way; alcohol- and drug-free hall ('Ehardt').",
+      "src": [
+        "h_engelhardt"
+      ]
+    },
+    {
+      "text": "Amenities listed are a kitchen, laundry, indoor bike storage and WiFi; no air conditioning or elevator is listed. Accessibility: limited-use bathroom on the 1st floor.",
+      "src": [
+        "h_engelhardt"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Engelhardt Hall",
+      "url": "https://www.unh.edu/housing/facility/engelhardt-hall-lower-quad"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "arch_res": {
+      "title": "Student Residences",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "arch_idx": {
+      "title": "University History: Buildings (index with build/dedication years)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "h_engelhardt": {
+      "title": "Engelhardt Hall (Lower Quad)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/engelhardt-hall-lower-quad",
+      "accessed": "2026-11-04"
+    },
+    "s19a": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 5,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "Small 1946 Lower Quad hall in tidy brick with a dormered top floor; no A/C or elevator, but the quads are liked.",
+  "notes": "No renovation history found for the Lower Quad halls. Old row credited Eric T. Huddleston as architect; no source I opened confirms it, so architect is left null. notunh's map spells it 'Englehardt'; the archives and Housing spell it 'Engelhardt', so the notunh name should be corrected. No licensed photo found. Reference photo 02 (UNH Housing) shows the Lower Quad in autumn: two-storey red-brick halls with white dormered upper storeys and white entry porticoes around a lawn with mature trees.",
+  "judgeNotes": "Reference photos show plain postwar colonial brick."
+}

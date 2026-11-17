@@ -1,0 +1,83 @@
+{
+  "name": "Flow Physics Facility",
+  "aliases": [
+    "FPF"
+  ],
+  "place": "Flow Physics Facility",
+  "category": "academic",
+  "use": "Boundary-layer wind tunnel for turbulence research",
+  "built": 2010,
+  "builtText": "c. 2010 (described as UNH's newest building in UNH Magazine, Winter 2011)",
+  "style": "Utilitarian long shed",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "At 300 ft long and 20 ft wide it is described as the world's largest scientific-quality boundary-layer wind tunnel.",
+      "src": [
+        "ceps"
+      ]
+    },
+    {
+      "text": "Two 400-hp fans each move 250,000 cfm, pulling air through garage-style doors at about 28 mph (UNH Magazine says up to 30 mph).",
+      "src": [
+        "ceps",
+        "mag"
+      ]
+    },
+    {
+      "text": "On Waterworks Road; features a 10-inch poured concrete floor, windows for external laser measurement, a turntable and floor drag plates.",
+      "src": [
+        "ceps"
+      ]
+    },
+    {
+      "text": "A $3 million facility funded by NSF EPSCoR, the Office of Naval Research and UNH.",
+      "src": [
+        "mag",
+        "ceps"
+      ]
+    },
+    {
+      "text": "UNH Magazine called it architecturally bland and geographically isolated, with no students or faculty housed in it.",
+      "src": [
+        "mag"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "CEPS: Flow Physics Facility",
+      "url": "https://ceps.unh.edu/facility/flow-physics-facility"
+    },
+    {
+      "label": "UNH Magazine: Blown Away (2011)",
+      "url": "https://unhmagazine.unh.edu/w11/blown_away.html"
+    }
+  ],
+  "sources": {
+    "ceps": {
+      "title": "Flow Physics Facility",
+      "publisher": "UNH College of Engineering and Physical Sciences",
+      "url": "https://ceps.unh.edu/facility/flow-physics-facility",
+      "accessed": "2026-11-04"
+    },
+    "mag": {
+      "title": "Campus Currents: Blown away (Winter 2011)",
+      "publisher": "UNH Magazine",
+      "url": "https://unhmagazine.unh.edu/w11/blown_away.html",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 2,
+    "interior": 5,
+    "condition": 7,
+    "function": 8,
+    "character": 5,
+    "reputation": 4
+  },
+  "confidence": "med",
+  "verdict": "A 300-ft shed housing the world's largest scientific boundary-layer wind tunnel: unique inside, bland and isolated outside.",
+  "notes": "notunh has no name for it (inventory notunh null); it may not be on the map. No licensed photo; reference shows a dark tall interior hall with two big fans and a polished floor. Exact completion date unconfirmed (UNH Today Nov 2010 release found by search but its node URL now redirects). CEPS says \"eastern edge of campus\" on Waterworks Road; verify location against map.",
+  "judgeNotes": "Reference photo of the tunnel hall only; UNH Magazine itself calls the building bland."
+}

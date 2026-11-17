@@ -1,0 +1,134 @@
+{
+  "name": "UNH Observatory",
+  "aliases": [
+    "University of New Hampshire Observatory"
+  ],
+  "place": "UNH Observatory",
+  "category": "academic",
+  "use": "Teaching and public-outreach observatory of the Department of Physics and Astronomy; free public sessions on the first and third Saturdays",
+  "built": 1985,
+  "builtText": "Built Feb–Apr 1985; moved to its present site off Spinney Lane / Horticultural Farm Road in summer 2004",
+  "style": "Prefabricated metal dome",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2004,
+      "what": "Relocated from the west edge of campus past the Field House (Boulder Field) to a darker site near the old Durham Reservoir",
+      "major": false,
+      "src": [
+        "s1",
+        "s4"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "The observatory was built from February to April 1985 with a $25,000 Elliott Fund grant.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Its main instrument is a 14-inch (0.35 m) Schmidt–Cassegrain telescope donated in 1984 and used for teaching rather than research.",
+      "src": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "text": "Before the observatory existed, the telescope was stored under a stairwell in old DeMeritt Hall and had to be carried out by several people for each use.",
+      "src": [
+        "s4"
+      ]
+    },
+    {
+      "text": "At its first site in Boulder Field, crowds lined up through the snow to see Halley's Comet in 1986.",
+      "src": [
+        "s4"
+      ]
+    },
+    {
+      "text": "In 2004 it moved to a darker site near the old Durham Reservoir, on land given by COLSA and screened by trees on three sides.",
+      "src": [
+        "s1",
+        "s4"
+      ]
+    },
+    {
+      "text": "Free public observing sessions run on the first and third Saturday of every month; no appointment is needed.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "Introductory astronomy students must visit, and experimental physics students use it for exoplanet observations.",
+      "src": [
+        "s4"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/UNHObservatoryJune2018.jpg/1280px-UNHObservatoryJune2018.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:UNHObservatoryJune2018.jpg",
+      "credit": "Ken Gallager",
+      "view": "exterior",
+      "year": 2018,
+      "caption": "Dome beside the reservoir meadow, June 2018",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Physics & Astronomy: UNH Observatory",
+      "url": "https://ceps.unh.edu/physics-astronomy/unh-observatory"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "Wikipedia: University of New Hampshire Observatory",
+      "url": "https://en.wikipedia.org/wiki/University_of_New_Hampshire_Observatory"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "University of New Hampshire Observatory",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/University_of_New_Hampshire_Observatory",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "The UNH Observatory",
+      "publisher": "UNH Department of Physics and Astronomy",
+      "url": "https://ceps.unh.edu/physics-astronomy/unh-observatory",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "UNH Observatory (Oct. 2019)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2019/10/unh-observatory",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 3,
+    "condition": 5,
+    "function": 6,
+    "character": 6,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "A small prefab dome in a dark meadow, with free public nights run by student volunteers.",
+  "notes": "Dates conflict: Wikipedia gives 'established 1984' (the telescope donation year), the Archives say the building went up in 1985, and the 2019 TNH piece places it at Boulder Field 'in 1986' for Halley's Comet. I used 1985. It's a single small metal dome (about 10 ft radius per TNH) with a separate shed. The photo shows a clean, utilitarian prefab dome in an attractive meadow and pine setting. Interior is one tight room, dark by design. A/C and accessibility are not documented.",
+  "judgeNotes": "Photo shows a clean utilitarian dome and shed. Reputation up for public sessions."
+}

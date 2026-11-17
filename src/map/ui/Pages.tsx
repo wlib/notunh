@@ -40,6 +40,7 @@ import { type Day as CalendarDay, addDays, clockOf, daysBetween, localDay, local
 import type { Place } from "../../places/search.mts"
 import { type Chapter, chapterNamed } from "../../places/chapters.mts"
 import { servicesAt } from "../../places/services.mts"
+import { CATEGORIES, eraParts, profileNamed, statusText } from "../../places/profiles.mts"
 import { ClockRange, ClockTime, Count, Counted, Day, DayRange, List, Minutes, Weekdays, relativeDay } from "../../shell/intl.tsx"
 import { capture } from "../../shell/usage.tsx"
 import { minutes, nowMs, walkTo } from "./common.tsx"
@@ -57,6 +58,7 @@ import { YouView } from "./You.tsx"
 import { BusesView } from "./Buses.tsx"
 import { RoomView, SpacesHere } from "./Rooms.tsx"
 import { NewEvent } from "./Home.tsx"
+import { About, PhotoCredits, Photos, Rating } from "./Profile.tsx"
 
 /** A notice for the page shown, like a link copied */
 const notice = r<string>()
@@ -708,9 +710,10 @@ const ChapterFacts = ({ chapter }: { chapter: Chapter }) =>
   </p>
 
 /**
- * A place's page: its facts, Directions, what's on there today and this week, with a new event as the last row,
- * the stop beside it and what it offers itself, the classes under way, a reminder to leave to be there by a time,
- * and parking
+ * A place's page: its facts, a building's when it was built among them, Directions, a building's photos, verdict
+ * and rating, what's on there today and this week, with a new event as the last row, the stop beside it and what it
+ * offers itself, the classes under way, a building's facts, a reminder to leave to be there by a time, parking, and
+ * who took the photos
  */
 const PlaceView = ({ name }: { name: string }) => {
   const place = placeNamed(name)
@@ -718,21 +721,28 @@ const PlaceView = ({ name }: { name: string }) => {
     return <Missing what={name} why="Nowhere the map knows." />
   focusOn({ kind: "place", name }, name)
   const chapter = chapterNamed(name)
+  const profile = profileNamed(state.profiles.peek(), name)
+  const standing = profile && statusText(profile)
   const by = r<number>()
   const time: HTMLInputElement = <input type="time" aria-label="Be there by" onchange={() => by.value = time.value ? nextAt(time.value, nowMs()) : undefined} />
   return (
     <>
-      <Head kind={chapter && <ChapterKind chapter={chapter} />} title={name} />
+      <Head kind={chapter ? <ChapterKind chapter={chapter} /> : profile && CATEGORIES[profile.category]} title={name} />
       {chapter && <ChapterFacts chapter={chapter} />}
       {r(() => {
         const walk = walkTo(place)
         const hall = hallOf(name)
-        return (walk !== undefined || hall) && <p class="view-facts"><List type="unit" items={[...hall ? ["Dining hall"] : [], ...walk !== undefined ? [<><Minutes value={minutes(walk)} /> walk</>] : [], ...hall ? [<HallHours name={name} />] : []]} /></p>
+        const items: BruhChild[] = [...profile ? eraParts(profile) : hall ? ["Dining hall"] : [], ...walk !== undefined ? [<><Minutes value={minutes(walk)} /> walk</>] : [], ...hall ? [<HallHours name={name} />] : []]
+        // Joined as text rather than by a list element, which fills in a tick later and would reflow the page under a scroll restored
+        return items.length > 0 && <p class="view-facts">{items.flatMap((item, i) => i ? [" · ", item] : [item])}</p>
       })}
+      {standing && <p class="view-facts">{standing}</p>}
       <div class="view-actions">
         <button type="button" class="button primary" onclick={() => directions(place, name)}>Directions</button>
         <button type="button" class="button" onclick={() => share(name)}>Share</button>
       </div>
+      {profile && profile.photos.length > 0 && <Photos name={name} photos={profile.photos} />}
+      {profile && <Rating profile={profile} ranked={state.profiles.peek().ranked} />}
       {r(() => {
         const here = state.todayList.value.filter(event => event.place === name)
         const week = upcoming(state.events.value.events.filter(event => event.place === name), nowMs(), WEEK).flatMap(({ day, events }) => events.map(event => ({ day, event })))
@@ -751,7 +761,9 @@ const PlaceView = ({ name }: { name: string }) => {
       <NearestStop place={place} />
       <SpacesHere name={name} />
       <ScheduledNow name={name} />
+      {profile && <About profile={profile} />}
       <div class="lines">
+        {profile?.more.map(({ label, url }) => <LinkLine href={url}>{label}</LinkLine>)}
         {servicesAt(name).map(({ label, url }) => <LinkLine href={url}>{label}</LinkLine>)}
         {chapter && <LinkLine href={chapter.url}>UNH chapter page</LinkLine>}
         <Building name={name} />
@@ -762,6 +774,7 @@ const PlaceView = ({ name }: { name: string }) => {
         </div>
         <LinkLine to={{ kind: "parking", place: name }}>Parking</LinkLine>
       </div>
+      {profile && profile.photos.length > 0 && <PhotoCredits photos={profile.photos} />}
     </>
   )
 }

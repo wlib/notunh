@@ -1,0 +1,83 @@
+{
+  "name": "Sawyer Hall",
+  "place": "Sawyer Hall",
+  "category": "residence",
+  "use": "Residence hall, 131 students; Paul College learning communities on the second floor",
+  "built": 1951,
+  "builtText": "dedicated October 20, 1951",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Dedicated October 20, 1951, as a women's dormitory and named for Elizabeth Coffin Sawyer, the first woman on the Board of Trustees (1925–1932).",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Small co-ed hall of 131 students at 7 Garrison Avenue, near Holloway Commons and Paul College, mostly double rooms.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Accessibility listed as braille signage, roll-in building access and strobe alerts in some rooms; no elevator or A/C listed.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a2/Sawyer_Hall%2C_UNH_1.jpg/1280px-Sawyer_Hall%2C_UNH_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Sawyer_Hall,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Front facade on Garrison Avenue",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Sawyer Hall",
+      "url": "https://www.unh.edu/housing/facility/sawyer-hall"
+    },
+    {
+      "label": "UNH Library: residence hall histories",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Sawyer Hall (hall page)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/sawyer-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Sawyer Hall Dorm Reviews",
+      "publisher": "RoomSurf",
+      "url": "https://www.roomsurf.com/dorm-reviews/unh/sawyer-hall/17665",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 5,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "1951 Colonial Revival hall with a white columned porch in the best location on campus; plain rooms, leaky showers, no A/C.",
+  "notes": "Architect not given by the archives. No renovation found. Photos: symmetrical three-storey red-brick Colonial Revival-style front with white columned porch, Palladian-style window and pediment with oculus, behind lawn and trees. Licensed photo (2013): symmetrical three-storey brick front with a white pedimented central bay, oculus and columned porch; tidy, conventional Colonial Revival. A near-duplicate (Sawyer Hall, UNH 2.jpg) was skipped.",
+  "judgeNotes": "Photo shows a well-composed symmetrical front."
+}

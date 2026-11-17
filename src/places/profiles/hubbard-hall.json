@@ -1,0 +1,91 @@
+{
+  "name": "Hubbard Hall",
+  "place": "Hubbard Hall",
+  "category": "residence",
+  "use": "Medium co-ed residence hall (about 210 students), first-year and upper-division; hosts the Transfer Community",
+  "built": 1968,
+  "builtText": "Dedicated March 16, 1968 (construction start not documented)",
+  "architect": "Griswold, Boyden, Wylde & Ames (builder: Franchi Brothers Construction Co.)",
+  "style": "Late-1960s modern brick slab (from photos)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Dedicated March 16, 1968 as a hall for female residents and named for trustee Austin I. Hubbard, a 1925 forestry graduate.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Designed by Griswold, Boyden, Wylde & Ames and built by Franchi Brothers Construction Company.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Housing lists it as a 210-student medium hall with traditional singles and doubles, home to the Transfer Community; meal plan required.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "First floor has a study lounge with whiteboards, projector and fireplace, and a recreation lounge with pool table, piano and ping-pong; floor lounges at each end of upper floors, a community kitchen, laundry, dumbwaiter, hydration stations and a volleyball court.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Housing's accessibility list gives only roll-in building access and strobe alerts in some rooms; no elevator or air conditioning is listed.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Address: 4 Evergreen Dr.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Hubbard Hall",
+      "url": "https://www.unh.edu/housing/facility/hubbard-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#hubbard"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Hubbard Hall (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#hubbard",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Hubbard Hall | Housing & Residential Life",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/hubbard-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 3,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "1968 brick slab on concrete pilotis by Philbrook; plain, no A/C, decent rooms.",
+  "notes": "No licensed photo found (Commons category and file search, Flickr search attempted). Reference photos: four-storey red-brick slab over a recessed, glazed ground floor behind a concrete band and columns; plain punched windows; room photo shows a standard double with bunked beds, a wide multi-pane window (good daylight for a dorm room) and an ordinary ~8 ft ceiling. Old row said 1967 and \"Honors\" theme: archives give only the 1968 dedication; Housing now lists the Transfer Community (Society19 Dec 2024 still calls it the honors dorm, possibly stale). No renovation found. Old row said bike storage and cable TV; Housing lists bike storage spaces but not cable.",
+  "judgeNotes": "Reference photos show a utilitarian slab over an open ground floor."
+}

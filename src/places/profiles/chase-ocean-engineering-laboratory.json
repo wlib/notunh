@@ -1,0 +1,166 @@
+{
+  "name": "Chase Ocean Engineering Laboratory",
+  "aliases": [
+    "Jere A. Chase Ocean Engineering Laboratory",
+    "Chase Ocean Engineering Building",
+    "COEL",
+    "Joint Hydrographic Center"
+  ],
+  "place": "Jere A. Chase Ocean Engineering",
+  "category": "academic",
+  "use": "Ocean engineering labs and tanks; Center for Coastal and Ocean Mapping / NOAA-UNH Joint Hydrographic Center",
+  "built": 1996,
+  "builtText": "1996 (core high bay early 1990s; dedicated Oct 10, 1997); some sources say 1994",
+  "style": "Low brick office wings fronting an industrial high bay",
+  "status": "in-use",
+  "renovations": [
+    {
+      "what": "Two additions by the Center for Coastal and Ocean Mapping (offices, labs)",
+      "major": true,
+      "src": [
+        "tnh20"
+      ]
+    },
+    {
+      "year": 2017,
+      "what": "New ocean engineering wing from a $3M alumnus gift: four research labs, instrumentation lab, machine shop, 90-seat lecture hall, seminar room, covered outdoor workspace",
+      "cost": 3000000,
+      "major": true,
+      "src": [
+        "tnh17",
+        "tnh20"
+      ]
+    },
+    {
+      "year": 2019,
+      "what": "Full-scale sediment flume installed beside the wave/tow tank",
+      "major": false,
+      "src": [
+        "tnh20"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Constructed in 1996 and dedicated October 10, 1997 for Jere A. Chase (class of 1936), a longtime UNH administrator who helped found the marine program.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "The high bay holds a 60 x 40 x 20 ft deep engineering tank and a 12 x 8 x 120 ft wave/tow tank with a hydraulic wavemaker.",
+      "src": [
+        "marine"
+      ]
+    },
+    {
+      "text": "The high bay is a warehouse-like workspace with two interior bays and one exterior bay, home to the ASV lab and ROV refits.",
+      "src": [
+        "ccom"
+      ]
+    },
+    {
+      "text": "A faculty member called the building \"deceiving\" from outside; the core high bay and some offices were built in the early 1990s.",
+      "src": [
+        "tnh20"
+      ]
+    },
+    {
+      "text": "It houses the Center for Coastal and Ocean Mapping.",
+      "src": [
+        "wiki"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/5/57/JACOEL-Wave_Tow_Tank-Image16.png",
+      "page": "https://commons.wikimedia.org/wiki/File:JACOEL-Wave_Tow_Tank-Image16.png",
+      "credit": "Unknown author (NOAA)",
+      "view": "interior",
+      "year": 2012,
+      "caption": "Model testing in the wave/tow tank (NOAA image)",
+      "license": "Public domain"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Data_Visualization_Lab%2C_Center_for_Coastal_and_Ocean_Mapping%2C_UNH%2C_Durham_NH.jpg/1280px-Data_Visualization_Lab%2C_Center_for_Coastal_and_Ocean_Mapping%2C_UNH%2C_Durham_NH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Data_Visualization_Lab,_Center_for_Coastal_and_Ocean_Mapping,_UNH,_Durham_NH.jpg",
+      "credit": "John Phelan",
+      "view": "interior",
+      "year": 2013,
+      "caption": "CCOM data visualization lab with curved display wall",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "Marine School: Chase Ocean Engineering Lab",
+      "url": "https://marine.unh.edu/research-centers/facilities/jere-chase-ocean-engineering-laboratory"
+    },
+    {
+      "label": "Wikipedia: Center for Coastal and Ocean Mapping",
+      "url": "https://en.wikipedia.org/wiki/Center_for_Coastal_and_Ocean_Mapping"
+    },
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "marine": {
+      "title": "Jere A. Chase Ocean Engineering Laboratory",
+      "publisher": "UNH School of Marine Science and Ocean Engineering",
+      "url": "https://marine.unh.edu/research-centers/facilities/jere-chase-ocean-engineering-laboratory",
+      "accessed": "2026-11-04"
+    },
+    "ccom": {
+      "title": "High Bay",
+      "publisher": "UNH Center for Coastal and Ocean Mapping",
+      "url": "https://www.ccom.unh.edu/resources/labs-workspaces/high-bay",
+      "accessed": "2026-11-04"
+    },
+    "tnh17": {
+      "title": "Donation to expand UNH ocean engineering program (2017-02)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2017/02/donation-to-expand-unh-ocean-engineering-program",
+      "accessed": "2026-11-04"
+    },
+    "tnh20": {
+      "title": "Chase high bay (2020-02)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2020/02/chase-high-bay",
+      "accessed": "2026-11-04"
+    },
+    "wiki": {
+      "title": "Center for Coastal and Ocean Mapping",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Center_for_Coastal_and_Ocean_Mapping",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 3,
+    "interior": 6,
+    "condition": 6,
+    "function": 8,
+    "character": 6,
+    "reputation": 6
+  },
+  "confidence": "high",
+  "verdict": "Plain brick wings hide a cavernous high bay with deep engineering and wave/tow tanks, the real heart of UNH ocean engineering.",
+  "notes": "No licensed exterior photo. Licensed interiors: a 2013 CCOM visualization lab (dropped acoustic-tile ceiling, fluorescent panels, no windows visible) and an older NOAA PD image of the tow tank in a tall industrial high bay with painted block walls. Archives exterior (1997) shows plain low brick wings. TNH 2017 says original lab built 1994; archives says 1996. 2017 wing size (12,000 sq ft) from search excerpt only.",
+  "judgeNotes": "Exterior from 1997 archives photo: low plain brick. Interior photos show the tow tank and a windowless vis lab. Gallery leads with the tank since there is no licensed exterior."
+}

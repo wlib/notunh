@@ -31,6 +31,7 @@ src/map/events.json
 src/map/rooms.json
 src/parking/parking.json
 src/programs/prereqs.json
+src/map/profiles.json
 src/courses/courses.json
 # What scripts/leads.mts last found, for /refresh-events to judge; its verdicts are kept in leads-seen.json
 leads.md

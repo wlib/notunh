@@ -7,6 +7,7 @@ import { type Section, type Term, KINDS, codeOf, courseOf } from "../courses/cou
 import type { Person } from "../courses/people.mts"
 import { daysOf, patternsOf } from "../courses/saved.mts"
 import type { GazetteerPlace } from "../places/gazetteer.mts"
+import { type Profile, CATEGORIES, ratingText } from "../places/profiles.mts"
 import type { Area } from "../parking/model.mts"
 import type { Listed } from "../programs/program.mts"
 import type { Space } from "../courses/bookings.mts"
@@ -62,13 +63,17 @@ export const eventPreview = (event: Event | Pin): Preview => ({
 const kindName = (kind: string) =>
   kind[0].toUpperCase() + kind.slice(1).replaceAll("_", " ")
 
-/** A place's: its kind, and what's on there next within the events given, else what the page offers */
-export const placePreview = (place: Pick<GazetteerPlace, "name" | "kind">, events: readonly Event[], now: number): Preview => {
+/**
+ * A place's: its kind, or a profiled building's category, and what's on there next within the events given, else its
+ * rating and verdict, else what the page offers
+ */
+export const placePreview = (place: Pick<GazetteerPlace, "name" | "kind">, events: readonly Event[], now: number, profiled?: { profile: Profile, ranked: number }): Preview => {
   const next = events.filter(event => event.place === place.name && event.end > now).sort((a, b) => a.start - b.start)[0]
+  const rated = profiled && [ratingText(profiled.profile, profiled.ranked), profiled.profile.verdict].filter(line => line !== undefined)
   return {
-    kind:  kindName(place.kind),
+    kind:  profiled ? CATEGORIES[profiled.profile.category] : kindName(place.kind),
     title: place.name,
-    lines: next ? [`Next: ${next.title}`, whenOf(next)] : ["Directions by bus or on foot"]
+    lines: next ? [`Next: ${next.title}`, whenOf(next)] : rated?.length ? rated : ["Directions by bus or on foot"]
   }
 }
 

@@ -1,0 +1,197 @@
+{
+  "name": "Thompson Hall",
+  "aliases": [
+    "T-Hall",
+    "T Hall"
+  ],
+  "place": "Thompson Hall",
+  "category": "administration",
+  "use": "Office of the President and central administration offices",
+  "built": 1893,
+  "builtText": "1891–93 (construction begun 1891, cornerstone 1892, opened fall 1893)",
+  "architect": "Dow & Randlett (Concord, NH)",
+  "style": "Richardsonian Romanesque",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 1986,
+      "what": "Interior extensively altered; only a few rooms kept in original form",
+      "major": true,
+      "src": [
+        "wiki"
+      ]
+    },
+    {
+      "year": 2007,
+      "what": "First complete exterior and structural restoration since 1893 (Goody Clancy, architect; Shawmut, contractor): failing lintels, turrets, roof rafter tails and an outward-moving wall addressed",
+      "cost": 5300000,
+      "major": true,
+      "src": [
+        "mag06",
+        "arch_admin"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Named for Benjamin Thompson, a Durham farmer whose 1890 bequest of his estate and farmland to the state founded the Durham campus; T-Hall stands on his farmland.",
+      "src": [
+        "arch_admin",
+        "wiki"
+      ]
+    },
+    {
+      "text": "The first academic building of New Hampshire College in Durham; it has housed the president's office continuously since 1893, and over time classrooms, labs, the library and bookstore, and a women's gymnasium.",
+      "src": [
+        "arch_admin"
+      ]
+    },
+    {
+      "text": "Listed on the National Register of Historic Places on December 6, 1996 (ref. 96001468); UNH Magazine calls it the only UNH building on the Register.",
+      "src": [
+        "wiki",
+        "mag06"
+      ]
+    },
+    {
+      "text": "Five-story clock tower with pyramidal roof and round corner turrets; nominally 2½ stories over a raised basement, with granite trim and a slate hip roof.",
+      "src": [
+        "wiki"
+      ]
+    },
+    {
+      "text": "Before the 2006–07 restoration, snow fence surrounded the turrets and bracing rods held bricks in the arched windows; survey markers showed the wall facing Dimond Library moving outward.",
+      "src": [
+        "mag06"
+      ]
+    },
+    {
+      "text": "The tower bell was cast by Meneely & Co. of West Troy, NY, in the same mold as Dartmouth's bell.",
+      "src": [
+        "arch_admin"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Thompson_Hall%2C_UNH_Sunset.jpg/1280px-Thompson_Hall%2C_UNH_Sunset.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Thompson_Hall,_UNH_Sunset.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Main facade and tower from the lawn in evening light",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1b/Thompson_Hall%2C_UNH_1.jpg/1280px-Thompson_Hall%2C_UNH_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Thompson_Hall,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Clock tower and arched entrance framed by trees",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://live.staticflickr.com/878/39495700970_7b892cd0ea_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/39495700970",
+      "credit": "Meghan Murphy / UNHDigitalSandbox (Flickr)",
+      "view": "exterior",
+      "year": 2018,
+      "caption": "Tower, turret and porte-cochere arch in early spring",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://live.staticflickr.com/4895/45928980612_819b10eee8_b.jpg",
+      "page": "https://www.flickr.com/photos/23119666@N03/45928980612",
+      "credit": "Mark Bonica",
+      "view": "exterior",
+      "year": 2018,
+      "caption": "Tower in snow from Main Street",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Durham_NH_005.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Durham_NH_005.jpg",
+      "credit": "Olivier Aumage",
+      "view": "exterior",
+      "year": 2005,
+      "caption": "Clock tower rising above the trees from the lawn",
+      "license": "CC BY-SA 2.0 fr",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/fr/deed.en"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/The_New_Hampshire_College_Monthly_%281909%29_%2814580506730%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:The_New_Hampshire_College_Monthly_(1909)_(14580506730).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1909,
+      "caption": "Thompson Hall on its knoll (cropped from a 1909 New Hampshire College Monthly photo page)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    }
+  ],
+  "more": [
+    {
+      "label": "Wikipedia: Thompson Hall (University of New Hampshire)",
+      "url": "https://en.wikipedia.org/wiki/Thompson_Hall_(University_of_New_Hampshire)"
+    },
+    {
+      "label": "UNH Library Archives: administrative and campus life buildings",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life"
+    },
+    {
+      "label": "UNH Magazine (2006): T-Hall restoration",
+      "url": "https://unhmagazine.unh.edu/f06/makeover.html"
+    },
+    {
+      "label": "Clio: Thompson Hall",
+      "url": "https://theclio.com/tour/2807/3"
+    },
+    {
+      "label": "UNH News (2025): More Than a Building (video tour)",
+      "url": "https://www.unh.edu/news/more-building-enduring-legacy-unhs-thompson-hall"
+    }
+  ],
+  "sources": {
+    "arch_admin": {
+      "title": "Administrative and Campus Life Buildings",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life",
+      "accessed": "2026-11-04"
+    },
+    "wiki": {
+      "title": "Thompson Hall (University of New Hampshire)",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Thompson_Hall_(University_of_New_Hampshire)",
+      "accessed": "2026-11-04"
+    },
+    "mag06": {
+      "title": "T-Hall makeover (Fall 2006)",
+      "publisher": "UNH Magazine",
+      "url": "https://unhmagazine.unh.edu/f06/makeover.html",
+      "accessed": "2026-11-04"
+    },
+    "news25": {
+      "title": "More Than a Building: The Enduring Legacy of UNH’s Thompson Hall (Aug 19, 2025)",
+      "publisher": "UNH News",
+      "url": "https://www.unh.edu/news/more-building-enduring-legacy-unhs-thompson-hall",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 10,
+    "interior": 5,
+    "condition": 7,
+    "function": 6,
+    "character": 10,
+    "reputation": 9
+  },
+  "confidence": "high",
+  "verdict": "The campus's landmark: an 1893 Romanesque clock tower everyone knows, restored outside in 2007, though inside it's mostly 1986 offices.",
+  "notes": "Year: Wikipedia's lead says 1892 while its NRHP-sourced body says construction began 1891; the archives say cornerstone 1892, completed 1893. The $5.3M figure is the project budget (UNH Magazine, Fall 2006); exact completion date not confirmed (old data said 2006–07). Old data's '1940 Huddleston remodel (stairs, stained glass removed)' and '1986 by Perry Dean Rogers' were not confirmed; Wikipedia confirms only an extensive 1986 interior alteration. Wikipedia says an electronic carillon replaced the single bell in 1952, while the archives say the bell 'is now controlled from the Alumni Center'; both may be true. The Flash 'Central City University' claim is uncited on Wikipedia and was not kept. No student reviews found (Reddit not reachable). A/C and accessibility undocumented. Photos: strong licensed exterior coverage (Commons and Flickr, 2005–2018) showing the red brick, rock-faced granite trim, tower and turrets in good repair; no interior photo found. Mark Bonica's other Flickr photo 'Thompson Hall' (CC BY 2.0, flickr.com/photos/23119666@N03/21596383339) is a further option.",
+  "judgeNotes": "Photos confirm the anchor: tower, turrets and porte-cochère. Scores match the old run."
+}

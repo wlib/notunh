@@ -1,0 +1,129 @@
+{
+  "name": "Huddleston Hall",
+  "aliases": [
+    "The Commons",
+    "Hamel Honors and Scholars Building"
+  ],
+  "place": "Huddleston Hall",
+  "category": "academic",
+  "use": "Hamel Honors and Scholars College: offices, classrooms, lounge, study 'huddle' spaces, ballroom function space",
+  "built": 1919,
+  "builtText": "Opened 1919 as the Commons; renamed Huddleston Hall in 1963",
+  "architect": "Eric T. Huddleston (original); Engelberth Construction (2023-24 renovation)",
+  "style": "Colonial Revival",
+  "status": "in-use",
+  "statusNote": "Home of the Hamel Honors and Scholars College since 2024",
+  "renovations": [
+    {
+      "year": 2024,
+      "what": "Historic-preservation renovation for the Hamel Honors and Scholars College: full 2nd floor, partial 1st and 3rd, new elevator, life-safety and energy systems, ADA upgrades, new 3,500 sf two-storey accessible entrance addition, roof shingles, parking moved to rear; opened September 29, 2024",
+      "major": true,
+      "src": [
+        "engelberth",
+        "tnh_hamel"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Opened in 1919 as the Commons, the first campus dining hall; wartime material restrictions delayed it a year. The third floor was built as a men's dormitory but housed women.",
+      "src": [
+        "arch_din"
+      ]
+    },
+    {
+      "text": "It served as the dining hall until spring 2003, when Holloway Commons replaced it; its dining room became a ballroom used as function space.",
+      "src": [
+        "arch_din"
+      ]
+    },
+    {
+      "text": "Named Huddleston Hall since 1963 for campus architect Eric T. Huddleston, who designed it in a restrained Colonial Revival style with white columns and Palladian windows.",
+      "src": [
+        "clio"
+      ]
+    },
+    {
+      "text": "The 40,000 sf, four-storey building was renovated as the home of the Hamel Honors and Scholars College, with a new 3,500 sf two-storey accessible entrance addition.",
+      "src": [
+        "engelberth"
+      ]
+    },
+    {
+      "text": "The renovation was enabled by a $20 million gift from Dana Hamel; the ribbon was cut September 29, 2024.",
+      "src": [
+        "tnh_hamel"
+      ]
+    },
+    {
+      "text": "The renovated ballroom has high ceilings and lots of natural light from half-round windows.",
+      "src": [
+        "tnh_hamel"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Huddleston_Hall%2C_UNH.jpg/1280px-Huddleston_Hall%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Huddleston_Hall,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Three-storey brick facade with dormers and arched windows behind trees (2013, before the renovation)",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: The Commons",
+      "url": "https://library.unh.edu/find/archives/buildings/dining-facilities"
+    },
+    {
+      "label": "Clio: Huddleston Hall history",
+      "url": "https://theclio.com/tour/2807/1"
+    },
+    {
+      "label": "Engelberth: renovation project",
+      "url": "https://www.engelberth.com/portfolio/unh-huddleston-hall/"
+    }
+  ],
+  "sources": {
+    "arch_din": {
+      "title": "Dining Facilities",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/dining-facilities",
+      "accessed": "2026-11-04"
+    },
+    "clio": {
+      "title": "Huddleston Hall",
+      "publisher": "Clio",
+      "url": "https://theclio.com/tour/2807/1",
+      "accessed": "2026-11-04"
+    },
+    "engelberth": {
+      "title": "Huddleston Hall, Hamel Honors and Scholars College",
+      "publisher": "Engelberth Construction",
+      "url": "https://www.engelberth.com/portfolio/unh-huddleston-hall/",
+      "accessed": "2026-11-04"
+    },
+    "tnh_hamel": {
+      "title": "Hamel Scholars opens its doors",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2024/10/hamel-scholars-opens-its-doors",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 7,
+    "interior": 8,
+    "condition": 9,
+    "function": 8,
+    "character": 8,
+    "reputation": 8
+  },
+  "confidence": "high",
+  "verdict": "The 1919 Commons, restored in 2024 for the Honors College; its old dining room is now a sunlit ballroom students love.",
+  "notes": "Category corrected from 'student-life' to 'academic': it now houses the Honors College's offices and classrooms. The licensed 2013 photo shows a brick Colonial Revival block with a stone-capped balustrade, dormers and arched first-floor windows; I can't confirm which facade it shows, and it predates the 2024 glass entrance addition. The cost of the renovation itself is not published (the $20M gift also funded the Hamel Scholars endowment). The ~1994 $5.5M restructuring and the Harriman design credit in the old row were not verified.",
+  "judgeNotes": "Photo shows a handsome Colonial Revival front with dormers; ballroom described as high and bright. Exterior trimmed to 7 to match Congreve and Hetzel."
+}

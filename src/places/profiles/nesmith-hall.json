@@ -1,0 +1,131 @@
+{
+  "name": "Nesmith Hall",
+  "place": "Nesmith Hall",
+  "category": "academic",
+  "use": "UNH Sustainability Institute (relocating); historically Agricultural Experiment Station and plant/animal sciences",
+  "built": 1893,
+  "builtText": "1893 (two floors); third floor 1932; wings 1938–39",
+  "architect": "Original based on a design by William Butterfield; 1932 and 1938–39 work by Eric T. Huddleston",
+  "style": "Colonial Revival (originally Gothic Revival with a tower)",
+  "status": "proposed-closure",
+  "statusNote": "Phase 1 closure list, Oct 2025; Sustainability Institute relocating",
+  "renovations": [
+    {
+      "year": 1932,
+      "what": "Remodeled from Gothic Revival to Colonial Revival and raised to three floors (Huddleston)",
+      "major": true,
+      "src": [
+        "arch_acad",
+        "clio"
+      ]
+    },
+    {
+      "year": 1939,
+      "what": "Two ninety-foot wings added, quadrupling the building",
+      "major": true,
+      "src": [
+        "clio"
+      ]
+    },
+    {
+      "year": 1965,
+      "what": "Significant interior renovation during the 1960s (exact year unknown)",
+      "major": true,
+      "src": [
+        "arch_acad"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "One of the first buildings after the 1893 move from Hanover, built for the Agricultural Experiment Station and named for Judge George W. Nesmith.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "Its original design was noted as eccentric; the student paper called it 'pig-faced' in 1929.",
+      "src": [
+        "arch_acad",
+        "clio"
+      ]
+    },
+    {
+      "text": "Labs moved out after Rudman Hall opened (1996), and it served for a time as swing space during the Dimond and Pettee renovations.",
+      "src": [
+        "arch_acad",
+        "clio"
+      ]
+    },
+    {
+      "text": "Its occupants describe it as one of the least sustainable, least energy-efficient buildings on campus.",
+      "src": [
+        "tnh_close"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/d0/The_New_Hampshire_College_Monthly_%281909%29_%2814787081033%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:The_New_Hampshire_College_Monthly_(1909)_(14787081033).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1909,
+      "caption": "Nesmith Hall before the 1932 remodel, with its original tower (cropped from a 1909 New Hampshire College Monthly photo page)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "Clio: Nesmith Hall",
+      "url": "https://theclio.com/tour/2807/4"
+    },
+    {
+      "label": "UNH: proposed Durham building closures (Oct 2025)",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "closure": {
+      "title": "Proposed Durham Building Closures (Oct 24, 2025)",
+      "publisher": "UNH Leadership blog",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures",
+      "accessed": "2026-11-04"
+    },
+    "tnh_close": {
+      "title": "TRIO Scholars and Sustainability Institute prepare to relocate (Dec 12, 2025; updated Mar 12, 2026)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2025/12/trio-scholars-and-sustainability-institute-prepare-to-relocate",
+      "accessed": "2026-11-04"
+    },
+    "clio": {
+      "title": "Nesmith Hall",
+      "publisher": "Clio",
+      "url": "https://theclio.com/tour/2807/4",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 3,
+    "condition": 2,
+    "function": 2,
+    "character": 6,
+    "reputation": 3
+  },
+  "confidence": "med",
+  "verdict": "1893 experiment-station building, remodelled to Colonial Revival in 1932; its tenants call it among the least efficient on campus, and it is slated for closure.",
+  "notes": "The 1965 date is a placeholder for 'significant interior renovation during the 1960s' (archives); the exact year is unknown. Clio (2024) says it is now the plant and animal science headquarters with classrooms only; TNH (Dec 2025) says it houses the Sustainability Institute. Treat Clio's current-use line as stale. Closure execution unconfirmed. No licensed modern photo; ref-01 (archives) shows the long Colonial Revival front on Main Street; ref-02 (Clio) shows its three stages.",
+  "judgeNotes": "Archives photo shows a decent porticoed brick front; only a 1909 licensed image survives."
+}

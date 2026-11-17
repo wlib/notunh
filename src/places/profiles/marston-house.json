@@ -1,0 +1,89 @@
+{
+  "name": "Marston House",
+  "aliases": [
+    "The Minis"
+  ],
+  "place": "Marston House",
+  "category": "residence",
+  "use": "Former mini-dorm (50 students), mostly singles; part of the four-building Minis",
+  "built": 1976,
+  "builtText": "Dedicated October 17, 1976 (construction years not documented)",
+  "style": "Two-storey wood-frame houses with vertical board siding and gabled roofs (from photos)",
+  "status": "closed",
+  "statusNote": "Minis closed at the end of spring 2026; future not announced",
+  "facts": [
+    {
+      "text": "Dedicated October 17, 1976 as a language residence where residents spoke only French, Spanish or German in their wing; named for UNH historian Philip M. Marston.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Housing's Minis pages (archived April 2026) state the Minis were expected to close permanently at the end of the spring 2026 semester and were not available for 2026-27 assignments; the live pages now return \"Access denied\" and the Minis are absent from the current residence-hall list.",
+      "src": [
+        "s2",
+        "s3"
+      ]
+    },
+    {
+      "text": "Housing described Marston (50 students) as mostly single rooms with six doubles, lounge spaces, and a \"tree-surrounded cabin near a stream\" setting near College Woods and Philbrook. The four Minis (Eaton, Hall, Marston, Richardson) functioned as one hall; residents could swipe into all four.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Accessibility per Housing: limited-use bathrooms, roll-in building access, strobe alerts in some rooms; gender-inclusive restrooms. No elevator or AC listed.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Address: 28 Demeritt Circle.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#marston"
+    },
+    {
+      "label": "Archived Housing page (April 2026)",
+      "url": "https://web.archive.org/web/20260430002356/https://www.unh.edu/housing/facility/minis-marston-house"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Marston House (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#marston",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "The Minis (Marston House) | Housing & Residential Life (archived 2026-04-30; live page now returns 403)",
+      "publisher": "UNH Housing",
+      "url": "https://web.archive.org/web/20260430002356/https://www.unh.edu/housing/facility/minis-marston-house",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Residence Halls | Housing & Residential Life",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/housing-options/residence-halls",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 3,
+    "function": 3,
+    "character": 5,
+    "reputation": 4
+  },
+  "confidence": "med",
+  "verdict": "1976 cabin-like Mini by a stream, once a foreign-language house; closed in 2026.",
+  "notes": "Reference photos show the Minis as low two-storey wood-frame buildings clad in grey vertical boards, with gabled roofs, exterior stairs and decks, set among tall pines near College Woods; modest, cabin-like, weathered. No licensed photo found. Old row's \"welcoming\" reputation note not re-sourced.",
+  "judgeNotes": "Reference photos show weathered board-clad cabins in the pines. Down about a point from the old run because the Minis closed in 2026 (condition and function 3)."
+}

@@ -1,0 +1,88 @@
+{
+  "name": "Lord Hall",
+  "place": "Lord Hall",
+  "category": "residence",
+  "use": "Residence hall, 118 first-year students",
+  "built": 1958,
+  "builtText": "built 1957–58; occupied spring 1959; dedicated April 24, 1960",
+  "architect": "Koehler and Isaak",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2024,
+      "what": "Domestic hot water to be supplied from a new shared steam-fired heater in Congreve (bid)",
+      "major": false,
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Designed by Koehler and Isaak, built 1957–58 and first occupied as a women's dorm in spring 1959; dedicated April 24, 1960.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Named for Frank Stetson Lord, whose 1951 bequest of about $250,000 was then the second-largest gift to the university.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Small first-year hall of 118 students at 30 Ballard Street, next to the Whittemore Center, with four lounges; the main lounge has a fireplace, pool table, piano and TV.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Lord Hall",
+      "url": "https://www.unh.edu/housing/facility/lord-hall"
+    },
+    {
+      "label": "UNH Library: residence hall histories",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Lord Hall (hall page)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/lord-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "UNH Congreve Hall Heat Exchanger Replacement (bid notice, published 2024-05-25)",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/6646906-unh-congreve-hall-heat-exchanger-replacement&find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "The Ultimate Ranking Of Freshman Dorms At UNH (published 2025-10-24)",
+      "publisher": "Society19",
+      "url": "https://www.society19.com/the-ultimate-ranking-of-freshman-dorms-at-unh/amp/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 5,
+    "condition": 4,
+    "function": 5,
+    "character": 4,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "Small 1959 first-year hall with a cozy entrance and a bright fireplace lounge; no A/C.",
+  "notes": "Accessibility on the hall page lists only strobe alerts (some rooms), so 'partial' is generous; no elevator listed. The old row's 2023 pipe replacement was not re-verified. Photos: two/three-storey brick hall with a white-trimmed entry bay up a stone stair, heavily planted; the main lounge is bright, with long ribbons of large windows, brick fireplace wall and flush round ceiling lights, but the ceiling is ordinary height. No licensed photo found (searched the Commons category tree under 'University of New Hampshire' and 'Durham, New Hampshire', Commons file search by name, Commons geosearch at the building's coordinates, and Openverse/Flickr CC).",
+  "judgeNotes": "Reference photos show plain brick and a sunny lounge."
+}

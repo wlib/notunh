@@ -1,0 +1,151 @@
+{
+  "name": "Macfarlane Research Greenhouses",
+  "aliases": [
+    "Greenhouses",
+    "Macfarlane Greenhouses"
+  ],
+  "place": "Greenhouses",
+  "category": "research-farm",
+  "use": "NH Agricultural Experiment Station / COLSA research and teaching greenhouses (plant breeding, crop physiology, pest management)",
+  "built": 1948,
+  "builtText": "Greenhouses moved to this site in 1948 (UNH's first greenhouse dates to 1896); addition opened October 2020",
+  "style": "Glass research greenhouse range",
+  "status": "in-use",
+  "statusNote": "1940s houses due for replacement with federal funds announced 2026",
+  "renovations": [
+    {
+      "year": 2020,
+      "what": "Research greenhouse addition (about 6,800 sq ft, ~43% more research-grade space), opened October 2020",
+      "cost": 2580000,
+      "major": true,
+      "src": [
+        "s5"
+      ]
+    },
+    {
+      "year": 2026,
+      "what": "Nearly $2 million federal appropriation to replace antiquated 1940s greenhouse structures with a new greenhouse, renovated labs, a classroom and modern plumbing/HVAC (planned; CEED Plant Science)",
+      "cost": 2000000,
+      "major": false,
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "The complex has more than 25,000 square feet of greenhouse space, with environments regulated by a computer-based control system.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH's first greenhouse was built in 1896 and was moved to the present site in 1948; the greenhouses are named for James Macfarlane, UNH's first greenhouse director.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Much of the infrastructure dates to the 1940s; a nearly $2 million federal appropriation announced in 2026 will replace antiquated structures and create the Center for Excellence in Education and Discovery for Plant Science.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "The facility typically supports 20 to 30 research projects a year, including the cucurbit breeding program, North America's longest continuously running pumpkin and squash breeding effort.",
+      "src": [
+        "s3",
+        "s1"
+      ]
+    },
+    {
+      "text": "It received the top sustainability grade from an international certification group two years running and is described as the only research greenhouse operation in the world with that certification.",
+      "src": [
+        "s4"
+      ]
+    },
+    {
+      "text": "A free public open house is held every spring.",
+      "src": [
+        "s1",
+        "s2"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://live.staticflickr.com/5083/5230526182_cfea2403cc_b.jpg",
+      "page": "https://www.flickr.com/photos/26531284@N02/5230526182/",
+      "credit": "rickpilot_2000",
+      "view": "interior",
+      "year": 2010,
+      "caption": "Poinsettia trials under the glass roof during the 5th annual open house, Dec. 2010",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://live.staticflickr.com/5286/5230527048_1317713b55_b.jpg",
+      "page": "https://www.flickr.com/photos/26531284@N02/5230527048/",
+      "credit": "rickpilot_2000",
+      "view": "interior",
+      "year": 2010,
+      "caption": "Benches of poinsettia varieties, Dec. 2010",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "COLSA: Macfarlane Research Greenhouses",
+      "url": "https://colsa.unh.edu/facility/macfarlane-research-greenhouses"
+    },
+    {
+      "label": "UNH News: federal investment in the greenhouses (2026)",
+      "url": "https://www.unh.edu/news/federal-investment-advances-unh-plant-research-excellence"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Macfarlane Research Greenhouses",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/facility/macfarlane-research-greenhouses",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "UNH Macfarlane Greenhouses to Hold Open House on April 6 (Apr. 3, 2024)",
+      "publisher": "Greenhouse Grower",
+      "url": "https://www.greenhousegrower.com/events/unh-macfarlane-greenhouses-to-hold-open-house-on-april-6/",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Federal Investment Advances UNH Plant Research Excellence (2026)",
+      "publisher": "UNH News",
+      "url": "https://www.unh.edu/news/federal-investment-advances-unh-plant-research-excellence",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "UNH Greenhouses Earn Top Sustainability Credential from International Group",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/spotlight/unh-greenhouses-earn-top-sustainability-credential-international-group",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "Hydock Facilitated Construction of $2.6M Greenhouse Addition",
+      "publisher": "UNH Today",
+      "url": "https://www.unh.edu/unhtoday/node/18856",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 7,
+    "condition": 5,
+    "function": 7,
+    "character": 6,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "Glass research range with a 2020 addition and 1940s houses awaiting replacement; home to the continent's longest-running cucurbit breeding program.",
+  "notes": "The 2020 addition figures ($2.58M, ~6,800 sq ft, Oct. 2020) come from the UNH Today article (s5), but that URL now redirects to the UNH Today homepage; I saw the figures only in search snippets, which agree with the old row. Area figures differ: 22,000 sq ft (older range, s2) vs 'more than 25,000' (whole complex, s1). The 2026 renovation is funded but not built. Both licensed photos are 2010 interiors of older glass houses: tall glazed ridge roofs, strong daylight, utilitarian steel framing, crowded benches. Two more CC BY photos by the same Flickr user (Dec. 2010, cactus and succulent collection) are titled 'UNH TSAS Greenhouse', i.e. the Thompson School teaching greenhouse; I left them out because it isn't clear that is the same structure. No licensed exterior photo found. No public reviews; the open house is popular, but I found no rated reviews.",
+  "judgeNotes": "Interior photos show bright glasshouses. Condition 5 for the antiquated 1940s structures."
+}

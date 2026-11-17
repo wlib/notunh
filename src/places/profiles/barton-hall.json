@@ -1,0 +1,68 @@
+{
+  "name": "Barton Hall",
+  "place": "Barton Hall",
+  "category": "academic",
+  "use": "Thompson School of Applied Science: animal science and food labs, classrooms, offices (built with a dairy and ice-cream plant)",
+  "built": 1969,
+  "builtText": "Planned 1963; completed 1969; dedicated April 10, 1970",
+  "architect": "Edward Benton Miles (builder: The Maxam Co.)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Barton Hall is named for Philip Shaw Barton, first director of the Thompson School of Applied Science, who helped found it in 1953.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It was designed by Edward Benton Miles and built by The Maxam Co.; planning began in 1963 and construction finished in 1969, and it was dedicated April 10, 1970.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It originally held a modern dairy and ice-cream manufacturing plant, along with classrooms, demonstration space, labs and offices.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "By 2008 it contained an animal science lab, a food preparation lab, a grooming facility, classrooms and faculty offices.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Undergraduate Course Catalog 2008-2009: Thompson School of Applied Science",
+      "publisher": "UNH",
+      "url": "https://www.unh.edu/archive/undergrad-catalog/2008-2009/info.cfm@id=5.html",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 4,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "Plain 1969 Thompson School lab building, built around a dairy plant; serviceable and anonymous.",
+  "notes": "No renovation history found. The old row's 'Physical Resources report: good, meets codes, accessible' could not be verified because the PDF is image-only, so it was dropped. Current occupants weren't confirmed beyond the 2008 catalog. No licensed photo found. The reference photo, probably from around 1970, shows a clean but plain flat-roofed modernist brick building with good ribbon windows on the main wing. No reviews.",
+  "judgeNotes": "Only a 1970 archives photo; no renovation or current-condition evidence."
+}

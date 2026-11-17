@@ -1,0 +1,149 @@
+{
+  "name": "Hamel Recreation Center",
+  "aliases": [
+    "Hamel",
+    "HRC",
+    "Snively Arena"
+  ],
+  "place": "Hamel Rec Center",
+  "category": "athletics",
+  "use": "Student recreation and fitness center (former Snively Arena); part of the Key Auto Group Complex",
+  "built": 1965,
+  "builtText": "1965 as Snively Arena; renovated, expanded and renamed 1995; expanded 2016–17",
+  "architect": "2016–17 expansion: Hughes Group Architects (builder Shawmut Design and Construction)",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 1995,
+      "what": "Renovated and expanded; renamed for benefactor Dana Hamel",
+      "major": true,
+      "src": [
+        "s1",
+        "s4"
+      ]
+    },
+    {
+      "year": 2017,
+      "what": "About 100,000 sq ft expansion and renovation with replacement of the outdoor pool; $5.5M of the $35.5M project went to deferred maintenance (roof, air handlers, hardwood floors)",
+      "cost": 35500000,
+      "major": true,
+      "src": [
+        "s1",
+        "s2"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built in 1965 as Snively Arena, named for coach A. Barr 'Whoop' Snively; home of UNH men's hockey until the Whittemore Center opened in 1995.",
+      "src": [
+        "s1",
+        "s4"
+      ]
+    },
+    {
+      "text": "The 2016–17 expansion added fitness space, a one-tenth-mile suspended track, wellness space, an instructional kitchen and a large multi-activity court.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Most of the $30 million non-maintenance cost was financed by a loan repaid by students.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Since 2023 it forms the Key Auto Group Complex with the Whittemore Center; UNH describes it as 158,000 sq ft with 18,000 sq ft of fitness space.",
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://live.staticflickr.com/789/40456033845_380b6f845d_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/40456033845/",
+      "credit": "Meghan Murphy / UNHDigitalSandbox (Flickr)",
+      "view": "exterior",
+      "year": 2018,
+      "caption": "Stone-and-glass entrance pavilion",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/Hamel_Rec_Center_Jan_2021.jpg/1280px-Hamel_Rec_Center_Jan_2021.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Hamel_Rec_Center_Jan_2021.jpg",
+      "credit": "Ken Gallager",
+      "view": "exterior",
+      "year": 2021,
+      "caption": "2017 entrance addition, with the 1965 arena vault behind",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://live.staticflickr.com/882/39542344600_a80b2c5013_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/39542344600/",
+      "credit": "Meghan Murphy / UNHDigitalSandbox (Flickr)",
+      "view": "detail",
+      "year": 2018,
+      "caption": "Main entrance with louvered glass bay",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: athletic facility histories",
+      "url": "https://library.unh.edu/find/archives/buildings/athletic-facilities"
+    },
+    {
+      "label": "Wikipedia: Hamel Recreation Center",
+      "url": "https://en.wikipedia.org/wiki/Snively_Arena"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Athletic Facilities (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/athletic-facilities",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Hamel Recreation Center gets a new addition (April 2016)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2016/04/hamel-recreation-center-gets-a-new-addition",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "UNH Athletics Receives $4 Million for Renovations and Names New Key Auto Group Complex (Wayback copy, 2024-07-20)",
+      "publisher": "UNH Today",
+      "url": "https://web.archive.org/web/20240720064208/https://www.unh.edu/unhtoday/node/19946",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Hamel Recreation Center",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Snively_Arena",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "Facilities (event venues)",
+      "publisher": "UNH Events & Conferences",
+      "url": "https://www.unh.edu/events-conferences/facilities",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 7,
+    "condition": 8,
+    "function": 9,
+    "character": 5,
+    "reputation": 8
+  },
+  "confidence": "high",
+  "verdict": "Snively Arena's 1965 vault wrapped by a 2017 stone-and-glass addition: a big, bright, well-used rec centre students paid for.",
+  "notes": "Old row's exact areas (98,920 sf renovation + 69,930 sf addition) and 'Living Wall / Sculptural Forest Wall' interior descriptions come from architect pages I could not open (Athletic Business returned 403); not re-verified. Archives say '100,000 square foot expansion and renovation' and date it 2016; TNH says the renovated building would be usable spring 2017. Old row's 86%-usage stat not re-verified. Wikipedia's article title is 'Hamel Recreation Center' (URL redirects from Snively_Arena). Photos: 1965 arena is a white barrel-vaulted shell; the new entry (Flickr, 2018) is a tall stone-and-glass block with a projecting louvred glass bay and canopy; MAC West courts have high open-truss ceilings. Licensed photos: 2021 (Ken Gallager) and 2018 (Flickr CC BY) show the 2017 entrance addition: buff stone piers, a projecting louvered glass bay, metal panel wings and large windows, with the white 1965 arena vault behind. Crisp and contemporary.",
+  "judgeNotes": "Photos show a crisp but generic entrance pavilion; interior reference shows bright courts. Exterior up a point from the old run now that the addition is visible."
+}

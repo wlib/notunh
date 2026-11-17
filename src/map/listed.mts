@@ -1,7 +1,8 @@
 // Every page of the map worth a search engine's while, for the sitemap (scripts/search.mts): the official events not
-// over, the places with something on, classes, a laundry room, a dining hall or a chapter, every stop a bus picks up
-// at, the courses, sections and rooms of the terms not over, the rooms anyone can book, the programs, and parking.
-// Never an instructor's, which are people (UNLISTED in site.mts). Each is of something as of the instant, so resolves
+// over, the places with something on, classes, a laundry room, a dining hall, a chapter or a profile, every stop a
+// bus picks up at, the courses, sections and rooms of the terms not over, the rooms anyone can book, the programs,
+// and parking. Never an instructor's, which are people (UNLISTED in site.mts). Each is of something as of the
+// instant, so resolves
 
 import type { Page } from "./link.mts"
 import { type Site, notOver, termsOf } from "./site.mts"
@@ -9,6 +10,7 @@ import { EventsData } from "../social/event.mts"
 import { Gazetteer } from "../places/gazetteer.mts"
 import { Places } from "../places/buildings.mts"
 import { CHAPTERS, isPlaced } from "../places/chapters.mts"
+import { Profiles } from "../places/profiles.mts"
 import { activeTerms, courseOf } from "../courses/course.mts"
 import { roomKey } from "../courses/rooms.mts"
 import { RoomsData } from "../courses/bookings.mts"
@@ -18,9 +20,10 @@ import { ParkingData } from "../parking/sources.mts"
 import { FeedData, boardableStops } from "../transit/feed.mts"
 
 export const listedPages = async (site: Site, now: number): Promise<Page[]> => {
-  const [{ events }, { places }, { buildings }, feed, prereqs, { areas }, { spaces }, terms] = await Promise.all([
+  const [{ events }, { places }, { buildings }, feed, prereqs, { areas }, { spaces }, terms, { profiles }] = await Promise.all([
     site.named("events", EventsData), site.named("gazetteer", Gazetteer), site.named("places", Places), site.named("gtfs", FeedData),
-    site.named("prereqs", PrereqsIndex), site.named("parking", ParkingData), site.named("rooms", RoomsData), termsOf(site, notOver(now))
+    site.named("prereqs", PrereqsIndex), site.named("parking", ParkingData), site.named("rooms", RoomsData), termsOf(site, notOver(now)),
+    site.named("profiles", Profiles)
   ])
   const active = new Set(activeTerms(terms, now))
   const upcoming = events.filter(event => event.end > now)
@@ -30,7 +33,8 @@ export const listedPages = async (site: Site, now: number): Promise<Page[]> => {
     ...upcoming.map(event => event.place),
     ...meetings.map(meeting => meeting.place),
     ...buildings.map(building => building.name),
-    ...CHAPTERS.filter(isPlaced).map(chapter => chapter.name)
+    ...CHAPTERS.filter(isPlaced).map(chapter => chapter.name),
+    ...Object.keys(profiles)
   ].filter(name => name !== undefined && named.has(name)) as string[])
   const rooms = new Map([
     ...spaces.map(space => [roomKey(space.where), space.where] as const),

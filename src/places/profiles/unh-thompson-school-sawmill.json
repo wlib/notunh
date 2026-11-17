@@ -1,0 +1,99 @@
+{
+  "name": "UNH Thompson School Sawmill",
+  "aliases": [
+    "UNH Sawmill",
+    "T-School Sawmill"
+  ],
+  "place": "UNH Thompson School Sawmill",
+  "category": "research-farm",
+  "use": "Teaching sawmill for Thompson School forest technology students; mills lumber harvested from university land",
+  "built": 1968,
+  "builtText": "1968 (pole barn built by UNH faculty and students)",
+  "style": "Timber pole barn",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2006,
+      "what": "Fund-raising campaign ($230,000 goal plus $100,000 UNH match) for a band saw, heated classroom, upgraded electric service and running water",
+      "cost": 330000,
+      "major": false,
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "The sawmill is a 45-by-100-foot pole barn built by UNH faculty and students in 1968 on Mast Road.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It has served UNH since 1968 for research, education and sustainable lumber production; all lumber is harvested from university land by Thompson School forest technology students.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "In 2006 the mill, with its handset carriage and circular saw, was described as increasingly obsolete, and a campaign was raised to renovate it.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "The site connects directly to College Woods and has parking, water, power and year-round educational facilities.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "The Forestry FACTS plan would expand the site around the sawmill with a maple-sugaring operation, Christmas-tree research and demonstration areas, with Phase 1 targeted for fall 2026.",
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "COLSA: UNH Sawmill",
+      "url": "https://colsa.unh.edu/facility/unh-sawmill"
+    },
+    {
+      "label": "COLSA: Forestry FACTS",
+      "url": "https://colsa.unh.edu/forestry-field-activity-center-thompson-school"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Cutting Edge (Winter 2006)",
+      "publisher": "UNH Magazine",
+      "url": "https://unhmagazine.unh.edu/w06/cuttingedge.html",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "UNH Sawmill",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/facility/unh-sawmill",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Forestry Field Activity Center at the Thompson School (Forestry FACTS)",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/forestry-field-activity-center-thompson-school",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 6,
+    "condition": 5,
+    "function": 7,
+    "character": 6,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "A 1968 pole barn built by faculty and students, now a timber-trussed teaching mill cutting lumber from university woods.",
+  "notes": "Whether the 2006 renovation was completed isn't directly confirmed. The 2018 and 2021 COLSA reference photos show a modern band-saw line (not the old circular saw), which suggests it was. Interior per references: big open timber-truss shed with a translucent ridge strip and warm wood; rustic but handsome and functional. A search snippet attributed a 1960 construction date to UNH Magazine, but the article I opened says 1968. No licensed photos; no reviews.",
+  "judgeNotes": "Reference photos show a warm, handsome timber shed with a modern band-saw line."
+}

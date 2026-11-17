@@ -1,0 +1,105 @@
+{
+  "name": "McLaughlin Hall",
+  "place": "McLaughlin Hall",
+  "category": "residence",
+  "use": "Residence hall, 127 first-year students; Health & Human Services learning community",
+  "built": 1955,
+  "builtText": "dedicated March 19, 1955",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2024,
+      "what": "Domestic hot water to be supplied from a new shared steam-fired heater in Congreve (bid); McLaughlin keeps a gas instantaneous heater as backup",
+      "major": false,
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Dedicated March 19, 1955, and named for Helen Fitch McLaughlin, chair of home economics from 1920, who served UNH for 36 years.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Small first-year hall of 127 students at 32 Ballard Street, on a hill overlooking western campus and surrounded by trees and lawns.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Has a gender-inclusive community restroom on the ground floor and a single-use restroom on the first floor; lounges on all floors.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/70/McLaughlin_Hall%2C_UNH.jpg/1280px-McLaughlin_Hall%2C_UNH.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:McLaughlin_Hall,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Gable end and side on its wooded hillside",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: McLaughlin Hall",
+      "url": "https://www.unh.edu/housing/facility/mclaughlin-hall"
+    },
+    {
+      "label": "UNH Library: residence hall histories",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "McLaughlin Hall (hall page)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/mclaughlin-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "UNH Congreve Hall Heat Exchanger Replacement (bid notice, published 2024-05-25)",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/6646906-unh-congreve-hall-heat-exchanger-replacement&find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "McLaughlin Hall Dorm Reviews",
+      "publisher": "RoomSurf",
+      "url": "https://www.roomsurf.com/dorm-reviews/unh/mclaughlin-hall/23593",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "Facility tag: Air conditioning",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility-tags/air-conditioning",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 5,
+    "condition": 4,
+    "function": 5,
+    "character": 4,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "Small 1955 brick hall on a wooded hill; quiet and well staffed, little else.",
+  "notes": "CONTRADICTION: the McLaughlin hall page lists 'Air conditioning' under Amenities, but UNH Housing's air-conditioning facility tag does not include McLaughlin (it lists ATW, Congreve, Fairchild, Haaland, Handler, Mills, Peterson). Old row said no A/C; left 'unknown'. Architect not given by the archives. Hall size is 127 now (old row ~123). Photos: three-storey red-brick Colonial Revival-style block with white trim, pedimented entry and a stair up a leafy slope; lobby interior is dated (painted trim, glass doors). Licensed photo (2013): a plain three-storey red-brick box with a low gable roof and regular double-hung windows on a grassy hillside under pines; modest and well kept.",
+  "judgeNotes": "Photo shows a neat gabled brick block."
+}

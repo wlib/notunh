@@ -1,0 +1,85 @@
+{
+  "name": "2 Leavitt Lane",
+  "aliases": [
+    "Leavitt Center"
+  ],
+  "place": "2 Leavitt Lane",
+  "category": "administration",
+  "use": "Former UNH Human Resources offices; on the 2025 proposed-closure list",
+  "status": "proposed-closure",
+  "statusNote": "Phase 1 closure list, Oct 2025; HR has moved to the New England Center",
+  "renovations": [
+    {
+      "year": 2022,
+      "what": "Oil-fired boiler replaced with natural-gas boiler (bid 2022; completion not confirmed)",
+      "major": false,
+      "src": [
+        "s4"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "2 Leavitt Lane is first on UNH's October 2025 list of six Durham buildings proposed for closure in phase one, chosen on cost of ownership, condition, occupancy and disruption.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH said buildings that could be emptied quickly would be vacated by January 2026 and the rest by June, though it had not yet confirmed the closures.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "UNH Human Resources has relocated to the New England Center at 15 Strafford Avenue, consolidating its operations there.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "Its oil boiler was among three on Leavitt Lane put out to bid for gas conversion in 2022.",
+      "src": [
+        "s4"
+      ]
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Proposed Durham Building Closures (Oct. 24, 2025)",
+      "publisher": "UNH Office of the President / Facilities",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "TRIO scholars and Sustainability Institute prepare to relocate (Dec. 2025)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2025/12/trio-scholars-and-sustainability-institute-prepare-to-relocate",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Contact HR",
+      "publisher": "UNH Human Resources",
+      "url": "https://www.unh.edu/hr/contact-hr",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Gas Conversion for 3 HVAC Boiler Systems at 1, 2 and 6 Leavitt Lane (bid 2022)",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/5463714-gas-conversion-for-3-hvac-boiler-systems-at-1-2-and-6-leavitt-lane&find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 3,
+    "condition": 3,
+    "function": 3,
+    "character": 2,
+    "reputation": 2
+  },
+  "confidence": "low",
+  "verdict": "Former HR office, emptied and first on the 2025 closure list, which says enough about its condition.",
+  "notes": "Split from old row 96 ('Leavitt Lane buildings (1, 2, 6 Leavitt Ln)'), which bundled three separate buildings with different occupants. A 2022 USNH bid replaced three separate oil boilers at 1, 2 and 6 Leavitt Lane, one per building. Campus maps reportedly also list 5, 9 and 11 Leavitt Lane (search snippet only, not verified). notunh's map has a 'Leavitt Lane' parking lot and 'UNH Human Resources' and 'UNH Lock Shop' points nearby, but no building outlines for these addresses. Construction years, architects and photos not found; no licensed or reference photos. That 2 Leavitt Lane housed HR operations comes from a search snippet of an older HR page. The current HR page (s3) only says HR moved to the NEC, so HR's former location here is likely but not directly confirmed. Final closure not confirmed as of Nov. 2026.",
+  "judgeNotes": "No photos; condition/function lowered for the closure listing and vacated tenant."
+}

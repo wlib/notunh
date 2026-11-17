@@ -1,0 +1,135 @@
+{
+  "name": "Congreve Hall",
+  "place": "Congreve Hall",
+  "category": "residence",
+  "use": "Residence hall, 272 students, all class years",
+  "built": 1920,
+  "builtText": "1920; center section 1922; wing dedicated 1938",
+  "architect": "Eric T. Huddleston",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 1922,
+      "what": "Center section added",
+      "major": true,
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "year": 1938,
+      "what": "Additional wing dedicated October 1, 1938",
+      "major": true,
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "year": 2024,
+      "what": "Steam-fired domestic hot-water heaters (end of useful life) put out to bid for replacement with one heater in Congreve serving Congreve, McLaughlin and Lord",
+      "major": false,
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Designed by Professor Eric T. Huddleston and built in 1920 as the second women's dormitory on campus.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Built with money borrowed from the Alice Hamilton Smith Fund and repaid from residents' rents; named for her first husband, Charles McIlvaine Congreve.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Houses 272 students of all class years, with five community lounges and a gender-inclusive community bathroom on each floor.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "One of the few UNH halls with air conditioning and an elevator; it also has roll-in access and a roll-in shower.",
+      "src": [
+        "s2",
+        "s6"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/58/CongreveAcrossTHall.JPG/1280px-CongreveAcrossTHall.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:CongreveAcrossTHall.JPG",
+      "credit": "Kylejtod (en.wikipedia)",
+      "view": "exterior",
+      "year": 2007,
+      "caption": "Congreve Hall seen across the Thompson Hall lawn and Main Street",
+      "license": "CC BY-SA 2.5",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Congreve Hall",
+      "url": "https://www.unh.edu/housing/facility/congreve-hall"
+    },
+    {
+      "label": "UNH Library: residence hall histories",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Congreve Hall (hall page)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/congreve-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "UNH Congreve Hall Heat Exchanger Replacement (bid notice, published 2024-05-25)",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/6646906-unh-congreve-hall-heat-exchanger-replacement&find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Ranking of UNH Dorms and Residence Halls (published 2024-12-04)",
+      "publisher": "Society19",
+      "url": "https://www.society19.com/ranking-unh-dorms-residence-halls/amp/",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "Congreve Hall Dorm Reviews",
+      "publisher": "RoomSurf",
+      "url": "https://www.roomsurf.com/dorm-reviews/unh/congreve-hall/16733",
+      "accessed": "2026-11-04"
+    },
+    "s6": {
+      "title": "Facility tag: Air conditioning",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility-tags/air-conditioning",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 7,
+    "interior": 7,
+    "condition": 7,
+    "function": 8,
+    "character": 7,
+    "reputation": 8
+  },
+  "confidence": "high",
+  "verdict": "Huddleston's 1920s Georgian Revival dorm facing the T-Hall lawn, with A/C, an elevator and lounges students call hotel-like.",
+  "notes": "Old row's room mix (113 singles etc.) and 'undated modernization' were not confirmed on the current hall page, which lists amenities but no room counts; when A/C and the elevator were added is not documented. The 2024 hot-water work is confirmed only as a bid notice; completion not confirmed. Style left null: photos show a multi-wing brick building with slate roofs, dormers, a tall arched central window and a circular forecourt lawn (reads as Colonial/Georgian Revival), but no source names the style. Reference aerial (UNH Housing) shows a symmetrical U-shaped composition facing an oval lawn; interior not photographed in what I downloaded. Licensed photo (2007): seen across the T-Hall lawn, the long brick front with a gabled central pavilion, tall arched multi-pane window and slate roof with dormers reads as a dignified Georgian/Colonial Revival composition.",
+  "judgeNotes": "Photo and aerial show a well-proportioned brick complex with a glazed gable over the courtyard. Exterior down a point from the old run: handsome, not a landmark."
+}

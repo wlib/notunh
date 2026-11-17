@@ -1,0 +1,113 @@
+{
+  "name": "Taylor Hall",
+  "place": "Taylor Hall",
+  "category": "academic",
+  "use": "College of Life Sciences and Agriculture / Cooperative Extension offices (since 1964); proposed for closure",
+  "built": 1910,
+  "builtText": "1910",
+  "architect": "Unknown",
+  "style": "Small two-story building with white-painted walls and a fanlit Colonial Revival doorway (from photos)",
+  "status": "proposed-closure",
+  "statusNote": "Phase 1 closure list, Oct 2025",
+  "renovations": [
+    {
+      "year": 1964,
+      "what": "$53,000 renovation converting the dairy processing building to College of Agriculture and Cooperative Extension offices",
+      "cost": 53000,
+      "major": true,
+      "src": [
+        "arch_acad"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Stands on the site of the barn where New Hampshire College held its first Durham commencement in 1892; a class plaque outside marks it.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "Originally held the university's dairy processing equipment.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "Named for Frederick W. Taylor, agronomy professor (from 1903) and later Dean of the College of Agriculture.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "Listed among six Durham buildings proposed for first-phase closure in October 2025.",
+      "src": [
+        "closure"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3d/Durham_NH_002.jpg/1280px-Durham_NH_002.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Durham_NH_002.jpg",
+      "credit": "Olivier Aumage",
+      "view": "exterior",
+      "year": 2005,
+      "caption": "Entrance with fanlight and \"Taylor Hall\" sign",
+      "license": "CC BY-SA 2.0 fr",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/fr/deed.en"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Taylor_Hall%2C_UNH.jpg/1280px-Taylor_Hall%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Taylor_Hall,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Front facade on College Road, with construction fencing",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "UNH: proposed Durham building closures (Oct 2025)",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "arch_list": {
+      "title": "UNH Buildings (list with construction dates and uses)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "closure": {
+      "title": "Proposed Durham Building Closures (Oct 24, 2025)",
+      "publisher": "UNH Leadership blog",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 3,
+    "condition": 2,
+    "function": 3,
+    "character": 5,
+    "reputation": 3
+  },
+  "confidence": "low",
+  "verdict": "A 1910 dairy building with a fanlit doorway, on the site of the barn of the first Durham commencement; slated for closure.",
+  "notes": "Build year 1910 is from the archives' building list only. The archives describe the 1964 conversion but give no later renovation. Current occupant (Cooperative Extension at 59 College Rd) appears in search snippets but was not confirmed on an opened page. Closure execution unconfirmed. Photos show a plain, white-painted two-story block with a modest doorway; 2013 photo shows site works around it.",
+  "judgeNotes": "Photos show a plain white-painted block. 02 leads because 01 has fencing and a portable toilet."
+}

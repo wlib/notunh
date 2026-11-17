@@ -1,0 +1,137 @@
+{
+  "name": "The Gables",
+  "aliases": [
+    "Gables"
+  ],
+  "place": "Gables A",
+  "category": "residence",
+  "use": "Upper-division and 19+ apartments in five buildings (A, B, C, N, S), 965 students",
+  "built": 1991,
+  "builtText": "A/B/C built June 1990–Aug 1991 (dedicated Oct 17, 1991); N and S later (date unconfirmed)",
+  "architect": "Sasaki Associates (A/B/C; builder Suffolk Construction)",
+  "status": "in-use",
+  "statusNote": "Five buildings (A, B, C, N, S)",
+  "renovations": [
+    {
+      "year": 2014,
+      "what": "'Summer Slammer': Gables A, B and C gutted and refitted in 68 days (101 suites, 1,134 rooms): new carpet, lighting, flooring, kitchen cabinets and appliances, counters, toilets/showers, vanities and paint (JM Coull with Harriman)",
+      "major": true,
+      "src": [
+        "s3",
+        "s4"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "The original three towers of four-to-six-person apartments were designed by Sasaki Associates, built by Suffolk Construction between June 1990 and August 1991, and dedicated October 17, 1991.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Today there are five buildings: A (197), B (177), C (197), N (164) and S (230 students), at 40 Gables Way.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Apartments are fully furnished; the complex has elevators, on-site parking (permit required) and a mailroom in B tower.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "In summer 2014 JM Coull refitted 101 suites (1,134 rooms) in Gables A, B and C in 68 days.",
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://live.staticflickr.com/825/40910416765_a4917a043b_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/40910416765/",
+      "credit": "Brendan Freund / UNHDigitalSandbox (Flickr)",
+      "view": "exterior",
+      "year": 2018,
+      "caption": "Gables tower and courtyard terrace",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://live.staticflickr.com/970/40002111450_e8bbb8dc51_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/40002111450/",
+      "credit": "Brendan Freund / UNHDigitalSandbox (Flickr)",
+      "view": "exterior",
+      "year": 2018,
+      "caption": "Brick walkway between Gables towers",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://live.staticflickr.com/865/40002110870_4eb39dd7e4_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/40002110870/",
+      "credit": "Brendan Freund / UNHDigitalSandbox (Flickr)",
+      "view": "exterior",
+      "year": 2018,
+      "caption": "Walkway between towers toward the woods",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: The Gables Apartments",
+      "url": "https://www.unh.edu/housing/facility/gables-apartments"
+    },
+    {
+      "label": "UNH Library: residence hall histories",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "The Gables Apartments (hall page)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/gables-apartments",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "JM Coull completes Gables apartment building renovations at the University of New Hampshire",
+      "publisher": "New England Real Estate Journal",
+      "url": "https://nerej.com/print/31321",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "EnviroVantage wins Excellence in Construction Award ... for work on The Gables Dormitories",
+      "publisher": "New England Real Estate Journal",
+      "url": "https://nerej.com/envirovantage-wins-excellence-in-construction-award-from-the-new-hampshirevermont-chapter-of-the-associated-builders-and-contractors-association-for-work-on-the-gables-dormitories-at-university-of-new-hampshire",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "The Gables Dorm Reviews",
+      "publisher": "RoomSurf",
+      "url": "https://www.roomsurf.com/dorm-reviews/unh/the-gables/817",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 5,
+    "condition": 6,
+    "function": 8,
+    "character": 4,
+    "reputation": 6
+  },
+  "confidence": "high",
+  "verdict": "Sasaki's 1991 brick apartment towers with tall gables and arched passages in the woods; furnished apartments with kitchens, refitted in 2014.",
+  "notes": "One record covers all notunh parts (Gables A, B, C, N, S and the Community Building). The NEREJ article is undated in my copy (search results placed it in Sept 2014); old row said 2014, consistent with EnviroVantage's 'Summer Slammer'. N/S architect (old row: DiMella Shaffer) and build date (~2007) NOT confirmed this pass. Old row's 'Her Campus 2014' not re-verified. Photos: tall red-brick blocks (five to six storeys) with gabled dormers and steep roofs, arched entries and glazed stair bays, set along brick paths in woods; solid but bulky. Licensed photos (Flickr CC BY 2.0, 2018, student journalism account): tall red-brick towers with gabled dormers, arched entries and glazed stair bays along brick paths in the woods; solid but bulky. Account owner is a UNH journalism class ('UNHDigitalSandbox'); the photos are CC BY on Flickr, so they qualify, but the judge may want to double-check that they're acceptable.",
+  "judgeNotes": "Photos show better-than-average brick massing. Interior 5 on student comments about dated finishes. Condition 6: the 2014 refit was cosmetic, and the towers are 35 years old."
+}

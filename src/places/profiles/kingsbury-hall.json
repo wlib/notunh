@@ -1,0 +1,153 @@
+{
+  "name": "Kingsbury Hall",
+  "aliases": [
+    "Kingsbury",
+    "Engineering, Math and Computer Science Library"
+  ],
+  "place": "Kingsbury Hall",
+  "category": "academic",
+  "use": "College of Engineering and Physical Sciences: labs, classrooms, math, Engineering/Math/CS (Kingsbury) Library, Albert's Cafe",
+  "built": 1950,
+  "builtText": "1948–50 (cornerstone Nov 11, 1949; dedicated Oct 14, 1950); renovated and expanded 2004–07",
+  "architect": "Original unknown; 2004–07 architect not found",
+  "style": "Postwar brick block with 2000s brick, glass and metal-panel lab wings",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2007,
+      "what": "KEEP-NH renovation and expansion: Phase 1 new 45,000 sq ft lab wing (Jan 2006); Phase 2 renovated the rest and added a wing with student project space and expanded library; total 208,000 gsf",
+      "cost": 52980000,
+      "major": true,
+      "src": [
+        "A",
+        "unhmag06"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Construction approved 1947, begun winter 1948, cornerstone laid Nov 11, 1949, dedicated Oct 14, 1950.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "Named for Albert Kingsbury, UNH's first mechanical engineering professor, who invented the thrust bearing in Durham in 1898.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "Phase 1 of the $52.98M renovation finished January 2006 with a new 45,000 sq ft wing devoted to labs.",
+      "src": [
+        "unhmag06"
+      ]
+    },
+    {
+      "text": "Labs have large windows on both sides so passers-by can see work in progress; two lecture halls and student project spaces.",
+      "src": [
+        "cepsls"
+      ]
+    },
+    {
+      "text": "Fire suppression sprinklers were installed in Kingsbury in years before 2025.",
+      "src": [
+        "pcac5"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Kingsbury_Hall%2C_UNH_1.jpg/1280px-Kingsbury_Hall%2C_UNH_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Kingsbury_Hall,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "2000s metal-clad wing and entrance stairs with brick lab blocks behind",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Kingsbury_Hall%2C_UNH_2.jpg/1280px-Kingsbury_Hall%2C_UNH_2.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Kingsbury_Hall,_UNH_2.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Long three-story brick wing with glazed stair tower",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "CEPS learning spaces",
+      "url": "https://ceps.unh.edu/facility/learning-spaces"
+    },
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "hc2": {
+      "title": "The many study spots at UNH (2018-03)",
+      "publisher": "Her Campus UNH",
+      "url": "https://www.hercampus.com/school/unh/many-study-spots-unh/",
+      "accessed": "2026-11-04"
+    },
+    "pcac5": {
+      "title": "Three-year life safety construction project underway at PCAC (2025-12)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2025/12/ddngvtwcutgi",
+      "accessed": "2026-11-04"
+    },
+    "unhmag06": {
+      "title": "Campus Currents: Kingsbury Hall (Winter 2006)",
+      "publisher": "UNH Magazine",
+      "url": "https://unhmagazine.unh.edu/w06/kingsbury.html",
+      "accessed": "2026-11-04"
+    },
+    "cepsls": {
+      "title": "Learning Spaces",
+      "publisher": "UNH College of Engineering and Physical Sciences",
+      "url": "https://ceps.unh.edu/facility/learning-spaces",
+      "accessed": "2026-11-04"
+    },
+    "adm1": {
+      "title": "The Best Places on the UNH Campus",
+      "publisher": "UNH Admissions blog",
+      "url": "https://admissions.unh.edu/blog/2025/01/best-places-unh-campus",
+      "accessed": "2026-11-04"
+    },
+    "adm2": {
+      "title": "The Best Spots on Campus",
+      "publisher": "UNH Admissions blog",
+      "url": "https://admissions.unh.edu/blog/2025/01/best-spots-campus",
+      "accessed": "2026-11-04"
+    },
+    "adm3": {
+      "title": "A Civil Engineering Major's Favorite Things to Do at UNH",
+      "publisher": "UNH Admissions blog",
+      "url": "https://admissions.unh.edu/blog/2024/05/civil-engineering-majors-favorite-things-do-unh",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 6,
+    "condition": 7,
+    "function": 8,
+    "character": 5,
+    "reputation": 7
+  },
+  "confidence": "high",
+  "verdict": "Engineering's big 1950 block with a 2006 metal-and-glass lab wing; institutional outside, full of daylit study nooks students like.",
+  "notes": "Photos (2013) show a large complex: red-brick wings with banded windows, a glazed stair tower, and a grey metal-panel wing with ribbon windows; neat but institutional. Strong daylight in lounges per Her Campus. Old row's \"HVAC/air conditioning throughout\" not confirmed on an opened page (CEPS page only says labs have appropriate infrastructure). UNH Magazine says Phase 2 \"will renovate\" the 55-year-old building; completion 2007 per old row and search excerpts, not re-opened. Renovation architect not found. Admissions blog posts are UNH-run.",
+  "judgeNotes": "Photos show neat but heterogeneous wings. Reputation up a point for consistently positive student comments."
+}

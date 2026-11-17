@@ -1,0 +1,90 @@
+{
+  "name": "Craft Cottage",
+  "place": "Craft Cottage",
+  "category": "administration",
+  "use": "Closed (formerly the Marriage and Family Therapy clinic; earlier arts-and-crafts center, nursery school, Home Economics practice house)",
+  "builtText": "before 1893; moved to Ballard Street in 1932",
+  "architect": "Unknown",
+  "style": "19th-century wood-frame house (from archives photo)",
+  "status": "closed",
+  "statusNote": "Closed since about 2021, when the family therapy clinic left",
+  "renovations": [
+    {
+      "year": 1988,
+      "what": "Converted into a Marriage and Family Therapy clinic, which saved it from demolition",
+      "major": true,
+      "src": [
+        "clio"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Originally part of General Hoyt's property on Main Street; known around 1897 as 'The Orphanage' when rented as a bachelor residence.",
+      "src": [
+        "arch_acad",
+        "clio"
+      ]
+    },
+    {
+      "text": "Served as the Home Economics practice house from 1918 to 1930, then a nursery school.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "Moved in 1932, next to the Elizabeth DeMeritt House, to clear the site for Scott Hall.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "Was an arts-and-crafts center (hence 'Craft Cottage') until the 1980s; the MFT clinic closed about 2021 and the building is now closed.",
+      "src": [
+        "clio"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "Clio: Economic Practice House or Craft Cottage",
+      "url": "https://theclio.com/tour/2807/6"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "arch_list": {
+      "title": "UNH Buildings (list with construction dates and uses)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "clio": {
+      "title": "Economic Practice House or Craft Cottage",
+      "publisher": "Clio",
+      "url": "https://theclio.com/tour/2807/6",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 3,
+    "condition": 3,
+    "function": 2,
+    "character": 5,
+    "reputation": 2
+  },
+  "confidence": "low",
+  "verdict": "A 19th-century clapboard house moved to Ballard Street in 1932, now closed and empty.",
+  "notes": "Category 'administration' fits poorly: the building is closed, and its last use was a clinic (academic/CHHS). Old data's 'in use, small office cottage' is wrong per Clio. Clio says it stands on Ballard Street among Scott, Smith, Sawyer and Stillings. No licensed photo found anywhere; ref-01 (archives) shows a two-story clapboard house with bay windows.",
+  "judgeNotes": "Archives photo only. Still ranked as a closed building."
+}

@@ -1,0 +1,70 @@
+{
+  "name": "Child Study and Development Center",
+  "aliases": [
+    "CSDC"
+  ],
+  "place": "Child Study and Development Center",
+  "category": "academic",
+  "use": "Laboratory school (HDFS): child care and early education for ages 6 weeks to 5 years, plus kindergarten; teacher training and research site",
+  "built": 1988,
+  "builtText": "1988 (program founded 1929)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "The CSDC began in January 1929 as a demonstration nursery school for home economics students; the current building on O'Kane Farm was built in 1988.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It serves 122 children aged 6 weeks to 5 years in four full-time and three part-time classrooms, with 20 full-time staff and about 35 UNH students as teaching assistants each semester.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "All seven classrooms have observation booths for college students, faculty, parents and researchers.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "A full-day kindergarten was added in 1993, and the center has been NAEYC-accredited since 1999.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Its teaching approach has been inspired since the early 1990s by the Reggio Emilia schools of Italy.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "CHHS: Child Study and Development Center",
+      "url": "https://chhs.unh.edu/child-study-development-center/about-us"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "About Us: Child Study and Development Center",
+      "publisher": "UNH College of Health and Human Services",
+      "url": "https://chhs.unh.edu/child-study-development-center/about-us",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 6,
+    "condition": 5,
+    "function": 7,
+    "character": 5,
+    "reputation": 6
+  },
+  "confidence": "low",
+  "verdict": "1988 lab school on O'Kane Farm with observation booths in every classroom; purpose-built and well regarded, but barely documented.",
+  "notes": "Only one source (CSDC's own page). Architect and renovations not found. Photos: the official site's images center on children, so I didn't download them as references; no licensed photos found. The old row's description '6 weeks–5 yrs + kindergarten' is consistent; its 'CHHS' ownership is correct (HDFS is in CHHS). No independent reviews found.",
+  "judgeNotes": "Single source, no photos."
+}

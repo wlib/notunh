@@ -1,0 +1,95 @@
+{
+  "name": "John Olson Advanced Manufacturing Center",
+  "aliases": [
+    "Olson Center",
+    "Olson AMC"
+  ],
+  "place": null,
+  "category": "academic",
+  "use": "Advanced manufacturing teaching, research and industry partnerships: machining, light materials, flexible electronics, cleanroom; co-located companies",
+  "built": 2018,
+  "builtText": "Center founded 2016; opened June 2018 in the former Goss International building",
+  "style": "Industrial / tech-park (repurposed factory building)",
+  "status": "in-use",
+  "statusNote": "Moving to the NOAA Center of Excellence building in fall 2027",
+  "renovations": [
+    {
+      "year": 2025,
+      "what": "950 sq ft ISO 7 cleanroom unveiled (donated by Airtho)",
+      "major": false,
+      "src": [
+        "monitor"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Founded in 2016 with a $5.3 million gift from Whelen Engineering in honor of alumnus John Olson (class of 1957).",
+      "src": [
+        "ceps"
+      ]
+    },
+    {
+      "text": "Planned for the former Goss International building on the west edge of campus.",
+      "src": [
+        "nhbr"
+      ]
+    },
+    {
+      "text": "A 950 sq ft ISO 7 cleanroom was unveiled in 2025; seven technology businesses are co-located with about 24 UNH students.",
+      "src": [
+        "monitor"
+      ]
+    },
+    {
+      "text": "The new 70,500 sq ft Center of Excellence building at Main Street and Mast Road will also house the Olson Center when it opens in fall 2027.",
+      "src": [
+        "noaa"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "CEPS: Olson Center about",
+      "url": "https://ceps.unh.edu/john-olson-advanced-manufacturing-center/about-us"
+    }
+  ],
+  "sources": {
+    "noaa": {
+      "title": "UNH and Partners Celebrate Construction Milestone of Ocean Mapping Center of Excellence (2026-07)",
+      "publisher": "UNH News",
+      "url": "https://www.unh.edu/news/unh-partners-celebrate-construction-milestone-ocean-mapping-center-excellence",
+      "accessed": "2026-11-04"
+    },
+    "ceps": {
+      "title": "About Us",
+      "publisher": "John Olson Advanced Manufacturing Center (UNH CEPS)",
+      "url": "https://ceps.unh.edu/john-olson-advanced-manufacturing-center/about-us",
+      "accessed": "2026-11-04"
+    },
+    "nhbr": {
+      "title": "New UNH Advanced Manufacturing Center honors Whelen's Olson",
+      "publisher": "NH Business Review",
+      "url": "https://www.nhbr.com/new-unh-advanced-manufacturing-center-honors-whelens-olson/",
+      "accessed": "2026-11-04"
+    },
+    "monitor": {
+      "title": "UNH unveils cleanroom at Olson Center (2025-10)",
+      "publisher": "Concord Monitor (Granite Geek)",
+      "url": "https://granitegeek.concordmonitor.com/2025/10/27/15797/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 2,
+    "interior": 4,
+    "condition": 5,
+    "function": 7,
+    "character": 3,
+    "reputation": 5
+  },
+  "confidence": "low",
+  "verdict": "Advanced manufacturing labs and a cleanroom in a former Goss printing-press factory, due to move out in 2027.",
+  "notes": "notunh has no name for it. No photos of any kind found. Address 121 Technology Drive and the June 1, 2018 opening come from search excerpts of UNH Today (node URL now redirects); unconfirmed on an opened page. \"High ceilings\" assumes the high-bay industrial building; not documented. Relocation to the NOAA building is confirmed by UNH News (2026).",
+  "judgeNotes": "No photos. Exterior scored as an industrial tech-park box."
+}

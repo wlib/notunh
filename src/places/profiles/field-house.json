@@ -1,0 +1,151 @@
+{
+  "name": "Field House",
+  "aliases": [
+    "Lundholm Gymnasium",
+    "Swasey Pool",
+    "Paul Sweet Oval"
+  ],
+  "place": "Field House",
+  "category": "athletics",
+  "use": "Varsity athletics hub: Lundholm Gym (basketball, volleyball, gymnastics), Paul Sweet Oval indoor track, Swasey indoor pool",
+  "built": 1938,
+  "builtText": "constructed 1937 (archives); completed 1938 (Wikipedia)",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 1969,
+      "what": "Henry 'Hank' C. Swasey indoor pool dedicated",
+      "major": true,
+      "src": [
+        "s5"
+      ]
+    },
+    {
+      "year": 2001,
+      "what": "Lundholm Gymnasium restoration approved Dec 2000; refinished floor, new bleachers, lighting, sound and scoreboards (dates of each not given)",
+      "major": false,
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "year": 2008,
+      "what": "Paul Sweet Oval indoor track renovation, funded by $266,000 from more than 125 alumni and friends",
+      "cost": 266000,
+      "major": false,
+      "src": [
+        "s4"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built in 1937; the Board of Trustees blocked a student push to rename it for William H. Cowell, keeping the name University of New Hampshire Field House.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Lundholm Gym, its main component, is named for Carl Lundholm, athletic director 1939–1963; it was renamed in 1968.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Lundholm seats about 2,500 (UNH events) to 3,000 (Wikipedia); its court was named Friel Court in 2008.",
+      "src": [
+        "s2",
+        "s5",
+        "s3"
+      ]
+    },
+    {
+      "text": "The fields outside are named Lewis Fields for Dr. Edward Morgan Lewis.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Lundholm_Gym%2C_UNH%2C_Durham_NH.jpg/1280px-Lundholm_Gym%2C_UNH%2C_Durham_NH.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Lundholm_Gym,_UNH,_Durham_NH.jpg",
+      "credit": "John Phelan",
+      "view": "interior",
+      "year": 2013,
+      "caption": "Lundholm Gym court, bleachers and exposed roof trusses",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    },
+    {
+      "url": "https://live.staticflickr.com/871/41304594341_ef5c0738a9_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/41304594341/",
+      "credit": "Gates MacPherson / UNHDigitalSandbox (Flickr)",
+      "year": 2018,
+      "view": "interior",
+      "caption": "Swasey Pool from the spectator balcony",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "Wikipedia: Lundholm Gym",
+      "url": "https://en.wikipedia.org/wiki/Lundholm_Gym"
+    },
+    {
+      "label": "UNH Library: athletic facility histories",
+      "url": "https://library.unh.edu/find/archives/buildings/athletic-facilities"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Athletic Facilities (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/athletic-facilities",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Lundholm Gym",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Lundholm_Gym",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Lundholm Gymnasium (facility page)",
+      "publisher": "UNH Athletics",
+      "url": "https://unhwildcats.com/sports/2015/7/1/GEN_0701155002",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Paul Sweet Oval (facility page)",
+      "publisher": "UNH Athletics",
+      "url": "https://unhwildcats.com/sports/2015/7/1/GEN_0701155551",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "Facilities (event venues)",
+      "publisher": "UNH Events & Conferences",
+      "url": "https://www.unh.edu/events-conferences/facilities",
+      "accessed": "2026-11-04"
+    },
+    "s6": {
+      "title": "Lundholm Gymnasium review",
+      "publisher": "Stadium Journey",
+      "url": "https://www.stadiumjourney.com/stadiums/lundholm-gymnasium-s708",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 6,
+    "condition": 5,
+    "function": 6,
+    "character": 6,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "1937 brick athletics hall whose Lundholm Gym and Swasey Pool are serviceable but old-school.",
+  "notes": "Old row's additions (1966, 1988), Azumah Performance Center (2003/2019–20 $1.5M) and 1990s report quotes were NOT re-verified. Stadium Journey review date is approximate (mentions 2024–25 season). Wikipedia says Lundholm is 'attached to Wildcat Stadium' (in the Whittemore article). Photo: historic image shows a plain brick block with a pedimented parapet and press box above stadium bleachers; no modern exterior photo checked. Licensed photo (2013, interior): Lundholm Gym has a polished wood court, blue pull-out bleachers on one side, and a high wood-trussed roof with skylight strips; functional and a bit dated. No licensed exterior photo of the Field House found. Licensed interior added: a 2018 Flickr photo titled 'Swasey Pool' shows the competition pool with brick walls and a coffered ceiling.",
+  "judgeNotes": "Interior photos show a trussed gym and a decent pool; exterior only from a historic photo. No licensed exterior, so the gym leads the gallery."
+}

@@ -1,0 +1,78 @@
+{
+  "name": "Devine Hall",
+  "place": "Devine Hall",
+  "category": "residence",
+  "use": "Traditional residence hall in the Upper Quad (525 students across Hitchcock, Randall and Devine)",
+  "built": 1966,
+  "builtText": "Dedicated October 22, 1966 as a women's residence",
+  "architect": "Irving W. Hersey Associates (builder Davison Construction Company)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Dedicated October 22, 1966 as a women's residence and named for Maurice F. Devine, trustee from 1949 for two decades, who helped draft the 1944 GI Bill.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Designed by Irving W. Hersey Associates, built by Davison Construction, designed from the start to be handicap-accessible, and linked to Randall and Hitchcock.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Home of 'the Niche', a large lounge with pool, ping-pong, kitchen and TV, and of the gender-inclusive Lavender community on the 4th floor; accessible showers and laundry. Address 11 Quad Way.",
+      "src": [
+        "h_devine"
+      ]
+    },
+    {
+      "text": "Part of the linked Upper Quad with Hitchcock, Randall and Devine (525 students in all), with an elevator, kitchen, laundry and indoor bike storage; no air conditioning is listed.",
+      "src": [
+        "h_devine"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Devine Hall",
+      "url": "https://www.unh.edu/housing/facility/devine-hall-upper-quad"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "arch_res": {
+      "title": "Student Residences",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "h_devine": {
+      "title": "Devine Hall (Upper Quad)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/devine-hall-upper-quad",
+      "accessed": "2026-11-04"
+    },
+    "s19a": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 4,
+    "function": 6,
+    "character": 4,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "Five-storey 1966 brick block in the Upper Quad, accessible from the start but plain and without A/C.",
+  "notes": "No licensed photo found. Reference photo 02 (UNH Housing) shows a five-storey flat-fronted red-brick block with white-framed windows and a small white classical door surround: plain and institutional. The builder is Davison Construction, not Blanchard Stebbins (that firm built Hitchcock and Randall).",
+  "judgeNotes": "Reference photos show a flat institutional facade with a token classical door. Down from the old run on exterior (4) and condition (4, no renovation or A/C)."
+}

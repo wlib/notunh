@@ -1,0 +1,92 @@
+{
+  "name": "President's House",
+  "place": "President's House",
+  "category": "administration",
+  "use": "Official residence of the UNH president; events for visitors, alumni, donors and students; interior not public",
+  "built": 1905,
+  "builtText": "1904–05 (archives list gives 1904; Clio says completed 1905)",
+  "architect": "Specifications by Randlett & Griffin; contractor Walter H. Sargent; financed by Walter M. Parker",
+  "style": "Neoclassical, mixing Federal and Greek Revival features",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Replaced the wooden Mathes House, which burned in September 1903 just before President Gibbs's family was to move in.",
+      "src": [
+        "arch_admin",
+        "clio"
+      ]
+    },
+    {
+      "text": "Walter Parker of Manchester built it at his own expense; the trustees bought it outright in 1905 for $5,500.",
+      "src": [
+        "arch_admin"
+      ]
+    },
+    {
+      "text": "Landscape architect Bremer W. Pond drew a planting plan for the grounds in 1925, much of which remains.",
+      "src": [
+        "clio"
+      ]
+    },
+    {
+      "text": "Its front wrap-around porch was removed; otherwise there have been few structural changes.",
+      "src": [
+        "clio"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/d0/The_New_Hampshire_College_Monthly_%281909%29_%2814787081033%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:The_New_Hampshire_College_Monthly_(1909)_(14787081033).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1909,
+      "caption": "The President’s Residence with its original wrap-around porch (cropped from a 1909 New Hampshire College Monthly photo page)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: administrative and campus life buildings",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life"
+    },
+    {
+      "label": "Clio: University of New Hampshire President’s Residence",
+      "url": "https://theclio.com/tour/2807/8"
+    }
+  ],
+  "sources": {
+    "arch_admin": {
+      "title": "Administrative and Campus Life Buildings",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life",
+      "accessed": "2026-11-04"
+    },
+    "arch_list": {
+      "title": "UNH Buildings (list with construction dates and uses)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "clio": {
+      "title": "University of New Hampshire President’s Residence",
+      "publisher": "Clio",
+      "url": "https://theclio.com/tour/2807/8",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 5,
+    "condition": 5,
+    "function": 7,
+    "character": 6,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "The president's 1905 Neoclassical brick residence on Garrison Avenue, built after its wooden predecessor burned; little changed but for a lost porch.",
+  "notes": "Fire date conflict: the archives say Sunday, Sept. 20, 1903; Clio says Sept. 25, 1903. Clio says it is valued at $1.6M. Address: 2 Garrison Ave. No licensed modern photo found; ref-01 is a 1960 archives photo in snow. No interior information (private).",
+  "judgeNotes": "Archives photo shows a handsome house (exterior 6, one below the old run: a fine house, not a set piece) with bays and a Palladian dormer; interior private and undocumented."
+}

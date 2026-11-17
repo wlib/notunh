@@ -1,0 +1,47 @@
+{
+  "name": "Bremner Field",
+  "place": "Bremner Field",
+  "category": "athletics",
+  "use": "Lighted synthetic-turf field for athletics and Campus Recreation; community rentals",
+  "builtText": "unknown",
+  "status": "in-use",
+  "statusNote": "Open-air synthetic-turf field",
+  "facts": [
+    {
+      "text": "One of four Campus Recreation outdoor fields (with Boulder, Memorial and Student Rec); surface ProGrass; 114,750 sq ft (425 by 270 ft); lit, open weekdays 6 am to 12:30 am.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Rental: UNH groups $153/hour ($195 with lights); non-UNH $215 ($280 with lights).",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Campus Rec describes it as home to UNH men's and women's soccer and local youth sports.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Campus Recreation: outdoor fields",
+      "url": "https://campusrec.unh.edu/facilities/outdoor-fields"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Outdoor Fields",
+      "publisher": "UNH Campus Recreation",
+      "url": "https://campusrec.unh.edu/facilities/outdoor-fields",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "low",
+  "verdict": "A lit synthetic-turf field for recreation and rentals; useful, unremarkable.",
+  "notes": "No licensed photo; the Campus Rec image is an action shot of a player (not kept). Build year, turf replacement history and namesake not found; old row's TNH 2022 \"turf flagged for replacement\" not re-verified. The soccer claim conflicts with UNH News (Oct 2025), which places men's and women's soccer at Tucker Field; the Campus Rec page is probably stale. Location per notunh gazetteer: north-west of Wildcat Stadium.",
+  "judgeNotes": "Open-air field: unranked. Interior score is nominal."
+}

@@ -57,9 +57,10 @@ jobs:
       # Downloads Geofabrik's latest extract, and Planetiler unless cached, then stages the archive, manifest, and
       # pointer in release/, unless this generation is the one published already
       - run: node scripts/map/osm.mts --release release
-      # The buildings the build matches laundry rooms and dining halls to must still be there, else nothing's
-      # published. The rooms and halls are the fixtures', so this asks nothing of the laundry vendor or Nutrislice
-      - run: node scripts/map/places.mts --fixtures
+      # The buildings the build matches laundry rooms and dining halls to, and those profiled, must still be there,
+      # else nothing's published. The rooms and halls are the fixtures', so this asks nothing of the laundry vendor
+      # or Nutrislice
+      - run: node scripts/map/places.mts --fixtures && node scripts/map/profiles.mts
       - uses: ./.github/actions/publish
         with:
           kind: map-data

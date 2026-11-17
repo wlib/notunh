@@ -1,0 +1,229 @@
+{
+  "name": "Dairy Bar and Durham Train Station",
+  "aliases": [
+    "Dairy Bar",
+    "Durham–UNH station",
+    "Durham station",
+    "East Lynn depot"
+  ],
+  "place": "Dairy Bar and Durham Train Station",
+  "category": "dining",
+  "use": "Amtrak Downeaster station (waiting room) and the UNH Dairy Bar café, now open summers only",
+  "built": 1912,
+  "builtText": "Built 1896 in Lynn, Mass.; dismantled and re-erected in Durham 1911–12",
+  "style": "Richardsonian Romanesque",
+  "status": "in-use",
+  "statusNote": "Amtrak station open year-round; Dairy Bar café paused for the academic year, open summers",
+  "renovations": [
+    {
+      "year": 2008,
+      "what": "Depot rehabilitated as an intermodal center (reopened Aug. 11, 2008): slate roof repaired, semaphore restored, marble floors and woodwork repaired, mechanical/electrical systems replaced, ADA restrooms, heated vestibule, separate entrances for waiting room and Dairy Bar, bus roundabout",
+      "cost": 940000,
+      "major": true,
+      "src": [
+        "s3",
+        "s2"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "The depot was first built in 1896 as the East Lynn station in Lynn, Massachusetts; the Boston & Maine took it apart and rebuilt it in Durham when it moved its tracks west of campus in 1911–12.",
+      "src": [
+        "s1",
+        "s2",
+        "s3"
+      ]
+    },
+    {
+      "text": "The railroad moved the line after a January 1905 derailment in the middle of campus.",
+      "src": [
+        "s2",
+        "s3"
+      ]
+    },
+    {
+      "text": "UNH bought the depot from the Boston & Maine for $1 on September 28, 1960, and opened the Dairy Bar in it in 1965.",
+      "src": [
+        "s1",
+        "s3"
+      ]
+    },
+    {
+      "text": "Passenger trains stopped serving Durham on June 30, 1967; service returned with the Amtrak Downeaster on December 14, 2001.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Buff brick walls rise from a rusticated brown granite base, with round arches trimmed in granite, carved foliage capitals, and hipped slate roofs over the depot and its trackside canopy.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "The $940,000 2008 rehabilitation was paid for mostly by Federal Highway Administration programs ($668,000 CMAQ, $84,000 Transportation Enhancement) plus $188,000 from UNH, and won a New Hampshire Preservation Alliance award in 2009.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "UNH Dining paused the Dairy Bar's regular operations for the academic year from December 17, citing sales that have declined since COVID-19 and unsustainable losses; it reopens for summer.",
+      "src": [
+        "s4"
+      ]
+    },
+    {
+      "text": "In summer 2026 the Dairy Bar was open weekdays from June 1 to August 21.",
+      "src": [
+        "s5"
+      ]
+    },
+    {
+      "text": "The station is owned by UNH and is the third-busiest Amtrak stop in New Hampshire.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Front_of_Durham_station%2C_May_2017.JPG/1280px-Front_of_Durham_station%2C_May_2017.JPG",
+      "page": "https://commons.wikimedia.org/wiki/File:Front_of_Durham_station,_May_2017.JPG",
+      "credit": "Pi.1415926535",
+      "view": "exterior",
+      "year": 2017,
+      "caption": "Arched street facade, May 2017",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Durham%E2%80%93University_of_New_Hampshire_%28Amtrak_station%29_1.jpg/1280px-Durham%E2%80%93University_of_New_Hampshire_%28Amtrak_station%29_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Durham%E2%80%93University_of_New_Hampshire_(Amtrak_station)_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Street side of the depot with its open-air canopy, July 2013",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Track_side_of_Durham_station%2C_May_2017.JPG/1280px-Track_side_of_Durham_station%2C_May_2017.JPG",
+      "page": "https://commons.wikimedia.org/wiki/File:Track_side_of_Durham_station,_May_2017.JPG",
+      "credit": "Pi.1415926535",
+      "view": "exterior",
+      "year": 2017,
+      "caption": "Platform and trackside canopy at dusk, May 2017",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Durham-UNH_station_and_Dairy_Bar%2C_May_2016.jpg/1280px-Durham-UNH_station_and_Dairy_Bar%2C_May_2016.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Durham-UNH_station_and_Dairy_Bar,_May_2016.jpg",
+      "credit": "Pi.1415926535",
+      "view": "exterior",
+      "year": 2016,
+      "caption": "Depot and canopy from the bus loop, May 2016",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Durham-UNH_station_building_from_the_north%2C_May_2016.jpg/1280px-Durham-UNH_station_building_from_the_north%2C_May_2016.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Durham-UNH_station_building_from_the_north,_May_2016.jpg",
+      "credit": "Pi.1415926535",
+      "view": "exterior",
+      "year": 2016,
+      "caption": "North end of the depot, May 2016",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Dairy_Bar_seating_at_Durham-UNH_station%2C_May_2016.jpg/1280px-Dairy_Bar_seating_at_Durham-UNH_station%2C_May_2016.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Dairy_Bar_seating_at_Durham-UNH_station,_May_2016.jpg",
+      "credit": "Pi.1415926535",
+      "view": "detail",
+      "year": 2016,
+      "caption": "Dairy Bar picnic seating under the canopy, May 2016",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Dining: Dairy Bar",
+      "url": "https://www.unh.edu/dining/unh-dairy-bar"
+    },
+    {
+      "label": "UNH Library: dining facilities history",
+      "url": "https://library.unh.edu/find/archives/buildings/dining-facilities"
+    },
+    {
+      "label": "Wikipedia: Durham–UNH station",
+      "url": "https://en.wikipedia.org/wiki/Durham%E2%80%93UNH_station"
+    },
+    {
+      "label": "Amtrak Great American Stations: Durham, NH",
+      "url": "https://www.greatamericanstations.com/stations/durham-nh-dhm/"
+    },
+    {
+      "label": "Wikimedia Commons: Durham–UNH station",
+      "url": "https://commons.wikimedia.org/wiki/Category:Durham%E2%80%93UNH_station"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Dining Facilities",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/dining-facilities",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Durham–UNH station",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Durham%E2%80%93UNH_station",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Durham, NH (DHM)",
+      "publisher": "Amtrak Great American Stations",
+      "url": "https://www.greatamericanstations.com/stations/durham-nh-dhm/",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "UNH Dairy Bar is Closed",
+      "publisher": "UNH Dining",
+      "url": "https://www.unh.edu/dining/facility/unh-dairy-bar-closed",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "Summer Hours 2026",
+      "publisher": "UNH Dining",
+      "url": "https://www.unh.edu/dining/summer-hours-2026",
+      "accessed": "2026-11-04"
+    },
+    "s6": {
+      "title": "UNH Dairy Bar reviews",
+      "publisher": "Birdeye",
+      "url": "https://reviews.birdeye.com/unh-dairy-bar-147170881912797",
+      "accessed": "2026-11-04"
+    },
+    "s7": {
+      "title": "Dairy Bar stays fresh during winter months",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2015/03/dairy-bar-stays-fresh-during-winter-months",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 7,
+    "interior": 6,
+    "condition": 7,
+    "function": 6,
+    "character": 9,
+    "reputation": 8
+  },
+  "confidence": "high",
+  "verdict": "An 1896 Romanesque depot moved here from Lynn in 1912, bought by UNH for $1: a well-kept small gem and the town's front door.",
+  "notes": "Category kept as dining, but the building is equally the Amtrak station; the waiting room stays open with train service while the café is seasonal. Re-erection year differs by source: Great American Stations says the depot arrived 1911, Wikipedia and the Archives say 1912. The closure notice (s4) gives 'December 17' with no year; the old row dated it Dec 2025, consistent with the summer-2026 reopening (s5). No licensed interior photo of the marble-floored waiting room or the café was found; all licensed photos are exteriors (warm buff brick, granite arches, slate roof, generous canopy; the street side is cluttered with utility poles and wires). Windows are deep round-arched, so interior light is probably moderate. A/C not documented. Architect of the 1896 Lynn depot not confirmed.",
+  "judgeNotes": "Photos confirm buff brick, granite arches and slate roofs, though parking and poles crowd the views. Exterior down a point from the old run on that basis."
+}

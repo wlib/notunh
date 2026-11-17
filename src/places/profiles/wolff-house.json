@@ -1,0 +1,79 @@
+{
+  "name": "Wolff House",
+  "aliases": [
+    "SHARPP Center"
+  ],
+  "place": "Wolff House",
+  "category": "administration",
+  "use": "Formerly SHARPP offices (8 Ballard St); SHARPP has moved to Smith Hall",
+  "builtText": "unknown",
+  "architect": "Unknown",
+  "style": "Late-19th/early-20th-century wood-frame house with twin front gables and bays (from photo)",
+  "status": "proposed-closure",
+  "statusNote": "Phase 1 closure list, Oct 2025; SHARPP moved to Smith Hall",
+  "facts": [
+    {
+      "text": "One of six Durham buildings UNH proposed for first-phase closure in October 2025.",
+      "src": [
+        "closure",
+        "tnh_close"
+      ]
+    },
+    {
+      "text": "SHARPP now lists 'our new location in Smith Hall (3rd Floor)'; its page header image is still labeled 'UNH Wolff House'.",
+      "src": [
+        "sharpp"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/Wolff_House%2C_UNH.jpg/1280px-Wolff_House%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Wolff_House,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Green clapboard house with twin gables and a ramped porch",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH: proposed Durham building closures (Oct 2025)",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures"
+    }
+  ],
+  "sources": {
+    "closure": {
+      "title": "Proposed Durham Building Closures (Oct 24, 2025)",
+      "publisher": "UNH Leadership blog",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures",
+      "accessed": "2026-11-04"
+    },
+    "tnh_close": {
+      "title": "TRIO Scholars and Sustainability Institute prepare to relocate (Dec 12, 2025; updated Mar 12, 2026)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2025/12/trio-scholars-and-sustainability-institute-prepare-to-relocate",
+      "accessed": "2026-11-04"
+    },
+    "sharpp": {
+      "title": "SHARPP",
+      "publisher": "UNH",
+      "url": "https://www.unh.edu/sharpp/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 3,
+    "condition": 3,
+    "function": 2,
+    "character": 3,
+    "reputation": 3
+  },
+  "confidence": "low",
+  "verdict": "A well-kept twin-gabled clapboard house on Ballard Street, emptied by SHARPP's move and slated for closure.",
+  "notes": "Not in the UNH Library Archives building lists, so build year and history are unknown. The 8 Ballard St address comes only from a course-syllabus snippet and Foursquare (not opened). Accessibility 'partial' is from the 2013 photo, which shows a wooden wheelchair ramp to the porch; nothing published. The photo shows a modest, well-kept two-and-a-half-story house in residential scale.",
+  "judgeNotes": "Photo shows a tidy house with a wooden ramp; history unknown."
+}

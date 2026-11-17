@@ -1,0 +1,78 @@
+{
+  "name": "Jessie Doe Hall",
+  "place": "Jessie Doe Hall",
+  "category": "residence",
+  "use": "Residence hall, 129 students, first-year and upper-division",
+  "built": 1963,
+  "builtText": "opened Sept 1963; dedicated May 9, 1964",
+  "architect": "Maurice E. Witmer, AIA (contractor Bond Bros., Inc.)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Opened in September 1963 as a women's residence and dedicated May 9, 1964; designed by Maurice E. Witmer, AIA, and built by Bond Bros.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Named for Jessie Doe (1887–1943), the first woman to serve in the New Hampshire legislature and a UNH trustee 1934–1943.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Small hall of 129 students at 24 Ballard Street, next to the Whittemore Center, with a basement study lounge and a first-floor lounge with pool, ping-pong, fireplace and big-screen TV.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Accessibility listed as braille signage and roll-in building access; no elevator or A/C listed.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Jessie Doe Hall",
+      "url": "https://www.unh.edu/housing/facility/jessie-doe-hall"
+    },
+    {
+      "label": "UNH Library: residence hall histories",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Jessie Doe Hall (hall page)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/jessie-doe-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Jessie Doe Hall Dorm Reviews",
+      "publisher": "RoomSurf",
+      "url": "https://www.roomsurf.com/dorm-reviews/unh/jessie-doe-hall/23217",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 5,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "Plain 1963 brick dorm by the Whittemore Center, named for New Hampshire's first woman legislator; tight-knit but tired.",
+  "notes": "No interior renovation found; the old row's 2023 utility pipe work and TNH vandalism story were not re-verified. Photos: plain four-storey red-brick slab with low-pitched roof, a glazed stair tower over a flat-canopied entry, set among pines; fireplace lounge has dropped acoustic-tile ceiling, painted block walls and fluorescent lighting, with windows on one side. Housing page shows the hall as first-year and upper-division (old row said first-year). No licensed photo found (searched the Commons category tree under 'University of New Hampshire' and 'Durham, New Hampshire', Commons file search by name, Commons geosearch at the building's coordinates, and Openverse/Flickr CC).",
+  "judgeNotes": "Reference photos: four-storey brick slab, dated block-walled lounge."
+}

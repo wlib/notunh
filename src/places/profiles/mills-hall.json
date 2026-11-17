@@ -1,0 +1,98 @@
+{
+  "name": "Mills Hall",
+  "aliases": [
+    "The Mills",
+    "Mills"
+  ],
+  "place": "Mills Hall",
+  "category": "residence",
+  "use": "Upper-division suite-style residence hall, 358 students",
+  "built": 2002,
+  "builtText": "Built 2002; dedicated November 7, 2002",
+  "style": "Neo-Georgian brick with gables (from photos)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Dedicated November 7, 2002 and named for Eugene Mills, UNH president 1975-1979, who later led Whittier College.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Suite-style hall for sophomores and upper-class students: four- to eight-person suites with their own bathrooms, larger suites with common rooms, five floors with two or three lounges each, and a seminar room.",
+      "src": [
+        "h_mills"
+      ]
+    },
+    {
+      "text": "Has air conditioning and an elevator; 358 students at 20 Quad Way, next to the MUB.",
+      "src": [
+        "h_mills"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Mills_Hall%2C_UNH.jpg/1280px-Mills_Hall%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Mills_Hall,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Five-storey brick wings with gabled end bays across the road",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Mills Hall",
+      "url": "https://www.unh.edu/housing/facility/mills-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    },
+    {
+      "label": "Wikipedia: University of New Hampshire (Mills Hall photo)",
+      "url": "https://en.wikipedia.org/wiki/University_of_New_Hampshire"
+    }
+  ],
+  "sources": {
+    "arch_res": {
+      "title": "Student Residences",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "h_mills": {
+      "title": "Mills Hall",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/mills-hall",
+      "accessed": "2026-11-04"
+    },
+    "s19a": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    },
+    "wiki": {
+      "title": "University of New Hampshire",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/University_of_New_Hampshire",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 6,
+    "condition": 7,
+    "function": 8,
+    "character": 4,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "2002 neo-Georgian suite hall with A/C and private baths next to the MUB; upper-class students' favourite.",
+  "notes": "Photo 02 is tagged PD-self by an uploader naming the engineering firm Vanderweil as author, with no VRT permission on file; its public-domain status is doubtful, so prefer 01. Both photos show a five-storey red-brick neo-Georgian block with stone-banded floors, gabled pavilions with lunette windows and chimneys. It is handsome and well kept, but plain. Contradiction: the Housing page says Mills was president 1971-1974; the archives say acting president from July 1974 and president 1975-1979. The archives are more likely right. Architect and builder were not confirmed from a page I opened (a search snippet cited JSA Inc. and Gilbane from a 2002 UNH release I could not open). No interior photos.",
+  "judgeNotes": "Photo shows a handsome, well-kept but generic brick block. Dropped 02.jpg: its public-domain tag is doubtful (no permission on file)."
+}

@@ -1,0 +1,73 @@
+{
+  "name": "Pettee Hall",
+  "place": "Pettee Hall",
+  "category": "academic",
+  "use": "College of Health and Human Services departments (Family Studies / Human Development, Social Work) and the NH Institute for Health Policy and Practice (as of 2001)",
+  "built": 1938,
+  "builtText": "1937–38",
+  "architect": "Eric T. Huddleston; 1998–2001 renovation by JSA, Inc.",
+  "style": "Colonial Revival (the renovated entrance has a cast-stone portico)",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2001,
+      "what": "Extensive renovation (exterior work by JSA, Inc. from 1998); rededicated March 2, 2001",
+      "major": true,
+      "src": [
+        "arch_acad"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built for home economics, agricultural engineering and military science.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "Named for Dean Charles H. Pettee, who served the college for 62 years and was three times interim president.",
+      "src": [
+        "arch_acad"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Durham_NH_001.jpg/1280px-Durham_NH_001.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Durham_NH_001.jpg",
+      "credit": "Olivier Aumage",
+      "view": "exterior",
+      "year": 2005,
+      "caption": "Renovated entrance with \"Pettee Hall\" lettering",
+      "license": "CC BY-SA 2.0 fr",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/fr/deed.en"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 5,
+    "condition": 6,
+    "function": 6,
+    "character": 5,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "1938 Colonial Revival hall for Health and Human Services, rebuilt in 2001 behind a crisp stone-trimmed portico.",
+  "notes": "Old data's 1997 fire-code closure and ~$5M cost not verified. Current occupants beyond the archives' 2001 list unconfirmed. The 2005 Commons photo shows a crisp renovated brick front with a stone-trimmed portico. No interior evidence; no reviews.",
+  "judgeNotes": "Photo of the renovated front; nothing documented about the interior."
+}

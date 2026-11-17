@@ -1,0 +1,161 @@
+{
+  "name": "Wildcat Stadium",
+  "aliases": [
+    "Cowell Stadium",
+    "Lewis Field",
+    "Mooradian Field",
+    "The Dungeon (student section)"
+  ],
+  "place": "Wildcat Stadium",
+  "category": "athletics",
+  "use": "Football, plus track and field (Reggie Atkins track); 11,015 seats",
+  "built": 1936,
+  "builtText": "Groundbreaking December 1933; first game September 26, 1936; dedicated October 10, 1936; rebuilt 2015-16",
+  "style": "Contemporary collegiate grandstand in brick with gabled ends (from 2025 aerial)",
+  "status": "in-use",
+  "statusNote": "Open-air stadium, rebuilt 2016",
+  "renovations": [
+    {
+      "year": 2014,
+      "what": "Lights installed; first night game September 27, 2014",
+      "major": false,
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "year": 2016,
+      "what": "Rebuilt and expanded after the 2015 season on the old visitor-stand side: new grandstand with Victory Club, suites, box seats, press box, video board; capacity 6,500 to 11,015; renamed Wildcat Stadium",
+      "cost": 25000000,
+      "major": true,
+      "src": [
+        "s1",
+        "s2",
+        "s3"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Opened September 26, 1936 and dedicated October 10, 1936; originally Lewis Field (1936-51), then Cowell Stadium (1952-2015) for coach and athletic director William H. \"Butch\" Cowell. The playing field has been Mooradian Field since 1994.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "The athletic fields outside the Field House were named Lewis Fields for Dr. Edward Morgan Lewis, who helped secure their funding.",
+      "src": [
+        "s4"
+      ]
+    },
+    {
+      "text": "UNH announced the $25 million project on January 31, 2014; trustees approved it in June 2014 after $5 million in private gifts; the renamed stadium opened September 10, 2016 against Holy Cross.",
+      "src": [
+        "s2",
+        "s1"
+      ]
+    },
+    {
+      "text": "Includes the Service Credit Union Victory Club (512 seats), 864 box seats, four suites, a 30 by 50 ft video board and a 14-speaker sound system.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "The new grandstand was built where Cowell Stadium's visitor stands stood; the 1939-era press box was torn down; a bridge links the video-board entrance to the concourse; elevators were added.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "Hosted most UNH spring commencements from 1948 through 2021.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH was criticised for spending $1 million of librarian Robert Morin's $4 million bequest on the video board.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d5/Wildcat_Stadium_%28University_of_New_Hampshire%29.jpg/1280px-Wildcat_Stadium_%28University_of_New_Hampshire%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Wildcat_Stadium_(University_of_New_Hampshire).jpg",
+      "credit": "Quintin Soloviev",
+      "view": "aerial",
+      "year": 2025,
+      "caption": "Aerial view: brick grandstand, blue track and Mooradian Field",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Cowell_Stadium%2C_UNH%2C_Durham_NH.jpg/1280px-Cowell_Stadium%2C_UNH%2C_Durham_NH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Cowell_Stadium,_UNH,_Durham_NH.jpg",
+      "credit": "John Phelan",
+      "view": "historic",
+      "year": 2013,
+      "caption": "Cowell Stadium before the 2016 rebuild, Field House behind",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "Wikipedia: Wildcat Stadium",
+      "url": "https://en.wikipedia.org/wiki/Wildcat_Stadium_(University_of_New_Hampshire)"
+    },
+    {
+      "label": "UNH Athletics: Wildcat Stadium",
+      "url": "https://unhwildcats.com/sports/2016/8/10/wildcat-stadium"
+    },
+    {
+      "label": "UNH Library: Field House and Lewis Fields",
+      "url": "https://library.unh.edu/find/archives/buildings/athletic-facilities#field"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Wildcat Stadium (University of New Hampshire)",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Wildcat_Stadium_(University_of_New_Hampshire)",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Wildcat Stadium",
+      "publisher": "UNH Athletics",
+      "url": "https://unhwildcats.com/sports/2016/8/10/wildcat-stadium",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Wildcat Stadium project updates",
+      "publisher": "UNH Athletics",
+      "url": "https://unhwildcats.com/sports/2016/9/1/project-updates",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Field House (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/athletic-facilities#field",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "File:Wildcat Stadium (University of New Hampshire).jpg",
+      "publisher": "Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/wiki/File:Wildcat_Stadium_(University_of_New_Hampshire).jpg",
+      "accessed": "2026-11-04"
+    },
+    "s6": {
+      "title": "File:Cowell Stadium, UNH, Durham NH.jpg",
+      "publisher": "Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/wiki/File:Cowell_Stadium,_UNH,_Durham_NH.jpg",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "high",
+  "verdict": "The 1936 football ground rebuilt in 2016 with a brick grandstand, club level and big video board; marred by the scoreboard-bequest row.",
+  "notes": "2025 aerial: two-storey brick grandstand with gabled pavilions and a glazed club level along one side, aluminium bleachers along the Field House side, blue track (it was red in the 2013 photo, so it has been resurfaced since; date not found). Architect not verified: old row credits Lavallee Brensinger with Populous and PC Construction design-build; I found no page confirming it. Wikipedia says the larger home stands are on the northeast side, but the aerial suggests the new grandstand is on the side away from the Field House; orientation unresolved. Old row's Stadium Journey score not re-verified. Wikipedia also says it hosts soccer and lacrosse, but soccer and women's lacrosse now play at Tucker Field (see tucker-field). AC applies only to enclosed club/suite spaces (assumed partial, unverified).",
+  "judgeNotes": "Open-air facility: unranked (old run had it at #7). Aerial confirms a tidy brick grandstand."
+}

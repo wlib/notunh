@@ -50,6 +50,7 @@ const FILES: Record<string, unknown> = {
   "/assets/prereqs-x.json": { fetched: 0, year: "2026-2027", programs: "/data/programs/list.json", files: [] },
   "/data/programs/list.json": { fetched: 0, programs: [{ slug: "computer-science-minor", title: "Computer Science Minor", kind: "minor", file: "/data/programs/cs.json" }], courses: {} },
   "/data/programs/cs.json": { slug: "computer-science-minor", title: "Computer Science Minor", kind: "minor", url: "", year: "2026-2027", courses: ["CS 415", "CS 416", "CS 518"], titles: {} },
+  "/assets/profiles-x.json": { ranked: 0, profiles: {} },
   "/assets/parking-x.json": { sources: { zones: 0, parkMobile: 0, osm: 0 }, built: 0, areas: [{ id: "B", name: "B Lot", permits: ["faculty"], always: false, osm: [], at: [-70.93, 43.13], spaces: 573 }] },
   "/assets/gtfs-x.json": {
     version: "x", start: TODAY, end: TODAY, services: {}, shapes: {},
@@ -59,7 +60,7 @@ const FILES: Record<string, unknown> = {
   }
 }
 
-const NAMES = ["events", "gazetteer", "places", "courses", "prereqs", "parking", "gtfs"]
+const NAMES = ["events", "gazetteer", "places", "courses", "prereqs", "parking", "gtfs", "profiles"]
 
 const head = (release: string, names: Record<string, string>) => `<head><meta charset="UTF-8"><title>UNH Campus Map · notunh</title><meta name="description" content="Every bus live"><meta name="release" content="${release}"><meta property="og:title" content="UNH Campus Map · notunh"><meta property="og:description" content="Every bus live"><meta property="og:url" content="https://notunh.app/map/"><meta property="og:image" content="https://notunh.app/social/map.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="notunh: Buses &amp; directions"><meta name="twitter:title" content="UNH Campus Map · notunh"><meta name="twitter:description" content="Every bus live"><meta name="twitter:image" content="https://notunh.app/social/map.png"><meta name="twitter:image:alt" content="notunh: Buses &amp; directions"><link rel="canonical" href="https://notunh.app/map/"><script type="application/ld+json">[{"@type":"BreadcrumbList"}]</script>${Object.entries(names).map(([name, href]) => `<link rel="data" href="${href}" data-name="${name}">`).join("")}</head>`
 

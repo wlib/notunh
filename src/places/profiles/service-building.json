@@ -1,0 +1,56 @@
+{
+  "name": "Service Building",
+  "place": "Service Building",
+  "category": "support",
+  "use": "Facilities maintenance: machine and woodworking shops, paint shop, offices; three-stall fire station",
+  "built": 1939,
+  "builtText": "1939",
+  "style": "Utilitarian 1930s brick shop building",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Built in 1939 for the maintenance department, machine and woodworking shops, paint shop and the superintendent of properties' office.",
+      "src": [
+        "AD"
+      ]
+    },
+    {
+      "text": "On College Road, sharing a site with the combined heat and power plant; known for its three-stall fire station and the smokestack behind it.",
+      "src": [
+        "AD"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: administrative and campus life buildings",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life"
+    }
+  ],
+  "sources": {
+    "AD": {
+      "title": "Administrative and Campus Life Buildings",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 3,
+    "interior": 3,
+    "condition": 4,
+    "function": 6,
+    "character": 4,
+    "reputation": 3
+  },
+  "confidence": "low",
+  "verdict": "The 1939 brick facilities shops and fire bays beneath the plant smokestack: pure utility.",
+  "notes": "No licensed photo. Reference shows long low brick and gabled shop wings with a parking lot and the plant smokestack. Renovation history unknown. Whether the fire station is still Durham-UNH Fire Department's station was not checked.",
+  "judgeNotes": "Archives photo only."
+}

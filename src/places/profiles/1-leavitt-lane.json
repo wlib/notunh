@@ -1,0 +1,72 @@
+{
+  "name": "1 Leavitt Lane",
+  "aliases": [
+    "One Leavitt Lane"
+  ],
+  "place": "1 Leavitt Lane",
+  "category": "administration",
+  "use": "Offices: UNH Online & Continuing Education (second floor) and UNH IT space",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2022,
+      "what": "Oil-fired boiler replaced with natural-gas boiler (bid 2022; completion not confirmed)",
+      "major": false,
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "UNH's Office of Online & Continuing Education is on the second floor of One Leavitt Lane.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH IT has secured space at One Leavitt Lane, with door access by request.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Its oil boiler was among three at 1, 2 and 6 Leavitt Lane put out to bid for conversion to natural gas in 2022.",
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Contact Us",
+      "publisher": "UNH Online & Continuing Education",
+      "url": "https://online.unh.edu/contact",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "One Leavitt Lane Building Access",
+      "publisher": "USNH TeamDynamix service portal",
+      "url": "https://td.usnh.edu/TDClient/60/Portal/Requests/Service/173/One-Leavitt-Lane-Building-Access",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Gas Conversion for 3 HVAC Boiler Systems at 1, 2 and 6 Leavitt Lane (bid 2022)",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/5463714-gas-conversion-for-3-hvac-boiler-systems-at-1-2-and-6-leavitt-lane&find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 2,
+    "reputation": 3
+  },
+  "confidence": "low",
+  "verdict": "Small office building on Leavitt Lane holding Online & Continuing Education and IT space; almost nothing is documented about it.",
+  "notes": "Split from old row 96 ('Leavitt Lane buildings (1, 2, 6 Leavitt Ln)'), which bundled three separate buildings with different occupants. A 2022 USNH bid replaced three separate oil boilers at 1, 2 and 6 Leavitt Lane, one per building. Campus maps reportedly also list 5, 9 and 11 Leavitt Lane (search snippet only, not verified). notunh's map has a 'Leavitt Lane' parking lot and 'UNH Human Resources' and 'UNH Lock Shop' points nearby, but no building outlines for these addresses. Construction years, architects and photos not found; no licensed or reference photos. ",
+  "judgeNotes": "No photos or history; scored as a generic support office near the campus median for its type."
+}

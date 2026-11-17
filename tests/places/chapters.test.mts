@@ -90,7 +90,7 @@ test("each placed chapter's house is one place in the gazetteer, in Durham, in p
 
 test("joining the chapters again changes nothing, and leaves every other place as it was", () => {
   expect(withChapters(places)).toEqual(places)
-  const names = new Set(places.map(place => place.name))
+  const names = new Set(withChapters(raw.places).map(place => place.name))
   expect(raw.places.filter(place => !names.has(place.name)).map(place => place.name)).toEqual(["AGR ( Alpha Gamma Rho)", "Elizabeth Demeritt House"])
 })
 

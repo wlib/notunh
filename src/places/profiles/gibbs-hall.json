@@ -1,0 +1,96 @@
+{
+  "name": "Gibbs Hall",
+  "place": "Gibbs Hall",
+  "category": "residence",
+  "use": "Small traditional residence hall, 111 students; Lower Quad; 'The Clubhouse' sports and active-living theme",
+  "built": 1946,
+  "builtText": "Built 1946; dedicated June 14, 1947",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Dedicated June 14, 1947 and named for William D. Gibbs, New Hampshire College president 1903-1912, who broadened the college's role for the whole state.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Built 1946; one of the three Lower Quad halls with Engelhardt, Gibbs and Hunter.",
+      "src": [
+        "arch_idx",
+        "h_gibbs"
+      ]
+    },
+    {
+      "text": "Hall of 111 students at 4 Quad Way; 'The Clubhouse' sports and active-living theme.",
+      "src": [
+        "h_gibbs"
+      ]
+    },
+    {
+      "text": "Amenities listed are a kitchen, laundry, indoor bike storage and WiFi; no air conditioning or elevator is listed. Accessibility: none listed.",
+      "src": [
+        "h_gibbs"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Gibbs_Hall%2C_UNH.jpg/1280px-Gibbs_Hall%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Gibbs_Hall,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Rear of the hall across the backyard sand volleyball court",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Gibbs Hall",
+      "url": "https://www.unh.edu/housing/facility/gibbs-hall-lower-quad"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "arch_res": {
+      "title": "Student Residences",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "arch_idx": {
+      "title": "University History: Buildings (index with build/dedication years)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "h_gibbs": {
+      "title": "Gibbs Hall (Lower Quad)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/gibbs-hall-lower-quad",
+      "accessed": "2026-11-04"
+    },
+    "s19a": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 5,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "Twin of Engelhardt: a tidy 1946 Lower Quad hall with a dormered top floor, friendly but without A/C.",
+  "notes": "No renovation history found for the Lower Quad halls. Old row credited Eric T. Huddleston as architect; no source I opened confirms it, so architect is left null. Licensed photo (2013) shows a long two-storey brick block with a white-clad dormered third storey and hipped roof, plain but tidy, behind the sand volleyball court mentioned by Housing. No interior photos.",
+  "judgeNotes": "Photo shows a long, neat brick block behind a volleyball court."
+}

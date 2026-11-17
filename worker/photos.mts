@@ -18,6 +18,9 @@ export const photos = new Hono<Worker>()
 /** A photo's source answering slower than this has stalled */
 const UPSTREAM_MS = 15_000
 
+/** How finely a photo is encoded: unasked, the binding encodes WebP all but losslessly, larger than the source */
+const QUALITY = 80
+
 photos.get("/api/photo", async c => {
   const src = c.req.query("src")
   const width = PHOTO_WIDTHS.find(width => String(width) === c.req.query("w"))
@@ -36,7 +39,7 @@ photos.get("/api/photo", async c => {
     const fetched = await fetch(src, { headers: HEADERS, signal: AbortSignal.timeout(UPSTREAM_MS) })
     if (!fetched.ok)
       throw new Error(`${src} is ${fetched.status}`)
-    const made = await c.env.IMAGES.input(fetched.body!).transform({ width, fit: "scale-down" }).output({ format: "image/webp" })
+    const made = await c.env.IMAGES.input(fetched.body!).transform({ width, fit: "scale-down" }).output({ format: "image/webp", quality: QUALITY })
     const photo = made.response({ headers: { "cache-control": "public, max-age=31536000, immutable" } })
     if (cache)
       c.executionCtx.waitUntil(cache.put(key, photo.clone()))

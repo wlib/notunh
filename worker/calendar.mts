@@ -1,9 +1,10 @@
 // Calendar files (src/shared/ics.mts), for a calendar app to add or subscribe to: an event's, a curated series', a
-// section's, and a person's feed of the sections they've saved and the events they're hosting or going to. Each is
-// made as it's asked for from the site's own data, so one subscribed to follows a room change. The first three say
-// only what their pages do. A feed is asked for by a token alone, 128 random bits kept as one of the person's
-// things (FEED in src/shared/sync.mts), which whoever holds can read their classes by, and which they make anew to
-// end; no device's secret is in it, and an unknown token is a 404 like any other
+// section's, and a person's feed of the sections they've saved, the events they're hosting or going to, and the
+// sessions they've saved; and an activity's every session. Each is made as it's asked for from the site's own data, so
+// one subscribed to follows a room change. The first three say only what their pages do. A feed is asked for by a token
+// alone, 128 random bits kept as one of the person's things (FEED in src/shared/sync.mts), which whoever holds can read
+// their classes by, and which they make anew to end; no device's secret is in it, and an unknown token is a 404 like
+// any other
 //
 // And the one request the Worker makes for someone's own calendar: a feed's address that their browser can't read
 // for want of CORS, as Canvas', Google's and Outlook's can't be, fetched here and handed straight back. The address
@@ -23,7 +24,9 @@ import * as v from "valibot"
 import curated from "../src/social/curated.json"
 import { Curated, entriesOf as seriesEntries, slugOf } from "../src/social/curated.mts"
 import { entryOf } from "../src/social/calendar.mts"
-import { EventsData } from "../src/social/event.mts"
+import { EventsData, LINGER, eventById } from "../src/social/event.mts"
+import { SAVES, readSaves, savedId } from "../src/social/saves.mts"
+import { seriesOf } from "../src/social/series.mts"
 import { CoursesIndex, TermFile, codeOf, termOf } from "../src/courses/course.mts"
 import { entriesOf as sectionEntries } from "../src/courses/ics.mts"
 import { SAVED, readSaved, savedIn } from "../src/courses/saved.mts"
@@ -65,8 +68,8 @@ const named = (file: string) =>
 // One event: UNH's as the site lists it, else a person's, which whoever has its link may read
 calendars.get("/api/calendar/event/:file", async c => {
   const id = named(c.req.param("file"))
-  const event = id && ((await siteOf(c.env).named("events", EventsData)).events.find(event => event.id === id) ?? await publicPin(c.env.DB, id))
-  return event ? served(c, event.title, writeCalendar(event.title, [entryOf(event)], Date.now()), CACHE.shared) : missing(c)
+  const event = id && (eventById((await siteOf(c.env).named("events", EventsData)).events, id) ?? await publicPin(c.env.DB, id))
+  return event ? served(c, event.title, writeCalendar(event.title, [entryOf({ ...event, id })], Date.now()), CACHE.shared) : missing(c)
 })
 
 // A curated series, every session of it, by its title's slug
@@ -86,7 +89,19 @@ calendars.get("/api/calendar/section/:term/:file", async c => {
   return name ? served(c, name, writeCalendar(name, sectionEntries(term!, section, index.calendar), Date.now(), REFRESH), CACHE.shared) : missing(c)
 })
 
-// A person's feed, by its token: the sections they've saved in the terms not over, and the events they host or are going to
+// An activity, every session of it listed, by its series' key (src/social/series.mts), for whoever follows it and
+// wants them all
+calendars.get("/api/calendar/activity/:file", async c => {
+  const key = named(c.req.param("file"))
+  const sessions = key ? (await siteOf(c.env).named("events", EventsData)).events.filter(event => event.end + LINGER > Date.now() && seriesOf(event)?.key === key) : []
+  const name = sessions[0] && seriesOf(sessions[0])?.name
+  return name ? served(c, name, writeCalendar(name, sessions.map(entryOf), Date.now(), REFRESH), CACHE.shared) : missing(c)
+})
+
+// A person's feed, by its token: the sections they've saved in the terms not over, the events they host or are going
+// to, and the sessions of UNH's events they've saved, each under the id it was saved by, so one merged with another
+// calendar's telling keeps its place in a calendar app. An activity followed isn't in it, as its own address has every
+// session. Made of the public events and pins alone, never of bookings, as whoever holds the address reads it
 calendars.get("/api/calendar/feed/:file", async c => {
   const token = named(c.req.param("file"))
   const person = token && v.is(FeedToken, token) ? await personOfFeed(c.env.DB, token) : undefined
@@ -94,9 +109,16 @@ calendars.get("/api/calendar/feed/:file", async c => {
     return missing(c)
   const now = Date.now()
   const site = siteOf(c.env)
-  const [terms, { calendar }, saved, pins] = await Promise.all([termsOf(site, notOver(now)), site.named("courses", CoursesIndex), kept(c.env.DB, person, SAVED), pinsOf(c.env.DB, person, now)])
+  const [terms, { calendar }, saved, pins, saves, { events }] = await Promise.all([
+    termsOf(site, notOver(now)), site.named("courses", CoursesIndex), kept(c.env.DB, person, SAVED), pinsOf(c.env.DB, person, now),
+    kept(c.env.DB, person, SAVES).then(readSaves), site.named("events", EventsData)
+  ])
   const classes = savedIn(readSaved(saved), terms).flatMap(({ term, section }) => sectionEntries(term, section, calendar))
-  return served(c, "notunh", writeCalendar("notunh", [...classes, ...pins.map(entryOf)], now, REFRESH), CACHE.feed)
+  const sessions = events.flatMap(event => {
+    const id = event.end + LINGER > now ? savedId(saves, event) : undefined
+    return id ? [entryOf({ ...event, id })] : []
+  })
+  return served(c, "notunh", writeCalendar("notunh", [...classes, ...pins.map(entryOf), ...sessions], now, REFRESH), CACHE.feed)
 })
 
 //#region Someone's own calendar, fetched for them

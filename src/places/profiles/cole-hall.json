@@ -1,0 +1,65 @@
+{
+  "name": "Cole Hall",
+  "aliases": [
+    "Stacey Cole Hall"
+  ],
+  "place": "Cole Hall",
+  "category": "academic",
+  "use": "Thompson School: 150-seat lecture hall, commercial kitchen and student-run dining room for the culinary and hospitality programs, study lounge, offices",
+  "built": 1990,
+  "builtText": "In use and named by 1990; construction start not confirmed (old data: 1987–90)",
+  "architect": "Banwell Architects",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Designed by Banwell Architects, Cole Hall was named in 1990 for Stacey Ward Cole (1921–2014), a 1941 Thompson School graduate, farmer, state representative and USNH trustee.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It contains a 150-seat lecture auditorium, a commercial kitchen and dining area, a student study and lounge area, a computer lab, a small classroom and administrative offices.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Thompson School restaurant-management students trained in two student-run restaurants in Cole Hall, Stacey's Buffet and the Balcony Bistro, during the academic year.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Undergraduate Course Catalog 2008-2009: Thompson School of Applied Science",
+      "publisher": "UNH",
+      "url": "https://www.unh.edu/archive/undergrad-catalog/2008-2009/info.cfm@id=5.html",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 5,
+    "condition": 5,
+    "function": 6,
+    "character": 5,
+    "reputation": 5
+  },
+  "confidence": "low",
+  "verdict": "Postmodern 1990 Thompson School hall with a lecture room and student-run restaurant kitchen.",
+  "notes": "The archive photo reads as postmodern (towers with ball finials, playful massing), but no source names a style. Construction year isn't stated by the Archives; 1990 is the naming year. The student restaurant has changed names over the years (Stacey's Buffet/Balcony Bistro in 2008; search snippets mention '180 Blue' around 2010 and 'The Restaurant at Thompson School' in Cole Hall 144). I couldn't open a source confirming the restaurant runs today. No renovation history. No licensed photo. No reviews found.",
+  "judgeNotes": "Archives photo shows playful white towers with finials; no current photos or condition evidence."
+}

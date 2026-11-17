@@ -1,0 +1,81 @@
+{
+  "name": "Hood House",
+  "place": "Hood House",
+  "category": "administration",
+  "use": "Administrative offices, including the University Advising Center (Room 101)",
+  "built": 1932,
+  "builtText": "1931–32 (dedicated June 12, 1932)",
+  "architect": "Eric T. Huddleston (per old data; not confirmed)",
+  "style": "Colonial Revival brick with cupola and balustraded terrace (from photos)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Built as a rest home (infirmary) to promote preventive health care on campus; named for Charles Harvey Hood, 1880 graduate and president of H.P. Hood and Son.",
+      "src": [
+        "arch_admin"
+      ]
+    },
+    {
+      "text": "The archives list International Education, the Honors Program, the Hamel Center for Undergraduate Research and advising as tenants.",
+      "src": [
+        "arch_admin"
+      ]
+    },
+    {
+      "text": "The University Advising Center gives its address as 101 Hood House.",
+      "src": [
+        "uac"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/f2/Scenes_on_the_University_of_New_Hampshire_Campus_-_Large_Letter_Postcard_%2814002554362%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Scenes_on_the_University_of_New_Hampshire_Campus_-_Large_Letter_Postcard_(14002554362).jpg",
+      "credit": "Steve Shook (collection); 1934 Curt Teich postcard",
+      "view": "historic",
+      "year": 1934,
+      "caption": "Charles Harvey Hood House (cropped panel of a 1934 Curt Teich large-letter postcard)",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: administrative and campus life buildings",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life"
+    }
+  ],
+  "sources": {
+    "arch_admin": {
+      "title": "Administrative and Campus Life Buildings",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life",
+      "accessed": "2026-11-04"
+    },
+    "arch_list": {
+      "title": "UNH Buildings (list with construction dates and uses)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "uac": {
+      "title": "Contact Us",
+      "publisher": "UNH University Advising Center",
+      "url": "https://www.unh.edu/uac/contact-us",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 4,
+    "condition": 5,
+    "function": 5,
+    "character": 6,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "1932 Colonial Revival infirmary with a cupola, now advising offices.",
+  "notes": "Architect Huddleston is from old data and not stated by the archives' Hood House entry. Honors has likely moved: the archives' Huddleston Hall entry says the Hamel Honors and Scholars College has been there since its 2024 renovation, so the archives' Hood House tenant list is dated. No renovation dates found. The only licensed image is a tiny 1934 postcard panel; ref-01 (archives) shows the brick front with a balustraded terrace and cupola.",
+  "judgeNotes": "Archives photo shows a gracious brick front; licensed image is a small postcard panel. No interior or condition evidence."
+}

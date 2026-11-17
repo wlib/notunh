@@ -1,0 +1,120 @@
+{
+  "name": "New England Center",
+  "aliases": [
+    "Kellogg Tower",
+    "NEC"
+  ],
+  "place": "New England Center - Kellogg Tower",
+  "category": "administration",
+  "use": "Former hotel and conference center; now UNH offices including the Center for Advancement (and Adams Tower West housing)",
+  "built": 1969,
+  "builtText": "opened October 1969; dedicated January 10, 1970; addition completed July 1988",
+  "architect": "William L. Pereira Associates; 1988 addition by The Architects Collaborative, Inc. and J.S.A., Inc.; Center for Advancement renovation by Harriman Associates",
+  "status": "in-use",
+  "statusNote": "Former hotel and conference centre, now UNH offices including Human Resources",
+  "renovations": [
+    {
+      "year": 1988,
+      "what": "Addition of 61 rooms and three conference rooms",
+      "major": true,
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "year": 2010,
+      "what": "Hotel, conference center and restaurant closed; one tower converted to student housing",
+      "major": true,
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "what": "Milestone renovated Adams Towers A and B and the Kellogg Building, then converted part of the center into the Center for Advancement (architect Harriman Associates; date not given)",
+      "major": false,
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built as the New England Center for Continuing Education, a joint project of the six New England state universities, New Hampshire, the U.S. Office of Education and the W.K. Kellogg Foundation.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Designed by William L. Pereira Associates of Los Angeles; it opened in October 1969 and was dedicated January 10, 1970.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "The NH Preservation Alliance put it on its 2009 'Seven to Save' list, describing green brick and glass tucked into a wooded landscape.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Financial concerns forced the hotel, conference center and restaurant to close in 2010.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/03/New_England_Center%2C_Durham%2C_NH.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "page": "https://commons.wikimedia.org/wiki/File:New_England_Center,_Durham,_NH.jpg",
+      "credit": "Djpalardy",
+      "view": "exterior",
+      "year": 2017,
+      "caption": "Green-brick tower with full-height slot windows",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: Adams Tower West / New England Center history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    },
+    {
+      "label": "NH Preservation Alliance 2009 Seven to Save",
+      "url": "https://nhpreservation.org/s/2009seventosave.pdf"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "New Hampshire's 2009 Seven to Save",
+      "publisher": "New Hampshire Preservation Alliance",
+      "url": "https://nhpreservation.org/s/2009seventosave.pdf",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Milestone completes work at UNH",
+      "publisher": "High-Profile",
+      "url": "https://www.high-profile.com/milestone-completes-work-at-unh/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 5,
+    "condition": 4,
+    "function": 5,
+    "character": 7,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "Pereira's 1969 green-brick hotel towers in the woods, a Preservation Alliance 'Seven to Save' building, now repurposed as offices.",
+  "notes": "CONTRADICTION: the Preservation Alliance flyer says 'constructed in 1963', the archives say it opened October 1969 (I trust the archives; 1963 is likely an error). The old row's 'complete fall 1969 / 2015 Center for Advancement' date and the 2020 Seven to Save relisting were not confirmed. Which building notunh calls 'Kellogg Tower' (the 1988 tower? the original Kellogg conference building?) and what offices occupy it today are not confirmed; current interior condition unknown. Category 'administration' kept on the strength of the Center for Advancement conversion. Old row's interior details (Collier Gallery, Concord dining room) not re-verified. Licensed photo (2017, overcast): stacked green glazed-brick piers and bronze-framed full-height slot windows rising among trees: an unusual, sculptural late-modern facade. Which notunh tower it shows (Adams vs Kellogg) is not stated on the file page; I did not reuse it for Adams Tower West for that reason.",
+  "judgeNotes": "Photo shows a striking slotted tower in green brick. Condition 4: closed as a hotel for financial reasons and partly repurposed."
+}

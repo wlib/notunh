@@ -1,0 +1,148 @@
+{
+  "name": "Williamson Hall",
+  "aliases": [
+    "Willy"
+  ],
+  "place": "Williamson Hall",
+  "category": "residence",
+  "use": "First-year-only residence hall (424 students), home of the First Year Experience; twin of Christensen",
+  "built": 1972,
+  "builtText": "Dedicated June 10, 1972 (opening year not documented; likely c.1970 as Christensen's twin)",
+  "style": "Late Modern brick towers matching Christensen",
+  "status": "in-use",
+  "statusNote": "Renovation with Christensen planned",
+  "renovations": [
+    {
+      "year": 2026,
+      "what": "Planned renovation with Christensen (interiors, bathrooms, common areas, heating and plumbing); $32.3M deferred maintenance. Status not confirmed.",
+      "major": false,
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Dedicated June 10, 1972 and named for Dean P. Williamson (class of 1932), alumni trustee and board chair.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Housing lists 424 students (large hall), first-year only, traditional singles and doubles, meal plan required; floor 2B is a gender-inclusive community.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Each floor is made of one to three towers (wings); a lobby duty desk lends games and cooking supplies 8-10 pm, and the main lounge has a fireplace.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Features: elevator, kitchen, laundry, indoor bike storage, sports courts; floor plans list ten floors; strobe/speaker alerts in all rooms. No AC listed.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Address: 24 Evergreen Dr.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "UNH Facilities lists a Williamson & Christensen renovation: at 50 years old the interiors are worn, bathrooms and common spaces need modernizing, and heating and plumbing systems are failing; the project addresses $32.3 million in deferred maintenance.",
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://live.staticflickr.com/808/26521368287_facb68fa68_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/26521368287/",
+      "credit": "Alexa Estrada / UNHDigitalSandbox (Flickr)",
+      "view": "exterior",
+      "year": 2017,
+      "caption": "Stepped brick massing over the recessed entrance stair",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/49/Williamson_Hall%2C_UNH%2C_Durham_NH.jpg/960px-Williamson_Hall%2C_UNH%2C_Durham_NH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Williamson_Hall,_UNH,_Durham_NH.jpg",
+      "credit": "John Phelan",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Stepped red-brick towers of Williamson Hall",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Williamson Hall",
+      "url": "https://www.unh.edu/housing/facility/williamson-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#williamson"
+    },
+    {
+      "label": "UNH Facilities: capital projects",
+      "url": "https://www.unh.edu/facilities/about/capital-planning-management/capital-projects-underway"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Williamson Hall (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#williamson",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Williamson Hall | Housing & Residential Life",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/williamson-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Capital Projects Underway",
+      "publisher": "UNH Facilities",
+      "url": "https://www.unh.edu/facilities/about/capital-planning-management/capital-projects-underway",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "The Ultimate Ranking Of Freshman Dorms At UNH",
+      "publisher": "Society19",
+      "url": "https://society19.com/the-ultimate-ranking-of-freshman-dorms-at-unh/amp",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    },
+    "s6": {
+      "title": "File:Williamson Hall, UNH, Durham NH.jpg",
+      "publisher": "Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/wiki/File:Williamson_Hall,_UNH,_Durham_NH.jpg",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 4,
+    "condition": 3,
+    "function": 5,
+    "character": 6,
+    "reputation": 6
+  },
+  "confidence": "high",
+  "verdict": "Christensen's stepped brick twin: a sculptural Late Modern tower outside, worn rooms and no A/C inside, renovation pending.",
+  "notes": "Commons photo (2013): sculpted ten-storey tower of smooth red brick, stepped setbacks and slot/bay windows; strong, monolithic massing, a distinctive Late Modern composition. Reference room photo: tall window, scuffed vinyl floor, plain white walls, average ceiling; dated finishes. Archives do not name Williamson's architect; Franzen is likely (twin of Christensen) but unconfirmed, so architect left null. The old row's 1969-70 dates are unsourced; only the 1972 dedication is documented. $70M/$76M cost figures seen only in search snippets (not opened). Alias \"Willy\" from Housing image filenames only; treat as informal.",
+  "judgeNotes": "Photos show strong massing. Matches Christensen. The planned 2026 renovation is marked major: false until it is done."
+}

@@ -1,0 +1,146 @@
+{
+  "name": "Smith Hall",
+  "place": "Smith Hall",
+  "category": "administration",
+  "use": "Office of Undergraduate Admissions; SHARPP (third floor); formerly the first women's dormitory",
+  "built": 1908,
+  "builtText": "1908 (opened fall 1908)",
+  "architect": "G. O. Totten; built by Lewis Killam",
+  "style": "Tudor/Gothic-influenced brick with stepped gables (from photos)",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 1918,
+      "what": "Annex built by soldiers of the vocational training camp",
+      "major": true,
+      "src": [
+        "arch_admin"
+      ]
+    },
+    {
+      "year": 1992,
+      "what": "Renovated with funds left over from building the Gables",
+      "major": true,
+      "src": [
+        "arch_admin"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Opened in 1908 as the first women's dormitory, given by Edith Onderdonk in memory of her mother, Alice Hamilton Smith.",
+      "src": [
+        "arch_admin",
+        "clio"
+      ]
+    },
+    {
+      "text": "Has been a women's dorm, an international house, and an administrative building.",
+      "src": [
+        "arch_admin"
+      ]
+    },
+    {
+      "text": "Admissions lists Smith Hall, 3 Garrison Avenue, as its office.",
+      "src": [
+        "adm"
+      ]
+    },
+    {
+      "text": "SHARPP (Sexual Harassment and Rape Prevention Program) has moved to the third floor of Smith Hall.",
+      "src": [
+        "sharpp"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c6/Smith_Hall%2C_UNH_1.jpg/1280px-Smith_Hall%2C_UNH_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Smith_Hall,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Gabled brick front with white porches",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2e/Smith_Hall%2C_UNH_2.jpg/1280px-Smith_Hall%2C_UNH_2.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Smith_Hall,_UNH_2.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Front from Garrison Avenue",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/ae/Smith_Hall%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Smith_Hall,_UNH.jpg",
+      "credit": "Unknown author",
+      "view": "historic",
+      "year": 1915,
+      "caption": "Smith Hall, c. 1915 postcard",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/d0/The_New_Hampshire_College_Monthly_%281909%29_%2814787081033%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:The_New_Hampshire_College_Monthly_(1909)_(14787081033).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1909,
+      "caption": "Smith Hall as a women’s dormitory (cropped from a 1909 New Hampshire College Monthly photo page)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: administrative and campus life buildings",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life"
+    },
+    {
+      "label": "Clio: Smith Hall",
+      "url": "https://theclio.com/tour/2807/7"
+    }
+  ],
+  "sources": {
+    "arch_admin": {
+      "title": "Administrative and Campus Life Buildings",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life",
+      "accessed": "2026-11-04"
+    },
+    "clio": {
+      "title": "Smith Hall",
+      "publisher": "Clio",
+      "url": "https://theclio.com/tour/2807/7",
+      "accessed": "2026-11-04"
+    },
+    "adm": {
+      "title": "Contact the Office of Undergraduate Admissions",
+      "publisher": "UNH Admissions",
+      "url": "https://admissions.unh.edu/contact",
+      "accessed": "2026-11-04"
+    },
+    "sharpp": {
+      "title": "SHARPP",
+      "publisher": "UNH",
+      "url": "https://www.unh.edu/sharpp/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 7,
+    "interior": 5,
+    "condition": 6,
+    "function": 6,
+    "character": 7,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "The 1908 first women's dormitory, all stepped gables and white porches, now Admissions' front door.",
+  "notes": "A search snippet said Admissions lists the Elliott Alumni Center as a temporary in-person visit location, but the contact page as opened does not say so; unconfirmed. Clio implies Smith is still a dormitory; it is not. The 'Center for Academic Resources' tenant (old data, archives) was not confirmed as current. The admissions page gives both 3 and 5 Garrison Ave. The 2013 photos show a well-kept three-story gabled brick hall.",
+  "judgeNotes": "Photos show one of the more characterful brick fronts on campus. Exterior up a point from the old run."
+}

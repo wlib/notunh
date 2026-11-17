@@ -1,0 +1,101 @@
+{
+  "name": "Hewitt Hall",
+  "place": "Hewitt Hall",
+  "category": "academic",
+  "use": "College of Health and Human Services (administration, classrooms, labs)",
+  "built": 1893,
+  "builtText": "1893 (as the Shops Building)",
+  "architect": "Unknown",
+  "style": "Brick (1990s rebuild; style undocumented)",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 1947,
+      "what": "U-shaped building renovated and 'filled in' (after three earlier renovations)",
+      "major": true,
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "year": 1994,
+      "what": "Major renovation in the early 1990s; 'New Hewitt Hall' reopened March 1994",
+      "major": true,
+      "src": [
+        "arch_acad"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built in 1893 as the Shops Building and renamed in 1942 for Charles E. Hewitt, the first electrical-engineering student and later first dean of engineering.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "CHHS lists its address as Hewitt Hall, 4 Library Way.",
+      "src": [
+        "chhs"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/The_New_Hampshire_College_Monthly_%281909%29_%2814580506730%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:The_New_Hampshire_College_Monthly_(1909)_(14580506730).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1909,
+      "caption": "Conant Hall (left) and the Shops, now Hewitt Hall, with smokestack (right) (cropped from a 1909 New Hampshire College Monthly photo page)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Catalogue_of_the_New_Hampshire_College_of_Agriculture_and_the_Mechanic_Arts_%281901%29_%2814781891965%29.jpg/1280px-Catalogue_of_the_New_Hampshire_College_of_Agriculture_and_the_Mechanic_Arts_%281901%29_%2814781891965%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Catalogue_of_the_New_Hampshire_College_of_Agriculture_and_the_Mechanic_Arts_(1901)_(14781891965).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1901,
+      "caption": "\"College Buildings Looking Southeast\" with the Shops at right (1901 catalogue)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "UNH College of Health and Human Services",
+      "url": "https://chhs.unh.edu/about/contact-us"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "chhs": {
+      "title": "Contact Us",
+      "publisher": "UNH College of Health and Human Services",
+      "url": "https://chhs.unh.edu/about/contact-us",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 4,
+    "condition": 5,
+    "function": 5,
+    "character": 6,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "The 1893 Shops building, rebuilt in the 1940s and again in 1994 as a long plain brick block for Health and Human Services.",
+  "notes": "The old data's '$4.1M' 1994 cost and the TNH claim that CHHS 'outgrew' Hewitt were not verified. Search snippets say a 2026 UNH article mentions a home-care simulation space in Hewitt; not opened. No licensed modern photo; archives ref-01 (July 2016, color) shows a long three-story red-brick block with an arched entry. The historic images show the 1893 shops, which bear little resemblance to today's building.",
+  "judgeNotes": "Archives photo shows a long three-storey brick front; licensed images are only distant 1901/1909 views."
+}

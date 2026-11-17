@@ -1,0 +1,72 @@
+{
+  "name": "Center of Excellence for Operational Ocean and Great Lakes Mapping",
+  "aliases": [
+    "NOAA Center of Excellence",
+    "Ocean Mapping Center of Excellence"
+  ],
+  "place": null,
+  "category": "academic",
+  "use": "NOAA operational ocean and Great Lakes mapping center, training, plus 35,000 sq ft high bay for industry partners and the Olson Center",
+  "built": 2027,
+  "builtText": "Under construction: ground broken Nov 2025, beam signing July 13, 2026, opening fall 2027",
+  "architect": "Stantec; builder Gilbane Building",
+  "style": "Contemporary (per rendering: blue metal-clad office block and grey high-bay volume)",
+  "status": "under-construction",
+  "statusNote": "Groundbreaking Nov 2025; opening planned fall 2027",
+  "facts": [
+    {
+      "text": "A 70,500 sq ft building at Main Street and Mast Road by the West Edge lot, designed by Stantec and built by Gilbane, scheduled to open fall 2027.",
+      "src": [
+        "noaa"
+      ]
+    },
+    {
+      "text": "Funded largely by over $25 million in NOAA and NIST awards plus UNH investment; includes 35,000 sq ft of high-bay space.",
+      "src": [
+        "noaa"
+      ]
+    },
+    {
+      "text": "Ground was broken in November; projected cost $34 million, including $20M from NOAA and $5M from NIST; first step of \"The Edge\" mixed-use district.",
+      "src": [
+        "nhpr"
+      ]
+    },
+    {
+      "text": "UNH Facilities describes a 2023 $20M NOAA award for a facility of office, training and high-bay space.",
+      "src": [
+        "cap"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH News: construction milestone",
+      "url": "https://www.unh.edu/news/unh-partners-celebrate-construction-milestone-ocean-mapping-center-excellence"
+    }
+  ],
+  "sources": {
+    "noaa": {
+      "title": "UNH and Partners Celebrate Construction Milestone of Ocean Mapping Center of Excellence (2026-07)",
+      "publisher": "UNH News",
+      "url": "https://www.unh.edu/news/unh-partners-celebrate-construction-milestone-ocean-mapping-center-excellence",
+      "accessed": "2026-11-04"
+    },
+    "cap": {
+      "title": "Capital Projects Underway",
+      "publisher": "UNH Facilities",
+      "url": "https://www.unh.edu/facilities/about/capital-planning-management/capital-projects-underway",
+      "accessed": "2026-11-04"
+    },
+    "nhpr": {
+      "title": "UNH project for major research and mixed-use community underway in Durham (2026-05)",
+      "publisher": "NHPR / Portsmouth Herald",
+      "url": "https://www.nhpr.org/nh-news/2026-05-07/unh-noaa-project-research-hotel-the-edge-durham",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "low",
+  "verdict": "NOAA's 70,500 sq ft ocean-mapping centre with a big high bay, rising at Main Street and Mast Road for 2027.",
+  "notes": "Name corrected to the official \"Center of Excellence for Operational Ocean and Great Lakes Mapping\". notunh has no name for it. Size conflict: UNH Facilities page says 20,500 sq ft (likely the NOAA-funded portion or old figure); UNH News and NHPR say 70,500. NHPR says operational by November 2027. built=2027 is the planned opening. Old row said groundbreaking early 2026; NHPR says November (2025).",
+  "judgeNotes": "Unranked (under construction). Exterior judged from a rendering only."
+}

@@ -1,0 +1,101 @@
+{
+  "name": "Eaton House",
+  "aliases": [
+    "The Minis"
+  ],
+  "place": "Eaton House",
+  "category": "residence",
+  "use": "Former mini-dorm (50 students), arts theme; part of the four-building Minis",
+  "built": 1976,
+  "builtText": "Dedicated October 17, 1976 (construction years not documented)",
+  "style": "Two-storey wood-frame houses with vertical board siding and gabled roofs (from photos)",
+  "status": "closed",
+  "statusNote": "Minis closed at the end of spring 2026; future not announced",
+  "facts": [
+    {
+      "text": "Dedicated October 17, 1976 as a residence and learning community for creative-arts students; named for Forrest M. Eaton (class of 1926), trustee chair 1959-67.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Housing's Minis pages (archived April 2026) state the Minis were expected to close permanently at the end of the spring 2026 semester and were not available for 2026-27 assignments; the live pages now return \"Access denied\" and the Minis are absent from the current residence-hall list.",
+      "src": [
+        "s2",
+        "s3"
+      ]
+    },
+    {
+      "text": "Housing described Eaton (50 students, The Arts theme, singles and doubles) as a small, eclectic arts community on the quieter side of campus near College Woods. The four Minis (Eaton, Hall, Marston, Richardson) functioned as one hall; residents could swipe into all four.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Accessibility per Housing: limited-use bathrooms, roll-in building access, strobe alerts in some rooms; gender-inclusive restrooms. No elevator or AC listed.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Address: 32 Demeritt Circle.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "In February 2021 about 20 residents were moved out so Eaton could serve as back-up COVID-19 quarantine housing; Housing called it the least-populated residential community with an ideal layout for that use.",
+      "src": [
+        "s4"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#eaton"
+    },
+    {
+      "label": "Archived Housing page (April 2026)",
+      "url": "https://web.archive.org/web/20260430004442/https://www.unh.edu/housing/facility/minis-eaton-house"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Eaton House (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#eaton",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "The Minis (Eaton House) | Housing & Residential Life (archived 2026-04-30; live page now returns 403)",
+      "publisher": "UNH Housing",
+      "url": "https://web.archive.org/web/20260430004442/https://www.unh.edu/housing/facility/minis-eaton-house",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Residence Halls | Housing & Residential Life",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/housing-options/residence-halls",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "UNH to use Eaton Hall as additional quarantine housing",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2021/02/unh-to-use-eaton-hall-as-additional-quarantine-housing",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 3,
+    "function": 3,
+    "character": 4,
+    "reputation": 4
+  },
+  "confidence": "med",
+  "verdict": "One of the 1976 'Minis', a weathered board-clad cabin dorm in the pines, closed in 2026.",
+  "notes": "Reference photos show the Minis as low two-storey wood-frame buildings clad in grey vertical boards, with gabled roofs, exterior stairs and decks, set among tall pines near College Woods; modest, cabin-like, weathered. Archives photo (historic): long two-storey gabled wood buildings on open lawn. Archived Housing images for Eaton failed to download from the Internet Archive. No licensed photo found.",
+  "judgeNotes": "Reference photos show modest grey wood-frame buildings. Function low because it is closed. Down about a point from the old run, which still had the Minis in use."
+}

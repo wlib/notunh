@@ -1,0 +1,89 @@
+{
+  "name": "Hall House",
+  "aliases": [
+    "The Minis"
+  ],
+  "place": "Hall House",
+  "category": "residence",
+  "use": "Former mini-dorm (50 students), outdoor-recreation theme; part of the four-building Minis",
+  "built": 1976,
+  "builtText": "Dedicated October 17, 1976 (construction years not documented)",
+  "style": "Two-storey wood-frame houses with vertical board siding and gabled roofs (from photos)",
+  "status": "closed",
+  "statusNote": "Minis closed at the end of spring 2026; future not announced",
+  "facts": [
+    {
+      "text": "Dedicated October 17, 1976 as a residence for quiet study, named for Fred W. Hall Jr. (class of 1941), board of trustees chair 1967-73; it later hosted an outdoor-recreation community.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Housing's Minis pages (archived April 2026) state the Minis were expected to close permanently at the end of the spring 2026 semester and were not available for 2026-27 assignments; the live pages now return \"Access denied\" and the Minis are absent from the current residence-hall list.",
+      "src": [
+        "s2",
+        "s3"
+      ]
+    },
+    {
+      "text": "Housing described Hall House (50 students, Outdoor Experiential Education theme, traditional singles and doubles) as suited to hikers, climbers and cyclists, near College Woods. The four Minis (Eaton, Hall, Marston, Richardson) functioned as one hall; residents could swipe into all four.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Accessibility per Housing: limited-use bathrooms, roll-in building access, strobe alerts in some rooms; gender-inclusive restrooms. No elevator or AC listed.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Address: 30 Demeritt Circle.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#hall"
+    },
+    {
+      "label": "Archived Housing page (April 2026)",
+      "url": "https://web.archive.org/web/20260420222008/https://www.unh.edu/housing/facility/minis-hall-house"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Hall House (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#hall",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "The Minis (Hall House) | Housing & Residential Life (archived 2026-04-20; live page now returns 403)",
+      "publisher": "UNH Housing",
+      "url": "https://web.archive.org/web/20260420222008/https://www.unh.edu/housing/facility/minis-hall-house",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Residence Halls | Housing & Residential Life",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/housing-options/residence-halls",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 3,
+    "function": 3,
+    "character": 4,
+    "reputation": 4
+  },
+  "confidence": "med",
+  "verdict": "One of the 1976 board-clad 'Minis' by College Woods, closed in 2026.",
+  "notes": "Reference photos show the Minis as low two-storey wood-frame buildings clad in grey vertical boards, with gabled roofs, exterior stairs and decks, set among tall pines near College Woods; modest, cabin-like, weathered. No archives thumbnail for Hall House. No licensed photo found. Old row's 1974-76 build dates and \"no renovation\" are unsourced. Harvey Construction says it demolished nine two-storey buildings for SERC in 2007 (archives name Sackett and Woodruff), so the Minis complex was once larger. Category kept as residence; status corrected to closed.",
+  "judgeNotes": "Reference photos show weathered grey cabins. Down about a point from the old run because the Minis closed in 2026 (condition and function 3)."
+}

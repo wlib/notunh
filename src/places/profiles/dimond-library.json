@@ -1,0 +1,182 @@
+{
+  "name": "Dimond Library",
+  "aliases": [
+    "Dimond"
+  ],
+  "place": "Dimond Library",
+  "category": "library",
+  "use": "Main university library; study space; Zeke's cafe",
+  "built": 1958,
+  "builtText": "1958 (named Dimond in 1967; known as such from 1963)",
+  "architect": "1958 architect not found; 1997–98 renovation and additions by Graham Gund Architects (Cambridge, MA)",
+  "style": "Stripped classical modern (1958) with 1990s additions",
+  "status": "in-use",
+  "statusNote": "Student success center planned for as early as fall 2027",
+  "renovations": [
+    {
+      "year": 1969,
+      "what": "Addition (165,000 to 207,000 sf); air-conditioning, carpet, escalator and expanded stacks",
+      "major": true,
+      "src": [
+        "arch_acad",
+        "exhibit"
+      ]
+    },
+    {
+      "year": 1998,
+      "what": "$19M renovation and north and east additions by Graham Gund Architects; atrium entrance; perimeter reading rooms with vaulted ceilings and tall windows",
+      "cost": 19000000,
+      "major": true,
+      "src": [
+        "arch_acad",
+        "mag99"
+      ]
+    },
+    {
+      "year": 2026,
+      "what": "Addison, Hubbard and Courtyard reading rooms recarpeted with refurbished furniture; new hallway flooring",
+      "major": false,
+      "src": [
+        "libnews"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Named for Ezekiel Dimond, first full-time professor of the college, who began at the Hanover campus in 1868.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "The 1998 reopening replaced a dark entrance with a soaring atrium, and cramped stacks with reading rooms with lofty vaulted ceilings and tall windows.",
+      "src": [
+        "mag99"
+      ]
+    },
+    {
+      "text": "Reading rooms and offices sit at the perimeter for daylight with the stacks at the core: 'People like light, books don't.'",
+      "src": [
+        "mag99"
+      ]
+    },
+    {
+      "text": "The building has had air-conditioning since the 1969 renovation.",
+      "src": [
+        "exhibit"
+      ]
+    },
+    {
+      "text": "UNH plans to co-locate tutoring, advising, accessibility and related services in a student success center in Dimond, possibly from fall 2027.",
+      "src": [
+        "lead26"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://live.staticflickr.com/885/27474555038_c0d8f90fcd_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/27474555038",
+      "credit": "Samantha Walsh / UNHDigitalSandbox (Flickr)",
+      "view": "detail",
+      "year": 2018,
+      "caption": "Entrance columns and tall windows",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Durham_NH_006.jpg/1280px-Durham_NH_006.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Durham_NH_006.jpg",
+      "credit": "Olivier Aumage",
+      "view": "exterior",
+      "year": 2005,
+      "caption": "Columned entrance with \"Dimond Library\" lettering from the plaza",
+      "license": "CC BY-SA 2.0 fr",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/fr/deed.en"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Reading_room_2223700331_98d0087a7f_o.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Reading_room_2223700331_98d0087a7f_o.jpg",
+      "credit": "affullerton (Flickr)",
+      "view": "interior",
+      "year": 2008,
+      "caption": "Hubbard Reading Room: exposed timber trusses and tall windows",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+    },
+    {
+      "url": "https://live.staticflickr.com/872/26474960107_4d2ef12b7a_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/26474960107",
+      "credit": "Samantha Walsh / UNHDigitalSandbox (Flickr)",
+      "view": "exterior",
+      "year": 2018,
+      "caption": "Entrance front with lantern cupola",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: History of Dimond Library (exhibit)",
+      "url": "https://library.unh.edu/exhibits/dimond-library"
+    },
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "UNH Magazine (1999): the renovated Dimond",
+      "url": "https://unhmagazine.unh.edu/w99/glorious.html"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "exhibit": {
+      "title": "History of Dimond Library",
+      "publisher": "UNH Library",
+      "url": "https://library.unh.edu/exhibits/dimond-library",
+      "accessed": "2026-11-04"
+    },
+    "mag99": {
+      "title": "Dimond Library renovation feature (Winter 1999)",
+      "publisher": "UNH Magazine",
+      "url": "https://unhmagazine.unh.edu/w99/glorious.html",
+      "accessed": "2026-11-04"
+    },
+    "libnews": {
+      "title": "Library Celebrates Renovation of Reading Rooms (Sep 3, 2026)",
+      "publisher": "UNH Library",
+      "url": "https://library.unh.edu/node/10722",
+      "accessed": "2026-11-04"
+    },
+    "lead26": {
+      "title": "Student academic support integration plans (Apr 9, 2026)",
+      "publisher": "UNH Leadership blog",
+      "url": "https://www.unh.edu/leadership/blog/2026/04/student-academic-support-integration-plans",
+      "accessed": "2026-11-04"
+    },
+    "hercampus": {
+      "title": "Best Study Spots on Campus (Sep 26, 2015)",
+      "publisher": "Her Campus UNH",
+      "url": "https://www.hercampus.com/school/unh/best-study-spots-campus/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 7,
+    "interior": 8,
+    "condition": 6,
+    "function": 8,
+    "character": 7,
+    "reputation": 8
+  },
+  "confidence": "high",
+  "verdict": "The campus's main library: a formal 1958 brick front, and inside Gund's 1998 reading rooms with timber trusses and tall windows that students rank top for study.",
+  "notes": "The exhibit dates the Gund renovation to 1997 (start); it reopened Aug 31, 1998 per UNH Magazine. Search snippets show the University System seeking state money, with $15M proposed for a ~215,000 sf Dimond modernization (FY2028–29). That source spells it 'Diamond' and was not opened; the old data's '$50M phased plan' is unverified. Hours were cut in 2025 budget reductions per a TNH headline (not opened). Photos: licensed interior (Hubbard Reading Room) shows a lofty timber-trussed gable ceiling and floor-to-ceiling windows, so ceilings and light are well evidenced. The 2005 and 2018 exteriors show the Gund-era columned entrance in brick with cast-stone trim. The 2018 close-up has strong lens glare. Reddit was not reachable.",
+  "judgeNotes": "Photos confirm the columned front and lantern; the Hubbard Reading Room photo justifies interior 8. Condition 6: 28 years since the Gund work, with modernization funding being sought. Dropped 05.jpg: identified only by its Flickr tags, and as a dull side-wall detail it adds little."
+}

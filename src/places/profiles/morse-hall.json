@@ -1,0 +1,120 @@
+{
+  "name": "Morse Hall",
+  "place": "Morse Hall",
+  "category": "academic",
+  "use": "Institute for the Study of Earth, Oceans, and Space (EOS) research labs and offices",
+  "built": 1986,
+  "builtText": "1984–86 (federal grant 1983; occupied 1986; dedicated Aug 19, 1992); archives index says 1985",
+  "style": "1980s postmodern brick research building with glazed entrance pavilion and columns",
+  "status": "in-use",
+  "statusNote": "Building-wide HVAC and envelope renewal under way",
+  "renovations": [
+    {
+      "what": "Capital project under way: replace building-wide HVAC (primary systems 38 years old), improve envelope (doors, window sealant, skylight), modernize original fume hoods; CM-at-risk",
+      "major": false,
+      "src": [
+        "cap"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "A $15 million federal grant was awarded in 1983 after a 1982 proposal to Senator Warren Rudman; groundbreaking 1984, occupied 1986.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "Dedicated August 19, 1992 to trustee Richard A. Morse (class of 1951).",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "UNH Facilities says lab spaces cannot hold the temperature and humidity tolerances research grants require, and the original fume hoods are in poor condition.",
+      "src": [
+        "cap"
+      ]
+    },
+    {
+      "text": "EOS has its director's office at 305 Morse Hall, 8 College Road.",
+      "src": [
+        "eos"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Morse_Hall%2C_UNH_1.jpg/1280px-Morse_Hall%2C_UNH_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Morse_Hall,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Entrance pavilion with columns and glazed atrium front",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Morse_Hall%2C_UNH_2.jpg/1280px-Morse_Hall%2C_UNH_2.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Morse_Hall,_UNH_2.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Long brick facade with service doors",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "EOS: contact and directions",
+      "url": "https://eos.unh.edu/about/contact"
+    },
+    {
+      "label": "UNH capital projects underway",
+      "url": "https://www.unh.edu/facilities/about/capital-planning-management/capital-projects-underway"
+    },
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "cap": {
+      "title": "Capital Projects Underway",
+      "publisher": "UNH Facilities",
+      "url": "https://www.unh.edu/facilities/about/capital-planning-management/capital-projects-underway",
+      "accessed": "2026-11-04"
+    },
+    "eos": {
+      "title": "Contact",
+      "publisher": "UNH Institute for the Study of Earth, Oceans, and Space",
+      "url": "https://eos.unh.edu/about/contact",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 4,
+    "condition": 3,
+    "function": 5,
+    "character": 4,
+    "reputation": 4
+  },
+  "confidence": "med",
+  "verdict": "1986 postmodern brick research block for EOS with a columned glass entry; its labs can't hold the conditions research grants demand.",
+  "notes": "Photos (2013) show a 1980s tan-and-red brick block with banding, a columned glazed entrance bay and a skylight/atrium element; the long side is plain with dumpsters and a service door. A/C marked partial because HVAC exists but cannot hold lab tolerances. Old row said \"Mathematics\" also housed here: not confirmed (admissions blog calls Kingsbury the math building). A $11.5M Morse HVAC budget appears in USNH ICPC minutes (March 2026) per search excerpt but the PDF could not be read; unconfirmed. Architect unknown. No student sentiment found.",
+  "judgeNotes": "Photos show a decent entrance and a plain service side. Condition 3 on Facilities' own assessment (38-year-old HVAC, poor fume hoods)."
+}

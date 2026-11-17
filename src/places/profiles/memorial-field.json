@@ -1,0 +1,91 @@
+{
+  "name": "Memorial Field",
+  "place": "Memorial Field",
+  "category": "athletics",
+  "use": "Artificial-turf field; home of UNH field hockey",
+  "builtText": "original plan 1920 (Commons file title); turf installed 2002",
+  "status": "in-use",
+  "statusNote": "Open-air artificial-turf field",
+  "renovations": [
+    {
+      "year": 2002,
+      "what": "Artificial turf installed",
+      "major": true,
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Memorial Field is the home field for UNH field hockey.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH closed the field in October 2012 after its 2002 artificial turf degraded enough for measurable lead to show in dust samples; replacement, already planned, was moved earlier.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "In December 2020 the NH House convened on the field hockey pitch in front of the Whittemore Center.",
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Whittemore_Center%2C_UNH%2C_Durham_NH.jpg/1280px-Whittemore_Center%2C_UNH%2C_Durham_NH.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Whittemore_Center,_UNH,_Durham_NH.jpg",
+      "credit": "John Phelan",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Memorial Field turf in front of the Whittemore Center",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/92/Whittemore_Center_Night.jpg/1280px-Whittemore_Center_Night.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Whittemore_Center_Night.jpg",
+      "credit": "Slulek",
+      "view": "exterior",
+      "year": 2024,
+      "caption": "Memorial Field under lights",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Events & Conferences: venues",
+      "url": "https://www.unh.edu/events-conferences/facilities"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Facilities (event venues)",
+      "publisher": "UNH Events & Conferences",
+      "url": "https://www.unh.edu/events-conferences/facilities",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "UNH Field Closed Due To High Lead Levels (AP, Oct 2012)",
+      "publisher": "CBS Boston",
+      "url": "https://www.cbsnews.com/boston/news/unh-field-closed-due-to-high-lead-levels/",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Whittemore Center",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Whittemore_Center",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "low",
+  "verdict": "Field hockey's turf in front of the Whittemore Center; closed in 2012 over lead in degraded turf, since replaced.",
+  "notes": "Not a building. When the replacement turf went in after 2012, and whether a 2023 replacement bid was carried out, are unconfirmed. Old row said it hosted lacrosse and graduation historically (CBS 2012 confirms both as of 2012). The 'original plan 1920' date comes only from a Commons file title. Same reference photo as the Whittemore Center (it shows the field in the foreground). Licensed photos reuse two Whittemore Center files whose foreground is Memorial Field's green turf. Commons also has 'Memorial field unh original plan 1920.jpg' (public domain), a plan of a football field with grandstand; it probably shows an earlier Memorial Field at a different site, so I did not use it.",
+  "judgeNotes": "Open-air field: unranked."
+}

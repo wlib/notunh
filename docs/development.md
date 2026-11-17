@@ -86,5 +86,6 @@ Nightly unless said; each stage is `node scripts/<stage>.mts` (`scripts/data.mts
 | Prerequisites, programs | catalog.unh.edu | `programs/prereqs`, read weekly; `--from <folder> --programs <folder>` reads pages kept ([programs.md](programs.md)) |
 | Parking | UNH's visitor page and zone table PDF, ParkMobile's zones, OSM's parking areas; rules by hand in `src/parking/areas.mts` | `map/parking` checks the rules, `--cached` against the fixtures ([parking.md](parking.md)) |
 | Fraternities and sororities | UNH's chapter scorecards and unrecognized organizations pages, Wildcat Link, the national organizations' and chapters' sites; houses from Durham's parcels and OSM | None: reviewed by hand in `src/places/chapters.mts` ([map.md](map.md#places)) |
+| Buildings' profiles | Researched and judged by hand, one record each in `src/places/profiles/`, photos hotlinked from Wikimedia Commons and Flickr | None: the build makes `src/map/profiles.json` of them ([map.md](map.md#places)) |
 | Menus | Nutrislice | `dining/menus` |
 | Laundry | LaundryConnect (`laundryconnectlive.com`) | Only through the Worker ([worker.md](worker.md#laundry)) |

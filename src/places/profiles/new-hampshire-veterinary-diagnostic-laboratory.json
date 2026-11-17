@@ -1,0 +1,84 @@
+{
+  "name": "New Hampshire Veterinary Diagnostic Laboratory",
+  "aliases": [
+    "NHVDL",
+    "VDL"
+  ],
+  "place": "New Hampshire Veterinary Diagnostic Laboratory",
+  "category": "research-farm",
+  "use": "State veterinary diagnostic lab run by UNH/COLSA: necropsy, pathology, serology, microbiology, molecular diagnostics",
+  "built": 2015,
+  "builtText": "Groundbreaking spring 2015; completion expected that August",
+  "architect": "Port City Architecture (design-build with AlliedCook Construction)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "The one-story, 6,500 sq ft lab was designed by Port City Architecture and built by AlliedCook Construction as design-build, with lab programming by Jacobs Consultancy.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It houses necropsy, serology, microbiology, histology and molecular diagnostics labs, plus offices, reception and a conference room, with improved climate control and ventilation over the old lab.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It was designed to fit the rural character of the agricultural campus, near the Macfarlane Greenhouses at Main Street and North Drive.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Its address is 21 Botanical Lane, Durham.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Kendall Hall was partly funded through the N.H. Department of Agriculture for the Veterinary Diagnostic Laboratory, the lab's earlier home.",
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "COLSA: NH Veterinary Diagnostic Laboratory",
+      "url": "https://colsa.unh.edu/new-hampshire-veterinary-diagnostic-laboratory"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "AlliedCook Construction breaks ground on 6,500 s/f NHVDL (Apr. 2015)",
+      "publisher": "New England Real Estate Journal",
+      "url": "https://nerej.com/alliedcook-construction-breaks-ground-on-6-500-s-f-nhvdl",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "New Hampshire Veterinary Diagnostic Laboratory",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/new-hampshire-veterinary-diagnostic-laboratory",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 5,
+    "condition": 8,
+    "function": 8,
+    "character": 3,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "Compact 2015 one-storey state diagnostic lab near the greenhouses; new and fit for purpose, little to look at.",
+  "notes": "Opening year 2015 is inferred from the groundbreaking article's 'completion expected in August'. I didn't find an opening announcement. Not on notunh's map by this name. No licensed or reference photo found. The review entry is self-selected marketing testimonial, so weight it lightly.",
+  "judgeNotes": "No photos of any kind."
+}

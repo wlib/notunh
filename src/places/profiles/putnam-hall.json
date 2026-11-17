@@ -1,0 +1,61 @@
+{
+  "name": "Putnam Hall",
+  "place": "Putnam Hall",
+  "category": "academic",
+  "use": "Thompson School: applied technical labs (architecture, surveying/GIS, CAD, agricultural mechanization shop), classrooms and offices",
+  "built": 1949,
+  "builtText": "Dedicated December 10, 1949",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Putnam Hall was dedicated December 10, 1949, and named for George Martin Putnam, longtime president of the New Hampshire Farm Bureau and first recipient of the American Farm Bureau medal.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It was built to house administrative offices for the applied farming course, laboratory work and livestock judging.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "By 2008 it held an architecture lab, a surveying and mapping lab, a GIS lab, a CAD lab, an agricultural mechanization shop (welding, engines), classrooms and faculty offices.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Undergraduate Course Catalog 2008-2009: Thompson School of Applied Science",
+      "publisher": "UNH",
+      "url": "https://www.unh.edu/archive/undergrad-catalog/2008-2009/info.cfm@id=5.html",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 4,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "A modest 1949 white clapboard Thompson School building with a cupola, now technical labs.",
+  "notes": "The archive photo shows a modest one-story white clapboard building with a central pediment and cupola, Colonial Revival in feel. That is my reading, so style is left null. Architect, renovations and current condition not found. The old row's note that it is used as seminar space for greenhouse events wasn't confirmed. No licensed photo. No reviews.",
+  "judgeNotes": "Archives photo only."
+}

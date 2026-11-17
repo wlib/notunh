@@ -1,0 +1,102 @@
+{
+  "name": "Fairchild Hall",
+  "place": "Fairchild Hall",
+  "category": "residence",
+  "use": "Traditional-style residence hall, 125 students; International Connections theme hall and Honors RLC (3rd floor)",
+  "built": 1916,
+  "builtText": "Dedicated April 12, 1916",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2008,
+      "what": "Complete renovation; began housing international students in 2010",
+      "major": true,
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "year": 2025,
+      "what": "Fairchild-Huddleston courtyard rebuilt ($508,000): new concrete, single staircase with code-height steel railings, lighting, landscaping",
+      "cost": 508000,
+      "major": false,
+      "src": [
+        "tnh_court"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Dedicated April 12, 1916 and named for Edward T. Fairchild, New Hampshire College president 1912-1917, whose tenure saw three dormitories and DeMeritt Hall built.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Completely renovated in 2008; it began housing international students in 2010.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Home of the International Connections themed hall and an Honors community; rooms come in unique sizes with large windows facing Main Street.",
+      "src": [
+        "h_fairchild"
+      ]
+    },
+    {
+      "text": "Has air conditioning and an elevator; roll-in access to the building is by the elevator only. Address 67 Main St.; 125 students.",
+      "src": [
+        "h_fairchild"
+      ]
+    },
+    {
+      "text": "The rusted, non-code stairs in the courtyard it shares with Huddleston Hall were replaced in fall 2025.",
+      "src": [
+        "tnh_court"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Fairchild Hall",
+      "url": "https://www.unh.edu/housing/facility/fairchild-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "arch_res": {
+      "title": "Student Residences",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "h_fairchild": {
+      "title": "Fairchild Hall",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/fairchild-hall",
+      "accessed": "2026-11-04"
+    },
+    "tnh_court": {
+      "title": "Fairchild, Huddleston courtyard renovation addressing safety concerns nears completion",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2025/11/fairchild-huddleston-courtyard-renovation-addressing-safety-concerns-nears-completion",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 6,
+    "condition": 7,
+    "function": 7,
+    "character": 6,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "1916 brick hall on Main Street, fully renovated in 2008 with A/C and an elevator; home of the international community.",
+  "notes": "No licensed photo found: Commons search by name and the UNH category crawl found nothing for Fairchild, and Flickr could not be searched without an API key. The archives reference photo is a historic black-and-white view: a three-and-a-half-storey brick block with a central entrance, gabled ends and chimneys. Architect and style unconfirmed (old row said 'not Huddleston'; I found no source either way). Old row's 2008 cost (~$8.5M, ACUHO award), room mix and the Roomsurf 'hotel' quote were not re-verified. Natural light 'strong' rests on Housing's 'large windows' description only.",
+  "judgeNotes": "Only a historic archives photo (plain three-and-a-half-storey block). Each score down about a point from the old run for lack of evidence. Condition 7: the 2008 renovation is now 18 years old."
+}

@@ -1,0 +1,135 @@
+{
+  "name": "Stoke Hall",
+  "place": "Stoke Hall",
+  "category": "residence",
+  "use": "Largest residence hall: 593 students; floors 2–3 mostly upper-division, floors 5–8 first-year",
+  "built": 1966,
+  "builtText": "two Garrison Ave wings 1965; third wing 1966; dedicated Nov 16–17, 1966",
+  "architect": "Leo Provost (builder Davison Construction Co.)",
+  "status": "in-use",
+  "renovations": [
+    {
+      "what": "Upgraded first-floor gaming lounge and newly updated fifth-floor study lounge (date not given)",
+      "major": false,
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "At 83 feet, Stoke was the university's first high-rise; two wings facing Garrison Avenue were built in 1965 and the third in 1966.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Designed by Leo Provost and built by Davison Construction on the site of Ballard Hall, which was demolished in 1961 to make way for it.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Named for Harold Walter Stoke, UNH president 1944–1947, during an enrollment surge that more than tripled enrollment.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH's largest residence hall, with 593 students and two resident assistants on every floor; it has an elevator and a gender-inclusive restroom on every floor.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/f6/Stoke_hall.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "page": "https://commons.wikimedia.org/wiki/File:Stoke_hall.jpg",
+      "credit": "Slulek",
+      "view": "exterior",
+      "year": 2021,
+      "caption": "Courtyard face with central entrance tower",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/47/Stoke_Hall%2C_UNH.jpg/1280px-Stoke_Hall%2C_UNH.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Stoke_Hall,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Curving wing seen from Garrison Avenue",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://live.staticflickr.com/894/40591268974_474b8781ab_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/40591268974/",
+      "credit": "Jake Dawson / UNHDigitalSandbox (Flickr)",
+      "year": 2018,
+      "view": "exterior",
+      "caption": "Entrance tower and canopy with the Stoke Hall sign",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://live.staticflickr.com/891/41304717841_f907778d26_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/41304717841/",
+      "credit": "Jake Dawson / UNHDigitalSandbox (Flickr)",
+      "year": 2018,
+      "view": "exterior",
+      "caption": "Nine-storey slab and brick end tower from the street",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Stoke Hall",
+      "url": "https://www.unh.edu/housing/facility/stoke-hall"
+    },
+    {
+      "label": "UNH Library: residence hall histories",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Stoke Hall (hall page)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/stoke-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Ranking of UNH Dorms and Residence Halls (published 2024-12-04)",
+      "publisher": "Society19",
+      "url": "https://www.society19.com/ranking-unh-dorms-residence-halls/amp/",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Stoke Hall Dorm Reviews",
+      "publisher": "RoomSurf",
+      "url": "https://www.roomsurf.com/dorm-reviews/unh/stoke-hall/29431",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 3,
+    "condition": 3,
+    "function": 4,
+    "character": 5,
+    "reputation": 4
+  },
+  "confidence": "high",
+  "verdict": "UNH's first high-rise: a curving nine-storey 1966 slab housing 593 students; social, loud, dated, no A/C.",
+  "notes": "Old row's dramatic condition claims (20–30 sinks broken 2022–23, fall-2025 vandalism, moldy shower ceilings, Buildings of New England 'graceful' quote, Her Campus 2016 quote, MyDorm grade D) were NOT re-verified in this pass; a targeted search found nothing. Old row 'built 1965' corrected to 1966 completion (1965 for first two wings). Photos: eight-storey brick-and-white-concrete-banded slab with strip windows, institutional; a double room shows vinyl floor, bare painted block walls and wood loft furniture. Licensed photos: 2021 shows the eight-storey courtyard facade, two long brick-and-white-spandrel wings framing a glazed central tower; 2013 shows the curving wing on Garrison Avenue. Big, institutional, dated; window ribbons suggest ordinary room light.",
+  "judgeNotes": "Photos show a monumental but heavy banded slab. 04.jpg kept: its series identification matches the other views (brick end tower, banded wings)."
+}

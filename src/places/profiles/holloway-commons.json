@@ -1,0 +1,138 @@
+{
+  "name": "Holloway Commons",
+  "aliases": [
+    "HoCo",
+    "Holloway"
+  ],
+  "place": "Holloway Commons",
+  "category": "dining",
+  "use": "Largest dining hall on campus; the only dining hall open on weekends since fall 2025",
+  "built": 2003,
+  "builtText": "Opened August 2003",
+  "architect": "Original architect unknown; Miller Dyer Spears (2015-16 renovation), built by North Branch Construction",
+  "style": "Contemporary brick (from reference photo)",
+  "status": "in-use",
+  "statusNote": "The only dining hall open on weekends since fall 2025",
+  "renovations": [
+    {
+      "year": 2016,
+      "what": "10,500 sf renovation and expansion: new roof sections, structural steel additions, HVAC, grill station, dish return, entry, elevators and two seating areas; about 365 seats added (MDS: 860 to 1,270)",
+      "cost": 10500000,
+      "major": true,
+      "src": [
+        "mds",
+        "nerej_hoco",
+        "tnh_constr16"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built in 2003 as the central dining hall, replacing the Commons (now Huddleston Hall), and named for Paul Holloway, longtime USNH trustee and board chair.",
+      "src": [
+        "arch_din"
+      ]
+    },
+    {
+      "text": "The 2015-16 Miller Dyer Spears renovation and expansion raised seating from 860 to 1,270, added a grill station and improved circulation; it opened in February 2016 while the hall stayed open.",
+      "src": [
+        "mds"
+      ]
+    },
+    {
+      "text": "North Branch Construction's summer 2015 phase (nearly $6 million) replaced roof systems, added structural steel on several sides, and installed new HVAC, dish return, grill and entry.",
+      "src": [
+        "nerej_hoco"
+      ]
+    },
+    {
+      "text": "The $10.5 million project added about 365 seats and a custom table made from the original hall's reclaimed railings with LED lighting.",
+      "src": [
+        "tnh_constr16",
+        "tnh_dining16"
+      ]
+    },
+    {
+      "text": "A 4-Star Certified Green Restaurant; known for stir-fry and brick-oven specialties.",
+      "src": [
+        "dining_hoco"
+      ]
+    },
+    {
+      "text": "UNH consolidated weekend dining at Holloway in fall 2025 to balance the budget, closing Philbrook on weekends.",
+      "src": [
+        "dining_update"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Dining: Holloway Commons",
+      "url": "https://www.unh.edu/dining/facility/holloway-commons-hoco"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/dining-facilities"
+    },
+    {
+      "label": "Miller Dyer Spears: renovation project",
+      "url": "https://www.mds-bos.com/unh-holloway-commons-renovation"
+    }
+  ],
+  "sources": {
+    "arch_din": {
+      "title": "Dining Facilities",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/dining-facilities",
+      "accessed": "2026-11-04"
+    },
+    "mds": {
+      "title": "UNH Holloway Commons renovation",
+      "publisher": "Miller Dyer Spears",
+      "url": "https://www.mds-bos.com/unh-holloway-commons-renovation",
+      "accessed": "2026-11-04"
+    },
+    "nerej_hoco": {
+      "title": "North Branch Const. completes $6M renovation project at UNH",
+      "publisher": "New England Real Estate Journal",
+      "url": "https://nerej.com/north-branch-const-completes-6m-renovation-project-at-unh",
+      "accessed": "2026-11-04"
+    },
+    "tnh_constr16": {
+      "title": "Constant construction finally pays off",
+      "publisher": "The New Hampshire",
+      "url": "https://tnhdigital.com/6096/news/constant-construction-finally-pays-off",
+      "accessed": "2026-11-04"
+    },
+    "tnh_dining16": {
+      "title": "Where to eat on campus: a guide to UNH's dining halls",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2016/08/where-to-eat-on-campus-a-guide-to-unhs-dining-halls",
+      "accessed": "2026-11-04"
+    },
+    "dining_hoco": {
+      "title": "Holloway Commons (HoCo)",
+      "publisher": "UNH Dining",
+      "url": "https://www.unh.edu/dining/facility/holloway-commons-hoco",
+      "accessed": "2026-11-04"
+    },
+    "dining_update": {
+      "title": "Dining Hall Update",
+      "publisher": "UNH Leadership blog",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/dining-hall-update",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 7,
+    "condition": 7,
+    "function": 8,
+    "character": 4,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "The main dining hall: a 2003 brick gable with a tall glazed bay, expanded in 2016 to 1,270 seats; busy and well run, crowded at weekends.",
+  "notes": "No licensed photo found (Commons searches return only London's Holloway Road). Archives reference photo shows a tall brick gable end with a large vertical glazed window bay and chimneys. Old row's 'glass-walled terraced addition' and 'green room' descriptions come from sources I did not open; MDS confirms only a 'terrace' design theme. Ceilings 'high' and light 'strong' are inferred from the glazed gable and the MDS description, not confirmed. Seat counts differ: MDS says 860 to 1,270 (+410); TNH says +365; the old row said 883 to 1,202. Original 2003 architect unconfirmed.",
+  "judgeNotes": "Archives photo only; interior judged from published descriptions."
+}

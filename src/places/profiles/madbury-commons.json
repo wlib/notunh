@@ -1,0 +1,63 @@
+{
+  "name": "Madbury Commons",
+  "place": "Madbury Commons",
+  "category": "residence",
+  "use": "Private student apartments (525 beds, 126 units) over ground-floor commercial space, including UNH's InterOperability Lab",
+  "built": 2015,
+  "builtText": "Construction June 2014 to August 2015; opened fall 2015",
+  "architect": "TMS Architects; construction manager PROCON; developer Golden Goose Capital",
+  "style": "Mixed-use apartment blocks styled as a New England village street",
+  "status": "not-unh",
+  "statusNote": "Privately owned apartments; UNH leases ground-floor lab space",
+  "facts": [
+    {
+      "text": "A 525-bed, 126-apartment mixed-use development at 17 and 21 Madbury Road, built in 14 months from June 2014 for the fall 2015 semester by PROCON for developer Golden Goose Capital.",
+      "src": [
+        "nerej_madc"
+      ]
+    },
+    {
+      "text": "Two buildings totalling 208,000 sf on 2.6 acres with 46,000 sf of ground-floor commercial space; UNH signed a 20-year lease for 38,000 sf for its InterOperability Laboratory.",
+      "src": [
+        "nerej_madc",
+        "tms"
+      ]
+    },
+    {
+      "text": "Units have granite counters, full bathrooms, air conditioning and in-unit washer/dryers, along colour-coded hallways with 26 floor plans.",
+      "src": [
+        "nerej_madc"
+      ]
+    },
+    {
+      "text": "TMS Architects designed the two buildings around a central 'street' meant to evoke a New England village, with natural light a stated design priority.",
+      "src": [
+        "tms"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "TMS Architects: Madbury Commons",
+      "url": "https://www.tmsarchitects.com/tms_project/madbury-commons/"
+    }
+  ],
+  "sources": {
+    "nerej_madc": {
+      "title": "PROCON completes Madbury Commons housing at UNH",
+      "publisher": "New England Real Estate Journal",
+      "url": "https://nerej.com/procon-completes-madbury-commons-housing-at-unh",
+      "accessed": "2026-11-04"
+    },
+    "tms": {
+      "title": "Madbury Commons",
+      "publisher": "TMS Architects",
+      "url": "https://www.tmsarchitects.com/tms_project/madbury-commons/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "med",
+  "verdict": "Private 2015 student apartments styled as a village street; modern amenities, no history.",
+  "notes": "Privately owned, not UNH housing, but UNH leases its InterOperability Lab space inside. Category 'residence' kept; consider showing the IOL lease. No licensed photo found: the 2013 Commons 'Madbury Rd, Durham NH' photo shows a different, earlier building. No independent student reviews found. The search summary said Apartments.com lists no renter reviews, but I did not open that page.",
+  "judgeNotes": "Unranked (not UNH). Aerial reference only."
+}

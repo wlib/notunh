@@ -117,3 +117,13 @@ test("a name typed exactly is found first with any case, spacing or punctuation,
     expect(names(search(typed))[0]).toBe(all[0])
   }), { numRuns: 40 })
 )
+
+test("a place's own name typed exactly comes before another's alias that's the same, however much nearer that is", () =>
+  fc.assert(fc.property(fc.double({ min: 0.001, max: 0.05, noNaN: true }), fc.double({ min: 0.001, max: 0.05, noNaN: true }), (farther, nearer) => {
+    const named = { name: "Public Television", lat: CENTER.lat + Math.max(farther, nearer), lon: CENTER.lon }
+    const nicknamed = { name: "Broadcast Center", lat: CENTER.lat + Math.min(farther, nearer), lon: CENTER.lon }
+    const search = createPlaceSearch([nicknamed, named], CENTER, new Map([["Broadcast Center", ["Public Television"]]]))
+    expect(search("public television").map(({ name }) => name)).toEqual(["Public Television", "Broadcast Center"])
+    expect(search("broadcast center")[0].name).toBe("Broadcast Center")
+  }))
+)

@@ -1,0 +1,71 @@
+{
+  "name": "NHPBS Broadcast Center",
+  "aliases": [
+    "NHPBS Studio",
+    "New Hampshire Public Television",
+    "NHPTV",
+    "New Hampshire PBS"
+  ],
+  "place": "NHPBS Broadcast Center",
+  "category": "support",
+  "use": "Studios and offices of New Hampshire PBS (an independent nonprofit, not part of UNH)",
+  "built": 1987,
+  "builtText": "1987 per town assessor",
+  "style": "Two-story office building",
+  "status": "not-unh",
+  "statusNote": "Owned by New Hampshire Public Broadcasting since 2012",
+  "facts": [
+    {
+      "text": "The Durham assessor lists 268 Mast Road as a two-story, roughly 27,300 sq ft office building built in 1987, owned by New Hampshire Public Broadcasting since June 28, 2012.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH signed on WENH-TV (channel 11), the state's first educational TV station, on July 6, 1959; its Durham studio converted to color in 1972.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "The station became an independent nonprofit, New Hampshire Public Broadcasting, on July 1, 2012, and rebranded from NHPTV to New Hampshire PBS on October 1, 2017.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "From the 1972–73 season through 2007–08 it broadcast most UNH men's hockey home games live.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "Wikipedia: New Hampshire PBS",
+      "url": "https://en.wikipedia.org/wiki/New_Hampshire_PBS"
+    },
+    {
+      "label": "NHPBS: directions to the Broadcast Center",
+      "url": "https://nhpbs.org/about/dir.asp"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "268 Mast Road parcel record",
+      "publisher": "Town of Durham assessor (Vision Government Solutions)",
+      "url": "https://gis.vgsi.com/durhamnh/Parcel.aspx?pid=103203",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "New Hampshire PBS",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/New_Hampshire_PBS",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "med",
+  "verdict": "1987 office-and-studio building for New Hampshire PBS, which UNH founded in 1959 but no longer owns.",
+  "notes": "Corrections: built 1987 per the assessor, not 1985. More important, the building has been owned by New Hampshire Public Broadcasting since 2012 and is not a UNH or USNH building. Consider excluding it, or label it 'not UNH'. notunh calls it 'New Hampshire Public Television' (old name). The old row's 'master control moved to WGBH 2012' isn't confirmed: Wikipedia only documents a 2012 WGBH collaboration and shared schedule. No licensed photo found (the Commons NHPTV category has only logos and events). No public reviews of the building.",
+  "judgeNotes": "Unranked (not UNH). No photos."
+}

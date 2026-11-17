@@ -1,0 +1,60 @@
+{
+  "name": "6 Leavitt Lane",
+  "aliases": [
+    "Facilities Administration"
+  ],
+  "place": "6 Leavitt Lane",
+  "category": "support",
+  "use": "UNH Facilities offices (visitor address for Facilities)",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2022,
+      "what": "Oil-fired boiler replaced with natural-gas boiler (bid 2022; completion not confirmed)",
+      "major": false,
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "UNH Facilities lists 6 Leavitt Lane as its visitor address.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Its oil boiler was among three on Leavitt Lane put out to bid for natural-gas conversion in 2022.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Visit Us",
+      "publisher": "UNH Facilities",
+      "url": "https://www.unh.edu/facilities/about/visit-us",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Gas Conversion for 3 HVAC Boiler Systems at 1, 2 and 6 Leavitt Lane (bid 2022)",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/5463714-gas-conversion-for-3-hvac-boiler-systems-at-1-2-and-6-leavitt-lane&find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 2,
+    "reputation": 3
+  },
+  "confidence": "low",
+  "verdict": "Facilities' visitor office on Leavitt Lane; a working back-office building with no recorded history.",
+  "notes": "Split from old row 96 ('Leavitt Lane buildings (1, 2, 6 Leavitt Ln)'), which bundled three separate buildings with different occupants. A 2022 USNH bid replaced three separate oil boilers at 1, 2 and 6 Leavitt Lane, one per building. Campus maps reportedly also list 5, 9 and 11 Leavitt Lane (search snippet only, not verified). notunh's map has a 'Leavitt Lane' parking lot and 'UNH Human Resources' and 'UNH Lock Shop' points nearby, but no building outlines for these addresses. Construction years, architects and photos not found; no licensed or reference photos. ",
+  "judgeNotes": "No photos or history; generic support-office scores."
+}

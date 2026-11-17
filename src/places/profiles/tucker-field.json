@@ -1,0 +1,90 @@
+{
+  "name": "Tucker Field",
+  "place": "Tucker Field",
+  "category": "athletics",
+  "use": "Turf field for UNH soccer and women's lacrosse, plus Oyster River Youth Association; planned future stadium",
+  "built": 2019,
+  "builtText": "Phase I built during the 2018-19 academic year; lights switched on October 2, 2025",
+  "status": "in-use",
+  "statusNote": "Open-air turf field; lights added 2025",
+  "renovations": [
+    {
+      "year": 2025,
+      "what": "Field lighting funded by a $2 million gift from Greg and Corinna Tucker; lit at a ceremony October 2, 2025",
+      "cost": 2000000,
+      "major": false,
+      "src": [
+        "s2",
+        "s3"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Phase I was completed in 2018-19; the field opened for training and hosted select women's lacrosse games in 2020.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH Athletics' Phase II plan called for lighting, a grandstand for about 2,000, a press box and covered team benches, estimated at $1.8 million.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Greg and Corinna Tucker gave $2 million for lights (announced 2024); the lights were switched on at halftime of a women's soccer game on October 2, 2025.",
+      "src": [
+        "s2",
+        "s3"
+      ]
+    },
+    {
+      "text": "Home to UNH soccer and women's lacrosse and used by the Oyster River Youth Association; plans call for stadium seating, concessions, restrooms and a press box.",
+      "src": [
+        "s2",
+        "s3"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Athletics: Tucker Field",
+      "url": "https://unhwildcats.com/sports/2019/12/10/tucker-field"
+    },
+    {
+      "label": "UNH News: Tucker Field lighting ceremony",
+      "url": "https://www.unh.edu/news/lighting-ceremony-celebrates-illumination-tucker-field-culmination-2m-gift"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Tucker Field",
+      "publisher": "UNH Athletics",
+      "url": "https://unhwildcats.com/sports/2019/12/10/tucker-field",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Lighting Ceremony Celebrates Illumination of Tucker Field, Culmination of $2M Gift",
+      "publisher": "UNH News",
+      "url": "https://www.unh.edu/news/lighting-ceremony-celebrates-illumination-tucker-field-culmination-2m-gift",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "From a Field to a Stadium",
+      "publisher": "UNH Magazine (Summer 2024)",
+      "url": "https://magazine.unh.edu/issue/summer-2024/from-a-field-to-a-stadium/",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "File:Wildcat Stadium (University of New Hampshire).jpg",
+      "publisher": "Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/wiki/File:Wildcat_Stadium_(University_of_New_Hampshire).jpg",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "med",
+  "verdict": "Soccer and lacrosse turf with new $2M lights; grandstand still only planned.",
+  "notes": "The only licensed image is the 2025 Wildcat Stadium aerial; the lit turf soccer field in its upper left is identified as Tucker Field from its position (south-east of the stadium per notunh's gazetteer) and its new light poles. That identification is mine, not the uploader's; the judge should confirm. The field appears to be synthetic turf with lines for soccer; no buildings. Corrections to old row: Phase II estimate was $1.8M for about 2,000 seats (old row said ~$4M and 2,000-3,000 seats); \"site of old Lewis Field\" not confirmed. Same image file as wildcat-stadium/01.jpg, copied.",
+  "judgeNotes": "Open-air field: unranked. Dropped 01.jpg: it is the Wildcat Stadium aerial with Tucker Field a corner of the frame, so it doesn't represent this field."
+}

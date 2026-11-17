@@ -1,0 +1,34 @@
+{
+  "name": "Telecommunications Center",
+  "aliases": [
+    "Telecommunications Building"
+  ],
+  "place": "Telecommunications",
+  "category": "support",
+  "use": "Campus data center and telecom demarcation (1st floor), IT offices and conference rooms (2nd floor)",
+  "built": 2020,
+  "builtText": "completed Jan 2020 (per contractor listing; unverified)",
+  "architect": "Oakpoint Associates (unverified)",
+  "style": "Contemporary utilitarian",
+  "status": "in-use",
+  "sources": {
+    "bb": {
+      "title": "UNH Telecommunications Building (Charters Brothers project listing)",
+      "publisher": "The Blue Book",
+      "url": "https://www.thebluebook.com/iProView/1354150/charters-brothers-construction-llc/general-contractors/construction-projects/unh-telecommunications-building-582590/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 5,
+    "condition": 8,
+    "function": 8,
+    "character": 2,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "A small 2020 data-centre and IT building; every detail comes from an unopened contractor listing.",
+  "notes": "Every fact here is UNCONFIRMED: the only source (The Blue Book project listing, cited by the old row) returns 403 to curl and WebFetch, so I saw its content only as search-engine excerpts: 7,200 sq ft, Charters Brothers CM, Oakpoint Associates architect, completed Jan 2020, data center on floor 1 with Liebert heat-pump HVAC and halon suppression, IT offices on floor 2. A separate USNH Enterprise Technology Data Center \"on the outer edge of the UNH campus\" exists (https://www.usnh.edu/ibeamnh/services/co-location-application-hosting); I could not tell if it is the same building. No photos. Location unverified.",
+  "judgeNotes": "No photos; facts unconfirmed."
+}

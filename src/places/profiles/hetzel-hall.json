@@ -1,0 +1,169 @@
+{
+  "name": "Hetzel Hall",
+  "place": "Hetzel Hall",
+  "category": "residence",
+  "use": "Traditional-style residence hall, 141 students; first-year and upper-division",
+  "built": 1925,
+  "builtText": "Built 1925; dedicated June 1927",
+  "architect": "Eric T. Huddleston (original, per AIA NH submission); Lavallee Brensinger Architects (2023-25 renovation) with contractor Wright-Ryan",
+  "style": "Colonial Revival",
+  "status": "in-use",
+  "statusNote": "Reopened January 2025 after a $26M renovation",
+  "renovations": [
+    {
+      "year": 2025,
+      "what": "First major renovation in its 100 years: full interior overhaul, new elevator (building underpinned with steel beams), air conditioning, more singles and private bathrooms, community kitchen and lounges, new roof and windows, two accessible entrances; reopened January 2025, grand opening June 7, 2025",
+      "cost": 26000000,
+      "major": true,
+      "src": [
+        "het_news",
+        "lbpa",
+        "tnh_constr23",
+        "h_hetzel"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built in 1925 and dedicated in June 1927 to Ralph Dorn Hetzel, New Hampshire College president 1917-1927, under whom the legislature made the college a university.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Designed by campus architect Eric Huddleston; a four-story Colonial Revival hall and the second building on what was then the east quadrangle.",
+      "src": [
+        "aianh"
+      ]
+    },
+    {
+      "text": "Closed during the COVID-19 pandemic and reopened in January 2025 after its first significant renovation in 100 years.",
+      "src": [
+        "het_news",
+        "het_mag"
+      ]
+    },
+    {
+      "text": "The renovation added an elevator, air conditioning, more single rooms and private bathrooms, and a kitchen beside the first-floor lounge; the exterior got a new roof and windows while keeping its historic look.",
+      "src": [
+        "het_news"
+      ]
+    },
+    {
+      "text": "The renovation was budgeted at $26 million for about 140 beds.",
+      "src": [
+        "tnh_constr23"
+      ]
+    },
+    {
+      "text": "Housing says Hetzel filled faster than any other building in first-year room selection after reopening.",
+      "src": [
+        "het_news"
+      ]
+    },
+    {
+      "text": "Address 63 Main Street, at a corner of campus beside downtown Durham; hall size 141 students; two private accessible suites and two full accessible bathrooms per floor.",
+      "src": [
+        "h_hetzel"
+      ]
+    },
+    {
+      "text": "AIA New Hampshire jurors praised the wood cabinetry, textiles, colours, furnishings and interior lighting, and noted blower-door results 20% better than before.",
+      "src": [
+        "aianh"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Hetzel_Hall%2C_UNH.jpg/1280px-Hetzel_Hall%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Hetzel_Hall,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Main facade with balustraded entrance terrace, July 2013 (before the 2023-25 renovation)",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Hetzel Hall",
+      "url": "https://www.unh.edu/housing/facility/hetzel-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    },
+    {
+      "label": "UNH News: Hetzel turns 100",
+      "url": "https://www.unh.edu/news/2025/08/hetzel-hall-turns-100-style-after-major-renovation"
+    },
+    {
+      "label": "Lavallee Brensinger: project page",
+      "url": "https://lbpa.com/project/hetzel-hall/"
+    }
+  ],
+  "sources": {
+    "arch_res": {
+      "title": "Student Residences",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "aianh": {
+      "title": "A Century Reimagined (2025 Design Awards submission)",
+      "publisher": "AIA New Hampshire",
+      "url": "https://www.aianh.org/2025-design-awards-submissions/sbemgpsxsnc8gxg-knjnp-l74re-egbxz-xnmkz-3ypz4",
+      "accessed": "2026-11-04"
+    },
+    "het_news": {
+      "title": "Hetzel Hall Turns 100 in Style After Major Renovation",
+      "publisher": "UNH News",
+      "url": "https://www.unh.edu/news/2025/08/hetzel-hall-turns-100-style-after-major-renovation",
+      "accessed": "2026-11-04"
+    },
+    "het_mag": {
+      "title": "A New Life for Hetzel Hall",
+      "publisher": "UNH Magazine",
+      "url": "https://magazine.unh.edu/issue/winter-2026/a-new-life-for-hetzel-hall/",
+      "accessed": "2026-11-04"
+    },
+    "lbpa": {
+      "title": "Hetzel Hall, University of New Hampshire",
+      "publisher": "Lavallee Brensinger Architects",
+      "url": "https://lbpa.com/project/hetzel-hall/",
+      "accessed": "2026-11-04"
+    },
+    "tnh_constr23": {
+      "title": "Campus construction held up due to supply chain delays",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2023/09/campus-construction-held-up-due-to-supply-chain-delays",
+      "accessed": "2026-11-04"
+    },
+    "h_hetzel": {
+      "title": "Hetzel Hall",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/hetzel-hall",
+      "accessed": "2026-11-04"
+    },
+    "s19a": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 7,
+    "interior": 7,
+    "condition": 9,
+    "function": 9,
+    "character": 7,
+    "reputation": 8
+  },
+  "confidence": "high",
+  "verdict": "Huddleston's 1925 Colonial Revival hall on Main Street, gutted and reopened in 2025 with A/C, an elevator and private baths; it now fills first.",
+  "notes": "Licensed photo (2013) predates the renovation; exterior is largely unchanged (brick, white trim, mansard-style dormer roof, balustraded terrace) but roof and windows were replaced. Reference lounge photo (UNH Housing, 2025) shows a bright room with three large wood-trimmed windows, wood-slat ceiling, new carpet and furniture: strong natural light, ordinary ceiling height. Old row's claim that the renovation won an award: the AIA NH page is a 2025 awards submission with juror comments; I could not confirm which award level, if any. Architect of the original is from the AIA submission, not the archives page. Cost ($26M) is the 2023 budget figure, not a final cost. Society19 page metadata says Dec 2024 but the text predates the renovation.",
+  "judgeNotes": "Photo shows a handsome brick front with mansard dormers and a balustraded terrace; reference lounges are bright and new. Down from the old run's #2: exterior is good, not landmark, and condition 9 rather than 10."
+}

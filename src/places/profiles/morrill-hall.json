@@ -1,0 +1,109 @@
+{
+  "name": "Morrill Hall",
+  "place": "Morrill Hall",
+  "category": "academic",
+  "use": "Formerly agriculture/horticulture, later College of Liberal Arts offices (Anthropology); proposed for closure",
+  "built": 1903,
+  "builtText": "1902–03 (dedicated Oct 28, 1903; third floor completed 1914)",
+  "architect": "Unknown (built by Walter H. Sargent)",
+  "style": "Early-20th-century brick collegiate (hip roof, dormers, arched corner porch in early photos)",
+  "status": "proposed-closure",
+  "statusNote": "Phase 1 closure list, Oct 2025; Anthropology moved to Huddleston",
+  "facts": [
+    {
+      "text": "Built with a 1902 state appropriation as the agricultural and horticultural building; the third floor went unfinished until 1914 for lack of funds.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "Named for U.S. Senator Justin Smith Morrill of Vermont, author of the Morrill Act that created land-grant colleges.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "One of six Durham buildings UNH proposed in October 2025 to close in a first phase, chosen on cost of ownership, condition and occupancy.",
+      "src": [
+        "closure",
+        "tnh_close"
+      ]
+    },
+    {
+      "text": "The Anthropology Department's contact page now gives Huddleston Hall 328 as its office.",
+      "src": [
+        "anth"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/92/Morrill_Hall%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Morrill_Hall,_UNH.jpg",
+      "credit": "Unknown author",
+      "view": "historic",
+      "year": 1920,
+      "caption": "Morrill Hall, c. 1920 postcard",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/The_New_Hampshire_College_Monthly_%281909%29_%2814580506730%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:The_New_Hampshire_College_Monthly_(1909)_(14580506730).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1909,
+      "caption": "Morrill Hall with its arched corner porch (cropped from a 1909 New Hampshire College Monthly photo page)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "UNH: proposed Durham building closures (Oct 2025)",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "closure": {
+      "title": "Proposed Durham Building Closures (Oct 24, 2025)",
+      "publisher": "UNH Leadership blog",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures",
+      "accessed": "2026-11-04"
+    },
+    "tnh_close": {
+      "title": "TRIO Scholars and Sustainability Institute prepare to relocate (Dec 12, 2025; updated Mar 12, 2026)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2025/12/trio-scholars-and-sustainability-institute-prepare-to-relocate",
+      "accessed": "2026-11-04"
+    },
+    "anth": {
+      "title": "Contact Us: Department of Anthropology",
+      "publisher": "UNH College of Liberal Arts",
+      "url": "https://cola.unh.edu/anthropology/contact-us",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 3,
+    "condition": 2,
+    "function": 2,
+    "character": 6,
+    "reputation": 3
+  },
+  "confidence": "low",
+  "verdict": "Handsome 1903 hip-roofed brick hall named for the land-grant act's author, never majorly renovated and now emptied for closure.",
+  "notes": "Old data said it housed Education and Anthropology; Anthropology has moved to Huddleston Hall 328 (search snippets still show 'B11 Morrill Hall', from an older version of the page). No major renovation documented. Whether the closure was carried out is unconfirmed (TNH, Dec 2025: Phase 1 targeted Jan/Jun 2026, not confirmed). No licensed modern photo found; only historic images. Archives ref-01 is a 1917 Clement Moran photo. Designer unknown. No reviews.",
+  "judgeNotes": "Only historic images; condition and function low for the closure."
+}

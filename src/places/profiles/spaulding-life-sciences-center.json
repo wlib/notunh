@@ -1,0 +1,132 @@
+{
+  "name": "Spaulding Life Sciences Center",
+  "aliases": [
+    "Spaulding Hall",
+    "Spaulding"
+  ],
+  "place": "Spaulding Life Sciences",
+  "category": "academic",
+  "use": "Biological sciences (COLSA): teaching and research labs, aquatic research core, bioreactor core, natural history collections",
+  "built": 1960,
+  "builtText": "1958–60 (dedicated May 6, 1960); addition 2019–22, renovation to June 2024",
+  "architect": "Original unknown; 2019–24 addition and renovation by Ellenzweig",
+  "style": "1960 brick lab slab spanning College Brook, plus contemporary addition",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 1996,
+      "what": "Partial renovation as part of the Rudman Hall project",
+      "major": false,
+      "src": [
+        "ellz",
+        "spaupd"
+      ]
+    },
+    {
+      "year": 2024,
+      "what": "Spaulding Biosciences Project: ~47,000 sq ft addition then full renovation of the 83,000 sq ft original; new power, heating and cooling; ribbon cutting June 6, 2025",
+      "cost": 95500000,
+      "major": true,
+      "src": [
+        "spa2",
+        "spaupd"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Dedicated May 6, 1960; begun 1958 with state funds and a U.S. Public Health Service grant.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "The building spans College Brook, presenting three levels from the ravine and two from DeMeritt Road.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "The $95.5 million expansion and renovation is the largest capital project in UNH history; construction wrapped up June 2024.",
+      "src": [
+        "spa2"
+      ]
+    },
+    {
+      "text": "Ellenzweig designed the addition around \"science in action,\" with a first-floor public gallery along a main pedestrian route.",
+      "src": [
+        "ellz"
+      ]
+    },
+    {
+      "text": "It now has research neighborhoods, an aquatic research core with freshwater and saltwater labs, a bioreactor core and expanded study areas.",
+      "src": [
+        "spa2"
+      ]
+    },
+    {
+      "text": "In 2019 planners said the old air system needed replacing; only the large lecture hall and two teaching labs renovated around 2016 were to be kept.",
+      "src": [
+        "spaupd"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH News: Renovated Spaulding Hall unveiled",
+      "url": "https://www.unh.edu/news/renovated-spaulding-hall-unveiled"
+    },
+    {
+      "label": "Ellenzweig project page",
+      "url": "https://www.ellenzweig.com/our-projects/university-of-new-hampshire-spaulding-hall/"
+    },
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "spa2": {
+      "title": "Renovated Spaulding Hall Unveiled",
+      "publisher": "UNH News",
+      "url": "https://www.unh.edu/news/renovated-spaulding-hall-unveiled",
+      "accessed": "2026-11-04"
+    },
+    "ellz": {
+      "title": "University of New Hampshire Spaulding Hall",
+      "publisher": "Ellenzweig",
+      "url": "https://www.ellenzweig.com/our-projects/university-of-new-hampshire-spaulding-hall/",
+      "accessed": "2026-11-04"
+    },
+    "spaupd": {
+      "title": "Spaulding update (2019-10)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2019/10/spaulding-update",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 7,
+    "condition": 10,
+    "function": 9,
+    "character": 5,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "1960 lab slab over College Brook, rebuilt and expanded by 2024 in UNH's largest-ever project: new labs, aquatic cores and a public science gallery.",
+  "notes": "No licensed photo of Spaulding found on Commons or Flickr CC; references only. A/C marked yes from the new heating/cooling systems (TNH 2019) rather than an explicit statement. Cost figures vary: $86M (2019 plan), $89M (Skanska release, not opened), $95.5M (UNH 2025). Addition size 47,000 (UNH) vs 47,500/50,000 elsewhere. LEED Silver target from old row not confirmed. notunh name \"Spaulding Life Sciences\" is fine; archives index calls it Spaulding Hall.",
+  "judgeNotes": "No photo of the new addition (references show the 1960 slab and a ribbon-cutting), so exterior and interior are held to 6 and 7 and confidence to med."
+}

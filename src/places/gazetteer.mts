@@ -26,8 +26,9 @@ export type GazetteerPlace = {
 }
 
 /**
- * The gazetteer as the map's page loads it: every place, with those added.mts names that it doesn't yet, and the
- * fraternities' and sororities' houses (chapters.mts), and where they came from
+ * The gazetteer as the map's page loads it: every place, with those added.mts names that it doesn't yet, its names
+ * for those OpenStreetMap misnames, and the fraternities' and sororities' houses (chapters.mts), and where they came
+ * from
  */
 export const Gazetteer = v.pipe(
   v.object({ made: Made, places: arrayOf<GazetteerPlace>() }),

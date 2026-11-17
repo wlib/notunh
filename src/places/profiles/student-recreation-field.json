@@ -1,0 +1,44 @@
+{
+  "name": "Student Recreation Field",
+  "aliases": [
+    "Student Rec Field"
+  ],
+  "place": "Student Rec Field",
+  "category": "athletics",
+  "use": "Large lighted synthetic-turf field for club sports, intramurals and summer camps",
+  "builtText": "unknown",
+  "status": "in-use",
+  "statusNote": "Open-air synthetic-turf field",
+  "facts": [
+    {
+      "text": "Surface A-Turf Mono; 150,500 sq ft (430 by 350 ft), the largest of Campus Rec's fields; lit, open weekdays 6 am to 12:30 am.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Used for club sports, intramural leagues and summer camps; rental for UNH groups $201 ($262 with lights), non-UNH $275 ($375 with lights).",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Campus Recreation: outdoor fields",
+      "url": "https://campusrec.unh.edu/facilities/outdoor-fields"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Outdoor Fields",
+      "publisher": "UNH Campus Recreation",
+      "url": "https://campusrec.unh.edu/facilities/outdoor-fields",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "low",
+  "verdict": "Campus Rec's largest lit turf field, used for club sports and intramurals.",
+  "notes": "No licensed photo; Campus Rec image is a rugby action shot (not kept). Build year unknown. Location per notunh gazetteer: west of Bremner Field.",
+  "judgeNotes": "Open-air field: unranked."
+}

@@ -1,0 +1,138 @@
+{
+  "name": "Handler Hall",
+  "aliases": [
+    "SERC A"
+  ],
+  "place": "Handler Hall",
+  "category": "residence",
+  "use": "Residence hall (289 students), first-year and upper-division; InCEPSion engineering floor",
+  "built": 2007,
+  "builtText": "Opened 2007 as SERC A; renamed 2013",
+  "architect": "JSA, Inc. (builder: Harvey Construction)",
+  "style": "Neo-traditional brick residence hall with cast-stone bands and gabled roofs (from photos)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Built as SERC A (Southeast Residence Complex), opened 2007; renamed Handler Hall on October 11, 2013.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "SERC was a three-building complex for 730 students built by Harvey Construction to designs by JSA, Inc.; SERC A is about 75,000 sq ft. Harvey first demolished nine existing two-storey buildings on the site; Phase 1 (A and B) finished by summer 2007, Phase 2 (C) by summer 2008.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "Housing lists 289 students; traditional pod rooms plus suites: 32 traditional doubles, 4 traditional singles, 41 suites of two doubles and 8 suites of two doubles and two singles (excluding expanded-occupancy rooms).",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Air conditioning, elevator, automatic front and rear doors, accessible private bathrooms on the 2nd and 4th floors; kitchen, laundry, lounges, sports courts. Home to the InCEPSion engineering learning-community floor.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Named for Evelyn E. Handler, UNH president 1980-83 and the first woman to lead any land- and sea-grant university.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Address: 5 DeMeritt Circle.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c2/Handler_Hall%2C_UNH.jpg/1280px-Handler_Hall%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Handler_Hall,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Handler Hall across the lawn",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6f/Entrance_to_Handler_Hall.jpg/960px-Entrance_to_Handler_Hall.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Entrance_to_Handler_Hall.jpg",
+      "credit": "Thunderblood101",
+      "view": "detail",
+      "year": 2025,
+      "caption": "Brick-lined entrance porch with wooden doors",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Handler Hall",
+      "url": "https://www.unh.edu/housing/facility/handler-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#handler"
+    },
+    {
+      "label": "Harvey Construction: SERC project",
+      "url": "https://www.harveyconstruction.com/cpt_project/southeast-residence-complex/"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Handler Hall (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#handler",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Handler Hall | Housing & Residential Life",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/handler-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "UNH Southeast Residence Complex",
+      "publisher": "Harvey Construction",
+      "url": "https://www.harveyconstruction.com/cpt_project/southeast-residence-complex/",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "File:Handler Hall, UNH.jpg",
+      "publisher": "Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/wiki/File:Handler_Hall,_UNH.jpg",
+      "accessed": "2026-11-04"
+    },
+    "s6": {
+      "title": "File:Entrance to Handler Hall.jpg",
+      "publisher": "Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/wiki/File:Entrance_to_Handler_Hall.jpg",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 6,
+    "condition": 7,
+    "function": 8,
+    "character": 3,
+    "reputation": 7
+  },
+  "confidence": "high",
+  "verdict": "Big 2007 SERC hall in neat neo-traditional brick, with A/C and accessible baths; comfortable and anonymous.",
+  "notes": "Commons photos: 2013 exterior shows a five-storey red-brick block with cast-stone banding, projecting gabled bays and a glazed corner stair; neat, conventional collegiate styling. 2025 entrance photo shows good-quality brick and wood doors. Harvey interior photo (lounge, hall unspecified) shows a curved carpeted lounge with large windows, standard ~8-9 ft acoustic-tile ceilings. Old row's \"hotel feel\" quote not re-verified.",
+  "judgeNotes": "Photos show a conventional five-storey brick block; lounge reference is pleasant, rooms standard."
+}

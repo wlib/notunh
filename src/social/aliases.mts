@@ -47,7 +47,8 @@ export const ALIASES: Record<string, string> = {
   "Chase Ocean Engineering":     "Jere A. Chase Ocean Engineering",
   "Chase Ocean Engineering Laboratory": "Jere A. Chase Ocean Engineering",
   "ECenter":                     "Peter And Paula Vosotas Career Center",
-  "Elliot Alumni":               "Elliot Alumni Center",
+  "Elliot Alumni":               "Elliott Alumni Center",
+  "Elliott Alumni":              "Elliott Alumni Center",
   "Murkland":                    "Murkland Hall",
   "McConnell":                   "McConnell Hall",
   "Spaulding":                   "Spaulding Life Sciences",
@@ -55,6 +56,12 @@ export const ALIASES: Record<string, string> = {
   "Demerit Hall":                "DeMeritt Hall",
   "Demeritt Hall":               "DeMeritt Hall",
   "Mills":                       "Mills Hall",
+  // As OpenStreetMap misnames them (RENAMED in src/places/added.mts)
+  "Morill Hall":                 "Morrill Hall",
+  "Englehardt Hall":             "Engelhardt Hall",
+  "Ritzman Labatory":            "Ritzman Laboratory",
+  "Elliot Alumni Center":        "Elliott Alumni Center",
+  "New Hampshire Public Television": "NHPBS Broadcast Center",
   "A-Lot":                       "Lot S",
   "A Lot":                       "Lot S"
 }

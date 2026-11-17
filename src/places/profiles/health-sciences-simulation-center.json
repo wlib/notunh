@@ -1,0 +1,78 @@
+{
+  "name": "Health Sciences Simulation Center",
+  "aliases": [
+    "HSSC"
+  ],
+  "place": "Health Sciences Simulation Center",
+  "category": "academic",
+  "use": "Clinical simulation labs, classrooms and offices for nursing, occupational therapy, communication sciences and other CHHS programs",
+  "built": 2021,
+  "builtText": "2020–21 (construction from fall 2020; opened Nov 2021)",
+  "architect": "Lavallee Brensinger Architects",
+  "style": "Contemporary: metal and fiber-cement panels with timber-toned entrance",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Construction began fall 2020 with major funding from the State of New Hampshire, the University System and UNH.",
+      "src": [
+        "chhs"
+      ]
+    },
+    {
+      "text": "More than 20,000 sq ft with 35 offices, classrooms and simulation labs mimicking hospital, clinic and primary care settings, plus common spaces for interprofessional discussion.",
+      "src": [
+        "chhs"
+      ]
+    },
+    {
+      "text": "The opening was celebrated on November 8, 2021.",
+      "src": [
+        "lbpa"
+      ]
+    },
+    {
+      "text": "It grew out of $9 million given to UNH in 2019 to address the state's health care worker shortage.",
+      "src": [
+        "tnh21"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "CHHS: About the Health Sciences Simulation Center",
+      "url": "https://chhs.unh.edu/health-sciences-simulation-center/about"
+    }
+  ],
+  "sources": {
+    "chhs": {
+      "title": "About the Health Sciences Simulation Center",
+      "publisher": "UNH College of Health and Human Services",
+      "url": "https://chhs.unh.edu/health-sciences-simulation-center/about",
+      "accessed": "2026-11-04"
+    },
+    "lbpa": {
+      "title": "New Health Sciences Simulation Center Opens at UNH",
+      "publisher": "Lavallee Brensinger Architects",
+      "url": "https://lbpa.com/13140-2/",
+      "accessed": "2026-11-04"
+    },
+    "tnh21": {
+      "title": "UNH opens healthcare simulation center to address worker shortages (2021-12)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2021/12/unh-opens-healthcare-simulation-center-to-address-worker-shortages-e2-80-af",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 7,
+    "condition": 9,
+    "function": 9,
+    "character": 4,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "2021 simulation centre with hospital-style training rooms for nursing and OT; new, purpose-built, well liked by students.",
+  "notes": "No licensed photo. Address 25 Colovos Rd and builder Wright-Ryan from old row are unconfirmed on opened pages. TNH gives the ceremony as Nov 4, LBPA as Nov 8, 2021. The 13 simulation rooms count from old row unconfirmed. Not in the archives building lists (too new).",
+  "judgeNotes": "Only reference photos (ribbon-cutting, sim room); exterior unseen beyond a timber-toned entry."
+}

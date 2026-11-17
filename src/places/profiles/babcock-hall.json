@@ -1,0 +1,100 @@
+{
+  "name": "Babcock Hall",
+  "aliases": [
+    "Babcock House"
+  ],
+  "place": "Babcock Hall",
+  "category": "residence",
+  "use": "All-single residence for students 21 and older (graduate, international and undergraduate)",
+  "built": 1968,
+  "builtText": "First residents January 29, 1968; dedicated March 16, 1968",
+  "architect": "Carter & Woodruff (builder: Davison Construction Co.)",
+  "style": "Late-1960s modern slab: exposed-aggregate precast panels between brick piers (from photo)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Dedicated March 16, 1968 and named for philosophy professor Donald C. Babcock.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Designed by Carter & Woodruff and built by Davison Construction; it was the first UNH residence designed specifically for graduate students and was first called Babcock House as a combined residence and graduate studies center. First residents moved in January 29, 1968.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Today it houses a community aged 21 and older (international, graduate and undergraduate) in single rooms, each with a mini fridge.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Features listed: elevator, inside bike storage, kitchen, laundry, lounges including one with a fireplace, sand volleyball court; floor plans for five floors; gender-inclusive bathrooms on the 2nd floor.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Address: 14 McDaniel Dr.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4b/Durham_NH_011.jpg/1280px-Durham_NH_011.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Durham_NH_011.jpg",
+      "credit": "Olivier Aumage",
+      "view": "exterior",
+      "year": 2005,
+      "caption": "Babcock Hall: precast-panel wings and brick stair towers",
+      "license": "CC BY-SA 2.0 fr",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/fr/deed.en"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Babcock Hall",
+      "url": "https://www.unh.edu/housing/facility/babcock-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#babcock"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Babcock Hall (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#babcock",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Babcock Hall | Housing & Residential Life",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/babcock-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "File:Durham NH 011.jpg",
+      "publisher": "Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/wiki/File:Durham_NH_011.jpg",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 3,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 4,
+    "reputation": 4
+  },
+  "confidence": "med",
+  "verdict": "1968 precast-panel slab for over-21 singles; utilitarian outside, no A/C, no renovation on record.",
+  "notes": "Photo (Commons, July 2005, described by the uploader as Babcock Hall): a tall slab of grey exposed-aggregate precast panels framed by full-height red-brick piers, with a glazed stair/lounge stack; utilitarian and dated, competent proportions, no ornament. No interior photos seen. No AC listed by Housing. No renovation documented. No student reviews found (old row cited MyDorm with 0 reviews; not rechecked).",
+  "judgeNotes": "Photo shows a grey exposed-aggregate slab between brick piers: dated and blunt. No interior evidence."
+}

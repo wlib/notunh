@@ -1,0 +1,85 @@
+{
+  "name": "McConnell Hall",
+  "place": "McConnell Hall",
+  "category": "academic",
+  "use": "Psychology, Sociology, Family Research Lab, COLA offices; formerly Whittemore School of Business and Economics",
+  "built": 1967,
+  "builtText": "1967",
+  "style": "1960s modernist (concrete frame with deep window grid, per archives photo)",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2014,
+      "what": "Interior gut renovation after the business school left: central air, entrance academic commons with computer clusters, SMART-screen classrooms; exterior unchanged",
+      "cost": 10000000,
+      "major": true,
+      "src": [
+        "tnh9922"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built in 1967 and named for John W. McConnell, UNH president 1963–71.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "Housed the Whittemore School of Business and Economics until the Paul College building opened in 2013.",
+      "src": [
+        "tnh9922"
+      ]
+    },
+    {
+      "text": "A roughly $10 million interior gut renovation added central air and an academic commons at the entrance, leaving the exterior as it was.",
+      "src": [
+        "tnh9922"
+      ]
+    },
+    {
+      "text": "Psychology moved to the fourth floor, consolidating offices previously split among Conant, Brook Way and Nesmith.",
+      "src": [
+        "tnh9922"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "tnh9922": {
+      "title": "Renovations change atmosphere, functionality of academic buildings (2014-09)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2014/09/renovations-change-atmosphere-functionality-of-academic-buildings",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 6,
+    "condition": 7,
+    "function": 7,
+    "character": 4,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "1967 concrete-grid twin of Horton, gutted in 2014 with central air and a new commons.",
+  "notes": "No licensed photo found on Commons (searched category and \"McConnell Hall\" UNH) or Flickr CC. Archives reference photo shows a four-story concrete frame with recessed window bays, very similar to Horton. Architect not found. Renovation year inferred from TNH Sept 2014 (\"over the last year\"). Current occupants as of 2014; not re-checked.",
+  "judgeNotes": "Archives photo only; exterior up a point from the old run to match Horton."
+}

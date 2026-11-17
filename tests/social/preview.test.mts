@@ -6,6 +6,7 @@ import type { Section, Term } from "../../src/courses/course.mts"
 import { createPeople } from "../../src/courses/people.mts"
 import { hide, reveal } from "../../src/courses/email.mts"
 import { DAY, HOUR, addDays, dayStart, localDay } from "../../src/shared/time.mts"
+import type { Profile } from "../../src/places/profiles.mts"
 
 // A Wednesday in term, with no clock change for weeks either side, so a time of day is so many hours from midnight
 const TODAY = "2026-10-07"
@@ -83,6 +84,21 @@ test("a place's preview names what's on there next, and only there", () => {
   ]
   expect(placePreview({ name: "Huddleston Hall", kind: "building" }, events, now)).toEqual({ kind: "Building", title: "Huddleston Hall", lines: ["Next: Sooner", whenOf(events[2])] })
   expect(placePreview({ name: "Wildcat Stadium", kind: "sports_centre" }, events, now)).toEqual({ kind: "Sports centre", title: "Wildcat Stadium", lines: ["Directions by bus or on foot"] })
+})
+
+test("a profiled building's preview says its category and, with nothing on there, its rating and verdict", () => {
+  const now = momentOf(0, 9 * HOUR)
+  const profile: Profile = {
+    name: "Thompson Hall", aliases: [], category: "administration", built: 1893, renovated: 2007, status: "in-use", confidence: "high",
+    rating: { overall: 7.9, rank: 4, exterior: 10, interior: 5, character: 10, condition: 7, function: 6, reputation: 9 },
+    verdict: "Campus's landmark.", facts: [], sources: {}, more: [], photos: []
+  }
+  expect(placePreview({ name: "Thompson Hall", kind: "building" }, [], now, { profile, ranked: 103 })).toEqual({
+    kind: "Administration", title: "Thompson Hall", lines: ["7.9 of 10 · 4th of 103", "Campus's landmark."]
+  })
+  expect(placePreview({ name: "Thompson Hall", kind: "building" }, [], now, { profile: { ...profile, rating: undefined, verdict: undefined }, ranked: 103 }).lines).toEqual(["Directions by bus or on foot"])
+  const events = [event(now + HOUR, now + 2 * HOUR, { title: "Open house", place: "Thompson Hall" })]
+  expect(placePreview({ name: "Thompson Hall", kind: "building" }, events, now, { profile, ranked: 103 }).lines).toEqual(["Next: Open house", whenOf(events[0])])
 })
 
 test("a section says its code, kind and term, when it meets each week, and each room once", () => {

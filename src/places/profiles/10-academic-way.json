@@ -1,0 +1,44 @@
+{
+  "name": "10 Academic Way",
+  "aliases": [
+    "UNH Housing"
+  ],
+  "place": "10 Academic Way",
+  "category": "administration",
+  "use": "UNH Housing & Residential Life office",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "UNH Housing & Residential Life's office address is 10 Academic Way, Durham; Residential Life is listed separately at 5 Quad Way (Hitchcock Hall).",
+      "src": [
+        "hc"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: contact",
+      "url": "https://www.unh.edu/housing/about-us/contact-us"
+    }
+  ],
+  "sources": {
+    "hc": {
+      "title": "Contact Us",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/about-us/contact-us",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 5,
+    "function": 5,
+    "character": 2,
+    "reputation": 3
+  },
+  "confidence": "low",
+  "verdict": "The Housing & Residential Life office address; the building itself has no recorded name, date or story.",
+  "notes": "Use confirmed as the UNH Housing office. Building name, construction date and history not found; it isn't in the archives building index under this address. notunh's gazetteer also places a 'UNH Police Station' point inside this footprint. That looks stale: UNH PD lists its address as 18 Waterworks Road (see unh-police-station). A search snippet suggested UNH safety reports also list 10 Academic Way for the Office of Community Standards; I could not open those PDFs to confirm. No photos found.",
+  "judgeNotes": "No photos, date or history found; generic office scores."
+}

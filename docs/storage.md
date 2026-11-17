@@ -33,7 +33,7 @@ A build only installs (`scripts/inputs.mts`) and writes nothing outside its fold
 | `src/dining/menus.json` | acquire | `fetched` | Bundled | With its page |
 | `public/data/dining/<hash>.json` | acquire; `keepPublishedMenus` | Content hash | Static | Tonight's, the served index's one more build, and any index's until 48 h past its last fetch (`carried` in `scripts/dining/publish.mts`, record at `/data/dining/published.json`) |
 | `public/data/map/<hash>/` (style, sprite, glyphs) | acquire | Hash of its contents | Static | New and previously served folder |
-| `src/map/tiles.json`, `src/map/places.json` | The build | `{ version, folders }`; hash of places' inputs | Bundled | With its page |
+| `src/map/tiles.json`, `src/map/places.json`, `src/map/profiles.json` | The build | `{ version, folders }`; hash of places' inputs; the profiles' records in `src/places/profiles/` | Bundled | With its page |
 | `public/inputs.json` | The build | Inputs and map data versions | Static | With the deploy |
 | Page HTML, `/sw.js` | `vite build` | `<meta name="release">` and the hashed files it names; the worker by its bytes | Static; SW cache | Current and previous per page in browsers |
 | Reminders: the device's push subscription and secret's hash, and each watch (a time, a lead, the run if any, what the phone was last told) | `PUT /api/reminders/:id` | `reminders-1` migration; a row from before watches had a time is dropped | The device's `Reminders` Durable Object ([reminders.md](reminders.md)) | A watch until its time has gone; the device 30 days after its last, or until its push service says it's gone |

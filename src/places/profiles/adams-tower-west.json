@@ -1,0 +1,126 @@
+{
+  "name": "Adams Tower West",
+  "aliases": [
+    "Adams Tower",
+    "ATW"
+  ],
+  "place": "New England Center - Adams Tower",
+  "category": "residence",
+  "use": "Second-year suite housing, 163 students in three-person suites",
+  "built": 1969,
+  "builtText": "New England Center opened Oct 1969 (dedicated Jan 10, 1970); converted to housing 2010",
+  "architect": "William L. Pereira Associates (Los Angeles)",
+  "status": "in-use",
+  "statusNote": "Former New England Center hotel tower, housing since 2010",
+  "renovations": [
+    {
+      "year": 2010,
+      "what": "Hotel closed; one tower converted to student housing",
+      "major": true,
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "what": "Milestone Engineering & Construction renovated Adams Towers A and B (undated)",
+      "major": false,
+      "src": [
+        "s4"
+      ]
+    },
+    {
+      "year": 2026,
+      "what": "Air-cooled chiller replacement put out to bid (Jan 2026)",
+      "major": false,
+      "src": [
+        "s5"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Occupies one of the two towers of the former New England Center hotel and conference center, designed by William L. Pereira Associates and opened in October 1969.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "After financial concerns closed the hotel, conference center and restaurant in 2010, converting a tower to housing preserved what the archives call an architectural landmark.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Named for Arthur Stanton Adams, UNH's eleventh president (1948–1950).",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Every suite is a spacious triple with its own bathroom, air conditioning and floor-to-ceiling windows over a wooded area; 163 second-year students live here.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Has an elevator and one accessible suite per floor; lounge and kitchen are on the fifth floor.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Adams Tower West",
+      "url": "https://www.unh.edu/housing/facility/adams-tower-west"
+    },
+    {
+      "label": "UNH Library: residence hall histories",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Student Residences (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Adams Tower West (hall page)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/adams-tower-west",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Ranking of UNH Dorms and Residence Halls (published 2024-12-04)",
+      "publisher": "Society19",
+      "url": "https://www.society19.com/ranking-unh-dorms-residence-halls/amp/",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Milestone completes work at UNH",
+      "publisher": "High-Profile",
+      "url": "https://www.high-profile.com/milestone-completes-work-at-unh/",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "UNH Adams Tower Chiller Replacement (bid notice, published 2026-01-30)",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/7363342-unh-adams-tower-chiller-replacement%26find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 6,
+    "condition": 6,
+    "function": 8,
+    "character": 6,
+    "reputation": 7
+  },
+  "confidence": "high",
+  "verdict": "Pereira's 1969 hotel tower hidden in the woods, now suite housing with air conditioning, private baths and floor-to-ceiling windows.",
+  "notes": "The 1988 addition (61 rooms, 3 conference rooms, The Architects Collaborative with J.S.A.) belongs to the New England Center complex; which tower is 'Adams' vs 'Kellogg' in notunh's naming is not confirmed by sources. NH Preservation Alliance (2009) gives 1963 for the NEC, conflicting with the archives' 1969 opening (see new-england-center). Old row's MyDorm grade and 'UNH guide' quote not re-verified. Chiller replacement is a bid notice only. Photos: tall narrow slab of green-grey glazed brick piers with full-height slot windows in bronze frames, an unusual and refined mid-century facade; suite interior has wood-look floor, plain walls, standard ceiling height. No licensed photo found (searched the Commons category tree under 'University of New Hampshire' and 'Durham, New Hampshire', Commons file search by name, Commons geosearch at the building's coordinates, and Openverse/Flickr CC).",
+  "judgeNotes": "Reference photos show finned concrete towers in a pine grove: distinctive but weathered. Room photo is ordinary. Function up for AC, baths and an elevator; exterior down a point from the old run."
+}

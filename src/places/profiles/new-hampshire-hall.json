@@ -1,0 +1,131 @@
+{
+  "name": "New Hampshire Hall",
+  "aliases": [
+    "NHH"
+  ],
+  "place": "New Hampshire Hall",
+  "category": "academic",
+  "use": "Kinesiology; dance studios (Theatre and Dance)",
+  "built": 1906,
+  "builtText": "1906",
+  "architect": "Unknown (1939 rework by Eric T. Huddleston)",
+  "style": "Colonial Revival (originally Romanesque-style turreted armory)",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 1939,
+      "what": "Huddleston rework: added floor and front wings, enlarged women's locker rooms, Romanesque turrets removed and exterior made Colonial Revival (foundation and flooding problems)",
+      "major": true,
+      "src": [
+        "clio"
+      ]
+    },
+    {
+      "year": 1945,
+      "what": "Remodeled in the 1940s for women's physical education, the Newman Club, and student activities (exact year unknown)",
+      "major": true,
+      "src": [
+        "arch_acad"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built in 1906 as armory, gymnasium and auditorium, funded partly by Boston & Maine president Lucius Tuttle in thanks for students' help at a 1905 train wreck.",
+      "src": [
+        "arch_acad",
+        "clio"
+      ]
+    },
+    {
+      "text": "After the 1939 renovation it opened to women students while men moved to Lundholm Gymnasium.",
+      "src": [
+        "clio"
+      ]
+    },
+    {
+      "text": "Holds the roughly 3,500 sq ft Newman Dance Studio with a removable marley floor.",
+      "src": [
+        "clio"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/New_Hampshire_Hall%2C_UNH_2.jpg/1280px-New_Hampshire_Hall%2C_UNH_2.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:New_Hampshire_Hall,_UNH_2.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Front facade from the street",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/New_Hampshire_Hall%2C_UNH_1.jpg/1280px-New_Hampshire_Hall%2C_UNH_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:New_Hampshire_Hall,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Front facade",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/f2/Scenes_on_the_University_of_New_Hampshire_Campus_-_Large_Letter_Postcard_%2814002554362%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Scenes_on_the_University_of_New_Hampshire_Campus_-_Large_Letter_Postcard_(14002554362).jpg",
+      "credit": "Steve Shook (collection); 1934 Curt Teich postcard",
+      "view": "historic",
+      "year": 1934,
+      "caption": "The Gymnasium (New Hampshire Hall) with its round crenellated turret, before the 1939 rework (cropped panel of a 1934 Curt Teich large-letter postcard)",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/The_New_Hampshire_College_Monthly_%281909%29_%2814580506730%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:The_New_Hampshire_College_Monthly_(1909)_(14580506730).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1909,
+      "caption": "The 1906 Gymnasium with its original turret (cropped from a 1909 New Hampshire College Monthly photo page)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "Clio: New Hampshire Hall",
+      "url": "https://theclio.com/tour/2807/5"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "clio": {
+      "title": "New Hampshire Hall, University of New Hampshire",
+      "publisher": "Clio",
+      "url": "https://theclio.com/tour/2807/5",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 5,
+    "condition": 4,
+    "function": 5,
+    "character": 7,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "1906 armory-gym, reworked as Colonial Revival in 1939; now kinesiology and dance, with no renovation since the 1940s on record.",
+  "notes": "The 1945 date is a placeholder for the archives' 'remodeled in the 1940s'. No renovation after the 1940s was found; the old data's 1990s report of 'no A/C, poor accessibility, major renovation planned' was not verified. Thebluebook lists a 'University of New Hampshire New Hampshire Hall' roofing project (not opened). The 1934 postcard panel labeled 'Gymnasium' shows the round crenellated turret, i.e. the building before the 1939 rework. No reviews. The 2013 photos show the Colonial Revival front in fair-to-good exterior repair; no interior photos.",
+  "judgeNotes": "Photos show a pleasant symmetrical brick front. 02 leads (no passers-by); historic turreted views kept."
+}

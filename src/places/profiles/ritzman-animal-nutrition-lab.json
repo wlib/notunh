@@ -1,0 +1,54 @@
+{
+  "name": "Ritzman Animal Nutrition Lab",
+  "aliases": [
+    "Ritzman Laboratory",
+    "Ritzman Lab"
+  ],
+  "place": "Ritzman Laboratory",
+  "category": "research-farm",
+  "use": "Animal nutrition research laboratory (COLSA/NHAES); current occupants not confirmed",
+  "built": 1959,
+  "builtText": "Built 1959; dedicated 1960",
+  "status": "in-use",
+  "statusNote": "Current occupants unconfirmed",
+  "facts": [
+    {
+      "text": "The lab was built in 1959 to replace the original nutrition laboratory in the creamery, which burned in 1956; it was dedicated in 1960.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It is named for Ernest G. Ritzman (1875–1955), who started UNH's animal metabolism research program in 1918 and continued work begun with a flock of sheep bequeathed by Alexander Graham Bell.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 3,
+    "interior": 3,
+    "condition": 3,
+    "function": 4,
+    "character": 4,
+    "reputation": 3
+  },
+  "confidence": "low",
+  "verdict": "Plain 1959 painted-block lab with window air conditioners, built after the creamery fire; current use unknown.",
+  "notes": "notunh's label 'Ritzman Labatory' is misspelled; the building is the Ritzman Animal Nutrition Lab or Ritzman Laboratory. Current use and occupants weren't found: COLSA's facilities list has no entry for it. The reference photo shows a plain two-story painted block building with window A/C units (so central A/C is unlikely), small awnings and a tired, utilitarian look. No licensed photo, no renovation record, no reviews.",
+  "judgeNotes": "One reference photo."
+}

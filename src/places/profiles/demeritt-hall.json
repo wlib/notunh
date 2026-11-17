@@ -1,0 +1,93 @@
+{
+  "name": "DeMeritt Hall",
+  "aliases": [
+    "Demeritt Hall"
+  ],
+  "place": "DeMeritt Hall",
+  "category": "academic",
+  "use": "Physics and Astronomy (College of Engineering and Physical Sciences)",
+  "built": 2008,
+  "builtText": "2008 (replaced the 1914 DeMeritt Hall, demolished July 2007)",
+  "architect": "Architerra, Inc. with Rist-Frost-Shumway; built by Harvey Construction",
+  "style": "Contemporary brick with glazed curtain-wall stair tower",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "The original 1914 DeMeritt Hall was named for Albert DeMeritt, Durham's state representative who secured its funding; it housed physics, engineering, the School of Architecture and once a temporary dormitory.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "The original was demolished in July 2007 and replaced by the current building, completed in 2008.",
+      "src": [
+        "arch_acad",
+        "arch_list"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/DeMeritt_Hall%2C_UNH_1.jpg/1280px-DeMeritt_Hall%2C_UNH_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:DeMeritt_Hall,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Entrance front with glazed stair tower",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/49/DeMeritt_Hall%2C_UNH_2.jpg/1280px-DeMeritt_Hall%2C_UNH_2.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:DeMeritt_Hall,_UNH_2.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Side elevation across the lawn",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/f/f2/Scenes_on_the_University_of_New_Hampshire_Campus_-_Large_Letter_Postcard_%2814002554362%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Scenes_on_the_University_of_New_Hampshire_Campus_-_Large_Letter_Postcard_(14002554362).jpg",
+      "credit": "Steve Shook (collection); 1934 Curt Teich postcard",
+      "view": "historic",
+      "year": 1934,
+      "caption": "The original DeMeritt Hall (demolished 2007) (cropped panel of a 1934 Curt Teich large-letter postcard)",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "arch_list": {
+      "title": "UNH Buildings (list with construction dates and uses)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 6,
+    "condition": 8,
+    "function": 8,
+    "character": 4,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "Competent 2008 brick physics building with a glazed blue stair tower, a replacement for the 1914 original.",
+  "notes": "Search snippets say UNH funded it with $18.3M in state KEEP-NH money and an AASHE report called it 'LEED Silver equivalent' (not certified); neither page was opened, so leed is null. Old note 'ample natural light / floor-to-ceiling physics lounge windows' unverified; the 2013 photos do show a large glazed stair tower and big window bays. A UNH page in search results gives the original as 1913; the archives say 1914. No reviews found.",
+  "judgeNotes": "Photos show a tidy contemporary block; no interior evidence or student reviews, so interior and reputation sit at mid-scale."
+}

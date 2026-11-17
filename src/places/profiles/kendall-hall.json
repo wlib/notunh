@@ -1,0 +1,97 @@
+{
+  "name": "Kendall Hall",
+  "place": "Kendall Hall",
+  "category": "academic",
+  "use": "Originally animal sciences and the state Veterinary Diagnostic Laboratory; current occupants unclear (COLSA per archives index)",
+  "built": 1970,
+  "builtText": "c. 1970 (archives index: built 1970)",
+  "architect": "Frank Grad & Sons; builder Davison Construction",
+  "style": "c.1970 modernist concrete frame, five stories with continuous window bands",
+  "status": "in-use",
+  "statusNote": "Floors being repurposed; current occupants unclear",
+  "renovations": [
+    {
+      "what": "Design services solicited to repurpose floors 3 and 4 (USNH solicitation; date not shown)",
+      "major": false,
+      "src": [
+        "cc"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Designed by Frank Grad & Sons and built by Davison Construction; funded partly by the NH Department of Agriculture for the Veterinary Diagnostic Laboratory and by federal Higher Education Facilities Act funds; originally housed animal sciences.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "Named for John C. Kendall, director of the Agricultural Experiment Station 1910–39.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "Its transmission electron microscope was moved to a new imaging facility in Parsons Hall.",
+      "src": [
+        "nerej"
+      ]
+    },
+    {
+      "text": "Kendall is not on UNH's October 2025 list of six buildings proposed for closure.",
+      "src": [
+        "closures"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "closures": {
+      "title": "Proposed Durham Building Closures (2025-10)",
+      "publisher": "UNH Leadership blog",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures",
+      "accessed": "2026-11-04"
+    },
+    "cc": {
+      "title": "Design Services for Kendall Hall - Repurposing Levels 3 and 4",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/4518613-design-services-for-kendall-hall-repurposing-levels-3-and-4&find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    },
+    "nerej": {
+      "title": "JM Coull completes UNH's Advanced Technology Imaging Facility",
+      "publisher": "New England Real Estate Journal",
+      "url": "https://nerej.com/jm-coull-completes-unh-s-advanced-technology-imaging-facility",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 3,
+    "interior": 3,
+    "condition": 3,
+    "function": 4,
+    "character": 3,
+    "reputation": 3
+  },
+  "confidence": "low",
+  "verdict": "A 1970 five-storey concrete slab whose labs have largely moved out, now awaiting a new use.",
+  "notes": "No licensed photo. Archives reference shows a long five-story concrete-frame slab with repetitive window panels; brutal-modern and plain. Current use is the main open question: old row says VDL left ~2015 and floors served as Spaulding swing space 2019–23; none of that was confirmed on opened pages. The repurposing solicitation page is undated (old row: 2019, ~$500k). Not on the 2025 phase-one closure list.",
+  "judgeNotes": "Archives photo only; use and condition unclear."
+}

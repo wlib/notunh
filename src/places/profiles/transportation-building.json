@@ -1,0 +1,52 @@
+{
+  "name": "Transportation Building",
+  "aliases": [
+    "Transportation Garage",
+    "Automotive Garage"
+  ],
+  "place": "Transportation Building",
+  "category": "support",
+  "use": "Probably UNH's fleet/automotive garage (unconfirmed)",
+  "status": "in-use",
+  "statusNote": "Identification as the fleet garage unconfirmed",
+  "facts": [
+    {
+      "text": "UNH Transportation runs an Automotive Garage that services the university fleet, with a Garage & Fleet Manager.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Transportation Services' published addresses are the parking office in the MUB and transit at 20 Sage Way, so neither is this building.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Automotive Garage",
+      "publisher": "UNH Transportation",
+      "url": "https://www.unh.edu/transportation/automotive-garage",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Contact Us",
+      "publisher": "UNH Transportation",
+      "url": "https://www.unh.edu/transportation/about/contact-us",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 3,
+    "interior": 3,
+    "condition": 4,
+    "function": 5,
+    "character": 2,
+    "reputation": 2
+  },
+  "confidence": "low",
+  "verdict": "Probably the university's fleet garage on the west edge; not otherwise documented.",
+  "notes": "notunh's 'Transportation Building' outline sits just east of Leavitt Lane and the Institute on Disability building on the west edge. A search snippet of a UNH campus map labels a 'Transportation Garage' near the Leavitt Center, so this is most likely the fleet garage. I couldn't open the map PDFs (image-only), so the identification is unconfirmed. No construction date, photos or other details found. Consider merging with the Leavitt Lane buildings, or dropping it, if the judge needs more.",
+  "judgeNotes": "Identification unconfirmed; no photos."
+}

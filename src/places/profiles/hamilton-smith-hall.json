@@ -1,0 +1,178 @@
+{
+  "name": "Hamilton Smith Hall",
+  "aliases": [
+    "Ham Smith"
+  ],
+  "place": "Hamilton Smith Hall",
+  "category": "academic",
+  "use": "College of Liberal Arts classrooms and departments (English, Philosophy, and others)",
+  "built": 1907,
+  "builtText": "1905–07 (dedicated June 3, 1907)",
+  "architect": "George Oakley Totten Jr. (original, 1905 blueprint); Eric T. Huddleston (1930s exterior); Koehler & Isaak (1959); DiMella Shaffer (2015–17)",
+  "style": "Classical Revival library front with large columns; Colonial Revival reworking; contemporary rear addition",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 1938,
+      "what": "Exterior reworked in Colonial Revival style by Eric T. Huddleston (Clio dates this to 1937)",
+      "major": true,
+      "src": [
+        "clio"
+      ]
+    },
+    {
+      "year": 1959,
+      "what": "Converted from library to classrooms and offices after Dimond opened (Koehler & Isaak; Harvey Construction)",
+      "major": true,
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "year": 1966,
+      "what": "Rear addition (1965–66) for English, philosophy, history, government and sociology",
+      "major": true,
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "year": 2017,
+      "what": "Renovation and expansion: two-story central atrium rebuilt, 1965 addition replaced by a T-shaped wing, footbridge over the ravine, two WPA-era murals restored",
+      "cost": 37000000,
+      "major": true,
+      "src": [
+        "today17",
+        "clio"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built as the college library and Durham Public Library (1907–1958), funded by a $10,000 bequest from mining engineer Hamilton B. Smith plus a Carnegie grant.",
+      "src": [
+        "arch_acad",
+        "clio"
+      ]
+    },
+    {
+      "text": "The 2015–17 project cost $37 million and reconstructed a soaring two-story central atrium and airy front-wing classrooms; it reopened for Homecoming 2017 with a grand reopening on Sept. 22.",
+      "src": [
+        "today17"
+      ]
+    },
+    {
+      "text": "A new footbridge over the ravine links the building to the T-Hall parking lot, making the hall a main pedestrian route.",
+      "src": [
+        "today17"
+      ]
+    },
+    {
+      "text": "Two WPA-era murals completed in July 1940, when the building was the library, were restored; one had been hidden for decades, and the work was funded largely by Peter T. Paul '67.",
+      "src": [
+        "today17b",
+        "clio"
+      ]
+    },
+    {
+      "text": "Clio credits the surviving murals to George Lloyd (farming) and Arthur Esner (industry), and says recurring basement floods helped prompt the renovation.",
+      "src": [
+        "clio"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Library%2C_New_Hampshire_State_College%2C_Durham%2C_NH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Library,_New_Hampshire_State_College,_Durham,_NH.jpg",
+      "credit": "Unknown photographer",
+      "view": "historic",
+      "year": 1917,
+      "caption": "As the college library, c. 1917 postcard",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Old_Library%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Old_Library,_UNH.jpg",
+      "credit": "Unknown author",
+      "view": "historic",
+      "year": 1920,
+      "caption": "Old Library with Thompson Hall behind, c. 1920 postcard",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    {
+      "url": "https://live.staticflickr.com/4841/45928980452_25d05cd5cc_b.jpg",
+      "page": "https://www.flickr.com/photos/23119666@N03/45928980452",
+      "credit": "Mark Bonica",
+      "view": "detail",
+      "year": 2018,
+      "caption": "The 2017 footbridge over the ravine in snow, T-Hall tower behind",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/The_New_Hampshire_College_Monthly_%281909%29_%2814580506730%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:The_New_Hampshire_College_Monthly_(1909)_(14580506730).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1909,
+      "caption": "The library (now Hamilton Smith Hall) (cropped from a 1909 New Hampshire College Monthly photo page)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "Clio: Hamilton Smith Hall",
+      "url": "https://theclio.com/tour/2807/2"
+    },
+    {
+      "label": "UNH Today (2017): Its Former Glory, and Then Some (archived)",
+      "url": "https://web.archive.org/web/20210415083457/https://www.unh.edu/unhtoday/2017/08/its-former-glory-and-then-some"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "clio": {
+      "title": "Hamilton Smith Hall",
+      "publisher": "Clio",
+      "url": "https://theclio.com/tour/2807/2",
+      "accessed": "2026-11-04"
+    },
+    "today17": {
+      "title": "Its Former Glory, and Then Some (Aug 28, 2017; Wayback snapshot)",
+      "publisher": "UNH Today",
+      "url": "https://web.archive.org/web/20210415083457/https://www.unh.edu/unhtoday/2017/08/its-former-glory-and-then-some",
+      "accessed": "2026-11-04"
+    },
+    "today17b": {
+      "title": "Fine Restoration (Aug 2017; Wayback snapshot)",
+      "publisher": "UNH Today",
+      "url": "https://web.archive.org/web/20191217025525/https://www.unh.edu/unhtoday/2017/08/fine-restoration",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 8,
+    "interior": 8,
+    "condition": 9,
+    "function": 8,
+    "character": 8,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "The 1907 columned library turned liberal-arts hall, rebuilt in 2017 around a two-storey atrium with restored WPA murals.",
+  "notes": "Original UNH Today URLs now redirect to the UNH Today home page, so Wayback snapshots are cited. Search snippets show Skanska listing the project as $30M / 95,000 sf, against UNH's $37M / 91,000 sf; the Skanska page now redirects and was not opened. Ceilings/light are from UNH's own description ('soaring two-story atrium', 'airy classrooms'); no licensed interior photo was found. No licensed modern exterior of the main facade was found on Commons or Flickr CC; the gallery has the 2018 bridge and historic library images. Reference photo ref-01 is the archives' pre-2015 view. Architect spelling: Clio writes 'DiMelia Shaffer'; the firm is DiMella Shaffer. No independent student reviews found.",
+  "judgeNotes": "Exterior judged from historic postcards and the archives photo of the classical front; interior from published specs only, so confidence is capped at med. Reputation trimmed to 7: no student reviews were found. The footbridge shot moves behind the postcards because it barely shows the building."
+}

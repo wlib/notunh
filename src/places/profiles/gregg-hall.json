@@ -1,0 +1,97 @@
+{
+  "name": "Gregg Hall",
+  "aliases": [
+    "Environmental Technology Building"
+  ],
+  "place": "Gregg Hall",
+  "category": "academic",
+  "use": "Environmental research and technology labs: NOAA cooperative institutes, Environmental Research Group, Hubbard Genome Center, technology-commercialization offices",
+  "built": 2001,
+  "builtText": "2001 (opened spring 2001 as the Environmental Technology Building)",
+  "architect": "Lavallee Brensinger Architects; builder Eckman Construction",
+  "style": "Contemporary brick with a glazed curtain-wall bay and standing-seam roof",
+  "status": "in-use",
+  "renovations": [
+    {
+      "what": "Boiler plant upgrade: steam boilers replaced with hydronic boilers and building controls converted (bid notice; date not shown)",
+      "major": false,
+      "src": [
+        "cc"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Became operational in 2001 as an environmental technology building; tenants included NOAA-UNH CICEET, CINEMAR, the Environmental Research Group and the Hubbard Genome Center.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "A 40,000 sq ft building south of the Field House, built with $8.5 million in federal funds as part of a planned \"Entrepreneurial Campus\" quadrangle.",
+      "src": [
+        "unhmag01"
+      ]
+    },
+    {
+      "text": "Lavallee Brensinger calls it the first building of the Southeast Quad master plan: four stories with high-bay and wet labs designed for adaptability.",
+      "src": [
+        "lbpa"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "Lavallee Brensinger: Gregg Hall",
+      "url": "https://lbpa.com/project/gregg-hall-science-and-research/"
+    },
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "unhmag01": {
+      "title": "Campus Currents: Going Up! (Winter 2001)",
+      "publisher": "UNH Magazine",
+      "url": "https://unhmagazine.unh.edu/w01/cctechbldgw01.html",
+      "accessed": "2026-11-04"
+    },
+    "lbpa": {
+      "title": "Gregg Hall Science and Research",
+      "publisher": "Lavallee Brensinger Architects",
+      "url": "https://lbpa.com/project/gregg-hall-science-and-research/",
+      "accessed": "2026-11-04"
+    },
+    "cc": {
+      "title": "Durham Campus Gregg Hall Boiler Plant Upgrades Project",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/5748796-durham-campus-gregg-hall-boiler-plant-upgrades-project&find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 5,
+    "condition": 6,
+    "function": 7,
+    "character": 3,
+    "reputation": 4
+  },
+  "confidence": "med",
+  "verdict": "2001 brick research building with a glass entrance bay; adaptable labs, no particular presence.",
+  "notes": "No licensed photo found. Archives reference photo shows a red-brick four-story building with a tall glass curtain-wall entrance bay, grey roof and a dormer arch, among trees. Old row's \"dedicated 2004\" not confirmed; a search excerpt from a UNH page claimed \"dedicated in 1999\", which conflicts with the 2001 opening; unresolved. The boiler bid notice date is not shown (search engine said 2022). Tenant list is the archives' and may be dated.",
+  "judgeNotes": "Archives photo only; no reviews."
+}

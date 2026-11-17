@@ -1,0 +1,70 @@
+{
+  "name": "McGregor Memorial EMS",
+  "aliases": [
+    "Durham Ambulance Corps",
+    "McGregor"
+  ],
+  "place": "McGregor Memorial EMS",
+  "category": "support",
+  "use": "Headquarters and ambulance bays of McGregor Memorial EMS, the largely volunteer, student-heavy ambulance service for Durham, Lee, Madbury and UNH",
+  "status": "in-use",
+  "statusNote": "Leased from UNH by McGregor Memorial EMS",
+  "facts": [
+    {
+      "text": "Founded in 1968 as the private, non-profit Durham Ambulance Corps in memory of Durham physician Dr. George G. McGregor.",
+      "src": [
+        "mag03b"
+      ]
+    },
+    {
+      "text": "Its snug headquarters at 47 College Road, behind Zais Hall, is mostly ambulance bays and is leased by the corps from UNH.",
+      "src": [
+        "mag03"
+      ]
+    },
+    {
+      "text": "It is the primary emergency ambulance service for Durham, Lee, Madbury and UNH, and many of its volunteer EMTs are UNH students.",
+      "src": [
+        "tnh_ems20"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Magazine: Answering the Call (2003)",
+      "url": "https://unhmagazine.unh.edu/sp03/answering_the_call.html"
+    }
+  ],
+  "sources": {
+    "mag03": {
+      "title": "Answering the Call (Durham Ambulance Corps at 35)",
+      "publisher": "UNH Magazine",
+      "url": "https://unhmagazine.unh.edu/sp03/answering_the_call.html",
+      "accessed": "2026-11-04"
+    },
+    "mag03b": {
+      "title": "Answering the Call, page 3",
+      "publisher": "UNH Magazine",
+      "url": "https://unhmagazine.unh.edu/sp03/answering_the_call3.html",
+      "accessed": "2026-11-04"
+    },
+    "tnh_ems20": {
+      "title": "McGregor volunteers committed to helping the community",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2020/05/mcgregor-volunteers-committed-to-helping-the-community",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 3,
+    "interior": 3,
+    "condition": 4,
+    "function": 6,
+    "character": 5,
+    "reputation": 6
+  },
+  "confidence": "low",
+  "verdict": "Snug ambulance-bay headquarters behind Zais Hall for the student-staffed volunteer EMS.",
+  "notes": "The lease and address come from a 2003 article; current tenure not reconfirmed. A search snippet described the building as a low brick building that once housed lawnmowers, but I couldn't open the source (the UNH Today 2017 50th-anniversary piece redirected to the index), so it is left out. No construction date and no photos.",
+  "judgeNotes": "No photos or date."
+}

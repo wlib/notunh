@@ -1,0 +1,131 @@
+{
+  "name": "Horton Social Science Center",
+  "aliases": [
+    "Horton",
+    "Horton Hall"
+  ],
+  "place": "Horton Social Science Center",
+  "category": "academic",
+  "use": "Social sciences departments (history, political science, sociology/anthropology historically), classrooms, lecture halls",
+  "built": 1968,
+  "builtText": "1967–68 (opened 1968–69; dedicated Apr 30, 1977); archives index says built 1966",
+  "architect": "Skidmore, Owings & Merrill (New York); builder Harvey Construction",
+  "style": "Late-1960s modernist: precast concrete grid of deep-set windows",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2014,
+      "what": "Third floor fully renovated (~$1.5M); second floor done in the prior two summers; seminar rooms got A/C; lecture halls reshaped to bowls",
+      "cost": 1500000,
+      "major": false,
+      "src": [
+        "tnh9922"
+      ]
+    },
+    {
+      "year": 2018,
+      "what": "Six summers of phased interior renewal completed: classrooms, offices, labs, first-floor academic commons, new heating terminals, BMS controls, efficient lighting",
+      "cost": 6100000,
+      "major": true,
+      "src": [
+        "harriman"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Designed by Skidmore, Owings & Merrill of New York and built by Harvey Construction in 1967–68; opened for the 1968–69 year.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "Dedicated April 30, 1977 to trustee chair Mildred McAfee Horton.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "Harriman finished six years of summer renovation phases in 2018 within a $6.1M budget, adding a first-floor academic commons and correcting safety deficiencies.",
+      "src": [
+        "harriman"
+      ]
+    },
+    {
+      "text": "A faculty member said in 2014 the renovations made a huge difference to quality of life and seminar rooms gained air conditioning.",
+      "src": [
+        "tnh9922"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Horton_Hall%2C_UNH_2.jpg/1280px-Horton_Hall%2C_UNH_2.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Horton_Hall,_UNH_2.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Four-story block behind mature trees and lawn",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Horton_Hall%2C_UNH_1.jpg/1280px-Horton_Hall%2C_UNH_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Horton_Hall,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Concrete grid facade from the street, construction fencing (2013)",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "Harriman: Horton Hall renovation",
+      "url": "https://www.harriman.com/projects/unh-horton-hall-renovation/"
+    },
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "tnh9922": {
+      "title": "Renovations change atmosphere, functionality of academic buildings (2014-09)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2014/09/renovations-change-atmosphere-functionality-of-academic-buildings",
+      "accessed": "2026-11-04"
+    },
+    "harriman": {
+      "title": "UNH Horton Hall Renovation",
+      "publisher": "Harriman",
+      "url": "https://www.harriman.com/projects/unh-horton-hall-renovation/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 5,
+    "condition": 6,
+    "function": 7,
+    "character": 5,
+    "reputation": 5
+  },
+  "confidence": "high",
+  "verdict": "SOM's 1968 precast grid for the social sciences: sober and well proportioned, with interiors renewed floor by floor to 2018.",
+  "notes": "Photos show a four-story tan precast-concrete frame with deep square window bays, a sober SOM modernist block; trees soften it. Built year conflicts: archives narrative 1967–68, archives index \"built 1966\", TNH 2014 \"1966\". A/C confirmed only in seminar spaces (2014); whole-building A/C not confirmed. No interior photo; no student reviews found.",
+  "judgeNotes": "Photos show a disciplined concrete frame behind trees; 02 leads because 01 has construction fencing."
+}

@@ -1,0 +1,40 @@
+{
+  "name": "Poultry Research Building",
+  "aliases": [
+    "Poultry Lab Building",
+    "Poultry Lab"
+  ],
+  "place": null,
+  "category": "research-farm",
+  "use": "Built for poultry research for the College of Life Sciences and Agriculture; current use not confirmed",
+  "built": 1962,
+  "builtText": "1962",
+  "status": "in-use",
+  "statusNote": "Current use and location unconfirmed; may be gone or renamed",
+  "facts": [
+    {
+      "text": "The Poultry Lab Building was constructed in 1962 for the College of Life Sciences and Agriculture.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "low",
+  "verdict": "The 1962 Poultry Lab Building, known only from an archives list; its location and current use could not be found.",
+  "notes": "The Archives' official name is 'Poultry Lab Building'. 'Poultry Research Building' is the inventory's label, unconfirmed. This is the thinnest record in the batch. I couldn't find the location, current use or any photo (the Archives page has no image for it), and notunh's map has no matching feature. It may be absent from the map, renamed or gone; verify before showing it. Status was changed from 'in use' to unknown.",
+  "judgeNotes": "Could not judge: no location, photo or current use. Placeholder scores; left unranked."
+}

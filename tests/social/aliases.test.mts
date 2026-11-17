@@ -1,12 +1,14 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { readFile } from "node:fs/promises"
+import * as v from "valibot"
 import { ALIASES, NICKNAMES, otherNames, placeMatcher, shortNames } from "../../src/social/aliases.mts"
-import type { Gazetteer } from "../../src/places/gazetteer.mts"
+import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { createPlaceSearch } from "../../src/places/search.mts"
 import { CAMPUS } from "../../src/places/durham.mts"
 
-const gazetteer: Gazetteer = JSON.parse(await readFile(new URL("../fixtures/data/src/map/gazetteer.json", import.meta.url), "utf8"))
+// As the map loads it, with the places added and renamed
+const gazetteer = v.parse(Gazetteer, JSON.parse(await readFile(new URL("../fixtures/data/src/map/gazetteer.json", import.meta.url), "utf8")))
 const names = gazetteer.places.map(place => place.name)
 const match = placeMatcher(names)
 

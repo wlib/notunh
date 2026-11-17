@@ -1,0 +1,123 @@
+{
+  "name": "Conant Hall",
+  "place": "Conant Hall",
+  "category": "academic",
+  "use": "Offices, including TRIO Scholars (relocating); historically chemistry, later Psychology",
+  "built": 1893,
+  "builtText": "1893",
+  "architect": "Construction supervised by Randlett of Dow & Randlett (archives spell it 'Daw and Randlett')",
+  "style": "Late-19th-century brick (crenellated parapet in 1909 photo)",
+  "status": "proposed-closure",
+  "statusNote": "Phase 1 closure list, Oct 2025; TRIO relocating",
+  "renovations": [
+    {
+      "year": 1986,
+      "what": "Extensive renovation for the Psychology department; rededicated May 9, 1986",
+      "major": true,
+      "src": [
+        "arch_acad"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "One of the original buildings of the 1893 move from Hanover; named for John Conant, a farmer who gave $70,000 for buildings and scholarships.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "Home of chemistry from 1893 to 1929 and headquarters of the American Chemical Society from 1907 to 1911.",
+      "src": [
+        "mag00"
+      ]
+    },
+    {
+      "text": "Designated a National Historic Chemical Landmark on Oct. 29, 1999, the first in New England, for Charles James's rare-earth separation work done there.",
+      "src": [
+        "arch_acad",
+        "mag00"
+      ]
+    },
+    {
+      "text": "UNH's university architect said Conant has 'a lot of net asset value'; closing it would allow a comprehensive renovation later.",
+      "src": [
+        "tnh_close"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/The_New_Hampshire_College_Monthly_%281909%29_%2814580506730%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:The_New_Hampshire_College_Monthly_(1909)_(14580506730).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1909,
+      "caption": "Conant Hall (left) and the Shops, now Hewitt Hall (right) (cropped from a 1909 New Hampshire College Monthly photo page)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Catalogue_of_the_New_Hampshire_College_of_Agriculture_and_the_Mechanic_Arts_%281901%29_%2814781891965%29.jpg/1280px-Catalogue_of_the_New_Hampshire_College_of_Agriculture_and_the_Mechanic_Arts_%281901%29_%2814781891965%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Catalogue_of_the_New_Hampshire_College_of_Agriculture_and_the_Mechanic_Arts_(1901)_(14781891965).jpg",
+      "credit": "New Hampshire College of Agriculture and the Mechanic Arts",
+      "view": "historic",
+      "year": 1901,
+      "caption": "\"College Buildings Looking Southeast\": Thompson Hall, greenhouses, Conant Hall and the Shops (1901 catalogue)",
+      "license": "No known copyright restrictions",
+      "licenseUrl": "https://www.flickr.com/commons/usage/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "UNH Magazine (2000): Conant named a chemical landmark",
+      "url": "https://unhmagazine.unh.edu/w00/landmark.html"
+    },
+    {
+      "label": "UNH: proposed Durham building closures (Oct 2025)",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "closure": {
+      "title": "Proposed Durham Building Closures (Oct 24, 2025)",
+      "publisher": "UNH Leadership blog",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/proposed-durham-building-closures",
+      "accessed": "2026-11-04"
+    },
+    "tnh_close": {
+      "title": "TRIO Scholars and Sustainability Institute prepare to relocate (Dec 12, 2025; updated Mar 12, 2026)",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2025/12/trio-scholars-and-sustainability-institute-prepare-to-relocate",
+      "accessed": "2026-11-04"
+    },
+    "mag00": {
+      "title": "Conant Hall National Historic Chemical Landmark (Winter 2000)",
+      "publisher": "UNH Magazine",
+      "url": "https://unhmagazine.unh.edu/w00/landmark.html",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 4,
+    "condition": 4,
+    "function": 3,
+    "character": 8,
+    "reputation": 4
+  },
+  "confidence": "med",
+  "verdict": "1893 original with an ivy-covered crenellated front and a National Historic Chemical Landmark inside, now emptied for closure.",
+  "notes": "The old data's 'HIGH net asset value' matches TNH's quote. Closure execution unconfirmed. No licensed modern photo; ref-01 (archives) shows an ivy-covered brick front with an arched entry. The 1909 and 1901 historic images are small views. 1990s 'essentially ADA compliant' claim from old data not verified.",
+  "judgeNotes": "Archives photo shows a handsome brick front; only historic licensed images. Function low as it is being vacated. A modern licensed view of Conant's arched entrance (lettered \"CONANT HALL\") exists at the right edge of murkland-hall/01.jpg (Olivier Aumage, CC BY-SA 2.0 fr); a crop of it would make a better lead than the 1909 view."
+}

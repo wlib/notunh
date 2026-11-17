@@ -55,7 +55,8 @@ export default () =>
           courses:   "/src/courses/courses.json",
           prereqs:   "/src/programs/prereqs.json",
           parking:   "/src/parking/parking.json",
-          menus:     "/src/dining/menus.json"
+          menus:     "/src/dining/menus.json",
+          profiles:  "/src/map/profiles.json"
         }}
       />
       <body>

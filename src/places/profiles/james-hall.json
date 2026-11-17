@@ -1,0 +1,103 @@
+{
+  "name": "James Hall",
+  "place": "James Hall",
+  "category": "academic",
+  "use": "Earth Sciences; Natural Resources and the Environment",
+  "built": 1929,
+  "builtText": "1929 (dedicated Nov 9, 1929)",
+  "architect": "Eric T. Huddleston (designed with Charles James); 2008–10 renovation by EYP Architecture & Engineering with Shawmut Design and Construction",
+  "style": "Colonial Revival brick, with contemporary addition",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2010,
+      "what": "KEEP-NH renovation and 14,000 sf expansion (Aug 2008–Jan 2010): central stair and 75% of exterior walls, floors and roof kept; gray-water system, daylight harvesting, heat-recovery wheel, green roof, outdoor classroom",
+      "cost": 33800000,
+      "major": true,
+      "src": [
+        "today10"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Named for chemist Charles James ('King James'), who was designing the building when he died in 1928; it opened for chemistry and the Experiment Station.",
+      "src": [
+        "arch_acad",
+        "mag00"
+      ]
+    },
+    {
+      "text": "UNH's first building project to seek LEED certification.",
+      "src": [
+        "today10"
+      ]
+    },
+    {
+      "text": "The renovation kept the signature yellow glazed-brick interior walls and restored an 1878 wooden relief map of New Hampshire by Charles Hitchcock.",
+      "src": [
+        "today10"
+      ]
+    },
+    {
+      "text": "An energy kiosk in the lobby shows live energy use.",
+      "src": [
+        "today10"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a6/James_Hall%2C_UNH.jpg/1280px-James_Hall%2C_UNH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:James_Hall,_UNH.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Renovated hall and addition along the walkway",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "UNH Today (2010): James Hall renovation completed (archived)",
+      "url": "http://web.archive.org/web/20260211090653/https://www.unh.edu/unhtoday/node/5454"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "today10": {
+      "title": "UNH Completes Renovation of First Campus Building to Seek LEED Certification (Apr 2010; Wayback snapshot)",
+      "publisher": "UNH Today",
+      "url": "http://web.archive.org/web/20260211090653/https://www.unh.edu/unhtoday/node/5454",
+      "accessed": "2026-11-04"
+    },
+    "mag00": {
+      "title": "Conant Hall National Historic Chemical Landmark (Winter 2000)",
+      "publisher": "UNH Magazine",
+      "url": "https://unhmagazine.unh.edu/w00/landmark.html",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 7,
+    "interior": 7,
+    "condition": 8,
+    "function": 8,
+    "character": 7,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "1929 Colonial Revival chemistry hall, rebuilt in 2010 to LEED standards with its yellow glazed-brick walls and 1878 relief map kept.",
+  "notes": "LEED Gold: the April 2010 article expected 'at least Silver'. A UNH Today release titled 'UNH's James Hall Granted LEED Gold Certification' (unh.edu/unhtoday/node/5613) appears in search results but now redirects and has no Wayback copy, so Gold is not confirmed from an opened page. 'First LEED Gold in USNH' (old data) is not confirmed; the source says 'first ... to seek LEED certification'. Built year: the archives list says 1930, the narrative says dedicated 1929, UNH Today says built 1929. A/C not stated. No reviews. Only one licensed photo (exterior, 2013).",
+  "judgeNotes": "Photo confirms a well-kept brick front and sympathetic addition; interior from published descriptions only. Reputation 6 for lack of reviews."
+}

@@ -1,0 +1,65 @@
+{
+  "name": "Institute on Disability",
+  "aliases": [
+    "IOD",
+    "10 West Edge Drive"
+  ],
+  "place": "Institute on Disability",
+  "category": "academic",
+  "use": "Offices of the UNH Institute on Disability/UCED (research, policy and training on disability)",
+  "status": "in-use",
+  "statusNote": "Office building at 10 West Edge Drive; IOD is the main tenant",
+  "facts": [
+    {
+      "text": "The Institute on Disability's Durham office is at 10 West Edge Drive, Suite 101.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "The IOD was established at UNH in 1987 and is New Hampshire's University Center for Excellence in Developmental Disabilities Education, Research, and Service (UCEDD).",
+      "src": [
+        "s1",
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Institute on Disability",
+      "url": "https://iod.unh.edu/about"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "About the Institute on Disability",
+      "publisher": "UNH Institute on Disability",
+      "url": "https://iod.unh.edu/about",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Institute on Disability/UCED",
+      "publisher": "UNH Community Inclusion",
+      "url": "https://www.unh.edu/community-inclusion/resource-topic/institute-disabilityuced",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "UNH project for major research and mixed-use community underway in Durham (May 7, 2026)",
+      "publisher": "NHPR",
+      "url": "https://www.nhpr.org/nh-news/2026-05-07/unh-noaa-project-research-hotel-the-edge-durham",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 5,
+    "function": 5,
+    "character": 3,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "West Edge office suite best known as the Institute on Disability's home; the building itself is undocumented.",
+  "notes": "This is an office building at 10 West Edge Drive on the west edge of campus. 'Institute on Disability' is its main tenant, not a formal building name. The 1987 date is the institute's founding, not the building's; the building's construction year, owner history and architect weren't found. notunh's gazetteer puts UNH Mailing Service, West Edge Copy Center and Assistive Technology in New Hampshire inside or beside this footprint, so the building likely has several tenants (unverified from a web source). The West Edge is the site of UNH's planned 'The Edge' development (s3), but I found nothing saying this building is affected. No photos; no reviews.",
+  "judgeNotes": "No photos, date or history for the building."
+}

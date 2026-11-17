@@ -1,0 +1,136 @@
+{
+  "name": "Philbrook Hall",
+  "aliases": [
+    "Philly",
+    "Philbrook Dining Hall"
+  ],
+  "place": "Philbrook Hall",
+  "category": "dining",
+  "use": "Dining hall for the east-side residence halls (Timbers), with Philbrook Cafe; weekdays only since fall 2025",
+  "built": 1971,
+  "builtText": "Construction began 1968; Franzen design 1968-70; dedicated May 8, 1971",
+  "architect": "Ulrich Franzen & Associates (original); CMK Architects (2005, 2008 renovations)",
+  "style": "Late Modern brick (Franzen), opened up with glazing in 2005-08",
+  "status": "in-use",
+  "statusNote": "Closed weekends since fall 2025",
+  "renovations": [
+    {
+      "year": 2005,
+      "what": "Renovation and addition (CMK Architects): new entrances and large lobby, food stations replacing a single line, glazing cut into brick walls",
+      "major": true,
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "year": 2008,
+      "what": "Second phase (CMK Architects): additional dining room with its own servery, relocated dishwashing, soup and sandwich station overlooking the quad, screened loading dock",
+      "major": true,
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Designed by Ulrich Franzen & Associates and built by Davison Construction and Boyce Construction from 1968, to offer a smaller, more personal dining experience modelled on UMass, URI, Syracuse and Southern Illinois.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Dedicated May 8, 1971 and named for Dr. Anna Lester Philbrook (class of 1928), a child psychiatrist and alumni trustee.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Originally seated 600 and could not keep up with demand; 2005 and 2008 renovations and additions enlarged it and reorganised the food stations.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Offers an allergen-friendly station, Mongolian grill, all-day breakfast and made-to-order toasted subs; booth seating, tables and a separate breakfast dining room. It is a 4-Star Certified Green Restaurant.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "Single-level, with an automated front entrance via a stair-bypass walkway and an automated rear bridge entrance.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "Closed on weekends from fall 2025: weekend traffic was much lower than weekday traffic while costs stayed the same, so weekend dining was consolidated at Holloway Commons; UNH said in October 2025 it would stay closed weekends.",
+      "src": [
+        "s4"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Dining: Philbrook Dining Hall",
+      "url": "https://www.unh.edu/dining/facility/philbrook-dining-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/dining-facilities#philbrook"
+    },
+    {
+      "label": "CMK Architects: Philbrook renovation",
+      "url": "https://cmkarchitects.com/portfolio/education/higher-education/unh-philbrook.aspx"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Philbrook Hall (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/dining-facilities#philbrook",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "UNH Philbrook",
+      "publisher": "CMK Architects",
+      "url": "https://cmkarchitects.com/portfolio/education/higher-education/unh-philbrook.aspx",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Philbrook Dining Hall",
+      "publisher": "UNH Dining",
+      "url": "https://www.unh.edu/dining/facility/philbrook-dining-hall",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Dining Hall Update (Oct 2025)",
+      "publisher": "UNH Leadership blog",
+      "url": "https://www.unh.edu/leadership/blog/2025/10/dining-hall-update",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "Where to eat on campus: A guide to UNH's dining halls",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2016/08/where-to-eat-on-campus-a-guide-to-unhs-dining-halls",
+      "accessed": "2026-11-04"
+    },
+    "s6": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 6,
+    "condition": 6,
+    "function": 7,
+    "character": 5,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "Franzen's 1971 blank-walled brick dining hall, opened up in 2005–08 with colourful serveries; a student favourite for breakfast.",
+  "notes": "No licensed photo found. Reference photos: low red-brick mass with large blank planar walls, reached by a concrete stair and bridge; CMK thumbnails (tiny) show colourful drum-shaped soffits over serveries and a warm-toned dining room. Old row's \"cool roof\" and \"cafe renovated later\" not re-verified. Late-night service (2016) may no longer apply.",
+  "judgeNotes": "Reference photos show stark brick planes outside and warm, colourful interiors."
+}

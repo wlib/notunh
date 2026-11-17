@@ -1,0 +1,151 @@
+{
+  "name": "Jackson Estuarine Laboratory",
+  "aliases": [
+    "JEL",
+    "Jackson Lab"
+  ],
+  "place": "Jackson Estuarine Laboratory",
+  "category": "research-farm",
+  "use": "Estuarine and coastal research lab of the School of Marine Science and Ocean Engineering, on Great Bay at Adams Point, Durham",
+  "built": 1970,
+  "builtText": "Planned from 1963; dedicated May 30, 1970",
+  "architect": "Pierce and Luykx",
+  "status": "in-use",
+  "statusNote": "At Adams Point on Great Bay, off the main campus but in Durham",
+  "renovations": [
+    {
+      "year": 2026,
+      "what": "NIST-funded expansion: about 2,150 sq ft addition with two high bays for vessel and buoy work, dive lockers, meeting room and offices, a new entrance, and renovation of 1,084 sq ft of outdated lab space for the Water Quality Lab (grant period Apr 2023–Sep 2026; completion not independently confirmed)",
+      "cost": 3774870,
+      "major": true,
+      "src": [
+        "s4",
+        "s5"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Dedicated May 30, 1970, the lab is named for zoology professor C. Floyd Jackson, who founded the Isles of Shoals Marine Laboratory in 1928 and died months before it opened.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It was designed by Pierce and Luykx and built with money from the National Science Foundation and the New England Regional Commission.",
+      "src": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "text": "UNH leased the Adams Point site from the N.H. Fish and Game Department in 1963.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "It was one of the first academic labs in the U.S. devoted solely to estuarine science. Its researchers have trained more than 100 graduate students and published upward of 600 peer-reviewed papers.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "Early lab data helped defeat Aristotle Onassis's 1970s plan for an oil refinery on Great Bay.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "A $3.77 million NIST grant funds an addition and lab renovation; NIST issued a finding of no significant environmental impact in July 2025.",
+      "src": [
+        "s4",
+        "s5"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Jackson_Estuarine_Laboratory_%287082128625%29.jpg/1280px-Jackson_Estuarine_Laboratory_%287082128625%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Jackson_Estuarine_Laboratory_(7082128625).jpg",
+      "credit": "rickpilot_2000",
+      "view": "exterior",
+      "year": 2012,
+      "caption": "The lab from the parking lot with Great Bay behind, April 2012",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Jackson_Estuarine_Laboratory_%286936054750%29.jpg/1280px-Jackson_Estuarine_Laboratory_%286936054750%29.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Jackson_Estuarine_Laboratory_(6936054750).jpg",
+      "credit": "rickpilot_2000",
+      "view": "detail",
+      "year": 2012,
+      "caption": "Granite-post entrance sign, April 2012",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Marine: history timeline",
+      "url": "https://marine.unh.edu/about/history"
+    },
+    {
+      "label": "UNH Magazine: Jackson Lab at 50",
+      "url": "https://magazine.unh.edu/issue/fall-2020/evolving-all-the-time/"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "Wikimedia Commons: Jackson Estuarine Laboratory",
+      "url": "https://commons.wikimedia.org/wiki/Category:Jackson_Estuarine_Laboratory"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "History",
+      "publisher": "UNH School of Marine Science and Ocean Engineering",
+      "url": "https://marine.unh.edu/about/history",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Evolving All the Time (Fall 2020)",
+      "publisher": "UNH Magazine",
+      "url": "https://magazine.unh.edu/issue/fall-2020/evolving-all-the-time/",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Expanding Jackson Estuarine Lab (JEL) for Water Quality Needs, grant 60NANB23D018",
+      "publisher": "HigherGov (NIST award record)",
+      "url": "https://www.highergov.com/grant/60NANB23D018",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "FONSI: University of New Hampshire expansion of Jackson Estuarine Laboratory (signed July 2025)",
+      "publisher": "NIST",
+      "url": "https://www.nist.gov/document/university-new-hampshire-expansion-jackson-estuarine-laboratory",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 6,
+    "function": 7,
+    "character": 7,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "A plain 1970 brick lab on a beautiful Great Bay point, one of the first U.S. labs devoted to estuaries; its data helped stop Onassis's refinery.",
+  "notes": "Addition size conflicts: the grant record says ~2,150 sq ft added, while the old row and a bid listing say ~4,500 sq ft gross on a 2,200 sq ft footprint. Both agree on 1,084 sq ft of lab renovation. HigherGov marks the grant complete, but I found no ribbon-cutting or completion news, so treat the addition as unconfirmed as built. I could not extract the NIST PDF text, so s5 only backs the FONSI's existence and July 2025 date. The old row's contractor (Milestone Engineering & Construction) is unverified and has been dropped. The old UNH Today URL (node/16943) now redirects to the homepage and is not cited. Photos are 2012 exteriors of a modest 1970 brick lab: flat roofs, a dark upper volume, a tall chimney, a superb waterfront site. The setting carries it; the architecture is utilitarian. No interior photos. No public reviews.",
+  "judgeNotes": "Photo shows a low utilitarian brick box seen across a parking lot. Exterior cut from the old run's 7 to 4: the setting is the asset, not the building. The 2026 NIST addition is marked major, though its completion is unconfirmed."
+}

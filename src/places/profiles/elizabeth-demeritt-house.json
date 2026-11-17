@@ -1,0 +1,80 @@
+{
+  "name": "Elizabeth DeMeritt House",
+  "place": null,
+  "category": "administration",
+  "use": "Formerly Home Economics practice house; most recently Upward Bound offices (leased by UNH)",
+  "built": 1930,
+  "builtText": "1930 (moved to Garrison Avenue Oct 1950)",
+  "architect": "Eric T. Huddleston",
+  "style": "Colonial Revival wood-frame house (from photos)",
+  "status": "demolished",
+  "statusNote": "Demolished about 2019; leased, not UNH-owned, by 2018",
+  "renovations": [
+    {
+      "year": 1950,
+      "what": "Moved from the corner of Ballard St and Garrison Ave to Garrison Ave",
+      "major": false,
+      "src": [
+        "arch_admin",
+        "tnh18"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built in 1930 as the Practice House, where Home Economics students lived for seven weeks in a home-management course.",
+      "src": [
+        "arch_admin"
+      ]
+    },
+    {
+      "text": "Named for Elizabeth Pickering DeMeritt, Ballard Hall matron and Dean of Women (1919–1931).",
+      "src": [
+        "arch_admin"
+      ]
+    },
+    {
+      "text": "In 2018 the student paper reported that UNH did not own the house but had leased it, and that occupants were moving out.",
+      "src": [
+        "tnh18"
+      ]
+    },
+    {
+      "text": "The UNH archives record it as demolished around 2019.",
+      "src": [
+        "arch_admin",
+        "arch_list"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: administrative and campus life buildings",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life"
+    }
+  ],
+  "sources": {
+    "arch_admin": {
+      "title": "Administrative and Campus Life Buildings",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life",
+      "accessed": "2026-11-04"
+    },
+    "arch_list": {
+      "title": "UNH Buildings (list with construction dates and uses)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "tnh18": {
+      "title": "Elizabeth DeMeritt House sits unused by UNH (Sep 27, 2018)",
+      "publisher": "The New Hampshire",
+      "url": "https://tnhdigital.com/704/news/elizabeth-demerrit-house-sits-unused-by-unh",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "med",
+  "verdict": "The 1930 Home Economics practice house, later leased offices; demolished around 2019.",
+  "notes": "Inventory status 'verify (UNH use unconfirmed)' resolved: the building is demolished (archives, ca. 2019) and was a leased, non-UNH-owned property by 2018. Recommend notunh drop it from the map or mark it demolished. Demolition date not confirmed by a news report. Clio uses 'Elizabeth DeMeritt House' loosely for the practice-house lineage; don't confuse it with Craft Cottage (the original practice house).",
+  "judgeNotes": "Unranked (demolished). Dropped 01.jpg: a ~120px crop too small to show anything."
+}

@@ -1,0 +1,45 @@
+{
+  "name": "UNH Police Station",
+  "aliases": [
+    "University Police",
+    "UNH Police Department"
+  ],
+  "place": "UNH Police Station",
+  "category": "support",
+  "use": "UNH Police Department headquarters",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "The UNH Police Department is located at 18 Waterworks Road, Durham.",
+      "src": [
+        "upd"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Police Department",
+      "url": "https://www.unh.edu/upd"
+    }
+  ],
+  "sources": {
+    "upd": {
+      "title": "Contact Us",
+      "publisher": "UNH Police Department",
+      "url": "https://www.unh.edu/upd/about/contact-us",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 5,
+    "function": 6,
+    "character": 2,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "UNH Police headquarters on Waterworks Road; only the address is confirmed.",
+  "notes": "Only the address is confirmed. I did not verify that notunh's 'UNH Police Station' building footprint (near -70.9389, 43.1335) is 18 Waterworks Road; check against batch 5's 22 Waterworks Road record. Construction date, history and photos not found.",
+  "judgeNotes": "No photos or history."
+}

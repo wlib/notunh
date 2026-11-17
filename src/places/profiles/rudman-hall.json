@@ -1,0 +1,63 @@
+{
+  "name": "Rudman Hall",
+  "place": "Rudman Hall",
+  "category": "academic",
+  "use": "Biological sciences research (Department of Biological Sciences offices at 46 College Road per search excerpt)",
+  "built": 1995,
+  "builtText": "1995 (dedicated Apr 30, 1996)",
+  "architect": "Ellenzweig",
+  "style": "1990s brick research building with glazed stair tower, designed to bridge campus styles",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Ellenzweig's first UNH project, completed 1995 across from Spaulding and designed to bridge the campus's architectural aesthetics; it included a partial renovation of Spaulding.",
+      "src": [
+        "ellz"
+      ]
+    },
+    {
+      "text": "Dedicated April 30, 1996 to Senator Warren B. Rudman, who secured $15 million in federal funding in 1992, matched by the state.",
+      "src": [
+        "A"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "ellz": {
+      "title": "University of New Hampshire Spaulding Hall (mentions Rudman)",
+      "publisher": "Ellenzweig",
+      "url": "https://www.ellenzweig.com/our-projects/university-of-new-hampshire-spaulding-hall/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 5,
+    "condition": 6,
+    "function": 7,
+    "character": 4,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "Ellenzweig's tidy 1995 brick biology research block with a glazed stair tower.",
+  "notes": "No licensed photo found. Archives reference photo shows a four-story red-brick block with a glazed, white-framed central stair tower and gabled roof line; tidy 1990s contextual design. No renovations documented; no interior or student evidence found. Old row's \"Spaulding swing space 2021\" not verified.",
+  "judgeNotes": "Archives photo only; no reviews."
+}

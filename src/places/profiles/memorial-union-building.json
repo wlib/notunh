@@ -1,0 +1,155 @@
+{
+  "name": "Memorial Union Building",
+  "aliases": [
+    "MUB",
+    "New Hampshire Memorial Union",
+    "Memorial Union"
+  ],
+  "place": "Memorial Union Building",
+  "category": "student-life",
+  "use": "Student union and New Hampshire's official state war memorial: bookstore, post office, theaters, dining, meeting and function rooms, student organizations",
+  "built": 1957,
+  "builtText": "Built 1957; dedicated October 12, 1957",
+  "architect": "Ronald Gourley (Harvard faculty); builder John A. Volpe Construction",
+  "style": "Mid-century modern with later additions",
+  "status": "in-use",
+  "statusNote": "Roof replacement in design",
+  "renovations": [
+    {
+      "year": 1995,
+      "what": "Extensive renovation and addition, including the MUB theaters",
+      "major": true,
+      "src": [
+        "arch_adm",
+        "tnh_mub18"
+      ]
+    },
+    {
+      "year": 2026,
+      "what": "Roof replacement: design-services RFQ issued November 2025",
+      "major": false,
+      "src": [
+        "mub_roof"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Built 1957 as student union, conference centre and New Hampshire's official state war memorial; designed by Ronald Gourley and built by John A. Volpe Construction; dedicated October 12, 1957.",
+      "src": [
+        "arch_adm"
+      ]
+    },
+    {
+      "text": "Artist and professor John Hatch made the coloured glass window in the war memorial room, the first window in the world to use laminated safety glass decoratively.",
+      "src": [
+        "arch_adm"
+      ]
+    },
+    {
+      "text": "Extensively renovated in 1995; the theater addition's debt was still being paid off in 2018.",
+      "src": [
+        "arch_adm",
+        "tnh_mub18"
+      ]
+    },
+    {
+      "text": "In 2018 the MUB director said 10,000-12,000 people used it daily and that the roof and largely 1950s electrical system needed replacing within ten years; a full repair was estimated at about $85 million, minimum upkeep about $25 million.",
+      "src": [
+        "tnh_mub18"
+      ]
+    },
+    {
+      "text": "USNH sought design services for a full MUB roof replacement in November 2025.",
+      "src": [
+        "mub_roof"
+      ]
+    },
+    {
+      "text": "Now branded the New Hampshire Memorial Union; it houses the bookstore, Cats' Cupboard food pantry, Granite Square Station mail and a games room.",
+      "src": [
+        "mub_svc"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Memorial_Union_Building%2C_UNH%2C_Durham_NH.jpg/1280px-Memorial_Union_Building%2C_UNH%2C_Durham_NH.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Memorial_Union_Building,_UNH,_Durham_NH.jpg",
+      "credit": "John Phelan",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Fieldstone base, brick upper block lettered MEMORIAL UNION and stone tower over a paved plaza",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+    },
+    {
+      "url": "https://live.staticflickr.com/804/27474555148_1a1b750e17_b.jpg",
+      "page": "https://www.flickr.com/photos/139546745@N02/27474555148/",
+      "credit": "Samantha Walsh / UNHDigitalSandbox (Flickr)",
+      "year": 2018,
+      "view": "interior",
+      "caption": "Bookstore entrance in the MUB's terrazzo-floored corridor",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+    }
+  ],
+  "more": [
+    {
+      "label": "New Hampshire Memorial Union",
+      "url": "https://students.unh.edu/campus-services/new-hampshire-memorial-union"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life"
+    },
+    {
+      "label": "Wikipedia: University of New Hampshire",
+      "url": "https://en.wikipedia.org/wiki/University_of_New_Hampshire"
+    }
+  ],
+  "sources": {
+    "arch_adm": {
+      "title": "Administrative and Campus Life Buildings",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life",
+      "accessed": "2026-11-04"
+    },
+    "tnh_mub18": {
+      "title": "MUB lacks necessary funding for major maintenance and repairs",
+      "publisher": "The New Hampshire",
+      "url": "https://www.tnhdigital.com/article/2018/11/mub-lacks-necessary-funding-for-major-maintenance-and-repairs",
+      "accessed": "2026-11-04"
+    },
+    "mub_roof": {
+      "title": "Design Services for UNH Memorial Union Building Roof Replacement (RFQ listing)",
+      "publisher": "HigherGov (USNH solicitation listing)",
+      "url": "https://www.highergov.com/sl/contract-opportunity/nh-design-services-for-unh-memorial-union-b-59364723/",
+      "accessed": "2026-11-04"
+    },
+    "mub_svc": {
+      "title": "New Hampshire Memorial Union",
+      "publisher": "UNH Student Life / Campus Services",
+      "url": "https://students.unh.edu/campus-services/new-hampshire-memorial-union",
+      "accessed": "2026-11-04"
+    },
+    "wiki": {
+      "title": "University of New Hampshire",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/University_of_New_Hampshire",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 5,
+    "condition": 4,
+    "function": 7,
+    "character": 8,
+    "reputation": 6
+  },
+  "confidence": "high",
+  "verdict": "The state's official war memorial and the student union: stark 1957 brick above a fieldstone wall, heavily used and ageing.",
+  "notes": "Photo (2013) shows the plaza side: a windowless brick box above a long fieldstone wall, a slim stone tower and a glazed entrance. The massing is stark, and the stone gives it some texture. No interior photos. The old row's list of later projects (balcony 2002, AV 2008, restrooms 2012, south addition) was not verified. Roof project status after the RFQ is unknown. Official name now appears as 'New Hampshire Memorial Union' on Student Life pages; notunh uses 'Memorial Union Building'. A licensed 2018 interior (Flickr, captioned as the bookstore in the MUB) shows a plain corridor with terrazzo floor and glazed shopfront.",
+  "judgeNotes": "Photo shows a windowless brick box over fieldstone; bookstore corridor ordinary. Exterior down a point from the old run."
+}

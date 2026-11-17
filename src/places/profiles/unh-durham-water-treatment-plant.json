@@ -1,0 +1,67 @@
+{
+  "name": "UNH/Durham Water Treatment Plant",
+  "place": "UNH/Durham Water Treatment Plant",
+  "category": "support",
+  "use": "Surface-water treatment plant for the jointly operated UNH-Durham water system (about 2 million gallons/day)",
+  "built": 2020,
+  "builtText": "Operational March 13, 2020; replaced the 1935 Arthur Rollins Treatment Plant",
+  "architect": "Woodard & Curran (design-build)",
+  "style": "Contemporary utility building with gabled roofs (from aerial)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Became operational March 13, 2020, replacing the Arthur Rollins Treatment Plant built in 1935; UNH owns and operates it, including the Lamprey River pump station.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Treats water from the Lamprey River, the Oyster River or the Spruce Hole Well; maximum capacity about 2 million gallons per day; serves UNH and the Town of Durham.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Design-build by Woodard & Curran: a 26,000 sq ft plant with three residuals lagoons, a process area visible through interior windows, and a training lab for engineering students; sited above the 100-year floodplain beside College Woods, unlike the old plant.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Facilities: Water Treatment Plant",
+      "url": "https://www.unh.edu/facilities/about/energy-utilities/water-treatment-plant"
+    },
+    {
+      "label": "Woodard & Curran project page",
+      "url": "https://www.woodardcurran.com/projects/design-build-delivery-for-university-water-treatment-plant"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "UNH/Durham Water Treatment Plant",
+      "publisher": "UNH Facilities",
+      "url": "https://www.unh.edu/facilities/about/energy-utilities/water-treatment-plant",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Design-Build Water Treatment Facility",
+      "publisher": "Woodard & Curran",
+      "url": "https://www.woodardcurran.com/projects/design-build-delivery-for-university-water-treatment-plant",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 4,
+    "interior": 4,
+    "condition": 9,
+    "function": 9,
+    "character": 3,
+    "reputation": 4
+  },
+  "confidence": "med",
+  "verdict": "The 2020 treatment plant serving campus and town: a tidy gabled utility building beside its lagoons.",
+  "notes": "No licensed photo. Reference aerial: a long grey building with a gabled metal roof and stone-faced base, beside three lagoons and woods; tidy industrial architecture. Ceilings marked high because of the process hall (inferred, not documented). Square footage conflicts: a search snippet cited 41,800 sq ft from a 2017 UNH planning submission (not opened); Woodard & Curran says 26,000. Whether the old Rollins building was demolished is not confirmed.",
+  "judgeNotes": "Aerial reference only. Scored as utility: high on condition and function, low on looks and story."
+}

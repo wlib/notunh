@@ -1,0 +1,70 @@
+{
+  "name": "Elliott Alumni Center",
+  "aliases": [
+    "Elliot Alumni"
+  ],
+  "place": "Elliott Alumni Center",
+  "category": "administration",
+  "use": "UNH Alumni Association and advancement/foundation offices; events",
+  "built": 1976,
+  "builtText": "1976 (dedicated June 11, 1977)",
+  "architect": "Banwell, White & Arnold, Inc.; built by U.S. Construction Co. of Nashua",
+  "style": "1970s modern (brick-and-shingle tower and low wings in 1970s photo)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Built with funds from alumni and friends, and named for John S. Elliott, a 1915 agriculture graduate, trustee and donor.",
+      "src": [
+        "arch_admin"
+      ]
+    },
+    {
+      "text": "The Alumni Association lists the Elliott Alumni Center, 9 Edgewood Road, as its address.",
+      "src": [
+        "alum"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: administrative and campus life buildings",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life"
+    },
+    {
+      "label": "UNH Alumni Association: About us",
+      "url": "https://alumni.unh.edu/about-us"
+    }
+  ],
+  "sources": {
+    "arch_admin": {
+      "title": "Administrative and Campus Life Buildings",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/administrative-and-campus-life",
+      "accessed": "2026-11-04"
+    },
+    "arch_list": {
+      "title": "UNH Buildings (list with construction dates and uses)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "alum": {
+      "title": "About Us",
+      "publisher": "UNH Alumni Association",
+      "url": "https://alumni.unh.edu/about-us",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 5,
+    "condition": 5,
+    "function": 6,
+    "character": 4,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "1976 alumni building on Edgewood Road with a brick-and-shingle entrance tower; unremarkable and little documented.",
+  "notes": "The archives spell it both 'Elliott' and 'Elliot'. No renovation history found. No licensed photo found (Commons and Flickr CC searched); ref-01 is a 1970s archives photo of the entrance tower with flags. No reviews.",
+  "judgeNotes": "Only a 1970s archives photo; no condition or review evidence."
+}

@@ -1,0 +1,71 @@
+{
+  "name": "Alexander Hall",
+  "place": "Alexander Hall",
+  "category": "residence",
+  "use": "First-year-only traditional residence hall, 135 students; Liberal Arts learning community (2nd floor)",
+  "built": 1951,
+  "builtText": "Built 1951; dedicated October 20, 1951 as a men's dormitory",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Dedicated October 20, 1951 as a men's dormitory and named for Norman Alexander, economics instructor from 1923, Dean of Men 1929-1944 and government department chair.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "A first-year-only hall of 135 students with a Liberal Arts learning community on the second floor; it shares an outdoor quad with other halls.",
+      "src": [
+        "h_alexander"
+      ]
+    },
+    {
+      "text": "Has a recreation lounge and a separate study lounge, first-floor kitchen and laundry; accessibility features listed are Braille signage, roll-in building access and strobe alerts in some rooms. No air conditioning or elevator is listed.",
+      "src": [
+        "h_alexander"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Alexander Hall",
+      "url": "https://www.unh.edu/housing/facility/alexander-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "arch_res": {
+      "title": "Student Residences",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "h_alexander": {
+      "title": "Alexander Hall",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/alexander-hall",
+      "accessed": "2026-11-04"
+    },
+    "s19b": {
+      "title": "The Ultimate Ranking of Freshman Dorms at UNH",
+      "publisher": "Society19",
+      "url": "https://society19.com/the-ultimate-ranking-of-freshman-dorms-at-unh/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 4,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "Plain 1951 brick dorm with a colonial doorway; no A/C, but students rate it the best first-year hall for its size and location.",
+  "notes": "No licensed photo found. Archives photo shows a plain three-storey flat-roofed brick block with regular punched windows, a modest postwar dormitory. No renovation history found; 'no AC' inferred from Housing's amenity list, which names AC for halls that have it. Architect unknown. Society19 article metadata says Oct 2025; the 'undecided COLA only' detail may be dated (Housing now says first-year with a Liberal Arts floor).",
+  "judgeNotes": "Reference photos: modest three-storey Georgian-ish block. Reputation carries it."
+}

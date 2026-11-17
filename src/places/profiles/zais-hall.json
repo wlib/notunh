@@ -1,0 +1,72 @@
+{
+  "name": "Zais Hall",
+  "place": "Zais Hall",
+  "category": "administration",
+  "use": "Army and Air Force ROTC; UNH ROTC Hall of Fame",
+  "built": 1948,
+  "builtText": "1948 (dedicated as Zais Hall Oct 14, 1978)",
+  "style": "Postwar one-and-a-half-story brick building with dormers (per reference photo)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Built 1948; used for ROTC.",
+      "src": [
+        "IDX"
+      ]
+    },
+    {
+      "text": "Dedicated October 14, 1978 for General Melvin Zais (class of 1937), then the highest-ranking UNH alumnus in the armed forces; it houses Army and Air Force ROTC.",
+      "src": [
+        "A"
+      ]
+    },
+    {
+      "text": "The UNH ROTC Hall of Fame plaques are permanently displayed in Zais Hall.",
+      "src": [
+        "rotc"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Army ROTC Hall of Fame",
+      "url": "https://www.unh.edu/army/about-us/unh-rotc-alumni"
+    },
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "A": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "IDX": {
+      "title": "Buildings (index with construction dates)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "rotc": {
+      "title": "UNH ROTC Alumni (Hall of Fame)",
+      "publisher": "UNH Army ROTC",
+      "url": "https://www.unh.edu/army/about-us/unh-rotc-alumni",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 3,
+    "interior": 3,
+    "condition": 4,
+    "function": 5,
+    "character": 4,
+    "reputation": 4
+  },
+  "confidence": "low",
+  "verdict": "1948 brick building for ROTC, with a dormered roof and the ROTC Hall of Fame.",
+  "notes": "Category corrected from academic to administration (ROTC program offices; arguably support). No licensed photo. Reference photo shows a modest red-brick building with a long dormered roof, a glazed vestibule and signage; utilitarian. Original 1948 use and any renovations unknown. Address 45 College Rd per search excerpt only.",
+  "judgeNotes": "Reference photo shows a utilitarian brick front."
+}

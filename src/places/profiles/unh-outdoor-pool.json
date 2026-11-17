@@ -1,0 +1,84 @@
+{
+  "name": "UNH Outdoor Pool",
+  "place": "Outdoor Pool",
+  "category": "athletics",
+  "use": "Seasonal outdoor pool for campus and the Durham community",
+  "built": 2016,
+  "builtText": "original WPA pool opened Aug 19, 1938; closed 2013; new pool opened Aug 2016",
+  "architect": "Pool design: Water Technology, Inc. (part of the Hughes Group Hamel project)",
+  "status": "in-use",
+  "statusNote": "Open-air pool, seasonal",
+  "renovations": [
+    {
+      "year": 2016,
+      "what": "Old pool replaced by a new pool built inside the original footprint, alongside the Hamel expansion",
+      "major": true,
+      "src": [
+        "s1",
+        "s2"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "The first UNH outdoor pool opened August 19, 1938, one of some 200 WPA pools; it was the last still operating when it closed at the end of 2013 after years of structural and environmental problems.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "The new pool was built within the original footprint and finished for the fall 2016 semester.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "The 14,355 sq ft leisure pool has zero-depth entry, wall sprays and geysers, eight lap lanes and a diving well.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Replacement of the outdoor pool was part of the 2016 Hamel Recreation Center expansion by Hughes Group Architects and Shawmut.",
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library: athletic facility histories",
+      "url": "https://library.unh.edu/find/archives/buildings/athletic-facilities"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Making a Splash (UNH Magazine Fall 2016; Wayback copy)",
+      "publisher": "UNH Today",
+      "url": "https://web.archive.org/web/20240114103311/https://www.unh.edu/unhtoday/2016/08/making-splash",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Hamel Recreation Center Pool at New Hampshire",
+      "publisher": "Water Technology, Inc.",
+      "url": "https://watertechnologyinc.com/projects/hamel-recreation-center-pool-at-new-hampshire",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Athletic Facilities (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/athletic-facilities",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Facilities (event venues)",
+      "publisher": "UNH Events & Conferences",
+      "url": "https://www.unh.edu/events-conferences/facilities",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "high",
+  "verdict": "The 2016 leisure and lap pool in the footprint of the 1938 WPA pool, the last of its kind until it closed.",
+  "notes": "Not a building: an outdoor pool with a bathhouse. Old row's $5.5M cost and the 2013–14 community petitions were not re-verified. 'accessible: partial' rests on zero-depth entry only. 'built' set to 2016 (the current pool); 1938 is the original. Photos: historic image shows a huge granite-edged pond-like pool with diving tower; current aerial shows a curvy free-form pool with lap lanes and lawn. No licensed photo found (searched the Commons category tree under 'University of New Hampshire' and 'Durham, New Hampshire', Commons file search by name, Commons geosearch at the building's coordinates, and Openverse/Flickr CC).",
+  "judgeNotes": "Open-air: unranked. Exterior 5 for a pool deck and bathhouse; the old run scored it as architecture."
+}

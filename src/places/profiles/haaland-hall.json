@@ -1,0 +1,104 @@
+{
+  "name": "Haaland Hall",
+  "aliases": [
+    "SERC C"
+  ],
+  "place": "Haaland Hall",
+  "category": "residence",
+  "use": "Medium residence hall (236 students), first-year and upper-division; Environmental Sustainability learning community",
+  "built": 2008,
+  "builtText": "Opened 2008 as SERC C; renamed 2013",
+  "architect": "JSA, Inc. (builder: Harvey Construction)",
+  "style": "Neo-traditional brick residence hall with cast-stone bands and gabled roofs (from photos)",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Built as SERC C (Southeast Residence Complex), opened 2008; renamed Haaland Hall on October 11, 2013.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "SERC was a three-building complex for 730 students built by Harvey Construction to designs by JSA, Inc.; SERC C is about 64,000 sq ft. Harvey first demolished nine existing two-storey buildings on the site; Phase 1 (A and B) finished by summer 2007, Phase 2 (C) by summer 2008.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "Housing lists 236 students; 28 traditional doubles, 8 traditional singles and 41 suites of two doubles; some lounges converted to expanded-occupancy rooms.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Air conditioning, elevator, limited-use bathrooms on two floors, kitchen, laundry, two academic classrooms, study space and a volleyball court.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Hosts the Environmental Sustainability first-year learning community; many residents are engineering and life-science students near Kingsbury Hall.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Named for Gordon A. Haaland, UNH president 1983-90.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Address: 27 DeMeritt Circle.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Haaland Hall",
+      "url": "https://www.unh.edu/housing/facility/haaland-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#haaland"
+    },
+    {
+      "label": "Harvey Construction: SERC project",
+      "url": "https://www.harveyconstruction.com/cpt_project/southeast-residence-complex/"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Haaland Hall (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#haaland",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Haaland Hall | Housing & Residential Life",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/haaland-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "UNH Southeast Residence Complex",
+      "publisher": "Harvey Construction",
+      "url": "https://www.harveyconstruction.com/cpt_project/southeast-residence-complex/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 5,
+    "condition": 7,
+    "function": 8,
+    "character": 3,
+    "reputation": 6
+  },
+  "confidence": "med",
+  "verdict": "2008 neo-traditional SERC hall with A/C and an elevator; comfortable but generic, with block-walled rooms.",
+  "notes": "No licensed photo found. Reference exterior: brick with cast-stone bands, gabled ends, wide stair approach; tidy but generic. Room photo (shared across SERC pages): painted block walls, checkerboard vinyl tile, one double-hung window; utilitarian. Old row said \"expanded occupancy in converted lounges\"; Housing confirms counts exclude such spaces. No specific reviews found.",
+  "judgeNotes": "Reference photos: tidy brick with cast-stone bands; room photo is utilitarian."
+}

@@ -1,0 +1,108 @@
+{
+  "name": "Woodman Horticultural Research Farm and Kingman Farm",
+  "aliases": [
+    "Woodman Farm",
+    "Horticultural Farm",
+    "Kingman Farm",
+    "Kingman Research Farm"
+  ],
+  "place": null,
+  "category": "research-farm",
+  "use": "NH Agricultural Experiment Station research farms: crop breeding and management (Woodman, Durham) and horticultural, agronomic and wildlife research (Kingman, Madbury)",
+  "built": 1917,
+  "builtText": "Woodman bought 1917 (orchards leased from 1912); Kingman land bought 1965 and after 1972",
+  "style": "Farmstead",
+  "status": "in-use",
+  "statusNote": "Woodman is in Durham; Kingman is in Madbury, outside Durham",
+  "facts": [
+    {
+      "text": "The college had leased Woodman's orchards since about 1912 and bought the farm in 1917 from Moses G. Woodman's executor for 'one dollar and other valuable considerations'.",
+      "src": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "text": "About 30 acres of Woodman are in agricultural research and production; the other roughly 125 acres have returned to forest and wetland.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Woodman's western side is farmed conventionally and its eastern side is certified organic; it hosts 10–15 active projects with two full-time staff.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Woodman's woods also hold the equestrian cross-country course.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Kingman Farm was first settled by Joseph Hicks and Sarah Davis before 1750; UNH bought 202 acres from Lotta Kingman Laton in 1965 and the farmhouse and most remaining land after her death in 1972.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "The 360-acre Kingman Research Farm is on Knox Marsh Road (Route 155) in Madbury, about 3 miles from campus, and was home to J. Brent Loy's cucurbit breeding program.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "The Kingman farmhouse was the second house in Madbury to have a television, in the late 1940s–1950s.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "COLSA: Woodman Horticultural Research Farm",
+      "url": "https://colsa.unh.edu/facility/woodman-horticultural-research-farm"
+    },
+    {
+      "label": "COLSA: Kingman Research Farm",
+      "url": "https://colsa.unh.edu/facility/kingman-research-farm"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Woodman Horticultural Research Farm",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/facility/woodman-horticultural-research-farm",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Kingman Research Farm",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/facility/kingman-research-farm",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 3,
+    "condition": 5,
+    "function": 6,
+    "character": 6,
+    "reputation": 5
+  },
+  "confidence": "med",
+  "verdict": "The experiment station's research farms: Woodman's organic and conventional plots near campus, plus the 1750s Kingman farmstead in Madbury.",
+  "notes": "Recommend splitting: Woodman (Durham, off Spinney Lane / Horticultural Farm Road near the observatory) is in scope, but Kingman Farm is in Madbury and falls outside the 'Durham campus only' rule. notunh's gazetteer does have a 'Kingman Farm' area feature. These are farms, not buildings. Farmhouse and barn construction dates weren't found. No licensed photos found. The reference photos show tidy traditional farmsteads (white Cape farmhouse, red barn). No reviews.",
+  "judgeNotes": "Reference photos show plain farmhouse and fields. Scored as a farm."
+}

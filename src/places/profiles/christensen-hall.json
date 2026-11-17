@@ -1,0 +1,118 @@
+{
+  "name": "Christensen Hall",
+  "place": "Christensen Hall",
+  "category": "residence",
+  "use": "First-year residence hall (ten floors) beside Philbrook Dining Hall; twin of Williamson",
+  "built": 1969,
+  "builtText": "Opened September 1969, completed late 1969; dedicated September 19, 1970",
+  "architect": "Ulrich Franzen & Associates (builder: Harvey Construction Co.)",
+  "style": "Late Modern brick towers (Franzen)",
+  "status": "in-use",
+  "statusNote": "Renovation with Williamson planned",
+  "renovations": [
+    {
+      "year": 2026,
+      "what": "Planned renovation with Williamson (interiors, bathrooms, common areas, heating and plumbing); $32.3M of deferred maintenance addressed. Design/construction status not confirmed.",
+      "major": false,
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Designed by Ulrich Franzen & Associates and built by Harvey Construction, it was UNH's second high-rise residence; it opened to residents in September 1969 and was dedicated September 19, 1970.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It was the first UNH hall with an apartment for a faculty member in residence, meant to foster student-faculty contact outside class.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Named for Ernest W. Christensen, a 1923 graduate, coach and trustee (1940-61).",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Housing describes small floor communities of 25-35 residents, a first-floor study lounge with fireplace, a basement rec lounge (52-inch TV, pool, ping-pong, foosball, piano), outdoor athletic courts and picnic area; floor plans list ten floors.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "Accessibility per Housing: braille signage, elevator, roll-in building access, strobe/audible alerts in all rooms. No air conditioning listed.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "UNH Facilities lists a Williamson & Christensen renovation: at 50 years old the interiors are worn, bathrooms and common spaces need modernizing, and heating and plumbing systems are failing; the project addresses $32.3 million in deferred maintenance.",
+      "src": [
+        "s3"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Christensen Hall",
+      "url": "https://www.unh.edu/housing/facility/christensen-hall"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#christensen"
+    },
+    {
+      "label": "UNH Facilities: capital projects (Williamson & Christensen)",
+      "url": "https://www.unh.edu/facilities/about/capital-planning-management/capital-projects-underway"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Christensen Hall (building history)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences#christensen",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Christensen Hall | Housing & Residential Life",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/christensen-hall",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "Capital Projects Underway",
+      "publisher": "UNH Facilities",
+      "url": "https://www.unh.edu/facilities/about/capital-planning-management/capital-projects-underway",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "The Ultimate Ranking Of Freshman Dorms At UNH",
+      "publisher": "Society19",
+      "url": "https://society19.com/the-ultimate-ranking-of-freshman-dorms-at-unh/amp",
+      "accessed": "2026-11-04"
+    },
+    "s5": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 6,
+    "interior": 4,
+    "condition": 3,
+    "function": 5,
+    "character": 6,
+    "reputation": 6
+  },
+  "confidence": "high",
+  "verdict": "Ulrich Franzen's stepped brick tower, bold from outside but worn within: no A/C, dated baths, renovation pending.",
+  "notes": "No licensed photo of Christensen found on Commons (only Williamson). Reference photos show deep red-brick towers with recessed, stepped window bays and a brick-lined undercroft entrance (the old row's \"concrete towers\" is wrong: cladding is brick). Room photo: painted walls, average ceiling, one window. Cost: search snippets cite a $70M state-committee approval (Jan 2026) and a USNH not-to-exceed of $76M (Dec 2025), but I could not open either source (scanned PDF / 404), so no cost is recorded. Old row's DOCOMOMO-US and Buildings of New England claims not verified. Hall size not stated on the Christensen page; Society19 dates are page publish dates (content appears older).",
+  "judgeNotes": "Reference photos show sculpted brick towers with recessed bays (not concrete as the old run said). Character down a point: Franzen design is notable, but the story is thin. The planned 2026 renovation is marked major: false until it is done."
+}

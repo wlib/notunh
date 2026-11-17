@@ -1,0 +1,95 @@
+{
+  "name": "Fairchild Dairy Teaching and Research Center",
+  "aliases": [
+    "Fairchild Dairy",
+    "UNH dairy barn"
+  ],
+  "place": "Fairchild Dairy Teaching and Research Center",
+  "category": "research-farm",
+  "use": "Working research and teaching dairy (~90 milking cows plus ~70 young stock, including the student-run CREAM herd); open to visitors daily",
+  "built": 1989,
+  "builtText": "Opened 1989",
+  "style": "Agricultural barns",
+  "status": "in-use",
+  "statusNote": "Working dairy at 36 O'Kane Road, west edge of campus",
+  "renovations": [
+    {
+      "year": 2024,
+      "what": "Roof replacement on the heifer barn (bid 2023)",
+      "major": false,
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "The center opened in 1989 and is named for Thomas Fairchild, a dairy science professor and Extension specialist who became COLSA dean and interim UNH president.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "It houses about 90 cows of milking age and about 70 growing replacement animals, including 20–25 cows managed by students in the CREAM program.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Research focuses on calf health, animal nutrition, methane reduction and cow reproductive health.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "The adjacent Keener Dairy Research Building holds labs and offices for dairy faculty and graduate students.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "The public can visit daily from 8:00 a.m. to 4:30 p.m. and watch milking at 3:30 p.m.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "UNH has run a dairy program since the Hatch Act of 1887; a dairy barn was among the first structures on the Durham campus.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "COLSA: Fairchild Dairy",
+      "url": "https://colsa.unh.edu/facility/fairchild-dairy-teaching-research-center"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Fairchild Dairy Teaching and Research Center",
+      "publisher": "UNH College of Life Sciences and Agriculture",
+      "url": "https://colsa.unh.edu/facility/fairchild-dairy-teaching-research-center",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "UNH Fairchild Dairy Teaching & Research Building Roof Replacement",
+      "publisher": "ConstructConnect",
+      "url": "https://projects.constructconnect.com/details/6382175-unh-fairchild-dairy-teaching-research-building-roof-replacement&find_loc=new-hampshire-03824",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 3,
+    "condition": 6,
+    "function": 8,
+    "character": 6,
+    "reputation": 7
+  },
+  "confidence": "med",
+  "verdict": "A working dairy of red barns with about 90 milking cows, open to visitors daily; useful, well kept and much loved by the ag school.",
+  "notes": "Correction: the old status 'off main campus' is misleading. The dairy is at 36 O'Kane Road on UNH's farm land at the west edge of the Durham campus, near the Child Study and Development Center. The 2024 roof job is a bid listing; completion isn't confirmed. The reference drone photo shows a well-kept cluster of red barns with white roofs. No licensed photo found. Visitors are welcome, but I found no rated public reviews.",
+  "judgeNotes": "Reference drone photo shows a tidy barn cluster. Interior scored as barns."
+}

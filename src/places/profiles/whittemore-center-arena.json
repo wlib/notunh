@@ -1,0 +1,193 @@
+{
+  "name": "Whittemore Center Arena",
+  "aliases": [
+    "Whittemore",
+    "The Whitt",
+    "Key Auto Group Complex"
+  ],
+  "place": "Whittemore Center Arena",
+  "category": "athletics",
+  "use": "Hockey arena (men's and women's ice hockey), concerts, commencement and large events",
+  "built": 1995,
+  "builtText": "construction began Nov 12, 1994; opened Nov 1995; dedicated May 5, 1996",
+  "status": "in-use",
+  "statusNote": "Hockey renovation project announced 2023; status unconfirmed",
+  "renovations": [
+    {
+      "year": 2015,
+      "what": "New HD center-hung scoreboard",
+      "major": false,
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "year": 2017,
+      "what": "HID lighting replaced with LED",
+      "major": false,
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "year": 2022,
+      "what": "$6M renovation: ice reduced from 200x100 to 200x90 ft, new glass, NHL-style boards, sound system",
+      "cost": 6000000,
+      "major": false,
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "year": 2023,
+      "what": "UNH Hockey Renovation Project announced: larger accessible locker rooms, expanded strength and conditioning, offices; goal $16M ($4M gift + $6M state); groundbreaking tentatively 2025",
+      "major": false,
+      "src": [
+        "s3",
+        "s4"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Construction began November 12, 1994; the arena opened in November 1995 and was dedicated May 5, 1996, named for Frederick B. Whittemore, who gave $1.5 million toward it.",
+      "src": [
+        "s1"
+      ]
+    },
+    {
+      "text": "Built for $30 million; it replaced the adjacent Snively Arena as home of UNH hockey.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "The rink was a full Olympic-size 200x100 ft sheet until a 2022 renovation reduced it to 200x90 ft.",
+      "src": [
+        "s2"
+      ]
+    },
+    {
+      "text": "UNH had invested nearly $14 million in recent years in the ice surface, audio/visual technology and part of the HVAC before the 2023 hockey renovation project.",
+      "src": [
+        "s3"
+      ]
+    },
+    {
+      "text": "The NH House of Representatives met in the arena in 2020 for social distancing.",
+      "src": [
+        "s2"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Whittemore_Center%2C_UNH_2.jpg/1280px-Whittemore_Center%2C_UNH_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Whittemore_Center,_UNH_2.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Glass entrance front across the field hockey turf",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/Whittemore_Center%2C_UNH_3.jpg/1280px-Whittemore_Center%2C_UNH_3.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Whittemore_Center,_UNH_3.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Curved flank with climbing vines",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Whittemore_Center%2C_UNH%2C_Durham_NH.jpg/1280px-Whittemore_Center%2C_UNH%2C_Durham_NH.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Whittemore_Center,_UNH,_Durham_NH.jpg",
+      "credit": "John Phelan",
+      "view": "exterior",
+      "year": 2013,
+      "caption": "Long view across Memorial Field",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/92/Whittemore_Center_Night.jpg/1280px-Whittemore_Center_Night.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Whittemore_Center_Night.jpg",
+      "credit": "Slulek",
+      "view": "exterior",
+      "year": 2024,
+      "caption": "Lit arena behind Memorial Field at night",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+    },
+    {
+      "url": "https://live.staticflickr.com/2297/2269365385_c1498f886e_b.jpg",
+      "page": "https://www.flickr.com/photos/7595390@N06/2269365385",
+      "credit": "intenteffect (Flickr)",
+      "view": "interior",
+      "year": 2008,
+      "caption": "Arena bowl: steel roof trusses, banners and near-empty seating",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/"
+    },
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/51/Whittemore_Center%2C_UNH_1.jpg/1280px-Whittemore_Center%2C_UNH_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Whittemore_Center,_UNH_1.jpg",
+      "credit": "AcrossTheAtlantic",
+      "view": "detail",
+      "year": 2013,
+      "caption": "Wildcat statue at the entrance plaza",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+    }
+  ],
+  "more": [
+    {
+      "label": "Wikipedia: Whittemore Center",
+      "url": "https://en.wikipedia.org/wiki/Whittemore_Center"
+    },
+    {
+      "label": "UNH Library: athletic facility histories",
+      "url": "https://library.unh.edu/find/archives/buildings/athletic-facilities"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Athletic Facilities (building histories)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/athletic-facilities",
+      "accessed": "2026-11-04"
+    },
+    "s2": {
+      "title": "Whittemore Center",
+      "publisher": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Whittemore_Center",
+      "accessed": "2026-11-04"
+    },
+    "s3": {
+      "title": "UNH Receives $4M Gift for Whittemore Center Renovations, Creates Key Auto Group Complex (Wayback copy, 2025-03-28)",
+      "publisher": "UNH Today",
+      "url": "https://web.archive.org/web/20250328232204/https://www.unh.edu/unhtoday/node/19951",
+      "accessed": "2026-11-04"
+    },
+    "s4": {
+      "title": "Athletics pride (Winter 2024)",
+      "publisher": "UNH Magazine",
+      "url": "https://magazine.unh.edu/issue/winter-2024/athletics-pride/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 6,
+    "condition": 7,
+    "function": 8,
+    "character": 6,
+    "reputation": 8
+  },
+  "confidence": "high",
+  "verdict": "1995 hockey arena with a glass entrance and curved flank; a loud, well-loved home ice, freshened in 2022.",
+  "notes": "Whether the hockey renovation broke ground in 2025 or is complete is NOT confirmed (latest source: UNH Magazine Winter 2024, 'tentatively scheduled for 2025'). Sources disagree on project size ($16M goal; search snippets mention $20M/$23M). Architect not found. Capacity (old row 6,501) not re-verified this pass. Old row's Stadium Journey 3.86 and 'frankly unsafe' boards quote not re-verified. The archives paragraph says the Whittemore Center 'houses the Hamel Recreation Center' (outdated wording). Photos: long low grey concrete-and-glass arena with a band of clerestory glazing and a square entrance tower; utilitarian. Licensed photos (2013, 2024): long low concrete-and-glass arena with a curving metal roof edge, ribbon clerestory glazing and a square entrance tower, fronted by the green field-hockey turf; tidy but generic. Interior not photographed. Licensed interior added: a 2008 Flickr photo of the arena bowl shows exposed steel roof trusses over steep bench seating.",
+  "judgeNotes": "Photos show a tidy, generic arena. Exterior up a point from the old run."
+}

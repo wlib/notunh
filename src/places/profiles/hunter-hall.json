@@ -1,0 +1,84 @@
+{
+  "name": "Hunter Hall",
+  "place": "Hunter Hall",
+  "category": "residence",
+  "use": "Small traditional residence hall, 111 students; Lower Quad; co-ed first-year and upper-class hall with a backyard and the Lower Quad four-square court",
+  "built": 1946,
+  "builtText": "Built 1946; dedicated June 14, 1947",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "Dedicated June 14, 1947 and named for Roy D. Hunter, trustee for more than 28 years (13 as board president) who twice served as acting chief executive.",
+      "src": [
+        "arch_res"
+      ]
+    },
+    {
+      "text": "Built 1946; one of the three Lower Quad halls with Engelhardt, Gibbs and Hunter.",
+      "src": [
+        "arch_idx",
+        "h_hunter"
+      ]
+    },
+    {
+      "text": "Hall of 111 students at 8 Quad Way; co-ed first-year and upper-class hall with a backyard and the Lower Quad four-square court.",
+      "src": [
+        "h_hunter"
+      ]
+    },
+    {
+      "text": "Amenities listed are a kitchen, laundry, indoor bike storage and WiFi; no air conditioning or elevator is listed. Accessibility: accessible limited-use bathroom on the 1st floor.",
+      "src": [
+        "h_hunter"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Housing: Hunter Hall",
+      "url": "https://www.unh.edu/housing/facility/hunter-hall-lower-quad"
+    },
+    {
+      "label": "UNH Library: building history",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences"
+    }
+  ],
+  "sources": {
+    "arch_res": {
+      "title": "Student Residences",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/student-residences",
+      "accessed": "2026-11-04"
+    },
+    "arch_idx": {
+      "title": "University History: Buildings (index with build/dedication years)",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings",
+      "accessed": "2026-11-04"
+    },
+    "h_hunter": {
+      "title": "Hunter Hall (Lower Quad)",
+      "publisher": "UNH Housing",
+      "url": "https://www.unh.edu/housing/facility/hunter-hall-lower-quad",
+      "accessed": "2026-11-04"
+    },
+    "s19a": {
+      "title": "Ranking of UNH Dorms and Residence Halls",
+      "publisher": "Society19",
+      "url": "https://society19.com/ranking-unh-dorms-residence-halls/amp",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 5,
+    "interior": 4,
+    "condition": 4,
+    "function": 5,
+    "character": 5,
+    "reputation": 5
+  },
+  "confidence": "low",
+  "verdict": "The third 1946 Lower Quad hall: small, plain brick with dormers, no A/C.",
+  "notes": "No renovation history found for the Lower Quad halls. Old row credited Eric T. Huddleston as architect; no source I opened confirms it, so architect is left null. No licensed photo found. Archives reference photo shows a two-storey brick block with dormers, like its Lower Quad siblings. Old row's 'leadership community' theme isn't on the current Housing page.",
+  "judgeNotes": "Archives photo only."
+}

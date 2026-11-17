@@ -10,11 +10,14 @@ import { type Site, UNLISTED, resolve } from "../../src/map/site.mts"
 import { listedPages } from "../../src/map/listed.mts"
 import { pageOf, urlOf, viewOf } from "../../src/map/link.mts"
 import { EventsData } from "../../src/social/event.mts"
+import { Gazetteer } from "../../src/places/gazetteer.mts"
+import { CATEGORIES, eraParts, profilesOf, ratingText, statusText } from "../../src/places/profiles.mts"
 import { checked } from "../../src/shared/json.mts"
+import { readRecords } from "../../scripts/map/profiles.mts"
 
 const FIXTURES = new URL("../fixtures/data/", import.meta.url)
 
-/** The map page's data files by name, as the fixtures have them, and the buildings, which the build matches */
+/** The map page's data files by name, as the fixtures have them, and the buildings and profiles, which the build makes */
 const SOURCES: Record<string, string> = {
   events: "src/map/events.json", gazetteer: "src/map/gazetteer.json", gtfs: "src/map/gtfs.json", courses: "src/courses/courses.json",
   prereqs: "src/programs/prereqs.json", parking: "src/parking/parking.json", rooms: "src/map/rooms.json"
@@ -24,6 +27,8 @@ const BUILDINGS = { inputs: "", buildings: [{ id: "dining/holloway-commons", kin
 const json = (path: string) =>
   readFile(new URL(path, FIXTURES), "utf8").then(JSON.parse)
 
+const PROFILES = profilesOf(await readRecords(), new Set((await json("src/map/gazetteer.json").then(gazetteer => checked(Gazetteer, gazetteer, "gazetteer"))).places.map(place => place.name))).data
+
 // Each file read and checked once, as the Worker and the build keep theirs, since resolving every page asks for the
 // same few files thousands of times over
 const files = new Map<string, Promise<unknown>>()
@@ -32,7 +37,7 @@ const once = <T,>(key: string, read: () => Promise<T>) =>
 
 const site: Site = {
   named: <T,>(name: string, schema: StandardSchemaV1<unknown, T>) =>
-    once(`named:${name}`, async () => checked(schema, name === "places" ? BUILDINGS : await json(SOURCES[name]), name)),
+    once(`named:${name}`, async () => checked(schema, name === "places" ? BUILDINGS : name === "profiles" ? PROFILES : await json(SOURCES[name]), name)),
   file: <T,>(path: string, schema: StandardSchemaV1<unknown, T>) =>
     once(`file:${path}`, async () => checked(schema, await json(`public${path}`), path))
 }
@@ -61,7 +66,7 @@ test("every page listed is its own address, never an instructor's, each kind is 
 // Resolving every page reads nothing new, but there are over a thousand, so at the instants the listing turns on:
 // before the first event, within them, and once the last is over
 test.each([["before the events", first - 1], ["among the events", Math.floor((first + last) / 2)], ["after the events", last + 1]])(
-  "every page listed %s is of something there is, and a place listed has something to say: something on, classes, a hall, or a chapter",
+  "every page listed %s is of something there is, and a place listed has something to say: something on, classes, a hall, a chapter, or a profile",
   async (_, now) => {
     const pages = await listedPages(site, now)
     for (const page of pages) {
@@ -72,3 +77,18 @@ test.each([["before the events", first - 1], ["among the events", Math.floor((fi
     }
   }
 )
+
+test("a profiled building's page says when it was built, its rating and verdict, cites each fact's source, links to more, and is listed", async () => {
+  const now = first - 1
+  for (const [name, profile] of Object.entries(PROFILES.profiles).filter(([, { facts, rating }]) => facts.length && rating).slice(0, 5)) {
+    const found = await resolve(site, { kind: "place", name }, now)
+    const about = found!.parts.find(({ heading }) => heading === "About")!
+    expect(found!.preview.kind).toBe(CATEGORIES[profile.category])
+    expect(about.lines).toEqual(expect.arrayContaining([ratingText(profile, PROFILES.ranked), ...profile.verdict ? [profile.verdict] : [], ...statusText(profile) ? [statusText(profile)] : []]))
+    expect(about.lines![0]).toContain(eraParts(profile).join(" · "))
+    expect(about.items!.map(({ text }) => text)).toEqual(profile.facts.map(({ text }) => text))
+    expect(about.items!.every(({ href, detail }) => href?.startsWith("http") && detail)).toBe(true)
+    expect(found!.parts.find(({ heading }) => heading === "More about it")?.items?.map(({ href }) => href) ?? []).toEqual(profile.more.map(({ url }) => url))
+    expect((await listedPages(site, now)).some(page => page.kind === "place" && page.name === name)).toBe(true)
+  }
+})

@@ -1,0 +1,45 @@
+{
+  "name": "Parking and Transit Center",
+  "aliases": [
+    "Parking & Transit Center",
+    "Transit Center"
+  ],
+  "place": "Parking and Transit Center",
+  "category": "support",
+  "use": "Wildcat Transit / campus transit offices at 20 Sage Way",
+  "status": "in-use",
+  "facts": [
+    {
+      "text": "UNH Transportation lists the Transit Center at 20 Sage Way, Durham; parking services are at MUB Room 211.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Transportation: contact",
+      "url": "https://www.unh.edu/transportation/about/contact-us"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "Contact Us",
+      "publisher": "UNH Transportation Services",
+      "url": "https://www.unh.edu/transportation/about/contact-us",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 3,
+    "interior": 3,
+    "condition": 4,
+    "function": 5,
+    "character": 2,
+    "reputation": 3
+  },
+  "confidence": "low",
+  "verdict": "Transit office at 20 Sage Way; the building is undocumented.",
+  "notes": "Build date, architect and description not found. Transportation's contact page lists only 'Transit Center, 20 Sage Way' (parking office is in the MUB), so 'Parking and Transit Center' may describe the transit garage/office near the Sage Way visitor lot; unconfirmed. No photos of any kind found. No licensed photo found (searched the Commons category tree under 'University of New Hampshire' and 'Durham, New Hampshire', Commons file search by name, Commons geosearch at the building's coordinates, and Openverse/Flickr CC).",
+  "judgeNotes": "No photos or history."
+}

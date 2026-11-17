@@ -1,0 +1,105 @@
+{
+  "name": "Murkland Hall",
+  "aliases": [
+    "Murkland"
+  ],
+  "place": "Murkland Hall",
+  "category": "academic",
+  "use": "Department of Languages, Literatures, and Cultures; Dean of the College of Liberal Arts; Richards Auditorium",
+  "built": 1927,
+  "builtText": "designed 1927 by Eric T. Huddleston (Preservation Alliance citation says built 1929)",
+  "architect": "Eric T. Huddleston; 2002 renovation by Lavallee/Brensinger Architects with Martini Northern Construction",
+  "style": "Colonial Revival",
+  "status": "in-use",
+  "renovations": [
+    {
+      "year": 2002,
+      "what": "KEEP-NH renovation and restoration: corridors, dean's suite and auditorium restored; classrooms and systems modernized; new tiered lecture room; elevator to all four levels; brick repointed; historically appropriate windows",
+      "major": true,
+      "src": [
+        "arch_acad",
+        "lbpa"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "text": "Named for Charles Sumner Murkland, first president of New Hampshire College after its move to Durham (1893–1903).",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "Huddleston borrowed features of DeMeritt and Morrill halls to form a harmonious quadrangle; it was first planned as extra library book space plus classrooms.",
+      "src": [
+        "arch_acad"
+      ]
+    },
+    {
+      "text": "The New Hampshire Preservation Alliance honored the rehabilitation in 2004, praising UNH's 'respectful approach' to the original fabric.",
+      "src": [
+        "nhbr"
+      ]
+    },
+    {
+      "text": "The renovation added elevator access to all four levels.",
+      "src": [
+        "lbpa"
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/90/Durham_NH_004.jpg/1280px-Durham_NH_004.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Durham_NH_004.jpg",
+      "credit": "Olivier Aumage",
+      "view": "exterior",
+      "year": 2005,
+      "caption": "Courtyard facade across the lawn (identified by comparison with the architect’s photo; Commons caption reads only \"Durham, NH\")",
+      "license": "CC BY-SA 2.0 fr",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/fr/deed.en"
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Library Archives: academic buildings history",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties"
+    },
+    {
+      "label": "Lavallee Brensinger: Murkland Hall project",
+      "url": "https://lbpa.com/project/murkland-hall/"
+    }
+  ],
+  "sources": {
+    "arch_acad": {
+      "title": "Academic Buildings and Properties",
+      "publisher": "UNH Library Archives",
+      "url": "https://library.unh.edu/find/archives/buildings/academic-buildings-and-properties",
+      "accessed": "2026-11-04"
+    },
+    "lbpa": {
+      "title": "University of New Hampshire: Murkland Hall",
+      "publisher": "Lavallee Brensinger Architects",
+      "url": "https://lbpa.com/project/murkland-hall/",
+      "accessed": "2026-11-04"
+    },
+    "nhbr": {
+      "title": "Alliance honors state’s top rehabilitation projects (Jul 23, 2004)",
+      "publisher": "New Hampshire Business Review",
+      "url": "https://www.nhbr.com/alliance-honors-states-top-rehabilitation-projects/",
+      "accessed": "2026-11-04"
+    }
+  },
+  "ratings": {
+    "exterior": 7,
+    "interior": 8,
+    "condition": 7,
+    "function": 7,
+    "character": 7,
+    "reputation": 6
+  },
+  "confidence": "high",
+  "verdict": "Huddleston's 1927 Colonial Revival hall on the quad, restored in 2002 with its coffered auditorium and panelled rooms; an award-winning rehab.",
+  "notes": "Build year conflict: the archives say Huddleston designed it in 1927 (list says 'built 1927'); NHBR's award citation says 'built in 1929'. The architect's page calls Murkland 'the oldest building on the UNH Durham campus', which is wrong (Thompson, Conant, Nesmith and Hewitt date from 1893). Renovation year 2002 per archives; the award came in 2004. Ceilings/light are judged from the architect's (unlicensed) photos: the restored auditorium has a high coffered ceiling and tall round-arched windows; the conference room is wood-paneled with tall arched windows. Licensed photo 01 is attributed to Murkland by visual match with ref-02 (central white pedimented doorway, balustraded terrace wall); confirm before use. A/C undocumented. No student reviews found.",
+  "judgeNotes": "01.jpg confirmed: it matches the archives view (pedimented door, balustraded terrace), and the building at right carries \"CONANT HALL\" lettering, which places it on the quad. Unlicensed architect photos show a fine restored auditorium. Exterior 7 (handsome, not a landmark); reputation 6 for lack of student reviews."
+}

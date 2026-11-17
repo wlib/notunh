@@ -10,6 +10,7 @@ import { type Event, type Pin, EventsData, calendarOf, gazetteerPlaceOf, whereOf
 import { type GazetteerPlace, Gazetteer } from "../places/gazetteer.mts"
 import { Places } from "../places/buildings.mts"
 import { chapterNamed } from "../places/chapters.mts"
+import { type Profile, Profiles, eraParts, profileNamed, ratingText, statusText } from "../places/profiles.mts"
 import { type Term, type TermEntry, CoursesIndex, KINDS, TermFile, activeTerms, codeOf, courseOf, termOf } from "../courses/course.mts"
 import { createPeople } from "../courses/people.mts"
 import { roomKey } from "../courses/rooms.mts"
@@ -95,9 +96,19 @@ const chapterPart = (name: string): Part[] => {
   }] : []
 }
 
+/** A profiled building's: when it was built, how it stands, its rating and verdict, its facts each linking to a source, and where to read more */
+const profileParts = (profile: Profile, ranked: number): Part[] => [
+  {
+    heading: "About",
+    lines:   [[...eraParts(profile), profile.style, profile.use].filter(Boolean).join(" · "), statusText(profile), ratingText(profile, ranked), profile.verdict].filter((line): line is string => Boolean(line)),
+    items:   profile.facts.map(({ text, src: [id] }) => ({ text, href: profile.sources[id].url, detail: profile.sources[id].publisher ?? profile.sources[id].title }))
+  },
+  ...profile.more.length ? [{ heading: "More about it", items: profile.more.map(({ label, url }) => ({ text: label, href: url })) }] : []
+]
+
 const placeResolved = async (site: Site, name: string, now: number): Promise<Resolved | undefined> => {
-  const [{ places }, { events }, { buildings }, terms] = await Promise.all([
-    site.named("gazetteer", Gazetteer), site.named("events", EventsData), site.named("places", Places), termsOf(site, entries => activeTerms(entries, now))
+  const [{ places }, { events }, { buildings }, terms, profiles] = await Promise.all([
+    site.named("gazetteer", Gazetteer), site.named("events", EventsData), site.named("places", Places), termsOf(site, entries => activeTerms(entries, now)), site.named("profiles", Profiles)
   ])
   const place = gazetteerPlaceOf(places, name)
   if (!place)
@@ -113,10 +124,12 @@ const placeResolved = async (site: Site, name: string, now: number): Promise<Res
         }
   const laundry = buildings.filter(building => building.kind === "laundry" && building.name === name).flatMap(({ rooms = [] }) => rooms).flatMap(slug => roomAtSlug(slug) ?? [])
   const isDining = buildings.some(building => building.kind === "dining" && building.name === name)
+  const profile = profileNamed(profiles, name)
   return {
-    preview: placePreview(place, events, now),
+    preview: placePreview(place, events, now, profile && { profile, ranked: profiles.ranked }),
     parts:   [
       ...chapterPart(name),
+      ...profile ? profileParts(profile, profiles.ranked) : [],
       on.length
         ? { heading: "What's on", items: on.slice(0, ON_SHOWN).map(event => ({ text: event.title, href: urlOf({ kind: "event", id: event.id }), detail: whenOf(event) })) }
         : { heading: "What's on", lines: ["Nothing listed this week"] },

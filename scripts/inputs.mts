@@ -122,9 +122,10 @@ const keepPublished = async (name: string) =>
 
 /**
  * Installs the inputs and the map data in place of whatever was installed, everything under public/data/ included,
- * then keeps beside them what the site serves now, and matches the places. Offline, the fixtures are both, and
- * nothing's kept. A later source the generation lacks stays as it was installed or comes from the fixtures for npm
- * run dev, and is empty for a build, but for parking, whose fixtures' rules are as good as a night old
+ * then keeps beside them what the site serves now, matches the places and makes the buildings' profiles. Offline,
+ * the fixtures are both, and nothing's kept. A later source the generation lacks stays as it was installed or comes
+ * from the fixtures for npm run dev, and is empty for a build, but for parking, whose fixtures' rules are as good as
+ * a night old
  */
 const install = async ({ inputs, "map-data": mapData }: Installed) => {
   const folder = folderOf(inputs)
@@ -156,7 +157,8 @@ const install = async ({ inputs, "map-data": mapData }: Installed) => {
       await mkdir(new URL(".", new URL(file, REPO)), { recursive: true }).then(() => writeFile(new URL(file, REPO), data))
     console.log(`${path} ${from}, as inputs ${inputs} have none`)
   }
-  await run(process.execPath, [fileURLToPath(new URL("map/places.mts", import.meta.url))])
+  for (const script of ["map/places.mts", "map/profiles.mts"])
+    await run(process.execPath, [fileURLToPath(new URL(script, import.meta.url))])
   await writeFile(RECORD, JSON.stringify({ inputs, "map-data": mapData } satisfies Installed))
   console.log(`Inputs ${inputs}, map data ${mapData ?? "none"}`)
 }

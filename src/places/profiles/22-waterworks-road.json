@@ -1,0 +1,35 @@
+{
+  "name": "22 Waterworks Road",
+  "place": "22 Waterworks",
+  "category": "support",
+  "use": "Unknown (a building on Waterworks Road beside the water treatment plant)",
+  "builtText": "unknown",
+  "status": "in-use",
+  "statusNote": "Use unconfirmed; an unidentified utility building beside the water treatment plant",
+  "facts": [
+    {
+      "text": "Waterworks Road on the UNH campus is the site of the UNH/Durham water treatment plant, which replaced the 1935 Arthur Rollins plant in 2020.",
+      "src": [
+        "s1"
+      ]
+    }
+  ],
+  "more": [
+    {
+      "label": "UNH Facilities: Water Treatment Plant",
+      "url": "https://www.unh.edu/facilities/about/energy-utilities/water-treatment-plant"
+    }
+  ],
+  "sources": {
+    "s1": {
+      "title": "UNH/Durham Water Treatment Plant",
+      "publisher": "UNH Facilities",
+      "url": "https://www.unh.edu/facilities/about/energy-utilities/water-treatment-plant",
+      "accessed": "2026-11-04"
+    }
+  },
+  "confidence": "low",
+  "verdict": "An unidentified building beside the water treatment plant; neither its use nor its age could be confirmed.",
+  "notes": "Could not identify this building. A web search for the address found no records. notunh's gazetteer places it about 50 m east of the treatment plant. One possibility is the surviving 1935 Arthur Rollins plant or a related utility building, but that is unverified: a 2017 town planner review reportedly planned demolition of the old plant, and I could not open it (404). The category \"support\" is a placeholder. Suggest checking Durham's assessor (VGSI) or a UNH facilities map. No photos.",
+  "judgeNotes": "Could not identify; scores are placeholders and it is left unranked."
+}

@@ -7,7 +7,9 @@
 import * as v from "valibot"
 import { Live25Event, plain } from "../social/sources.mts"
 import { usable } from "../shared/json.mts"
-import { Day, addDays } from "../shared/time.mts"
+import { type Rule, WEEKDAYS, any, between, daily, except, occurrences, on, weekly } from "../shared/recur.mts"
+import { plainDay } from "../shared/temporal.mts"
+import { Day } from "../shared/time.mts"
 
 /** A weekday as the registrar writes it, Monday first */
 export const LETTERS = ["M", "T", "W", "R", "F", "S", "U"] as const
@@ -58,7 +60,7 @@ export const termName = (code: string) => {
   return `${SEASONS[half]} ${half === "10" ? year : year + 1}`
 }
 
-const WEEKDAYS: Record<string, Letter> = { monday: "M", tuesday: "T", wednesday: "W", thursday: "R", friday: "F", saturday: "S", sunday: "U" }
+const NAMED: Record<string, Letter> = { monday: "M", tuesday: "T", wednesday: "W", thursday: "R", friday: "F", saturday: "S", sunday: "U" }
 
 /** The calendar from 25Live's entries, any of its calendars, those of a shape not known left out */
 export const fromLive25 = (json: unknown, fetched: number): Calendar => {
@@ -76,7 +78,7 @@ export const fromLive25 = (json: unknown, fetched: number): Calendar => {
       calendar.holidays.push(day)
     if (/^No Classes|No Classes$|Thanksgiving Holidays|Spring Recess|Midsemester Break/.test(title) && !/Law/.test(title))
       calendar.noClass.push(day)
-    const swap = WEEKDAYS[title.match(/follow an? (\w+) Schedule/i)?.[1].toLowerCase() ?? ""]
+    const swap = NAMED[title.match(/follow an? (\w+) Schedule/i)?.[1].toLowerCase() ?? ""]
     if (swap)
       calendar.swaps[day] = swap
     // "Fall 2026 Classes Begin", "Spring 2027 Last Day of Classes", but not Term 1's or Law's
@@ -105,14 +107,31 @@ export const fromLive25 = (json: unknown, fetched: number): Calendar => {
  * Those of some days from a day that classes meet on, as clubs do too: within a term that's begun, not past its last
  * day of classes where the calendar names one, and not a day without classes
  */
-export const classDays = ({ noClass, terms }: Pick<Calendar, "noClass" | "terms">, from: Day, days: number) =>
-  Array.from({ length: days }, (_, i) => addDays(from, i))
-    .filter(day => Object.values(terms).some(({ start, end }) => start && start <= day && (!end || day <= end)))
-    .filter(day => !noClass.includes(day))
+export const classDays = ({ noClass, terms }: Pick<Calendar, "noClass" | "terms">, from: Day, days: number): Day[] =>
+  occurrences(
+    except(any(...Object.values(terms).flatMap(({ start, end }) => start ? [between(start, end, daily)] : [])), on(...noClass)),
+    plainDay(from),
+    days
+  ).map(String)
 
-/** The weekday a day's classes follow: its own, 0 for Monday, or the one it's swapped to */
-export const letterOf = (calendar: Pick<Calendar, "swaps">, day: Day, weekday: number): Letter =>
-  calendar.swaps[day] ?? LETTERS[weekday]
+const meetingDays = new WeakMap<object, Map<string, Rule>>()
+
+/**
+ * The days classes meeting on some weekdays, "MWF", meet, as a rule with no first or last day: those weekdays and
+ * the days swapped to one of them, but the days without classes and the days swapped to another weekday. Made once
+ * for a calendar and its weekdays, as every meeting of a term asks
+ */
+export const meetingRule = (calendar: Pick<Calendar, "noClass" | "swaps">, days: string): Rule => {
+  const made = meetingDays.get(calendar) ?? meetingDays.set(calendar, new Map()).get(calendar)!
+  if (!made.has(days)) {
+    const swapped = Object.entries(calendar.swaps)
+    made.set(days, except(
+      any(weekly(...letters(days).map(letter => WEEKDAYS[LETTERS.indexOf(letter)])), on(...swapped.flatMap(([day, letter]) => days.includes(letter) ? [day] : []))),
+      on(...calendar.noClass, ...swapped.flatMap(([day, letter]) => days.includes(letter) ? [] : [day]))
+    ))
+  }
+  return made.get(days)!
+}
 
 /** The letters a registrar's days name, like "MWF" */
 export const letters = (days: string) =>

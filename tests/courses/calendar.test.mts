@@ -1,6 +1,8 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { type Season, fromLive25, letterOf, letters, termCode, termName } from "../../src/courses/calendar.mts"
+import { type Season, LETTERS, fromLive25, letters, meetingRule, termCode, termName } from "../../src/courses/calendar.mts"
+import { occurs } from "../../src/shared/recur.mts"
+import { day } from "../shared/rules.mts"
 import { calendar, live25 } from "./fixtures.mts"
 
 test("the calendar read from 25Live has the holidays, the swap day, the terms' dates and finals, and only all-day academic entries", () => {
@@ -35,12 +37,19 @@ test("term codes follow the academic year, Fall 2026, J-Term 2027 and Spring 202
   }))
 })
 
-test("a day's letter is its weekday unless swapped", () =>
-  fc.assert(fc.property(fc.integer({ min: 0, max: 6 }), fc.constantFrom("M", "T", "W", "R", "F", "S", "U" as const), (weekday, swapped) => {
-    expect(letterOf({ swaps: {} }, "2026-10-13", weekday)).toBe("MTWRFSU"[weekday])
-    expect(letterOf({ swaps: { "2026-10-13": swapped } }, "2026-10-13", weekday)).toBe(swapped)
+test("classes on some weekdays meet on those, and on a day swapped to one of them, but never a day swapped to another or a day without classes", () => {
+  const offsets = fc.uniqueArray(fc.integer({ min: 0, max: 120 }), { maxLength: 12 })
+  fc.assert(fc.property(day, fc.subarray([...LETTERS]), offsets, offsets, fc.array(fc.constantFrom(...LETTERS), { minLength: 12, maxLength: 12 }), (start, meets, off, swapped, to) => {
+    const calendar = { noClass: off.map(days => start.add({ days }).toString()), swaps: Object.fromEntries(swapped.map((days, i) => [start.add({ days }).toString(), to[i]])) }
+    const rule = meetingRule(calendar, meets.join(""))
+    for (let i = 0, at = start; i <= 120; i++, at = at.add({ days: 1 })) {
+      const follows = calendar.swaps[at.toString()] ?? LETTERS[at.dayOfWeek - 1]
+      expect(occurs(rule, at)).toBe(meets.includes(follows) && !calendar.noClass.includes(at.toString()))
+    }
+    // Asked again of the same calendar and weekdays, it's the rule made before
+    expect(meetingRule(calendar, meets.join(""))).toBe(rule)
   }))
-)
+})
 
 test("a registrar's days read as the letters in them", () => {
   expect(letters("MWF")).toEqual(["M", "W", "F"])

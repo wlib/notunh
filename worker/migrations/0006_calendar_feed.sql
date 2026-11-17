@@ -1,0 +1,1 @@
+CREATE INDEX `state_feed` ON `state` (`value`) WHERE "state"."key" = 'calendar-feed';

@@ -6,7 +6,8 @@ import type { Event } from "../../src/social/event.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
 import { classOf, leadsOf, listedAs, pageExcluded, passagesOf, robotsAllows, scoreOf, wordingExcluded } from "../../src/social/leads.mts"
-import { timesOf, whenOf } from "../../src/social/when.mts"
+import { proposedRule, timesOf, whenOf } from "../../src/social/when.mts"
+import { WEEKDAYS, any, nth, on, weekly } from "../../src/shared/recur.mts"
 import { addDays, atClock, daysBetween, localDay, weekday } from "../../src/shared/time.mts"
 
 const gazetteer: Gazetteer = JSON.parse(await readFile(new URL("../fixtures/data/src/map/gazetteer.json", import.meta.url), "utf8"))
@@ -182,3 +183,42 @@ test("robots.txt is read as any crawler's: the longest rule deciding, an Allow w
   expect(robotsAllows(robots, "/sites/default/files/a.pdf")).toBe(false)
   fc.assert(fc.property(fc.webPath(), path => { expect(robotsAllows("", path)).toBe(true) }))
 })
+
+//#region Rules proposed
+
+/** What a passage's days are proposed as, read on a day */
+const proposed = (text: string, on: string) =>
+  proposedRule(text, whenOf(text, on)!)
+
+test("a passage's days are proposed as the rule it words: weekly, an nth weekday, or the dates it names, however it words how often", () => {
+  expect(proposed("Russian Conversation Hour: 2-3pm every Friday in the Murkland G10 Lounge", "2026-11-16")).toEqual(weekly("Fri"))
+  expect(proposed("Game night, first Tuesday of every month, 7-9pm", "2026-11-16")).toEqual(nth(1, "Tue"))
+  expect(proposed("We meet the 1st and 3rd Thursdays at 6pm in the MUB", "2026-11-16")).toEqual(any(nth(1, "Thu"), nth(3, "Thu")))
+  expect(proposed("Open mic on the last Friday of the month, 8-10pm", "2026-11-16")).toEqual(nth(-1, "Fri"))
+  expect(proposed("Every second Tuesday of the month at 5pm", "2026-11-16")).toEqual(nth(2, "Tue"))
+  // Which weeks is a guess with no day to count from
+  for (const text of ["Chinese Tea Hour: 3-4pm every other Wednesday", "AI club biweekly wednesdays at the MUB 6-7pm", "Every second Tuesday at 5pm", "Selected Thursdays 4-5pm"])
+    expect(proposed(text, "2026-11-16")).toBeUndefined()
+  expect(proposed("Chinese Tea Hour: 3-4pm every other Wednesday in the Murkland G10 Lounge 9/16, 9/30, 10/14, 10/28, 11/11, 12/2", "2026-11-16"))
+    .toEqual(on("2026-09-16", "2026-09-30", "2026-10-14", "2026-10-28", "2026-11-11", "2026-12-02"))
+  expect(proposed("February 23 and February 24 | 11AM - 3PM | Memorial Union Building", "2026-11-16")).toEqual(on("2027-02-23", "2027-02-24"))
+})
+
+test("whatever dates a passage names, the rule proposed for it is those, and one with only weekdays those every week", () => {
+  const start = fc.integer({ min: -200, max: 200 }).map(days => addDays(today, days))
+  fc.assert(fc.property(start, fc.uniqueArray(fc.integer({ min: 0, max: 150 }), { minLength: 1, maxLength: 10 }), fc.constantFrom("", "every other week: ", "Thursdays: ", "first Monday of the month: "), (from, offsets, words) => {
+    const dates = offsets.map(days => addDays(from, days)).sort()
+    const text = `Tea ${words}3-4pm on ${dates.map(date => `${+date.slice(5, 7)}/${+date.slice(8)}/${date.slice(0, 4)}`).join(", ")}`
+    expect(proposed(text, from)).toEqual(on(...dates))
+  }))
+  fc.assert(fc.property(fc.uniqueArray(fc.integer({ min: 0, max: 6 }), { minLength: 1 }), days => {
+    expect(proposed(`${days.map(day => `${DAY_NAMES[day]}s`).join(", ")} 3-4pm`, today)).toEqual(weekly(...days.sort().map(day => WEEKDAYS[day])))
+  }))
+})
+
+test("a lead carries the rule proposed for it", () => {
+  const [lead] = leadsOf([{ text: "Game night: first Tuesday of every month, 7-9pm in the Memorial Union Building", heading: "", url: "https://www.unh.edu/mub/games" }], match, { subjects: new Set(), sections: [], events: [] }, today)
+  expect(lead).toMatchObject({ rule: nth(1, "Tue"), place: "Memorial Union Building" })
+})
+
+//#endregion

@@ -4,14 +4,17 @@
 // page, "CREC > Hamel Rec Center > 3rd Floor (West Gym) > Court 1 (3rd Floor)", and answers a facility's schedule as
 // DevExtreme's appointments: a first occurrence on the local clock with no offset, and a recurrence rule (RFC 5545's
 // as DevExtreme writes it, UNTIL in UTC) with its exceptions, also local. The window asked for doesn't trim
-// recurring appointments, whose first occurrences come back from years before, so occurrences are expanded, then
-// kept to the days wanted. Its titles are what's on, as anyone reads them there ("Badminton Club"), so they're the
-// booking's kind. Pure
+// recurring appointments, whose first occurrences come back from years before, so each is read as a session
+// (src/shared/ics.mts) and asked only about the days wanted. Its titles are what's on, as anyone reads them there
+// ("Badminton Club"), so they're the booking's kind. Pure
 
 import * as v from "valibot"
 import type { Booking, Space } from "./bookings.mts"
 import { usable } from "../shared/json.mts"
-import { type Day, addDays, atClock, dayStart, daysBetween, weekday } from "../shared/time.mts"
+import { ruleOfRRule } from "../shared/ics.mts"
+import { except, on, spansOf } from "../shared/recur.mts"
+import { Temporal, instantAt, plainDay } from "../shared/temporal.mts"
+import { type Day, TIME_ZONE } from "../shared/time.mts"
 import { type Matcher, plain } from "../social/sources.mts"
 
 const FUSION = "https://crec.unh.edu/Facility"
@@ -56,92 +59,28 @@ const Appointment = v.object({
 })
 type Appointment = v.InferOutput<typeof Appointment>
 
-/** RFC 5545's weekdays, Monday first, as weekday() counts */
-const WEEKDAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-
-/** The most days a rule with a COUNT is followed for from its first, as its occurrences are counted one by one */
-const COUNTED_DAYS = 20 * 366
-
-/** RFC 5545's UTC time, "20270806T163000Z", as an instant */
-const instantOf = (stamp: string) =>
-  Date.parse(stamp.replace(/^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z?$/, "$1-$2-$3T$4:$5:$6Z"))
-
-/** A local stamp, "2027-01-19T08:00:00.000" or "20270119T080000", as its day and time of day */
-const localOf = (stamp: string) => {
-  const [, year, month, date, hours, minutes] = stamp.match(/^(\d{4})-?(\d\d)-?(\d\d)T(\d\d):?(\d\d)/)!
-  return { day: `${year}-${month}-${date}` as Day, time: `${hours}:${minutes}` }
-}
-
-/** The Sunday a day's week starts on, as Fusion's rules all say (WKST=SU) */
-const sundayOf = (day: Day) =>
-  addDays(day, -((weekday(day) + 1) % 7))
-
-/** Whether a rule, of an appointment first on a day, falls on another day, COUNT and UNTIL aside */
-const fallsOn = (parts: Record<string, string>, first: Day, day: Day) => {
-  const interval = +(parts.INTERVAL ?? 1)
-  const days = parts.BYDAY?.split(",") ?? []
-  switch (parts.FREQ) {
-    case "DAILY":
-      return daysBetween(first, day) % interval === 0
-    case "WEEKLY":
-      return (days.length ? days.includes(WEEKDAYS[weekday(day)]) : weekday(day) === weekday(first)) && daysBetween(sundayOf(first), sundayOf(day)) / 7 % interval === 0
-    case "MONTHLY": {
-      const months = (+day.slice(0, 4) - +first.slice(0, 4)) * 12 + +day.slice(5, 7) - +first.slice(5, 7)
-      if (months % interval !== 0)
-        return false
-      if (!days.length)
-        return day.slice(8) === first.slice(8)
-      // "2FR", or "FR" with BYSETPOS=2, is the second Friday; -1 the last
-      const nth = Math.ceil(+day.slice(8) / 7)
-      const isLast = addDays(day, 7).slice(5, 7) !== day.slice(5, 7)
-      return days.some(byDay => {
-        const [, ordinal, name] = byDay.match(/^([+-]?\d)?(\w\w)$/) ?? []
-        const wanted = +(ordinal ?? parts.BYSETPOS ?? 0)
-        return name === WEEKDAYS[weekday(day)] && (wanted === 0 || wanted === nth || wanted === -1 && isLast)
-      })
-    }
-    default:
-      return false
-  }
-}
-
 /**
  * An appointment's occurrences that touch some days, each from its start to its end in epoch ms on Durham's clock,
- * as Fusion means it: those its rule makes from its first, but its exceptions, up to its COUNT or UNTIL
+ * as Fusion means it: those its rule makes from its first (ruleOfRRule), but its exceptions. One over several days,
+ * or a whole day, runs through that many nights
  */
 export const occurrencesOf = (appointment: Appointment, from: Day, to: Day): { start: number, end: number }[] => {
-  const first = localOf(appointment.StartDate)
-  const last = localOf(appointment.EndDate)
-  const span = daysBetween(first.day, last.day)
-  const spanOf = (day: Day) => appointment.AllDay
-    ? { start: dayStart(day), end: dayStart(addDays(day, span + 1)) }
-    : { start: atClock(day, first.time), end: atClock(addDays(day, span), last.time) }
-  const touches = ({ start, end }: { start: number, end: number }) =>
-    start < dayStart(addDays(to, 1)) && end > dayStart(from)
-  const rule = appointment.RecurrenceRule?.trim()
-  if (!rule)
-    return [spanOf(first.day)].filter(touches)
-  const parts = Object.fromEntries(rule.split(";").filter(Boolean).map(part => part.split("=") as [string, string]))
-  const until = parts.UNTIL ? instantOf(parts.UNTIL) : Infinity
-  const count = parts.COUNT ? +parts.COUNT : Infinity
-  const except = new Set((appointment.RecurrenceException ?? "").split(",").filter(Boolean).map(stamp => localOf(stamp).day))
-  const found: { start: number, end: number }[] = []
-  let made = 0
-  // A COUNT counts from the first occurrence; anything else starts looking where the days asked about do, less the
-  // days an occurrence spans, so a rule set years ago costs no more than one set this week
-  const start = parts.COUNT || first.day > addDays(from, -span) ? first.day : addDays(from, -span)
-  for (let i = 0, day = start; i <= COUNTED_DAYS && day <= to && made < count; i++, day = addDays(day, 1)) {
-    // The first date itself counts only where its rule falls, as DevExtreme shows it
-    if (!fallsOn(parts, first.day, day))
-      continue
-    const occurrence = spanOf(day)
-    if (occurrence.start > until)
-      break
-    made++
-    if (!except.has(day) && touches(occurrence))
-      found.push(occurrence)
-  }
-  return found
+  const first = Temporal.PlainDateTime.from(appointment.StartDate)
+  const last = Temporal.PlainDateTime.from(appointment.EndDate)
+  const day = first.toPlainDate()
+  const nights = day.until(last.toPlainDate()).days + (appointment.AllDay ? 1 : 0)
+  const times = appointment.AllDay
+    ? { start: "00:00", end: "00:00", nights }
+    : { start: first.toPlainTime().toString({ smallestUnit: "minute" }), end: last.toPlainTime().toString({ smallestUnit: "minute" }), nights }
+  const rrule = appointment.RecurrenceRule?.trim()
+  const rule = rrule ? ruleOfRRule(rrule, day, first.toPlainTime(), TIME_ZONE) ?? on(day.toString()) : on(day.toString())
+  const exceptions = (appointment.RecurrenceException ?? "").split(",").filter(Boolean).map(stamp => Temporal.PlainDateTime.from(stamp).toPlainDate().toString())
+  // An occurrence that began up to its nights before the days asked about still touches them
+  const start = plainDay(from).subtract({ days: nights })
+  const [opens, closes] = [instantAt(plainDay(from), "00:00"), instantAt(plainDay(to).add({ days: 1 }), "00:00")]
+  return spansOf({ rule: except(rule, on(...exceptions)), ...times }, start, start.until(plainDay(to)).days + 1)
+    .filter(({ start, end }) => start < closes && end > opens)
+    .map(({ start, end }) => ({ start, end }))
 }
 
 /** A facility's bookings on some days, from its schedule's answer: each occurrence of each appointment, what's on as its kind */

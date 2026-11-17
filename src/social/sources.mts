@@ -12,6 +12,9 @@ import { type Event, SHORT } from "./event.mts"
 import { deduped } from "./sport.mts"
 import { usable } from "../shared/json.mts"
 import { MONTH, datesOf, timesOf, whenOf } from "./when.mts"
+import { readEvents } from "../shared/ics.mts"
+import { spanOn } from "../shared/recur.mts"
+import { plainDay } from "../shared/temporal.mts"
 import { DAY, type Day, HOUR, addDays, atClock, hhmm, localDay, weekday } from "../shared/time.mts"
 
 /** Text as it's shown: tags and entities dropped, space squeezed, cut to a length */
@@ -198,34 +201,15 @@ export const from25Live = (json: unknown, match: Matcher): Event[] =>
 
 export const ATHLETICS = "https://unhwildcats.com/calendar.ashx/calendar.ics"
 
-/** An ICS's events, each as its properties, lines unfolded and values unescaped */
-const vevents = (ics: string) =>
-  ics.replace(/\r?\n[ \t]/g, "").split(/\r?\n/).reduce<Record<string, string>[]>((events, line) => {
-    const [, name, value] = line.match(/^([A-Z-]+)(?:;[^:]*)?:(.*)$/) ?? []
-    if (name === "BEGIN" && value === "VEVENT")
-      events.push({})
-    else if (name && events.length && !("END" in events.at(-1)!))
-      events.at(-1)![name === "END" ? "END" : name] = value.replace(/\\([,;\\])/g, "$1").replace(/\\n/g, "\n")
-    return events
-  }, [])
-
-/** A UTC ICS time, like 20260925T190000Z */
-const utc = (value: string) => {
-  const [, y, mo, d, h, mi, s] = value.match(/^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z$/) ?? []
-  return y ? Date.UTC(+y, +mo - 1, +d, +h, +mi, +s) : NaN
-}
-
-/** Athletics' home games, from Sidearm's ICS: those in Durham, by their venue, which the gazetteer knows */
+/** Athletics' home games, from Sidearm's ICS (src/shared/ics.mts): those in Durham, by their venue, which the gazetteer knows */
 export const fromAthletics = (ics: string, match: Matcher): Event[] =>
-  vevents(ics).flatMap(event => {
-    const [, venue] = event.LOCATION?.match(/^Durham, N\.H\., (.+)$/) ?? []
-    const start = utc(event.DTSTART ?? "")
-    const end = utc(event.DTEND ?? "")
-    const id = event.UID?.match(/^vcal_(\d+)-/)?.[1]
-    if (!venue || !id || Number.isNaN(start) || Number.isNaN(end) || !event.SUMMARY || event.SUMMARY.startsWith("POSTPONED"))
+  readEvents(ics).flatMap(({ uid, title: summary, where, url, zone, day, session }) => {
+    const [, venue] = where.match(/^Durham, N\.H\., (.+)$/) ?? []
+    const id = uid.match(/^vcal_(\d+)-/)?.[1]
+    if (!venue || !id || !summary || summary.startsWith("POSTPONED"))
       return []
-    const title = plain(event.SUMMARY.replace(/^\[[WLT]\] /, "").replace(/^University of New Hampshire /, "UNH "))
-    return [{ id: `athletics:${id}`, title, start, end, place: match(venue), where: plain(venue), source: "athletics", url: (event.URL ?? "https://unhwildcats.com").replace(/&amp;/g, "&") }]
+    const title = plain(summary.replace(/^\[[WLT]\] /, "").replace(/^University of New Hampshire /, "UNH "))
+    return [{ id: `athletics:${id}`, title, ...spanOn(session, plainDay(day), zone), place: match(venue), where: plain(venue), source: "athletics", url: (url ?? "https://unhwildcats.com").replace(/&amp;/g, "&") }]
   })
 
 //#endregion

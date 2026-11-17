@@ -13,7 +13,7 @@ The sources keep these apart, and so does `src/courses/course.mts`:
 - An **instructor** (`people.mts`) is keyed by the hidden address where the registrar gives one, else the name. Their page says scheduled teaching, never whereabouts or office hours: the next class across every section they're on in a live term, and the week.
 - A **room** (`rooms.mts`) is the registrar's text, "Kingsbury N343", indexed with its building. Its page is today's schedule there; it says a room is free only where 25Live books it too ([Rooms to book](#rooms-to-book)).
 
-`standing(term, section, calendar, now)` gives the meeting under way and the next, whatever order the source lists meetings in. No-class days, swap days (a Tuesday run as a Wednesday) and holidays come from 25Live's all-day entries by their titles' pattern (`calendar.mts`), which `scripts/map/courses.mts` prints for a person to check once a term.
+`standing(term, section, calendar, now)` gives the meeting under way and the next, whatever order the source lists meetings in. A meeting is a session ([recurrence.md](recurrence.md)): its weekdays as the academic calendar has them meet, between its dates. No-class days, swap days (a Tuesday run as a Wednesday) and holidays come from 25Live's all-day entries by their titles' pattern (`calendar.mts`), which `scripts/map/courses.mts` prints for a person to check once a term.
 
 ## Terms
 
@@ -31,8 +31,8 @@ Instructors' addresses are hidden at build time (`email.mts`), shifted and rever
 
 - **Search** (`search.mts`), in the home's search and Directions' To: a code in any spelling, a CRN or a pasted schedule, a room with or without its building, titles fuzzily, and people's names, in labelled groups. An instructor's row already says their next class, time, room and Directions.
 - **Pages** (`src/map/ui/Pages.tsx`, `src/map/state/page.mts`): `/map/section/202610/12496`, `person/<id>`, `room/Kingsbury+N343`, `course/CS+518`. Directions and Remind are for the meeting the page leads with; Remind on a section goes on meeting after meeting, with nothing saved. A place's page lists its rooms with a class under way, never a count of people.
-- **Save** (`saved.mts`, `courses-saved`, synced per person): your next class is a row of Yours on the home, and My courses in You (`/map/you`) has the week, saved sections, a calendar file and a pasted schedule. Cross-listed sections meet together, so either saved is the one class. Classes never make markers or rows in the week.
-- **The calendar file** (`ics.mts`) is a snapshot: one VEVENT per pattern with a weekly rule, EXDATEs for days it won't meet and RDATEs for swap days, local times under a VTIMEZONE, UNTIL in UTC, DTSTAMP, lines folded by octet. It says it won't follow a room change.
+- **Save** (`saved.mts`, `courses-saved`, synced per person): your next class is a row of Yours on the home, and My courses in You (`/map/you`) has the week, saved sections, your calendar feed and a pasted schedule. Cross-listed sections meet together, so either saved is the one class. Classes never make markers or rows in the week.
+- **Calendar files** (`ics.mts`, [recurrence.md](recurrence.md#calendars-out)): a section's page adds or subscribes to its meetings, and your saved sections are a feed. Each pattern is one VEVENT with a weekly rule and EXDATEs for days it won't meet, and a VEVENT more for a day swapped to its weekday, as its session says.
 - **Programs**: a course's page names the programs listing it ("In 6 programs"), each opening its graph focused on the course, `/map/program/<slug>?course=<code>`; `/map/program` lists them ([programs.md](programs.md)).
 
 ## Rooms to book

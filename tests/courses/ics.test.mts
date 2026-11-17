@@ -1,6 +1,7 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { LINE, fold, icsOf, utc } from "../../src/courses/ics.mts"
+import { icsOf } from "../../src/courses/ics.mts"
+import { LINE, fold, utc } from "../../src/shared/ics.mts"
 import { type Section, meetingKeys, occurrences } from "../../src/courses/course.mts"
 import { addDays, atClock, weekday } from "../../src/shared/time.mts"
 import { calendar, fall, spring } from "./fixtures.mts"
@@ -19,10 +20,12 @@ const vevents = (ics: string) =>
     return events
   }, [])
 
-/** The days a weekly rule with EXDATEs and RDATEs lands on, as a calendar app computes them, UNTIL read as the UTC instant it is */
+/** A VEVENT's own day, where it doesn't repeat, or the days its weekly rule lands on but its EXDATEs, as a calendar app computes them, UNTIL read as the UTC instant it is */
 const expand = (event: Record<string, string[]>) => {
   const start = event.DTSTART[0]
   const day = (stamp: string) => `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}`
+  if (!event.RRULE)
+    return [day(start)]
   const until = Date.parse(event.RRULE[0].match(/UNTIL=(\d{8}T\d{6}Z)/)![1].replace(/(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z/, "$1-$2-$3T$4:$5:$6Z"))
   const days = event.RRULE[0].match(/BYDAY=([A-Z,]+)/)![1].split(",").map(code => BYDAY.indexOf(code))
   const time = `${start.slice(9, 11)}:${start.slice(11, 13)}`
@@ -32,9 +35,7 @@ const expand = (event: Record<string, string[]>) => {
       out.add(d)
   for (const ex of event.EXDATE ?? [])
     out.delete(day(ex))
-  for (const extra of event.RDATE ?? [])
-    out.add(day(extra))
-  return [...out].sort()
+  return [...out]
 }
 
 const timed = fall.sections.filter(section => section.meetings.some(meeting => meeting.days))
@@ -43,17 +44,26 @@ const saved = (sections: readonly Section[]) => sections.map(section => ({ term:
 test("a calendar app expanding the file's rules, UNTIL as the UTC instant it is, lands on exactly the days the app shows the class, swap day and holidays included", () =>
   fc.assert(fc.property(fc.uniqueArray(fc.constantFrom(...timed), { minLength: 1, maxLength: 6, selector: section => section.crn }), sections => {
     const events = vevents(icsOf(saved(sections), calendar))
-    expect(events.length).toBe(sections.reduce((n, section) => n + section.meetings.filter(meeting => meeting.days).length, 0))
+    expect(new Set(events.map(event => event.UID[0])).size).toBe(events.length)
+    /** Each meeting's VEVENTs: its weekly one, and one for each day swapped to its weekday, under its UID and that day */
+    const told = new Map<string, Record<string, string[]>[]>()
     for (const event of events) {
-      const [, crn, key] = event.UID[0].match(/^course-202610-(\d{5})-(.+)@notunh\.app$/)!
+      const uid = event.UID[0].replace(/^\d{4}-\d\d-\d\d-/, "")
+      told.set(uid, [...told.get(uid) ?? [], event])
+    }
+    expect(told.size).toBe(sections.reduce((n, section) => n + section.meetings.filter(meeting => meeting.days).length, 0))
+    for (const [uid, its] of told) {
+      const [, crn, key] = uid.match(/^course-202610-(\d{5})-(.+)@notunh\.app$/)!
       const section = sections.find(section => section.crn === crn)!
       const meeting = section.meetings[meetingKeys(section).indexOf(key)]
       const shown: string[] = []
       for (let day = meeting.from; day <= meeting.to; day = addDays(day, 1))
         if (occurrences(fall, section, calendar, day).some(event => event.key === key))
           shown.push(day)
-      expect(expand(event)).toEqual(shown)
-      expect(event.LOCATION[0]).toBe(meeting.where.replace(/,/g, "\\,"))
+      expect(its.filter(event => event.RRULE)).toHaveLength(1)
+      expect(its.flatMap(expand).sort()).toEqual(shown)
+      for (const event of its)
+        expect(event.LOCATION[0]).toBe(meeting.where.replace(/,/g, "\\,"))
     }
   }), { numRuns: 40 })
 )
@@ -64,7 +74,8 @@ test("every VEVENT has a DTSTAMP in UTC, and a TZID start goes with a UTC UNTIL,
   for (const event of vevents(ics)) {
     expect(event.DTSTAMP).toEqual([utc(now)])
     expect(event.DTSTAMP[0]).toMatch(/^\d{8}T\d{6}Z$/)
-    expect(event.RRULE[0]).toMatch(/UNTIL=\d{8}T\d{6}Z/)
+    for (const rrule of event.RRULE ?? [])
+      expect(rrule).toMatch(/UNTIL=\d{8}T\d{6}Z/)
   }
   expect(ics).toMatch(/DTSTART;TZID=America\/New_York:\d{8}T\d{6}\r\n/)
   fc.assert(fc.property(fc.date({ min: new Date(2000, 0, 1), max: new Date(2100, 0, 1), noInvalidDate: true }), date => {
@@ -95,10 +106,12 @@ test("the file begins and ends as RFC 5545 says, carries the time zone, and is n
   expect(ics).toContain("X-WR-CALNAME:UNH Fall 2026\\, Spring 2027")
 })
 
-test("the swap day shows up as an RDATE on Wednesday classes and an EXDATE on Tuesday ones, and Thanksgiving as an EXDATE", () => {
+test("the swap day is a VEVENT of its own for Wednesday classes, as Outlook reads no RDATE, and an EXDATE on Tuesday ones, and Thanksgiving an EXDATE", () => {
   const tuesday = timed.find(section => section.meetings.some(meeting => meeting.days === "TR" && meeting.from <= "2026-10-13" && "2026-10-13" <= meeting.to))!
   const wednesday = timed.find(section => section.meetings.some(meeting => meeting.days === "MWF" && meeting.from <= "2026-10-13" && "2026-10-13" <= meeting.to))!
   expect(icsOf(saved([tuesday]), calendar)).toMatch(/EXDATE;TZID=America\/New_York:20261013T/)
-  expect(icsOf(saved([wednesday]), calendar)).toMatch(/RDATE;TZID=America\/New_York:20261013T/)
+  expect(icsOf(saved([wednesday]), calendar)).toContain("UID:2026-10-13-course-")
+  expect(icsOf(saved([wednesday]), calendar)).toMatch(/DTSTART;TZID=America\/New_York:20261013T/)
+  expect(icsOf(saved([wednesday]), calendar)).not.toContain("RDATE")
   expect(icsOf(saved([wednesday]), calendar)).toMatch(/EXDATE;TZID=America\/New_York:20261127T/)
 })

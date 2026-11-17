@@ -1,9 +1,9 @@
-// Your things kept for you as a person, beside each device's own copy: saved sections, saved trips, your permit,
-// your laundry rooms and your dining hall and filters. Each is one key, whose last write wins, by when it was made
-// and then by which device made it, so every device and the Worker settle on the same value whatever order they hear
-// of writes in. The Worker decides, by isNewer, and each device keeps what it answers but for what it's written
-// since it asked. Pure: the pages keep and send (src/shell/state.mts, src/shell/sync.mts), the Worker stores
-// (worker/social.mts)
+// Your things kept for you as a person, beside each device's own copy: saved sections, saved trips, your permit, your
+// laundry rooms, your dining hall and filters, and the token your calendar feed is asked for by. Each is one key, whose
+// last write wins, by when it was made and then by which device made it, so every device and the Worker settle on the
+// same value whatever order they hear of writes in. The Worker decides, by isNewer, and each device keeps what it
+// answers but for what it's written since it asked. Pure: the pages keep and send (src/shell/state.mts,
+// src/shell/sync.mts), the Worker stores (worker/social.mts)
 
 import * as v from "valibot"
 
@@ -15,8 +15,18 @@ export const SYNCED = [
   "laundry-favorites",
   "dining-hall",
   "dining-diets",
-  "dining-avoid"
+  "dining-avoid",
+  "calendar-feed"
 ] as const
+
+/**
+ * Where the token of your calendar feed is kept: what a calendar app asks the Worker for your saved classes and
+ * events by (worker/calendar.mts), made here the first time you subscribe, and made anew to end the old address
+ */
+export const FEED = "calendar-feed" satisfies typeof SYNCED[number]
+
+/** A feed's token as it's made and asked by: 128 random bits in base64url */
+export const FeedToken = v.pipe(v.string(), v.regex(/^[\w-]{22}$/))
 
 export type Key = typeof SYNCED[number]
 

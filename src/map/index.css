@@ -1286,6 +1286,18 @@ body {
   text-align: end;
 }
 
+/* A line's links side by side, as adding to a calendar and subscribing are (ui/Calendars.tsx) */
+.line-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 0.25rem 1rem;
+}
+
+.line-links .go {
+  text-decoration: none;
+}
+
 /* A building's profile on its place's page (ui/Profile.tsx): a strip of photos out to the sheet's edges, each
    opening a viewer over the whole screen; its verdict, its rating in a line, and its scores; and its facts, each
    citing its sources. Tiles are sized by the panel's width, so the sheet and the side panel lay them out alike */
@@ -1716,6 +1728,18 @@ a.row {
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
   text-align: start;
+}
+
+/* A calendar imported here (ui/Calendars.tsx): its name over what's in it, and taking it away */
+.calendar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.calendar .row-what {
+  flex: 1;
+  min-inline-size: 0;
 }
 
 .paste textarea {

@@ -1,17 +1,18 @@
-// Leads: passages on UNH's own pages that say when something happens, as "Russian Conversation Hour: 2-3pm every
-// Friday in the Murkland G10 Lounge" does, which none of the calendars tell (sources.mts). scripts/leads.mts crawls
-// the pages and writes the leads for someone to judge into curated.json (curated.mts). A passage is a sentence or a
-// list item of a page's <main>; one that states a time of day (when.mts) is a lead, with its days, times and place as
-// read beside it, unless it's left out, cheapest first: by its page's address, by its wording, as a class meeting, or
-// as what a calendar already tells. What someone made of each passage (Seen) and what robots.txt lets a crawler read
-// are here too. Pure
+// Leads: passages on UNH's own pages that say when something happens, as "Russian Conversation Hour: 2-3pm every Friday
+// in the Murkland G10 Lounge" does, which none of the calendars tell (sources.mts). scripts/leads.mts crawls the pages
+// and writes the leads for someone to judge into curated.json (curated.mts). A passage is a sentence or a list item of
+// a page's <main>; one that states a time of day (when.mts) is a lead, with its days, times and place as read beside
+// it, and its days proposed as a rule (the dates it names, "first Tuesday"), unless it's left out, cheapest first: by
+// its page's address, by its wording, as a class meeting, or as what a calendar already tells. What someone made of
+// each passage (Seen) and what robots.txt lets a crawler read are here too. Pure
 
 import * as v from "valibot"
 import { LETTERS } from "../courses/calendar.mts"
 import type { Section } from "../courses/course.mts"
 import type { Event } from "./event.mts"
 import { type Matcher, plain } from "./sources.mts"
-import { type When, whenOf } from "./when.mts"
+import { type When, proposedRule, whenOf } from "./when.mts"
+import type { Rule } from "../shared/recur.mts"
 import { type Day, Day as DaySchema, daysBetween, localDay, localMinutes, weekday } from "../shared/time.mts"
 
 /** A passage of a page, the heading it's under, and the page's address */
@@ -164,8 +165,8 @@ export const scoreOf = (text: string, when: When, place: string | undefined, tod
 
 //#endregion
 
-/** A lead: a passage, what it says of when and where, how likely it is to be something to go to */
-export type Lead = Passage & { when: When, place?: string, score: number }
+/** A lead: a passage, what it says of when and where, its days as a rule where one's read, how likely it is to be something to go to */
+export type Lead = Passage & { when: When, rule?: Rule, place?: string, score: number }
 
 /** A passage left out, and why */
 type Left = Passage & { reason: string }
@@ -190,7 +191,8 @@ export const leadsOf = (passages: readonly Passage[], match: Matcher, known: Kno
     if (event)
       return [{ ...passage, reason: `listed already (${event.id})` }]
     const score = scoreOf(passage.text, when, place, today)
-    return [score < 0 ? { ...passage, reason: "scored below zero" } : { ...passage, when, ...place && { place }, score }]
+    const rule = proposedRule(passage.text, when)
+    return [score < 0 ? { ...passage, reason: "scored below zero" } : { ...passage, when, ...rule && { rule }, ...place && { place }, score }]
   })
 
 /**

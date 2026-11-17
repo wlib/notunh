@@ -11,10 +11,12 @@
 // /data/courses/ named by its content, loaded only when wanted (src/courses/browser/terms.mts)
 
 import * as v from "valibot"
-import { type Calendar, Calendar as CalendarSchema, emptyCalendar, letterOf } from "./calendar.mts"
+import { type Calendar, Calendar as CalendarSchema, emptyCalendar, meetingRule } from "./calendar.mts"
 import type { Event } from "../social/event.mts"
 import { arrayOf } from "../shared/json.mts"
-import { type Day, Day as DaySchema, addDays, atClock, daysBetween, localDay, weekday } from "../shared/time.mts"
+import { type Rule, type Session, between, occursOn, spanOn } from "../shared/recur.mts"
+import { plainDay } from "../shared/temporal.mts"
+import { type Day, Day as DaySchema, addDays, daysBetween, localDay } from "../shared/time.mts"
 
 /** A hidden address (email.mts) beside a name, or a name alone where the registrar lists none */
 export const Instructor = v.object({ name: v.string(), mail: v.optional(v.string()) })
@@ -139,7 +141,7 @@ export const registrarUrl = (term: string, crn: string) =>
 export const meets = (section: Section) =>
   section.meetings.some(meeting => meeting.days.length > 0)
 
-/** Minutes after midnight as "HH:MM", as atClock takes */
+/** Minutes after midnight as "HH:MM", as a session's times are */
 export const clock = (minutes: number) =>
   `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`
 
@@ -164,16 +166,18 @@ export const meetingKeys = (section: Section) => {
 /** A dated meeting: the event shape, with its section and meeting behind it */
 export type CourseEvent = Omit<Event, "source"> & { source: "course", term: string, crn: string, key: string }
 
-/** Whether a meeting falls on a day: on the day's letter (letterOf), within its dates, and not a no-class day */
-export const fallsOn = (meeting: Meeting, calendar: Calendar, day: Day, letter = letterOf(calendar, day, weekday(day))) =>
-  meeting.days.includes(letter) && meeting.from <= day && day <= meeting.to && !calendar.noClass.includes(day)
+/**
+ * A meeting as a session: its weekdays as the academic calendar has them meet (meetingRule), holidays, breaks and
+ * swapped days and all, between its own dates, at its times. Hours arranged have no weekdays, and so no days
+ */
+export const sessionOf = (meeting: Meeting, calendar: Calendar): Session =>
+  ({ rule: between(meeting.from, meeting.to, meetingRule(calendar, meeting.days)), start: clock(meeting.start), end: clock(meeting.end) })
 
 /** A meeting on a day, as the event it is there, by its key among its section's (meetingKeys) */
 export const eventOf = (term: Pick<Term, "code">, section: Section, meeting: Meeting, key: string, day: Day): CourseEvent => ({
   id:     `course:${term.code}:${section.crn}:${day}:${key}`,
   title:  `${courseOf(section)} · ${KINDS[section.kind] ?? section.kind}`,
-  start:  atClock(day, clock(meeting.start)),
-  end:    atClock(day, clock(meeting.end)),
+  ...spanOn({ start: clock(meeting.start), end: clock(meeting.end) }, plainDay(day)),
   place:  meeting.place,
   where:  meeting.where,
   source: "course",
@@ -187,21 +191,23 @@ export const byStart = (a: CourseEvent, b: CourseEvent) =>
   a.start - b.start || a.end - b.end || a.id.localeCompare(b.id)
 
 /**
- * A section's dated meetings on a Durham day: one per meeting that falls on it (fallsOn), soonest first. The id is
+ * A section's dated meetings on a Durham day: one per meeting whose session falls on it, soonest first. The id is
  * keyed by the meeting's content, so it's stable across builds and across the source reordering a section's
- * meetings, and Save, reminders and links survive a refetch
+ * meetings, and Save, reminders and links survive a refetch. `falls` asks a day's rules, for one day asked of many
+ * sections
  */
-export const occurrences = (term: Pick<Term, "code">, section: Section, calendar: Calendar, day: Day): CourseEvent[] => {
-  const letter = letterOf(calendar, day, weekday(day))
+export const occurrences = (term: Pick<Term, "code">, section: Section, calendar: Calendar, day: Day, falls: (rule: Rule) => boolean = occursOn(plainDay(day))): CourseEvent[] => {
   const keys = meetingKeys(section)
   return section.meetings
-    .flatMap((meeting, i) => fallsOn(meeting, calendar, day, letter) ? [eventOf(term, section, meeting, keys[i], day)] : [])
+    .flatMap((meeting, i) => falls(sessionOf(meeting, calendar).rule) ? [eventOf(term, section, meeting, keys[i], day)] : [])
     .sort(byStart)
 }
 
 /** Every dated meeting of a term's sections on a day, soonest first: what a day's list and a place's schedule read */
-export const onDay = (term: Term, calendar: Calendar, day: Day, sections: readonly Section[] = term.sections) =>
-  sections.flatMap(section => occurrences(term, section, calendar, day)).sort(byStart)
+export const onDay = (term: Term, calendar: Calendar, day: Day, sections: readonly Section[] = term.sections) => {
+  const falls = occursOn(plainDay(day))
+  return sections.flatMap(section => occurrences(term, section, calendar, day, falls)).sort(byStart)
+}
 
 /**
  * Where a section stands at an instant: the meeting under way, if one is, and the next to start, looking up to

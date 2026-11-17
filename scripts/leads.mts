@@ -267,7 +267,7 @@ const lines = [
   "",
   `${pages.size} pages read; ${stated} passages state a time; ${count} leads new or changed, ${judged} judged before. Left out: ${[...reasons].sort((a, b) => b[1] - a[1]).map(([reason, n]) => `${n} ${reason}`).join(", ") || "none"}.`,
   "",
-  "Each lead: its score, what it was read as (days, times, place), and its hash, which leads-seen.json keeps its verdict by.",
+  "Each lead: its score, what it was read as (days, times, place), its hash, which leads-seen.json keeps its verdict by, and its days as a rule to check against the page, where one was read.",
   ...found.flatMap(({ url, title, leads }) => [
     "",
     `## ${title || url}`,
@@ -276,7 +276,8 @@ const lines = [
     ...leads.flatMap(lead => [
       "",
       `- **${lead.score}** · ${whenText(lead.when)}${lead.place ? ` · ${lead.place}` : ""} · \`${lead.hash}\`${lead.heading ? ` · under "${lead.heading}"` : ""}`,
-      `  > ${lead.text}`
+      `  > ${lead.text}`,
+      ...lead.rule ? ["", `  Rule: \`${JSON.stringify(lead.rule)}\``] : []
     ])
   ])
 ]

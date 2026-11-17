@@ -3,12 +3,12 @@
 // noon", "Monday–Friday", "9/16, 9/30", "Nov. 4th". Our own patterns, shaped to how they're written rather than
 // general: a range's start takes its end's meridiem unless that puts it after the end, bare numbers ("grades 1-6")
 // aren't times, and a date without its year is in the year nearest the day it's read on. The one reader of times, for
-// the lead scanner (leads.mts), the clubs' meeting times and Campus Rec's offerings (sources.mts). Pure
+// the lead scanner (leads.mts), the clubs' meeting times and Campus Rec's offerings (sources.mts). What it reads of
+// which days, the dates named, "first and third Thursdays", "every Friday", it proposes as a rule
+// (src/shared/recur.mts) for someone to judge. Pure
 
+import { type Rule, WEEKDAYS, any, nth, on, weekly } from "../shared/recur.mts"
 import { type Day, addDays, daysBetween } from "../shared/time.mts"
-
-/** The weekdays as they're kept and shown, Monday first, as weekday() counts them */
-export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const
 
 /** A weekday as written, "Tuesdays", "Thurs.", "Fri", capitalized, or "weekdays" and "weekends" */
 const WEEKDAY = /\b(?:(Mon|Tue|Tues|Wed|Weds|Thu|Thur|Thurs|Fri|Sat|Sun)(?:day)?s?\b\.?|(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)s?\b|(weekday|weekend)s\b)/g
@@ -133,6 +133,43 @@ export const whenOf = (text: string, today: Day): When | undefined => {
     return
   return { days, times, dates, recurring: RECURRING.test(text) }
 }
+
+//#region Rules
+
+/** A weekday as an ordinal is written before it, "first Tuesday", "3rd Thursdays" */
+const DAY_WORD = "(Mon|Tue|Wed|Thu|Fri|Sat|Sun)(?:s|sday|nesday|rsday|urday|day)?s?"
+
+const ORDINALS: Record<string, number> = { first: 1, "1st": 1, second: 2, "2nd": 2, third: 3, "3rd": 3, fourth: 4, "4th": 4, fifth: 5, "5th": 5, last: -1 }
+const ORDINAL = Object.keys(ORDINALS).join("|")
+
+/** Ordinals before a weekday, "first and third Thursdays", "last Friday", and whether it goes on to say of the month */
+const NTH = new RegExp(String.raw`\b(every\s+)?((?:${ORDINAL})(?:(?:\s*,\s*|\s*&\s*|\s+and\s+|\s+or\s+)(?:${ORDINAL}))*)\s+${DAY_WORD}\b(\s+of\s+(?:the|each|every)\s+month)?`, "gi")
+
+/** The nth weekdays of the month a text names; "every second Tuesday" alone is every other Tuesday, not one */
+const nthsOf = (text: string): Rule[] =>
+  [...text.matchAll(NTH)].flatMap(([, isEvery, ordinals, day, ofMonth]) => {
+    const which = ordinals.toLowerCase().match(new RegExp(ORDINAL, "g"))!.map(ordinal => ORDINALS[ordinal])
+    return isEvery && !ofMonth && `${which}` === "2" ? [] : which.map(k => nth(k, WEEKDAYS.find(name => name.toLowerCase() === day.toLowerCase())!))
+  })
+
+/** Wording that it's some weeks and not others */
+const SKIPPING = /\b(every other|every second|alternat(e|ing)|bi-?weekly|fortnightly|every (two|three|four|\d) weeks|monthly|selected)\b/i
+
+/**
+ * The days a passage says, proposed as a rule. The dates a page names are what's so, however it words how often,
+ * so they're its days as they are. With none, its nth weekdays, else its weekdays every week, with no first or last
+ * day; none where it says every other week, as which weeks is a guess with no day to count from
+ */
+export const proposedRule = (text: string, { days, dates }: When): Rule | undefined => {
+  if (dates.length)
+    return on(...[...new Set(dates)].sort())
+  const nths = nthsOf(text)
+  if (nths.length)
+    return nths.length > 1 ? any(...nths) : nths[0]
+  return days.length && !SKIPPING.test(text) ? weekly(...days.map(day => WEEKDAYS[day])) : undefined
+}
+
+//#endregion
 
 /** What a lead was read as, for someone to check: "Fri · 14:00–15:00 · 9/16, 9/30" */
 export const whenText = ({ days, times, dates }: When) =>

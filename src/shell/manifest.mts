@@ -36,11 +36,15 @@ const ATTRIBUTE = /([\w-]+)="([^"]*)"/g
 const attributesOf = (tag: string) =>
   Object.fromEntries([...tag.matchAll(ATTRIBUTE)].map(([, key, value]) => [key, value]))
 
-/** What a page's HTML, or its head's, says of its build */
+/**
+ * What a page's HTML, or its head's, says of its build. A file named as a polyfill for a global, as Temporal's is
+ * (src/shared/temporal.mts), is code only where there's no such global, so an engine with its own never fetches or
+ * keeps it; page and worker run in one engine, and so agree
+ */
 export const buildOf = (html: string): Build => {
   const build: Build = { release: "", code: [], data: {} }
   for (const [tag] of html.split("</head>")[0].matchAll(TAG)) {
-    const { name, content, src, href, "data-name": dataName } = attributesOf(tag)
+    const { name, content, src, href, "data-name": dataName, "data-for": polyfills } = attributesOf(tag)
     if (tag.startsWith("<meta")) {
       if (name === "release" && content)
         build.release = content
@@ -49,7 +53,7 @@ export const buildOf = (html: string): Build => {
     }
     else if (dataName && href)
       build.data[dataName] = href
-    else if ((src ?? href)?.startsWith("/"))
+    else if ((src ?? href)?.startsWith("/") && !(polyfills && polyfills in globalThis))
       build.code.push(src ?? href)
   }
   return build

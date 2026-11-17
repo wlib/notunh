@@ -33,6 +33,13 @@ const load = async (data: Record<string, string>, code?: string[]) => {
   return { answers, fetches, ...await import("../../src/shell/build.mts") }
 }
 
+test("a file named as a polyfill is code only where the engine has no such global, so one with its own never keeps it", () =>
+  fc.assert(fc.property(code, hash, fc.constantFrom("Array", "Intl", "Promise"), fc.stringMatching(/^NoSuch[A-Z][a-z]{1,8}$/), (scripts, polyfill, has, lacks) => {
+    const named = (global: string) => headOf({}, scripts).replace("</head>", `<link rel="polyfill" href="/assets/temporal-polyfill-${polyfill}.js" data-for="${global}"></head>`)
+    expect(buildOf(named(has)).code).toEqual(scripts)
+    expect(buildOf(named(lacks)).code).toEqual([...scripts, `/assets/temporal-polyfill-${polyfill}.js`])
+  })))
+
 test("a page's head says which release it's from, which code it runs, and which data it loads, by name", () =>
   fc.assert(fc.property(names, fc.array(hash, { minLength: 1 }), code, (names, hashes, scripts) => {
     const data = dataOf(names, hashes)

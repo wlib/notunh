@@ -25,6 +25,7 @@ import { social } from "./social.mts"
 import { previews } from "./preview.mts"
 import { rooms as bookings } from "./rooms.mts"
 import { photos } from "./photos.mts"
+import { calendars } from "./calendar.mts"
 
 type Worker = { Bindings: Env }
 
@@ -35,8 +36,8 @@ const isBuild = bearerAuth<Worker>({
   verifyToken: async (token, c) => Boolean(c.env.BUILD_TOKEN) && timingSafeEqual(token, c.env.BUILD_TOKEN!)
 })
 
-// Every route under /api/ but health, laundry's, the rooms', reminders', buildings' photos, and the social routes, which go by each device's own secret
-app.use("/api/*", (c, next) => /^\/api\/(health$|laundry\/|rooms\/|push\/|reminders\/|photo$|pins|link|email|me$|state$|session$)/.test(c.req.path) ? next() : isBuild(c, next))
+// Every route under /api/ but health, laundry's, the rooms', reminders', buildings' photos, calendar files, and the social routes, which go by each device's own secret
+app.use("/api/*", (c, next) => /^\/api\/(health$|laundry\/|rooms\/|push\/|reminders\/|photo$|calendar\/|pins|link|email|me$|state$|session$)/.test(c.req.path) ? next() : isBuild(c, next))
 
 /** Part of a request as a schema makes it, its JSON body by default, or a 400 saying what's wrong with it */
 const valid = <S extends StandardSchemaV1, T extends "json" | "form" | "query" | "param" = "json">(schema: S, target = "json" as T) =>
@@ -206,6 +207,9 @@ app.route("/", photos)
 
 // Pins, marks, device links and email verification (social.mts)
 app.route("/", social)
+
+// Calendar files of events, series, sections and a person's feed, and someone's own calendar fetched for them (calendar.mts)
+app.route("/", calendars)
 
 // The pages a shared link or a search opens, pins', the map's and laundry rooms', each headed and summarized as what
 // it's of, and their cards (preview.mts)

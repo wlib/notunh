@@ -9,6 +9,11 @@
     "#jsx/*": {
       "browser": "bruh/browser/*",
       "default": "bruh/server/*"
+    },
+    "#temporal": {
+      "workerd": "temporal-polyfill/implementation",
+      "browser": "./src/shared/no-temporal.mts",
+      "default": "temporal-polyfill/implementation"
     }
   },
   "scripts": {
@@ -49,6 +54,7 @@
     "maplibre-gl": "^6.11.2",
     "posthog-js": "^1.438.12",
     "satori": "0.32.0",
+    "temporal-polyfill": "1.0.8",
     "valibot": "^1.5.0"
   },
   "devDependencies": {

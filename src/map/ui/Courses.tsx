@@ -2,24 +2,27 @@
 
 // The courses beside the map's own: search's labelled groups of instructors, sections and rooms under the places
 // (Search.tsx), the instructor's row already answering with their next scheduled class, its room, and Directions;
-// and My courses, in You, the sections saved as a week, a calendar file made on the device, and a pasted schedule
-// saved in one go (src/courses/saved.mts). Your next saved class is a row of Yours on the home (Home.tsx)
+// and My courses, in You, the sections saved as a week, with what's in the calendars imported here beside them
+// (Calendars.tsx), your feed of them for a calendar app, and a pasted schedule saved in one go
+// (src/courses/saved.mts). Your next saved class is a row of Yours on the home (Home.tsx)
 
 import { type DerivativeNode, r } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
+import type { Page } from "../link.mts"
 import { codeOf, courseOf } from "../../courses/course.mts"
+import { isClassAt } from "../../courses/imported.mts"
 import type { Courses } from "../../courses/browser/terms.mts"
 import { type Person, nextTeaching } from "../../courses/people.mts"
 import { crnsIn } from "../../courses/search.mts"
 import { spaceFor } from "../../courses/spaces.mts"
-import { icsOf } from "../../courses/ics.mts"
 import { weekOf } from "../../courses/saved.mts"
 import { visitOf } from "../../shared/visit.mts"
 import { addDays, localDay, weekday } from "../../shared/time.mts"
 import { ClockTime, Count, Counted, Day } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
-import { capture } from "../../shell/usage.tsx"
+import { today as currentDay } from "../../shell/lifecycle.mts"
 import { state } from "../state/map.mts"
+import { Feed } from "./Calendars.tsx"
 import { nowMs } from "./common.tsx"
 import { DayName, Row, SectionRow, directions, roomOf, sectionPage } from "./Pages.tsx"
 
@@ -99,38 +102,52 @@ export const CourseResults = ({ query }: { query: DerivativeNode<string> }) =>
     )
   })
 
-/** The saved sections' week, Monday first, the coming week's from the weekend, a day without classes kept only on weekdays */
+/**
+ * Your week, Monday first, the coming week's from the weekend: the saved sections' classes and what's in the
+ * calendars imported here, an imported class that's saved too told once, a day with nothing kept only on weekdays
+ */
 const Week = ({ courses }: { courses: Courses }) =>
   r(() => {
-    const today = localDay(nowMs())
-    const from = weekday(today) >= 5 ? addDays(today, 7 - weekday(today)) : today
-    const week = weekOf(state.saved.value, courses.calendar, from).filter(({ classes }, i) => i < 5 || classes.length)
+    // By the day alone, as a week of every calendar imported is read to show it
+    const now = currentDay.value
+    const from = weekday(now) >= 5 ? addDays(now, 7 - weekday(now)) : now
+    const classes = weekOf(state.saved.value, courses.calendar, from)
+    const imports = state.importsOn(classes[0].day, 7)
+    const week = classes
+      .map(({ day, classes }) => ({
+        day,
+        classes,
+        imports: imports.filter(one => localDay(one.start) === day && !classes.some(({ event, section }) => isClassAt(one, section, event.start)))
+      }))
+      .filter(({ classes, imports }, i) => i < 5 || classes.length || imports.length)
     return (
       <div class="week" style={`--days: ${week.length}`} aria-label="Your week">
-        {week.map(({ day, classes }) =>
-          <div class={{ "week-day": true, today: day === today }}>
+        {week.map(({ day, classes, imports }) =>
+          <div class={{ "week-day": true, today: day === now }}>
             <span class="week-name"><Day of={day} weekday="short" /></span>
-            {classes.map(({ event, term, section }) =>
-              <button type="button" class="week-class" onclick={() => state.go(sectionPage(term, section))}>
-                <span><ClockTime at={new Date(event.start)} /></span>
-                <strong>{courseOf(section)}</strong>
-                <span class="muted truncate">{roomOf(event.where)}</span>
-              </button>
-            )}
+            {[
+              ...classes.map(({ event, term, section }) => ({ start: event.start, what: courseOf(section), where: roomOf(event.where), to: sectionPage(term, section) as Page | undefined })),
+              ...imports.map(({ event, start, match: { found, place } }) => ({
+                start,
+                what:  found ? courseOf(found.section) : event.title,
+                where: event.where ? roomOf(event.where) : place ?? "",
+                to:    found ? sectionPage(found.term, found.section) : place ? { kind: "place" as const, name: place } : undefined
+              }))
+            ].sort((a, b) => a.start - b.start).map(({ start, what, where, to }) => {
+              const said = <>
+                <span><ClockTime at={new Date(start)} /></span>
+                <strong>{what}</strong>
+                <span class="muted truncate">{where}</span>
+              </>
+              return to
+                ? <button type="button" class="week-class" onclick={() => state.go(to)}>{said}</button>
+                : <div class="week-class">{said}</div>
+            })}
           </div>
         )}
       </div>
     )
   })
-
-/** Saves the saved sections as a calendar file on this device, a snapshot of them as they are */
-const download = (courses: Courses) => {
-  const ics = icsOf(state.saved.peek(), courses.calendar, Date.now())
-  const link = <a href={URL.createObjectURL(new Blob([ics], { type: "text/calendar" }))} download="notunh-courses.ics" /> as HTMLAnchorElement
-  link.click()
-  setTimeout(() => URL.revokeObjectURL(link.href), 60_000)
-  capture("courses_calendar")
-}
 
 /** A schedule pasted from Banner or WebCat, its CRNs that the live terms know saved */
 const Paste = ({ courses }: { courses: Courses }) => {
@@ -156,7 +173,7 @@ const Paste = ({ courses }: { courses: Courses }) => {
   )
 }
 
-/** My courses, a section of You: the week, the sections saved, a calendar file, and a pasted schedule */
+/** My courses, a section of You: the week, the sections saved, your feed of them, and a pasted schedule */
 export const MyCourses = () => {
   state.wantCourses()
   return (
@@ -167,9 +184,9 @@ export const MyCourses = () => {
         if (!courses)
           return <p class="muted">{state.coursesFailed.value ? "The courses couldn't load." : "Loading courses…"}</p>
         return <>
+          {(state.saved.value.length > 0 || state.calendars.value.length > 0) && <Week courses={courses} />}
           {state.saved.value.length > 0
             ? <>
-                <Week courses={courses} />
                 <ul class="rows" aria-label="Saved sections">
                   {state.saved.value.map(found =>
                     <SectionRow {...found} aside={
@@ -179,8 +196,7 @@ export const MyCourses = () => {
                     } />
                   )}
                 </ul>
-                <button type="button" class="button" onclick={() => download(courses)}>Add to calendar</button>
-                <p class="muted">A snapshot for your calendar app; it won't follow a room change.</p>
+                <Feed />
               </>
             : <p class="muted">Save a section from its page, or paste your schedule.</p>}
           <Paste courses={courses} />

@@ -51,6 +51,9 @@
   // Verification codes to UNH addresses, through Cloudflare Email Service (worker/mail.mts, docs/social.md), only from
   // the one sender, on notunh.app once it's onboarded. `wrangler dev` simulates it, logging what it would send
   "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["codes@notunh.app"] }],
+  // Buildings' photos made the width a page asks (worker/photos.mts): two widths of about a hundred photos, each a
+  // unique transformation once a month, well within the 5,000 included. `wrangler dev` makes them offline
+  "images": { "binding": "IMAGES" },
   "vars": {
     // Who push services can reach about our pushes (worker/push.mts)
     "VAPID_SUBJECT": "https://notunh.app",
@@ -88,6 +91,7 @@
         "migrations_dir": "worker/migrations"
       }
     ],
+    "images": { "binding": "IMAGES" },
     "vars": {
       "RETAIN_DAYS": 60,
       "RETAIN_ARCHIVED_DAYS": 14,

@@ -1,7 +1,8 @@
 // The few requests that reach the Worker: learning's and archiving's token-gated rows, models, timetables, and what
 // learning derives, public health, the laundry page's rooms, the laundry page under each room's own address,
-// devices' reminders, each device's own by its secret, the social routes (social.mts), and the pages a shared link
-// opens, pins' and the map's, with their previews (preview.mts). Every other page and asset is served without it
+// devices' reminders, each device's own by its secret, buildings' photos (photos.mts), the social routes
+// (social.mts), and the pages a shared link opens, pins' and the map's, with their previews (preview.mts). Every
+// other page and asset is served without it
 
 import { Hono } from "hono/tiny"
 import type { MiddlewareHandler } from "hono"
@@ -23,6 +24,7 @@ import { type Ask, Setting, vapidOf } from "./reminders.mts"
 import { social } from "./social.mts"
 import { previews } from "./preview.mts"
 import { rooms as bookings } from "./rooms.mts"
+import { photos } from "./photos.mts"
 
 type Worker = { Bindings: Env }
 
@@ -33,8 +35,8 @@ const isBuild = bearerAuth<Worker>({
   verifyToken: async (token, c) => Boolean(c.env.BUILD_TOKEN) && timingSafeEqual(token, c.env.BUILD_TOKEN!)
 })
 
-// Every route under /api/ but health, laundry's, the rooms', reminders', and the social routes, which go by each device's own secret
-app.use("/api/*", (c, next) => /^\/api\/(health$|laundry\/|rooms\/|push\/|reminders\/|pins|link|email|me$|state$|session$)/.test(c.req.path) ? next() : isBuild(c, next))
+// Every route under /api/ but health, laundry's, the rooms', reminders', buildings' photos, and the social routes, which go by each device's own secret
+app.use("/api/*", (c, next) => /^\/api\/(health$|laundry\/|rooms\/|push\/|reminders\/|photo$|pins|link|email|me$|state$|session$)/.test(c.req.path) ? next() : isBuild(c, next))
 
 /** Part of a request as a schema makes it, its JSON body by default, or a 400 saying what's wrong with it */
 const valid = <S extends StandardSchemaV1, T extends "json" | "form" | "query" | "param" = "json">(schema: S, target = "json" as T) =>
@@ -198,6 +200,9 @@ app.delete("/api/push/devices/:device", valid(v.object({ device: ID }), "param")
 
 // What's booked in the rooms 25Live books, said to each asker as they may see it (rooms.mts)
 app.route("/", bookings)
+
+// Buildings' photos, at a width, from the edge (photos.mts)
+app.route("/", photos)
 
 // Pins, marks, device links and email verification (social.mts)
 app.route("/", social)

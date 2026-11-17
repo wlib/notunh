@@ -16,7 +16,7 @@ const event = (id: string, title: string, source: Event["source"], start = at, p
 test("a practice, hold, camp, rehearsal or tryout isn't for going to; a game, meet or tournament is, whatever it's called by, as is anything a person made", () => {
   for (const title of ["Baseball: Practice", "HOLD for Admissions", "Wildcat Camp", "Dance Team Rehearsal", "Rugby Tryouts", "INDOOR POOL CLOSED"])
     expect(isPractice(event(title, title, "25live"))).toBe(true)
-  for (const title of ["Women’s Ice Hockey game: Holy Cross", "Men's Volleyball: Home Tournament", "Woodsmen tournament: Home Meet", "Take Back The Night"])
+  for (const title of ["Women’s Ice Hockey game: Holy Cross", "Men's Volleyball: Home Tournament", "Woodsmen tournament: Home Meet", "Take Back The Night", "Open Skate", "Stick & Puck", "Lap Swim"])
     expect(isPractice(event(title, title, "dserec"))).toBe(false)
   expect(isPractice(event("a", "Practice Night", "athletics"))).toBe(false)
   expect(isPractice(event("b", "Pickup soccer practice", "pin"))).toBe(false)

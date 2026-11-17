@@ -12,8 +12,11 @@ import { localDay } from "../shared/time.mts"
 
 /** Words of a game or meet, which win over a practice's: "Camper Appreciation Night" is a hockey game's */
 const GAME = /\bvs\.?\s|\bversus\b|\bgame\b|\bmeet\b|\bmatch\b|\btournament\b|\bscrimmage\b|\bplay day\b|\bregatta\b|\binvitational\b|\bchampionship/i
-/** Words of a practice, or anything else booked but closed: a hold, a camp, a rehearsal, a tryout */
-const PRACTICE = /\bpractices?\b|\brehears(al|als|ing)\b|\bhold\b|\bcamps?\b|\btraining\b|\btryouts?\b|\bclosed\b|\bconditioning\b|\blift(ing)?\b|\bwalk-?through\b|\bopen skate\b/i
+/**
+ * Words of a practice, or anything else booked but closed: a hold, a camp, a rehearsal, a tryout. What anyone with a
+ * UNH ID can drop in on, like an open skate or a swim, isn't one, however much it's on
+ */
+const PRACTICE = /\bpractices?\b|\brehears(al|als|ing)\b|\bhold\b|\bcamps?\b|\btraining\b|\btryouts?\b|\bclosed\b|\bconditioning\b|\blift(ing)?\b|\bwalk-?through\b/i
 
 /** Whether an event goes on there but isn't for going to: Athletics' never are, a person's own never is; else its title's words say */
 export const isPractice = (event: Pick<Event, "title" | "source">) =>

@@ -39,7 +39,7 @@ export const loadMapData = async () => {
     latest("style", loadStyle),
     latest("places", Places),
     // The map works without today's events, so it starts with none if they can't load
-    latest("events", EventsData, (): EventsData => ({ fetched: 0, events: [] })),
+    latest("events", EventsData, (): EventsData => ({ fetched: 0, events: [], orgs: [] })),
     // The rooms to book and the week's bookings as of the build, which the Worker's newer word is merged over (rooms.mts)
     latest("rooms", RoomsData, () => NO_ROOMS),
     // The indexes alone, which name the term files and the prerequisites loaded once something asks (state/courses.mts),

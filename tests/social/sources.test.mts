@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises"
 import * as v from "valibot"
 import { type Event, Event as EventSchema, EventsData } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromRecInstances, fromRecOfferings, merged, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
+import { WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromPresenceOrgs, fromRecInstances, fromRecOfferings, merged, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
 import { addDays, atClock, hhmm, localDay, weekday } from "../../src/shared/time.mts"
 import { classDays, fromLive25 } from "../../src/courses/calendar.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
@@ -129,7 +129,7 @@ test("the fixture's events file is what the build would make of the fixtures, an
   const file = v.parse(EventsData, JSON.parse(await readFile(new URL("../fixtures/data/src/map/events.json", import.meta.url), "utf8")))
   const series = fromCurated(v.parse(Curated, JSON.parse(await fixture("curated.json"))), localDay(file.fetched), 7 * WEEKS, match)
   const calendar = fromLive25(JSON.parse(await readFile(new URL("../fixtures/courses/25live.json", import.meta.url), "utf8")), file.fetched)
-  const meetings = fromPresenceClubs(rawOrganizations, classDays(calendar, localDay(file.fetched), 7 * WEEKS), match)
+  const meetings = fromPresenceClubs(fromPresenceOrgs(rawOrganizations), classDays(calendar, localDay(file.fetched), 7 * WEEKS), match)
   expect(file.events).toEqual(merged([presence, meetings, live, athletics, clubs, offerings, sessions, series], 0))
 })
 
@@ -352,7 +352,7 @@ test("an offering's title gives its day and window however the times are written
 const fortnight = Array.from({ length: 14 }, (_, i) => addDays("2026-11-16", i))
 
 test("a club meeting every week reads as a meeting each day of its weekday, at its time, told by its start alone where it gives no end", () => {
-  const meetings = fromPresenceClubs(rawOrganizations, fortnight, match)
+  const meetings = fromPresenceClubs(fromPresenceOrgs(rawOrganizations), fortnight, match)
   const of = (uri: string) => meetings.filter(({ id }) => id.startsWith(`presence:${uri}/`))
   expect(of("the-socratic-society").map(({ start, end }) => [start, end])).toEqual(["2026-11-20", "2026-11-27"].map(day => [atClock(day, "14:10"), atClock(day, "15:30")]))
   expect(of("the-socratic-society")[0]).toMatchObject({ title: "The Socratic Society meeting", where: "The Freedom Cafe", source: "presence", url: "https://unh.presence.io/organization/the-socratic-society" })
@@ -369,7 +369,7 @@ test("a club meeting every week reads as a meeting each day of its weekday, at i
 test("clubs meet only on the days given, on their own weekdays, each meeting once", () =>
   fc.assert(fc.property(fc.uniqueArray(fc.integer({ min: 0, max: 60 }), { maxLength: 30 }), offsets => {
     const days = offsets.map(i => addDays("2026-11-16", i))
-    const meetings = fromPresenceClubs(rawOrganizations, days, match)
+    const meetings = fromPresenceClubs(fromPresenceOrgs(rawOrganizations), days, match)
     expect(new Set(meetings.map(({ id }) => id)).size).toBe(meetings.length)
     for (const meeting of meetings)
       expect(days).toContain(localDay(meeting.start))

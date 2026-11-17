@@ -63,8 +63,30 @@ export const Event = v.object({
 })
 export type Event = v.InferOutput<typeof Event>
 
-/** The build's events.json: when it was fetched, and every event, those of a shape this code doesn't know left out */
-export const EventsData = v.object({ fetched: v.number(), events: usable(Event) })
+export const eventById = <E extends Event>(events: readonly E[], id: string) =>
+  events.find(event => event.id === id || event.also?.includes(id))
+
+/**
+ * A club as Wildcat Link lists it, whether or not it posts a time to meet: its key as its meetings' series is known by
+ * (series.mts), its name, its page, the meeting time and place it states, as words, and its categories. Never its
+ * description, which names its members, nor who's in it
+ */
+export const Org = v.object({
+  key:   v.pipe(v.string(), v.startsWith("presence:")),
+  name:  v.pipe(Text(SHORT), v.minLength(1)),
+  url:   v.string(),
+  meets: v.optional(Text(SHORT)),
+  where: v.optional(Text(SHORT)),
+  /** Wildcat Link's own tags for it, "Arts & Performance", which browsing goes by */
+  categories: v.optional(v.array(v.string()), [])
+})
+export type Org = v.InferOutput<typeof Org>
+
+/**
+ * The build's events.json: when it was fetched, every event, and Wildcat Link's clubs, those of a shape this code
+ * doesn't know left out; none from before clubs were kept
+ */
+export const EventsData = v.object({ fetched: v.number(), events: usable(Event), orgs: v.optional(usable(Org), []) })
 export type EventsData = v.InferOutput<typeof EventsData>
 
 /** A candidate time of an event whose time is still to pick (marks.mts); its index among the event's times is its id */

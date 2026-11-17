@@ -2,7 +2,7 @@
 // limits a campus sharing a few addresses runs into, nor load a photo whole: GET /api/photo?src=<url>&w=<width>, a
 // photo the served build's profiles show, by its address there, at one of the widths pages ask for, and nothing else,
 // so this is neither an open proxy nor a way to run up transformations. Each is fetched as published, made no wider
-// than asked as WebP, which every browser we serve takes, by the Images binding, and kept at the edge and in browsers
+// than asked by the Images binding, in the best format the browser says it takes, and kept at the edge and in browsers
 // for good, as an address is always the same photo
 
 import { Hono } from "hono/tiny"
@@ -21,13 +21,21 @@ const UPSTREAM_MS = 15_000
 /** How finely a photo is encoded: unasked, the binding encodes WebP all but losslessly, larger than the source */
 const QUALITY = 80
 
+/** What a photo is made as, the best first, of what the binding makes (JPEG XL isn't one); JPEG is taken by all */
+const FORMATS = ["image/avif", "image/webp"] as const
+
+/** The best format a browser's Accept names, AVIF where it's decoded, WebP on a Mac older than Ventura */
+export const formatOf = (accept = "") =>
+  FORMATS.find(format => accept.includes(format)) ?? "image/jpeg"
+
 photos.get("/api/photo", async c => {
   const src = c.req.query("src")
   const width = PHOTO_WIDTHS.find(width => String(width) === c.req.query("w"))
   if (src === undefined || width === undefined)
     return c.notFound()
+  const format = formatOf(c.req.header("accept"))
   // Keyed by what's served alone, so a made-up query can't skip the cache and have the photo fetched and made again
-  const key = new Request(new URL(photoSrc(src, width), c.req.url))
+  const key = new Request(new URL(`${photoSrc(src, width)}&as=${format.slice("image/".length)}`, c.req.url))
   const cache = typeof caches === "undefined" ? undefined : caches.default
   const kept = await cache?.match(key)
   if (kept)
@@ -39,8 +47,8 @@ photos.get("/api/photo", async c => {
     const fetched = await fetch(src, { headers: HEADERS, signal: AbortSignal.timeout(UPSTREAM_MS) })
     if (!fetched.ok)
       throw new Error(`${src} is ${fetched.status}`)
-    const made = await c.env.IMAGES.input(fetched.body!).transform({ width, fit: "scale-down" }).output({ format: "image/webp", quality: QUALITY })
-    const photo = made.response({ headers: { "cache-control": "public, max-age=31536000, immutable" } })
+    const made = await c.env.IMAGES.input(fetched.body!).transform({ width, fit: "scale-down" }).output({ format, quality: QUALITY })
+    const photo = made.response({ headers: { "cache-control": "public, max-age=31536000, immutable", "vary": "accept" } })
     if (cache)
       c.executionCtx.waitUntil(cache.put(key, photo.clone()))
     return photo

@@ -11,10 +11,12 @@
 // The terms are those running or yet to start within AHEAD days whose sections the registrar has published: the live
 // ones (activeTerms), J-Term included, which pages load as they're wanted, and the next, which only a course's page
 // loads. 25Live is read 30 days a request around today, a window split where it answers its cap of 200, far enough
-// either way to hold any such term's dates. The import fails loud (src/courses/registrar.mts), as does an unknown
-// building code (src/courses/buildings.mts) and any address in the clear (src/courses/email.mts), so the last
-// night's files stay
-import { readFile, readdir, stat, writeFile, mkdir } from "node:fs/promises"
+// either way to hold any such term's dates. The import fails loud (src/courses/registrar.mts), as does any address in
+// the clear (src/courses/email.mts), and then nothing is made. A building code the table can't place
+// (src/courses/buildings.mts) is no reason to hold back every other input, though: its classes are made with their
+// text and no place, as an online class is, each code is warned of, and the workflow's step is given them as its
+// output `unplaced`, so the job fails once they're published (inputs.yml)
+import { appendFile, readFile, readdir, stat, writeFile, mkdir } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 import * as v from "valibot"
 import { type CoursesIndex, type TermEntry, type TermFile, COURSES, DATA_PATH, Section, termSpan } from "../../src/courses/course.mts"
@@ -175,7 +177,8 @@ if (import.meta.main) {
 
   const now = Date.now()
   const gazetteer = v.parse(Gazetteer, JSON.parse(await readFile(fileURLToPath(new URL("../../src/map/gazetteer.json", import.meta.url)), "utf8")))
-  const place = placeOfCode(new Set(gazetteer.places.map(({ name }) => name)))
+  const unplaced = new Map<string, string>()
+  const place = placeOfCode(new Set(gazetteer.places.map(({ name }) => name)), ({ code, message }) => void unplaced.set(code, message))
   const calendar = await calendarOf(localDay(now), cache)
   if (!calendar.noClass.length || !Object.keys(calendar.terms).length)
     throw new Error("25Live's academic calendar has no terms or no days off: has it changed its titles?")
@@ -188,6 +191,11 @@ if (import.meta.main) {
   for (const [file, json] of files)
     await writeInput(`public${file}`, json)
   await writeInput(COURSES, JSON.stringify(index) + "\n")
+
+  for (const message of unplaced.values())
+    console.warn(`${message}. Its classes are made without a place`)
+  if (unplaced.size && process.env.GITHUB_OUTPUT)
+    await appendFile(process.env.GITHUB_OUTPUT, `unplaced=${[...unplaced.keys()].map(code => JSON.stringify(code)).join(" ")}\n`)
 
   console.log(`Calendar: no classes ${calendar.noClass.join(" ")}; swaps ${JSON.stringify(calendar.swaps)}; holidays ${calendar.holidays.join(" ")}`)
   for (const [code, dates] of Object.entries(calendar.terms))

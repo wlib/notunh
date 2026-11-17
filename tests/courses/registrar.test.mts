@@ -42,7 +42,7 @@ test("a page's time is the API's own clock where it says, else when it was read"
   expect(pageRead({ ...page, timestamp: undefined }, 5).fetched).toBe(5)
 })
 
-test("every building code in the fixtures is in the table, and an unknown code fails the import", () => {
+test("every building code in the fixtures is in the table, and one the table can't place fails the import", () => {
   const codes = new Set(Object.values(rawPages).flatMap(page => page.data.flatMap(row => (row as { COURSE_DATA: { MEETINGS: { BUILDING: string }[] } }).COURSE_DATA.MEETINGS.map(meeting => meeting.BUILDING))))
   for (const code of codes)
     expect(code in CODES).toBe(true)
@@ -58,6 +58,32 @@ test("every building code in the fixtures is in the table, and an unknown code f
   const row = unknown.find(row => row.COURSE_DATA.MEETINGS.length)!
   row.COURSE_DATA.MEETINGS[0].BUILDING = "NEWBLDG"
   expect(() => fromDhub(unknown, place)).toThrow(UnknownBuilding)
+})
+
+test("a placer told of the codes it can't place puts them nowhere, never somewhere, and places the rest as ever", () => {
+  const names = Object.values(CODES).filter(name => name !== null)
+  const code = fc.oneof(fc.constantFrom(...Object.keys(CODES)), fc.string(), fc.constantFrom("constructor", "toString", "__proto__"))
+  fc.assert(fc.property(code, fc.string(), fc.subarray(names), (code, description, kept) => {
+    const told: string[] = []
+    const placed = placeOfCode(new Set(kept), error => void told.push(error.code))(code, description)
+    const name = Object.hasOwn(CODES, code) ? CODES[code] : undefined
+    const isPlaceable = name === null || (name !== undefined && kept.includes(name))
+    expect(placed).toBe(isPlaceable ? name ?? undefined : undefined)
+    expect(told).toEqual(isPlaceable ? [] : [code])
+    if (!isPlaceable)
+      expect(() => placeOfCode(new Set(kept))(code, description)).toThrow(UnknownBuilding)
+  }))
+})
+
+test("a meeting whose building can't be placed keeps its text", () => {
+  const rows = structuredClone(rawRows) as { COURSE_DATA: { MEETINGS: { BUILDING: string, BUILDING_DESC: string, ROOM: string }[] } }[]
+  const at = rows.findIndex(row => row.COURSE_DATA.MEETINGS.length)
+  Object.assign(rows[at].COURSE_DATA.MEETINGS[0], { BUILDING: "NEWBLDG", BUILDING_DESC: "New Building", ROOM: "101" })
+  const told: string[] = []
+  const [meeting] = fromDhub(rows, placeOfCode(new Set(), error => void told.push(error.code)))[at].meetings
+  expect(meeting).toMatchObject({ where: "New Building 101" })
+  expect(meeting).not.toHaveProperty("place")
+  expect(told).toContain("NEWBLDG")
 })
 
 test("registrar times read as minutes after midnight, round the clock, and hours arranged as none", () => {

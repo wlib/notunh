@@ -2,8 +2,9 @@
 // scripts/map/courses.mts fetches and the tests read fixtures. Unlike the event calendars, the import fails loud: a
 // row the schema doesn't read throws, naming the row and the field, and a term whose rows don't add up to the API's
 // own total, or that lists a CRN twice, is refused, so a change upstream can't ship a partial term. In-person
-// meetings are placed on the gazetteer by building code (buildings.mts); instructors keep their name and a hidden
-// address (email.mts), and usernames are dropped
+// meetings are placed on the gazetteer by building code, and one of a code not known is placed nowhere or fails the
+// import, as the placer has it (buildings.mts); instructors keep their name and a hidden address (email.mts), and
+// usernames are dropped
 
 import * as v from "valibot"
 import { type Section, Section as SectionSchema } from "./course.mts"
@@ -65,7 +66,7 @@ export class MalformedRow extends Error {
   }
 }
 
-/** How a meeting's building code and description are placed: a gazetteer name, nowhere, or a throw (placeOfCode) */
+/** How a meeting's building code and description are placed: a gazetteer name, or nowhere, unless it throws (placeOfCode) */
 export type Placer = (code: string, description: string) => string | undefined
 
 /** Rows as sections, placed, the first numbered `first`; a row of a shape not known fails the import rather than vanishing */

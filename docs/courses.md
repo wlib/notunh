@@ -23,7 +23,7 @@ Terms are a set, never "the" term. The pipeline publishes every term running or 
 
 `scripts/map/courses.mts` writes the index, `src/courses/courses.json` (the calendar, and each term's dates, freshness and file), and each term's sections under `public/data/courses/`, named by content. The index loads with the map; a term file loads once something asks for courses (typing in search, a page, a saved section, a class reminder), and the service worker keeps it ([offline.md](offline.md)). A term's `fetched` is the registrar's timestamp on its oldest page; `built` is when the file was written.
 
-The import fails loud (`registrar.mts`): an unreadable row names its position and field, and a term whose rows don't add up to the API's total, a CRN listed twice, or a building code not in `buildings.mts` is refused. Codes for nowhere (online, TBA, off campus) keep their text and place nothing.
+The import fails loud (`registrar.mts`): an unreadable row names its position and field, and a term whose rows don't add up to the API's total or that lists a CRN twice is refused. Codes for nowhere (online, TBA, off campus) keep their text and place nothing. A building code `buildings.mts` can't place, a new one or one whose building the gazetteer no longer names, is never guessed at: its classes keep their text and place nothing too, so the night's other inputs still publish, and the Inputs run then fails, naming the code, until it's added.
 
 Instructors' addresses are hidden at build time (`email.mts`), shifted and reversed so no address regex matches the shipped JSON or HTML, and the build refuses anything that looks like one. A `mailto:` is assembled only as Email is tapped. UNH publishes the same addresses; this only keeps them from scrapers of static files.
 

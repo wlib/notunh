@@ -316,6 +316,9 @@ body {
 .home-body > .suggested {
   z-index: 1;
   align-content: start;
+  /* As wide as a row's gold wash beneath, which reaches past the list's edges */
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
   background: var(--surface);
 }
 
@@ -1150,13 +1153,14 @@ body {
   color: inherit;
 }
 
-.view-actions .button[aria-pressed="true"] {
-  color: var(--accent);
-}
-
 .view-actions .button.primary {
   flex-grow: 2;
   color: var(--on-accent);
+}
+
+/* After the primary's, so one pressed, as Following is, reads on its outline */
+.view-actions .button[aria-pressed="true"] {
+  color: var(--accent);
 }
 
 /* A room's days, today, tomorrow, and any other picked, in one row */
@@ -1603,36 +1607,160 @@ body {
   text-align: start;
 }
 
-/* Practices, quieter than what's on to go to: one as its own row, more gathered at a place, opening to show each (EventLines in Pages.tsx) */
-.rows > li.practices {
+/* What recurs on a day, folded into one quiet line that opens (FoldRow in Pages.tsx) */
+.rows > li.fold {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.practices summary,
+.fold summary,
 .rows > li.practice > .row {
   color: var(--muted);
 }
 
-.practices summary {
+.fold summary {
   list-style: none;
   cursor: pointer;
 }
 
-.practices summary::-webkit-details-marker {
+.fold summary::-webkit-details-marker {
   display: none;
 }
 
-.practices summary strong {
+.fold summary strong {
   font-weight: 550;
 }
 
-.practices details[open] > summary .row-state {
+.fold details[open] > summary .row-state {
   transform: rotate(90deg);
 }
 
-.practices details > .rows {
+.fold details > .rows {
   padding-inline-start: 0.75rem;
   border-inline-start: 2px solid var(--border);
+}
+
+/* A row's star, which saves that session: muted till it's saved, then gold */
+.star {
+  display: grid;
+  place-items: center;
+  min-inline-size: var(--tap);
+  min-block-size: var(--tap);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 1.15rem;
+}
+
+.star:hover {
+  color: var(--text);
+}
+
+.star[aria-pressed="true"],
+.save-button[aria-pressed="true"] .icon-star {
+  color: var(--star);
+}
+
+.star[aria-pressed="true"] .icon-star,
+.save-button[aria-pressed="true"] .icon-star {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' stroke='black' stroke-width='2' stroke-linejoin='round'><path d='m12 3 2.8 5.8 6.2.9-4.5 4.4 1.1 6.3L12 17.4l-5.6 3 1.1-6.3L3 9.7l6.2-.9z'/></svg>");
+}
+
+/* A row that's yours, washed in gold the row's width */
+.rows > li.yours {
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--radius-s);
+  background: color-mix(in oklch, var(--star) 14%, transparent);
+}
+
+.rows > li.yours + li,
+.rows > li + li.yours {
+  border-block-start-color: transparent;
+}
+
+.save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+}
+
+/* A save's notice, at the sheet's foot */
+.toast-slot {
+  position: absolute;
+  inset: auto var(--inset) max(var(--inset), env(safe-area-inset-bottom));
+  z-index: 3;
+  display: grid;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-m);
+  background: var(--text);
+  color: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+  pointer-events: auto;
+}
+
+.toast .go {
+  min-block-size: var(--tap);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--star);
+  font-weight: 600;
+}
+
+/* Chips in one line that scrolls sideways to the sheet's edges, with room for the tap each takes around it, as a room's days have */
+.chips:is(.interests, .shortcuts, .filters, .standing) {
+  flex-wrap: nowrap;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: calc(-1 * var(--inset));
+  padding: 0.25rem var(--inset);
+}
+
+.chips:is(.interests, .shortcuts, .filters, .standing)::-webkit-scrollbar {
+  display: none;
+}
+
+.chips.shortcuts .chip {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* A filter's day and time of day, native pickers, with its chips as tall beside them */
+.chips.filters select {
+  flex: none;
+  border-radius: 999px;
+}
+
+.chips.filters .chip {
+  min-block-size: var(--tap);
+}
+
+.join strong {
+  font-weight: 600;
+}
+
+.date-deadline .row-time,
+.date-registration .row-time,
+.date-registration .row-what strong {
+  color: var(--accent);
+}
+
+.date-break .row-what strong {
+  font-weight: 500;
 }
 
 /* A row that leaves the map, as a chapter's to UNH's page for it */

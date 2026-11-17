@@ -7,6 +7,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
 import { Map as MapLibre, addProtocol, setWorkerUrl, type GeoJSONSource } from "maplibre-gl"
 import { r } from "bruh/reactive"
 import { loadFeed, routeLabel } from "../transit/feed.mts"
+import { NO_SAVES } from "../social/saves.mts"
 import { toLine, pointAt } from "../geo/lines.mts"
 import { DRAWN_ICONS, glyphsFrom, hostedAt, loadStyle, upstreamGlyphs } from "./basemap/style.mts"
 import { PROTOCOL, tileLoader } from "./basemap/tiles.mts"
@@ -71,6 +72,7 @@ map.on("load", () => {
     buildings:        r(places.buildings),
     gazetteer:        r([]),
     todayPlaced:      r([]),
+    saves:            r(NO_SAVES),
     now:              r(0),
     shownRoutes:      r(new Set([route.id])),
     highlightedRoute: r(undefined),

@@ -1,6 +1,7 @@
-// The map page's state: your location, the live buses, which you're on, your trip, today's events, the courses,
-// your calendars, parking, the rooms to book, the page the sheet shows, and what the map shows. Starting it starts its polling and
-// watching, and stop ends them, so the page owns the one it starts, and a test can make its own
+// The map page's state: your location, the live buses, which you're on, your trip, today's events and what's yours of
+// them, the courses, your calendars, parking, the rooms to book, the page the sheet shows, and what the map shows.
+// Starting it starts its polling and watching, and stop ends them, so the page owns the one it starts, and a test can
+// make its own
 
 import { type MapData, loadMapData } from "./data.mts"
 import { createLocation } from "./location.mts"
@@ -9,6 +10,7 @@ import { createRiding } from "./riding.mts"
 import { createTrip } from "./trip.mts"
 import { createView } from "./view.mts"
 import { createToday } from "./today.mts"
+import { createSaves } from "./saves.mts"
 import { createCoursesState } from "./courses.mts"
 import { createCalendars } from "./calendars.mts"
 import { createPage } from "./page.mts"
@@ -24,11 +26,12 @@ export const createMapState = (data: MapData) => {
   const riding = createRiding({ ...data, ...location, ...live }, own)
   const trip = createTrip({ ...data, ...location, ...live, ...riding }, own)
   const today = createToday({ ...data, ...live }, own)
+  const saves = createSaves({ ...data, ...live, pins: today.pins })
   const courses = createCoursesState({ ...data, ...live })
   const calendars = createCalendars({ ...data, ...live, ...courses })
   const parking = createParkingState(data)
   const rooms = createRooms({ ...data, ...courses }, own)
-  const state = { ...data, ...location, ...live, ...riding, ...trip, ...today, ...courses, ...calendars, ...parking, ...rooms, ...createPage(own) }
+  const state = { ...data, ...location, ...live, ...riding, ...trip, ...today, ...saves, ...courses, ...calendars, ...parking, ...rooms, ...createPage(own) }
   return { ...state, ...createView(state), stop: () => stops.splice(0).forEach(stop => stop()) }
 }
 

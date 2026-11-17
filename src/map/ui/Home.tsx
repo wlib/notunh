@@ -1,23 +1,28 @@
 /** @jsxImportSource bruh/browser */
 
-// The home, under the search: the week as one list. Yours first, when you have anything: your next saved class
-// (state/courses.mts), the next thing in the calendars you've imported (state/calendars.mts), the reminders set on this phone (Remind.tsx) and the trips saved here (state/trip.mts), each a
-// row that opens its page or plans its trip. Then what's on now, later today (state/today.mts), with making an event
-// of your own as the last row of today, and each day to come under its own heading (src/social/event.mts), a week at
-// a time. While the search is typed in, its suggestions lie over the list (Search.tsx), which stays as it was beneath
-// them, scrolled and opened as it was, and the sheet the size it was
+// The home, under the search: what's yours and what's on today, short enough to read with the sheet half up. First the
+// ways into the lists of their own: clubs and activities, the week, and the term ahead (Explore.tsx, Ahead.tsx). Then
+// Yours, when you have anything: your next saved class (state/courses.mts), the next thing in the calendars you've
+// imported (state/calendars.mts), deadlines and breaks in the next few days, the sessions you've saved, the next of
+// each activity you follow and the events you're going to (state/saves.mts), the reminders set on this phone
+// (Remind.tsx) and the trips saved here (state/trip.mts), each a row that opens its page or plans its trip. Then
+// what's on now and the next few things today (state/today.mts), what recurs folded under them by kind, with making an
+// event of your own as the last row, and the week's page for the rest; then plan ahead, three rows. While the search
+// is typed in, its suggestions lie over the list (Search.tsx), which stays as it was beneath them, scrolled and opened
+// as it was, and the sheet the size it was
 
 import { r } from "bruh/reactive"
-import { type DayList, type Event, type Pin, WEEK, upcoming } from "../../social/event.mts"
 import { codeOf, courseOf } from "../../courses/course.mts"
 import { isClassAt } from "../../courses/imported.mts"
-import { daysBetween, localDay, nextAt } from "../../shared/time.mts"
-import { ClockTime, Day, relativeDay } from "../../shell/intl.tsx"
+import { localDay } from "../../shared/time.mts"
+import { ClockTime } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import { capture } from "../../shell/usage.tsx"
 import { state } from "../state/map.mts"
 import { nowMs, walkTo } from "./common.tsx"
-import { DayName, EventLines, Row, placeNamed, sectionPage } from "./Pages.tsx"
+import { DayName, EventLines, EventRow, Row, placeNamed, sectionPage } from "./Pages.tsx"
+import { Shortcuts } from "./Explore.tsx"
+import { DateRow, PlanAhead, dueSoon } from "./Ahead.tsx"
 import { Reminders, currentReminders } from "./Remind.tsx"
 import { Suggestions, SearchRow, isSearching } from "./Search.tsx"
 
@@ -79,19 +84,27 @@ const Goals = () =>
     />
   ))
 
-/** Yours: the next class and the next thing in your calendars, the sooner first, the reminders and the saved trips, as one list, when there's any */
+/**
+ * Yours: the next class and the next thing in your calendars, the sooner first, deadlines and breaks in the next few
+ * days, the sessions you've saved, the next of each activity you follow and the events you're going to, the reminders
+ * and the saved trips, as one list, when there's any
+ */
 const Yours = () => {
+  const due = r(dueSoon)
+  const mine = state.yoursNext
   const list: HTMLUListElement =
     <ul class="rows" aria-label="Yours">
       {r(() => state.nextImport.value && state.nextClass.value && state.nextImport.value.start < state.nextClass.value.event.start
         ? <><NextImport /><NextClass /></>
         : <><NextClass /><NextImport /></>)}
+      {r(() => due.value.map(date => <DateRow date={date} />))}
+      {r(() => mine.value.map(event => <EventRow event={event} />))}
       <Reminders />
       <Goals />
     </ul>
   return (
     <section class="yours">
-      {r(() => (state.nextClass.value || state.nextImport.value || state.goals.value.length > 0 || currentReminders.value.length > 0) && <h2 class="eyebrow">Yours</h2>)}
+      {r(() => (state.nextClass.value || state.nextImport.value || state.goals.value.length > 0 || currentReminders.value.length > 0 || due.value.length > 0 || mine.value.length > 0) && <h2 class="eyebrow">Yours</h2>)}
       {list}
     </section>
   )
@@ -105,7 +118,13 @@ const NewEvent = ({ place }: { place?: string }) =>
     </button>
   </li>
 
-/** Today: what's on now, and later today, with New event as the last row */
+/** How many of today's one-offs the home shows before the week's page */
+const NEXT_FEW = 4
+
+/**
+ * Today: what's on now, then the next few things later today, each kind of what recurs folded under them, with New
+ * event as the last row, and the week's page for the rest
+ */
 const Today = () =>
   r(() => {
     const now = nowMs()
@@ -114,47 +133,26 @@ const Today = () =>
     return <>
       {on.length > 0 && <>
         <h2 class="eyebrow">Now</h2>
-        <ul class="rows" aria-label="Now"><EventLines events={on} standing={<span class="on">On</span>} /></ul>
+        <ul class="rows" aria-label="Now"><EventLines events={on} standing={<span class="on">On</span>} rows={NEXT_FEW} /></ul>
       </>}
       <h2 class="eyebrow">{on.length ? "Later today" : "Today"}</h2>
       <ul class="rows" aria-label="Today">
-        <EventLines events={later} />
+        <EventLines events={later} rows={NEXT_FEW} />
         <NewEvent />
       </ul>
+      <button type="button" class="more" onclick={() => state.go({ kind: "week" })}>Browse this week ›</button>
     </>
   })
-
-/** A day to come: its heading, "Tomorrow" or "Thursday, Oct 29", and its rows */
-const DayRows = ({ day, events }: DayList<Event | Pin>) => {
-  const away = daysBetween(localDay(nowMs()), day)
-  return <>
-    <h2 class="eyebrow">{away === 1 ? relativeDay(1) : <Day of={day} weekday="long" month="short" day="numeric" />}</h2>
-    <ul class="rows" aria-label={day}><EventLines events={events} day={day} /></ul>
-  </>
-}
-
-/** The days to come, a week at a time, each with what's on it */
-const Later = () => {
-  const days = r(WEEK)
-  return r(() => {
-    const events = [...state.events.value.events, ...state.pins.value]
-    const listed = upcoming(events, nowMs(), days.value)
-    const all = upcoming(events, nowMs(), days.value + WEEK * 3)
-    return <>
-      {listed.map(day => <DayRows {...day} />)}
-      {all.length > listed.length && <button type="button" class="more" onclick={() => days.value += WEEK}>Later ›</button>}
-    </>
-  })
-}
 
 export const Home = () =>
   <section class="home">
     <SearchRow />
     <div class="home-body">
       <div class="agenda" inert={isSearching} aria-hidden={r(() => isSearching.value ? "true" : undefined)}>
+        <Shortcuts />
         <Yours />
         <Today />
-        <Later />
+        <PlanAhead />
       </div>
       {r(() => isSearching.value && <Suggestions />)}
     </div>

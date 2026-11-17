@@ -16,7 +16,9 @@ import { sync } from "../../shell/sync.mts"
 import { state } from "../state/map.mts"
 import { MyCalendar } from "./Calendars.tsx"
 import { MyCourses } from "./Courses.tsx"
-import { Head } from "./Pages.tsx"
+import { nowMs } from "./common.tsx"
+import { ActivityRow } from "./Explore.tsx"
+import { EventRow, Head } from "./Pages.tsx"
 
 /** The UNH address verified for this device's person, once known, or null for none */
 export const verified = r<string | null>(null)
@@ -209,9 +211,27 @@ const Email = () => {
 }
 
 /** You: this device, your courses, your calendars, your UNH email, and your devices */
+/** The sessions you've saved still to come, soonest first, and the activities you follow, when there are any */
+const Saved = () =>
+  r(() => {
+    const saved = state.events.value.events.filter(event => state.isSessionSaved(event) && event.end > nowMs()).sort((a, b) => a.start - b.start)
+    const followed = state.listings.value.filter(listing => state.isFollowing(listing.key))
+    return <>
+      {saved.length > 0 && <>
+        <h2 class="eyebrow">Saved</h2>
+        <ul class="rows">{saved.map(event => <EventRow event={event} day="" />)}</ul>
+      </>}
+      {followed.length > 0 && <>
+        <h2 class="eyebrow">Following</h2>
+        <ul class="rows">{followed.map(listing => <ActivityRow listing={listing} />)}</ul>
+      </>}
+    </>
+  })
+
 export const YouView = () => <>
   <Head title="You" />
   <p class="view-facts">{r(() => verified.value ? <>This device · <strong>{verified.value}</strong></> : "This device · no account")}</p>
+  <Saved />
   <MyCourses />
   <MyCalendar />
   <Email />

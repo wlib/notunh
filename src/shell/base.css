@@ -11,6 +11,7 @@
   --on-accent:      oklch(98.6% 0.004 85);
   --positive:       oklch(52% 0.14 152);
   --highlight:      oklch(90% 0.14 95 / 0.6);
+  --star:           oklch(68% 0.16 75);
   --shadow: 0 10px 30px oklch(23% 0.03 265 / 0.16), 0 1px 3px oklch(23% 0.03 265 / 0.12);
   /* Sheets and cards, fields and cards within them, and buttons */
   --radius-l: 1.125rem;
@@ -39,6 +40,7 @@
     --on-accent:      oklch(18.5% 0.01 265);
     --positive:       oklch(78% 0.15 152);
     --highlight:      oklch(75% 0.14 90 / 0.4);
+    --star:           oklch(80% 0.15 80);
     --shadow: 0 10px 30px oklch(0% 0 0 / 0.45), 0 1px 3px oklch(0% 0 0 / 0.35);
   }
 }

@@ -13,14 +13,16 @@ import type { Placed } from "../state/today.mts"
 import { clockOf } from "../../shared/time.mts"
 import { groupBy } from "../../shared/group.mts"
 import { isPractice } from "../../social/sport.mts"
+import { type Saves, NO_SAVES, isYours } from "../../social/saves.mts"
 import type { Coordinates } from "../../geo/projection.mts"
 import { laneSlots, lanePieces, measureCorridors } from "./corridors.mts"
 import { DENSITY, GREEK, QUIET, buildingIcon, busIcon, chapterIcon, chevronIcon } from "./icons.mts"
 
 const FONT = ["Noto Sans Bold"]
-// The page's ink, and the accent today's events are drawn in
+// The page's ink, the accent today's events are drawn in, and the gold of one that's yours
 const INK = "#23262e"
 const EVENT = "#2f4f9e"
+const STAR = "#c98a00"
 
 export const collection = (features: GeoJSON.Feature[]): GeoJSON.FeatureCollection => ({
   type: "FeatureCollection",
@@ -121,18 +123,21 @@ export const chapterFeatures = (places: readonly GazetteerPlace[]) =>
  * A marker for each place with something on today, which a tap opens, labelled in words by what's on there now,
  * "Tennis · till 3:00 PM", filled, else by what's next, "Soccer · 3:00 PM", outlined. Today's list is soonest first,
  * so the first at a place still to end is the one it's labelled by, but for practices, which only label a place
- * that has nothing else on, drawn muted (src/social/sport.mts)
+ * that has nothing else on, drawn muted (src/social/sport.mts), and anything yours (saved, an activity you follow, or
+ * one you're going to), which labels its place first, in gold, from further out
  */
-export const eventFeatures = (placed: readonly Placed[], now: number) =>
+export const eventFeatures = (placed: readonly Placed[], now: number, saves: Saves = NO_SAVES) =>
   [...groupBy(placed.filter(({ event }) => event.end > now), ({ place }) => place.name).values()].map((here, i): GeoJSON.Feature => {
-    const { event, place } = here.find(({ event }) => !isPractice(event)) ?? here[0]
+    const mine = here.find(({ event }) => isYours(saves, event))
+    const { event, place } = mine ?? here.find(({ event }) => !isPractice(event)) ?? here[0]
     return {
       type: "Feature",
       id: i,
       properties: {
         place: place.name,
         on:    event.start <= now,
-        muted: isPractice(event),
+        yours: Boolean(mine),
+        muted: isPractice(event) && !mine,
         label: event.start <= now ? `${event.title} · till ${clockOf(event.end)}` : `${event.title} · ${clockOf(event.start)}`
       },
       geometry: { type: "Point", coordinates: [place.lon, place.lat] }
@@ -220,35 +225,39 @@ export const addLayers = (map: MapLibre) => {
     minzoom: 13,
     paint: {
       // A place with only practices on is smaller and fainter, there to say something's on but not to go to
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, ["case", ["get", "muted"], 3, 4], 17, ["case", ["get", "muted"], 6.5, 9]],
-      "circle-color": ["case", ["get", "on"], EVENT, "white"],
-      "circle-stroke-color": ["case", ["get", "on"], "white", EVENT],
-      "circle-stroke-width": ["case", ["get", "muted"], 1.5, 2],
+      // One that's yours is larger, in gold
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, ["case", ["get", "yours"], 6, ["get", "muted"], 3, 4], 17, ["case", ["get", "yours"], 12, ["get", "muted"], 6.5, 9]],
+      "circle-color": ["case", ["get", "on"], ["case", ["get", "yours"], STAR, EVENT], "white"],
+      "circle-stroke-color": ["case", ["get", "on"], "white", ["get", "yours"], STAR, EVENT],
+      "circle-stroke-width": ["case", ["get", "yours"], 3, ["get", "muted"], 1.5, 2],
       "circle-opacity": ["case", ["get", "muted"], 0.75, 1],
       "circle-stroke-opacity": ["case", ["get", "muted"], 0.75, 1]
     }
   })
-  map.addLayer({
-    id: "event-labels",
-    type: "symbol",
-    source: "events",
-    minzoom: 15.5,
-    layout: {
-      "text-field": ["get", "label"],
-      "text-font": FONT,
-      "text-size": ["case", ["get", "muted"], 10, 11],
-      "text-offset": [0, 1],
-      "text-anchor": "top",
-      "text-max-width": 9,
-      "text-optional": true
-    },
-    paint: {
-      "text-color": EVENT,
-      "text-halo-color": "white",
-      "text-halo-width": 1.5,
-      "text-opacity": ["case", ["get", "muted"], 0.6, 1]
-    }
-  })
+  // Labelled once the campus is close, but what's yours, which is labelled from further out, larger and in gold
+  for (const yours of [false, true])
+    map.addLayer({
+      id: yours ? "yours-labels" : "event-labels",
+      type: "symbol",
+      source: "events",
+      minzoom: yours ? 13.5 : 15.5,
+      filter: yours ? ["get", "yours"] : ["!", ["get", "yours"]],
+      layout: {
+        "text-field": ["get", "label"],
+        "text-font": FONT,
+        "text-size": yours ? 12 : ["case", ["get", "muted"], 10, 11],
+        "text-offset": [0, yours ? 1.2 : 1],
+        "text-anchor": "top",
+        "text-max-width": 9,
+        "text-optional": !yours
+      },
+      paint: {
+        "text-color": yours ? STAR : EVENT,
+        "text-halo-color": "white",
+        "text-halo-width": 1.5,
+        "text-opacity": yours ? 1 : ["case", ["get", "muted"], 0.6, 1]
+      }
+    })
 
   map.addLayer({
     id: "routes-casing",
@@ -365,6 +374,7 @@ export const drawLayers = (
     buildings:        Reactive<readonly Building[]>,
     gazetteer:        Reactive<readonly GazetteerPlace[]>,
     todayPlaced:      Reactive<readonly Placed[]>,
+    saves:            Reactive<Saves>,
     now:              Reactive<number>,
     shownRoutes:      Reactive<ReadonlySet<string>>,
     highlightedRoute: Reactive<string | undefined>,
@@ -379,8 +389,8 @@ export const drawLayers = (
   })
   // Again each minute, as what's on at a place changes
   const minute = r(() => Math.floor(state.now.value / 60))
-  watch([state.todayPlaced, minute], () => {
-    map.getSource<GeoJSONSource>("events")!.setData(collection(eventFeatures(state.todayPlaced.value, minute.value * 60_000)))
+  watch([state.todayPlaced, minute, state.saves], () => {
+    map.getSource<GeoJSONSource>("events")!.setData(collection(eventFeatures(state.todayPlaced.value, minute.value * 60_000, state.saves.value)))
   })
 
   // Each route's bus and chevrons in its color, and the stops, as the timetable has them

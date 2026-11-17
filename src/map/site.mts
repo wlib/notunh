@@ -6,7 +6,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { type Page, urlOf } from "./link.mts"
 import { plain, areaPreview, coursePreview, eventPreview, meetingWhen, parkingPreview, personPreview, placePreview, programPreview, programsPreview, roomPreview, roomsOf, sectionPreview, spacePreview, stopPreview, weeklyOf, whenOf } from "../social/preview.mts"
-import { type Event, type Pin, EventsData, calendarOf, gazetteerPlaceOf, whereOf } from "../social/event.mts"
+import { type Event, type Pin, EventsData, calendarOf, eventById, gazetteerPlaceOf, whereOf } from "../social/event.mts"
 import { type GazetteerPlace, Gazetteer } from "../places/gazetteer.mts"
 import { Places } from "../places/buildings.mts"
 import { chapterNamed } from "../places/chapters.mts"
@@ -171,7 +171,7 @@ export const resolve = async (site: Site, page: Page, now: number): Promise<Reso
   switch (page.kind) {
     case "event": {
       const { events } = await site.named("events", EventsData)
-      const event = events.find(({ id }) => id === page.id)
+      const event = eventById(events, page.id)
       if (!event)
         return
       const { places } = await site.named("gazetteer", Gazetteer)

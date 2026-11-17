@@ -91,7 +91,15 @@ const stranger = (browser: Browser) =>
 test("the new-event form finds a place by what people call it, taking the first found once Where is left, and keeps what's typed as the clock moves on", async ({ page, fixture }) => {
   await page.clock.install()
   await openMap(page, fixture.origin)
-  await page.getByRole("button", { name: "New event" }).tap()
+  // Below what the half-raised sheet shows, so it's scrolled to in the sheet's body, as a finger would, rather than
+  // brought into view as Playwright would, by scrolling the page the map never scrolls
+  const add = page.getByRole("button", { name: "New event" })
+  await add.waitFor()
+  await add.evaluate(row => {
+    const body = document.querySelector(".panel-body")!
+    body.scrollTop += row.getBoundingClientRect().top - body.getBoundingClientRect().top - 40
+  })
+  await add.tap()
   const where = page.locator("input[name=place]")
   const exactly = page.getByLabel("Where exactly")
   await page.getByLabel("What").fill("Pickup frisbee")
@@ -474,7 +482,9 @@ test("a code emailed to a UNH address verifies this device once typed back, whic
   await fillWhen(page, 0, tomorrow)
   await page.getByRole("button", { name: "Post it" }).click()
   await expect(page.getByRole("heading", { name: "AI club" })).toBeVisible()
-  await page.goto(fixture.origin + "/map/")
+  // On the week's page, tomorrow
+  await page.goto(fixture.origin + "/map/week")
+  await page.locator(".week-days .chip").nth(1).click()
   await expect(page.getByRole("list", { name: localDay(tomorrow) }).locator(".row", { hasText: "AI club" })).toBeVisible()
   // Opened from the list, which never says whose it is, it's still its host's to edit and delete, and deleted, it's
   // off the list Back returns to
@@ -483,12 +493,11 @@ test("a code emailed to a UNH address verifies this device once typed back, whic
   await page.getByRole("button", { name: "Delete", exact: true }).click()
   await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click()
   await expect(page.getByText("This event is gone.")).toBeVisible()
-  await page.getByRole("button", { name: "Back to Map" }).click()
-  await expect(page.getByRole("list", { name: "Now" }).locator(".row", { hasText: "Open mic" })).toBeVisible()
+  await page.getByRole("button", { name: /^Back to/ }).click()
   await expect(page.locator(".row", { hasText: "AI club" })).toHaveCount(0)
 })
 
-test("an event's host edits it, its title and time, and sees it changed on its page and in the home's list, and a guest sees no Edit", async ({ page, browser, fixture }) => {
+test("an event's host edits it, its title and time, and sees it changed on its page and in the week's list, and a guest sees no Edit", async ({ page, browser, fixture }) => {
   // Two devices' pages, drawn in software beside the other tests
   test.slow()
   await page.clock.install()
@@ -542,8 +551,9 @@ test("an event's host edits it, its title and time, and sees it changed on its p
   await expect(page).toHaveURL(/\/map\/$/)
   await expect(page.getByRole("heading", { name: "Edit event" })).toHaveCount(0)
 
-  // On the home's list as edited
-  await page.goto(fixture.origin + "/map/")
+  // On the week's list, tomorrow, as edited
+  await page.goto(fixture.origin + "/map/week")
+  await page.locator(".week-days .chip").nth(1).click()
   const row = page.getByRole("list", { name: localDay(tomorrow) }).locator(".row", { hasText: "Ultimate frisbee" })
   await expect(row).toBeVisible()
   await expect(row).toContainText(/6:30/)

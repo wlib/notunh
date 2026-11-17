@@ -9,7 +9,7 @@ import { startMap } from "./state/map.mts"
 import { AppTitle } from "../shell/ui.tsx"
 import { Home } from "./ui/Home.tsx"
 import { open as openReminder, topUpClasses } from "./ui/Remind.tsx"
-import { PageView, placeNamed } from "./ui/Pages.tsx"
+import { PageView, Toast, placeNamed } from "./ui/Pages.tsx"
 import { Status } from "./ui/Buses.tsx"
 import { isAsked } from "./ui/You.tsx"
 import { RideSuggestion } from "./ui/BusView.tsx"
@@ -74,6 +74,7 @@ const Panel = () =>
     {grabber}
     {header}
     {body}
+    <Toast />
   </aside>
 
 const mapElement = <div class="map" /> as HTMLElement

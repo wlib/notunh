@@ -20,6 +20,7 @@ import { CourseResults, Group } from "./Courses.tsx"
 import { ParkingResults } from "./Parking.tsx"
 import { ChapterKind, EventResults, placeNamed } from "./Pages.tsx"
 import { ProgramResults } from "./Program.tsx"
+import { SeriesResults } from "./Explore.tsx"
 import { SpaceResults, wantRoomsFor } from "./Rooms.tsx"
 import { HOUR, hhmm, nextAt } from "../../shared/time.mts"
 
@@ -333,7 +334,7 @@ export const Suggestions = () => {
     <ul class="suggestions" id="place-options" role="listbox">
       {r(() => options.value.map((option, i) => !isFar(option) && <Option option={option} i={i} />))}
     </ul>
-    {editing.peek() !== "from" && <><SpaceResults query={query} /><CourseResults query={query} /><ParkingResults query={query} /><EventResults query={query} /><ProgramResults query={query} /><ChapterResults query={query} /></>}
+    {editing.peek() !== "from" && <><SpaceResults query={query} /><CourseResults query={query} /><ParkingResults query={query} /><SeriesResults query={query} /><EventResults query={query} /><ProgramResults query={query} /><ChapterResults query={query} /></>}
     {r(() => elsewhere.value.length > 0 &&
       <ul class="suggestions" role="listbox" aria-label="Further off">
         {options.value.map((option, i) => isFar(option) && <Option option={option} i={i} />)}

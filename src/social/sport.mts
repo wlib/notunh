@@ -8,7 +8,6 @@
 
 import type { Event, Source } from "./event.mts"
 import { groupBy } from "../shared/group.mts"
-import { localDay } from "../shared/time.mts"
 
 /** Words of a game or meet, which win over a practice's: "Camper Appreciation Night" is a hockey game's */
 const GAME = /\bvs\.?\s|\bversus\b|\bgame\b|\bmeet\b|\bmatch\b|\btournament\b|\bscrimmage\b|\bplay day\b|\bregatta\b|\binvitational\b|\bchampionship/i
@@ -113,23 +112,3 @@ export const deduped = (events: readonly Event[]): Event[] => {
 }
 
 //#endregion
-
-/** A list's line: an event, quieter if it's a practice, or a day's practices, gathered to say as one */
-export type Line<E extends Event = Event> = { event: E, isMuted: boolean } | { practices: E[], place?: string }
-
-/**
- * A list of events with each day's practices after the rest, gathered into one line where there's more than one, so
- * a list of what's on isn't a list of practices, and a lone practice takes no more room as its own row than as a line
- */
-export const gathered = <E extends Event,>(events: readonly E[]): Line<E>[] => {
-  const practices = groupBy(events.filter(isPractice), event => localDay(event.start))
-  return [
-    ...events.filter(event => !isPractice(event)).map(event => ({ event, isMuted: false })),
-    ...[...practices.values()].map(practices => {
-      if (practices.length === 1)
-        return { event: practices[0], isMuted: true }
-      const places = new Set(practices.map(event => event.place ?? event.where))
-      return { practices, place: places.size === 1 ? [...places][0] : undefined }
-    })
-  ]
-}

@@ -22,11 +22,12 @@ import { type Person, nextTeaching } from "../../courses/people.mts"
 import { mailto } from "../../courses/email.mts"
 import { type Dated, datedFrom, daysOf, isSaved, keyOf, patternsOf } from "../../courses/saved.mts"
 import { reqsOf } from "../../programs/prereqs.mts"
-import { type Event, type Pin, LINGER, WEEK, calendarOf, placeOf, upcoming, whereOf } from "../../social/event.mts"
+import { type Event, type Pin, LINGER, WEEK, calendarOf, eventById, placeOf, upcoming, whereOf } from "../../social/event.mts"
 import { calendarPath } from "../../social/calendar.mts"
 import { slugIn } from "../../social/curated.mts"
 import { isUnset } from "../../social/marks.mts"
-import { gathered } from "../../social/sport.mts"
+import { isPractice } from "../../social/sport.mts"
+import { type FoldKind, folded, seriesOf } from "../../social/series.mts"
 import { askOf } from "../../social/ask.mts"
 import * as social from "../../social/browser/api.mts"
 import { share as shareStory } from "../../social/story.mts"
@@ -45,6 +46,7 @@ import { servicesAt } from "../../places/services.mts"
 import { CATEGORIES, eraParts, profileNamed, statusText } from "../../places/profiles.mts"
 import { ClockRange, ClockTime, Count, Counted, Day, DayRange, List, Minutes, Weekdays, relativeDay } from "../../shell/intl.tsx"
 import { capture } from "../../shell/usage.tsx"
+import { Icon } from "../../shell/ui.tsx"
 import { minutes, nowMs, walkTo } from "./common.tsx"
 import { ArrivalOffset, Remind } from "./Remind.tsx"
 import { AreaPageView, ParkingView, parkingFor } from "./Parking.tsx"
@@ -61,6 +63,8 @@ import { BusesView } from "./Buses.tsx"
 import { CalendarLine } from "./Calendars.tsx"
 import { RoomView, SpacesHere } from "./Rooms.tsx"
 import { NewEvent } from "./Home.tsx"
+import { ActivityView, ExploreView, PartOf, SeriesHere, WeekView } from "./Explore.tsx"
+import { AheadView } from "./Ahead.tsx"
 import { About, PhotoCredits, Photos, Rating } from "./Profile.tsx"
 
 /** A notice for the page shown, like a link copied */
@@ -78,16 +82,20 @@ export const learn = (id: string, pin: Pin | undefined) =>
 
 /** An event by its id, or another calendar's id for it, if it's one of the build's or a public pin listed, as it is there, so its page shows at once */
 const listedEvent = (id: string): Event | Pin | undefined =>
-  [...state.pins.peek(), ...state.events.peek().events].find(event => event.id === id || event.also?.includes(id))
+  eventById([...state.pins.peek(), ...state.events.peek().events], id)
 
 /** Minutes after midnight on Durham's clock as a range, "2:10 – 3:30 PM", as the registrar's patterns are */
 export const Hours = ({ start, end }: Pick<Meeting, "start" | "end">) =>
   <ClockRange from={new Date(start * 60_000)} to={new Date(end * 60_000)} timeZone="UTC" />
 
-/** A Durham day as a row says it: "Today", "Tomorrow", or "Thu" */
+/** A Durham day as a row says it: "Today", "Tomorrow", "Thu" within the week, or "Nov 28" beyond it */
 export const DayName = ({ day }: { day: string }) => {
   const away = daysBetween(localDay(nowMs()), day)
-  return away >= 0 && away < 2 ? <>{relativeDay(away)}</> : <Day of={day} weekday="short" />
+  return (
+    away >= 0 && away < 2 ? <>{relativeDay(away)}</> :
+    away >= 0 && away < 7 ? <Day of={day} weekday="short" /> :
+                            <Day of={day} month="short" day="numeric" />
+  )
 }
 
 /**
@@ -210,18 +218,20 @@ export const Head = ({ kind, title, name }: { kind?: BruhChild, title: string, n
 }
 
 /** A row of a page's list: when, what and where, and how it stands, which a tap opens, and beside it what else it offers */
-export const Row = ({ time, what, sub, standing, onclick, aside, class: className }: { time?: BruhChild, what: BruhChild, sub?: BruhChild, standing?: BruhChild, onclick?: () => void, aside?: BruhChild, class?: string }) =>
-  <li class={className}>
-    <button type="button" class="row" onclick={onclick}>
+export const Row = ({ time, what, sub, standing, onclick, aside, class: className }: { time?: BruhChild, what: BruhChild, sub?: BruhChild, standing?: BruhChild, onclick?: () => void, aside?: BruhChild, class?: string | Reactive<string | undefined> }) => {
+  const Tag = onclick ? "button" : "div"
+  return <li class={className}>
+    <Tag class="row" {...onclick && { type: "button" as const, onclick }}>
       {time !== undefined && <span class="row-time">{time}</span>}
       <span class="row-what">
         <strong class="truncate">{what}</strong>
         {sub && <span class="muted truncate">{sub}</span>}
       </span>
       {standing && <span class="row-state">{standing}</span>}
-    </button>
+    </Tag>
     {aside}
   </li>
+}
 
 /** A labelled line of a page: what it is, and its value or where it goes */
 export const Line = ({ label, children }: { label: BruhChild, children?: BruhChild }) =>
@@ -545,11 +555,13 @@ const CourseView = ({ courses, code }: { courses: Courses, code: string }) => {
 
 /**
  * An event as a row: when, its day too where it isn't on the day the row's under, or that its time's still to pick,
- * what, and where, which opens its page
+ * what, and where, which opens its page; washed in gold while it's yours, with a star that saves this one session,
+ * but on a person's own event, which is gone to instead
  */
 export const EventRow = ({ event, day = localDay(nowMs()), standing, muted }: { event: Event | Pin, day?: string, standing?: BruhChild, muted?: boolean }) =>
   <Row
-    class={muted ? "practice" : undefined}
+    class={r(() => [muted && "practice", state.yours(event) && "yours"].filter(Boolean).join(" ") || undefined)}
+    aside={event.source !== "pin" && <SaveStar event={event} />}
     time={
       isUnset(event)               ? "To pick" :
       localDay(event.start) === day ? <Span {...event} /> :
@@ -561,6 +573,55 @@ export const EventRow = ({ event, day = localDay(nowMs()), standing, muted }: { 
     onclick={() => state.go({ kind: "event", id: event.id })}
   />
 
+const weekdayFormat = new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: "America/New_York" })
+
+/** What a save says for a few seconds, with the activity it offers to follow: "Saved Tuesday", Follow Yin Yoga */
+const savedNotice = r<{ day: string, follow?: { key: string, name: string } }>()
+let noticeTimer: ReturnType<typeof setTimeout> | undefined
+
+/** The save's notice, at the sheet's foot */
+export const Toast = () =>
+  <div class="toast-slot" aria-live="polite">
+    {r(() => {
+      const notice = savedNotice.value
+      if (!notice)
+        return
+      const follow = notice.follow
+      return <p class="toast" role="status">
+        <span>Saved {notice.day}</span>
+        {follow && <button type="button" class="go" onclick={() => {
+          state.setFollowed(follow.key, true)
+          savedNotice.value = undefined
+        }}>Follow {follow.name}</button>}
+      </p>
+    })}
+  </div>
+
+/** Saves one session, or takes the save back, never its activity, which the notice offers to follow */
+const saveSession = (event: Event, on: boolean) => {
+  state.setSaved(event, on)
+  capture(on ? "event_saved" : "event_unsaved")
+  clearTimeout(noticeTimer)
+  const activity = on && state.activityOf(event)
+  savedNotice.value = on ? {
+    day: weekdayFormat.format(event.start),
+    follow: activity && !state.isFollowing(activity.key) ? activity : undefined
+  } : undefined
+  if (on)
+    noticeTimer = setTimeout(() => savedNotice.value = undefined, 6000)
+}
+
+const SaveStar = ({ event }: { event: Event }) =>
+  <button
+    type="button"
+    class="star"
+    aria-label={`Save ${event.title} on ${weekdayFormat.format(event.start)}`}
+    aria-pressed={r(() => state.isSessionSaved(event) ? "true" : "false")}
+    onclick={() => saveSession(event, !state.isSessionSaved(event))}
+  >
+    <Icon name="star" />
+  </button>
+
 /** How many spots are left of one to sign up for, and till when: "8 spots left · sign up by Sat, Oct 31" */
 const SpotsLeft = ({ event }: { event: Event }) =>
   <>
@@ -568,39 +629,52 @@ const SpotsLeft = ({ event }: { event: Event }) =>
     {event.closes !== undefined && <> · sign up by <Day of={localDay(event.closes - 1)} weekday="short" month="short" day="numeric" /></>}
   </>
 
-/** A day's practices, as one muted line that opens to show each: "3 practices" over "Baseball, Softball · Bremner Field" */
-const PracticesRow = ({ practices, place, day = localDay(nowMs()) }: { practices: (Event | Pin)[], place?: string, day?: string }) => {
-  const [first] = practices
-  return (
-    <li class="practices">
-      <details>
-        <summary class="row">
-          <span class="row-time">{localDay(first.start) === day ? <Span {...first} /> : <><DayName day={localDay(first.start)} /><small><ClockTime at={new Date(first.start)} /></small></>}</span>
-          <span class="row-what">
-            <strong class="truncate"><Counted value={practices.length} one="practice" other="practices" /></strong>
-            <span class="muted truncate"><List type="unit" items={[...new Set(practices.map(({ title }) => title.split(":")[0]))]} />{place && ` · ${place}`}</span>
-          </span>
-          <span class="row-state">›</span>
-        </summary>
-        <ul class="rows">{practices.map(event => <EventRow event={event} day={day} />)}</ul>
-      </details>
-    </li>
-  )
+const FOLDED: Record<FoldKind, string> = { club: "Club meetings", rec: "Campus Rec classes", practice: "Practices" }
+
+/** The gathered lines left open, by kind and day, so one stays open as the list's made again, and on coming Back to it */
+const openFolds = new Set<string>()
+
+/** What recurs on a day as one line that opens to show each: "Club meetings · 25 today" over "Next: Hillel meeting · MUB 120" */
+const FoldRow = ({ fold, events, day = localDay(nowMs()) }: { fold: FoldKind, events: (Event | Pin)[], day?: string }) => {
+  const now = nowMs()
+  const next = events.find(event => event.start >= now) ?? events.find(event => event.end > now) ?? events[0]
+  const id = `${location.pathname}:${day}:${fold}:${events[0].start <= now ? "now" : "later"}`
+  const isToday = day === localDay(now)
+  const details: HTMLDetailsElement =
+    <details open={openFolds.has(id)} ontoggle={() => details.open ? openFolds.add(id) : openFolds.delete(id)}>
+      <summary class="row">
+        <span class="row-time">{localDay(next.start) === day || !day ? <ClockTime at={new Date(next.start)} /> : <DayName day={localDay(next.start)} />}<small>next</small></span>
+        <span class="row-what">
+          <strong class="truncate">{FOLDED[fold]} · <Count value={events.length} />{isToday && " today"}</strong>
+          <span class="muted truncate">Next: {next.title}{next.where && ` · ${next.where}`}</span>
+        </span>
+        <span class="row-state">›</span>
+      </summary>
+      <ul class="rows">{events.map(event => <EventRow event={event} day={day} muted={fold === "practice"} />)}</ul>
+    </details>
+  return <li class={`fold fold-${fold}`}>{details}</li>
 }
 
 /**
- * A list's events with each day's practices, holds and rehearsals after the rest, as gathered in
- * src/social/sport.mts, the same in every list, so a field with only practices still says something's on there
+ * A list's events as folded in src/social/series.mts, the same in every list: one-offs and what's yours as rows, at
+ * most `rows` of them, then each kind of what recurs as one line
  */
-export const EventLines = ({ events, day, standing }: { events: (Event | Pin)[], day?: string, standing?: BruhChild }) =>
-  <>{gathered(events).map(line =>
-    "event" in line ? <EventRow event={line.event} day={day} standing={line.isMuted ? undefined : standing} muted={line.isMuted} /> :
-                      <PracticesRow {...line} day={day} />)}</>
+export const EventLines = ({ events, day, standing, rows: most }: { events: (Event | Pin)[], day?: string, standing?: BruhChild, rows?: number }) =>
+  r(() => {
+    const keys = state.recurringKeys.value
+    const { rows, folds } = folded(events, key => keys.has(key), state.yours)
+    return <>
+      {rows.slice(0, most).map(event => <EventRow event={event} day={day} standing={isPractice(event) ? undefined : standing} />)}
+      {folds.map(({ fold, events }) => events.length === 1
+        ? <EventRow event={events[0]} day={day} muted={fold === "practice"} />
+        : <FoldRow fold={fold} events={events} day={day} />)}
+    </>
+  })
 
 /** How many events search lists */
 const FOUND = 5
 
-/** Search's events: those still to come whose title or place has every word typed, soonest first */
+/** Search's events: those still to come whose title or place has every word typed, soonest first, but a series' sessions */
 export const EventResults = ({ query }: { query: DerivativeNode<string> }) =>
   r(() => {
     const words = query.value.trim().toLocaleLowerCase().split(/\s+/).filter(word => word.length > 1)
@@ -608,10 +682,12 @@ export const EventResults = ({ query }: { query: DerivativeNode<string> }) =>
       return null
     const now = nowMs()
     const events = [...new Map([...state.events.value.events, ...state.pins.value].map(event => [event.id, event])).values()]
-    const found = events
+    const matched = events
       .filter(event => event.end + LINGER > now && words.every(word => `${event.title} ${event.place ?? ""} ${event.where}`.toLocaleLowerCase().includes(word)))
       .sort((a, b) => a.start - b.start)
-      .slice(0, FOUND)
+    // A series is told once, by Clubs & activities, so its sessions don't fill the events found
+    const keys = state.recurringKeys.value
+    const found = [...new Map(matched.filter(event => !keys.has(seriesOf(event)?.key ?? "")).map(event => [event.id, event])).values()].slice(0, FOUND)
     return found.length > 0 && <Group label="Events">{found.map(event => <EventRow event={event} />)}</Group>
   })
 
@@ -762,6 +838,7 @@ const PlaceView = ({ name }: { name: string }) => {
           </ul>
         </>
       })}
+      <SeriesHere name={name} />
       <NearestStop place={place} />
       <SpacesHere name={name} />
       <ScheduledNow name={name} />
@@ -861,6 +938,9 @@ const EventView = ({ id }: { id: string }) => {
       : share(event.title)
     const actions = <>
       {pin && !unset && <Going pin={pin} act={act} />}
+      {!pin && <button type="button" class="button save-button" aria-pressed={r(() => state.isSessionSaved(event) ? "true" : "false")} onclick={() => saveSession(event, !state.isSessionSaved(event))}>
+        <Icon name="star" /> {r(() => state.isSessionSaved(event) ? "Saved" : "Save")}
+      </button>}
       {event.left !== undefined && <a class="button" href={event.url} target="_blank" rel="noopener">Sign up</a>}
       <button type="button" class="button" onclick={shareIt}>Share</button>
     </>
@@ -869,6 +949,7 @@ const EventView = ({ id }: { id: string }) => {
         <Head kind={pin && <>A UNH student{pin.spots !== undefined && <> · <Counted value={pin.spots} one="spot" other="spots" /></>}</>} title={event.title} />
         <p class="view-when">{unset ? "Time to pick" : <When {...event} />}</p>
         <Facts where={whereOf(event)} place={event.place} />
+        <PartOf event={event} />
         {event.left !== undefined && <p class="view-facts"><SpotsLeft event={event} /></p>}
         {isAsked && <p class="ask" role="status">{askOf(pin).title}</p>}
         {visit
@@ -945,6 +1026,10 @@ export const PageView = ({ page }: { page: Page }) => {
         page.kind === "edit"       ? <EditEventView id={page.id} /> :
         page.kind === "you"        ? <YouView /> :
         page.kind === "buses"      ? <BusesView /> :
+        page.kind === "explore"    ? <ExploreView /> :
+        page.kind === "activity"   ? <ActivityView id={page.id} /> :
+        page.kind === "week"       ? <WeekView /> :
+        page.kind === "ahead"      ? <AheadView /> :
                                      <EventView id={page.id} />}
       {r(() => notice.value && <p class="notice" role="status">{notice.value}</p>)}
     </section>

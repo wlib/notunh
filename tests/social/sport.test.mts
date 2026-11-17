@@ -1,11 +1,10 @@
-// What kind of thing an event is, the same thing told by more than one calendar, and a list's practices gathered
-// (src/social/sport.mts): told once whatever order, the same again on its own answer, and nothing ever dropped
+// What kind of thing an event is, and the same thing told by more than one calendar (src/social/sport.mts): told
+// once whatever order, the same again on its own answer, and nothing ever dropped
 
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { type Event, SOURCES } from "../../src/social/event.mts"
-import { deduped, gathered, isPractice, isSame, isSameMeeting } from "../../src/social/sport.mts"
-import { localDay } from "../../src/shared/time.mts"
+import { deduped, isPractice, isSame, isSameMeeting } from "../../src/social/sport.mts"
 
 const HOUR = 3_600_000
 const at = Date.UTC(2026, 9, 31, 15)
@@ -56,26 +55,6 @@ test("telling each thing once drops nothing, is the same whatever order, and the
     // What's kept of a thing is one of its own tellings
     for (const kept of once)
       expect(made).toContainEqual(Object.fromEntries(Object.entries(kept).filter(([key]) => key !== "also")))
-  }))
-})
-
-test("a list's practices follow the rest, a lone one on a day as a muted row and more as one line, and every event is in exactly one line", () => {
-  fc.assert(fc.property(events, made => {
-    const lines = gathered(made)
-    const listed = lines.flatMap(line => "event" in line ? [line.event] : line.practices)
-    expect(listed.map(event => event.id).sort()).toEqual(made.map(event => event.id).sort())
-    const firstPractice = lines.findIndex(line => !("event" in line) || line.isMuted)
-    expect(firstPractice === -1 || lines.slice(firstPractice).every(line => !("event" in line) || line.isMuted)).toBe(true)
-    const days = lines.flatMap(line => "event" in line ? (line.isMuted ? [localDay(line.event.start)] : []) : [localDay(line.practices[0].start)])
-    expect(new Set(days).size).toBe(days.length)
-    for (const line of lines)
-      if ("practices" in line) {
-        expect(line.practices.length).toBeGreaterThan(1)
-        expect(line.practices.every(isPractice)).toBe(true)
-        expect(new Set(line.practices.map(event => localDay(event.start))).size).toBe(1)
-      }
-      else
-        expect(isPractice(line.event)).toBe(line.isMuted)
   }))
 })
 

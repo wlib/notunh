@@ -7,7 +7,7 @@
 import * as v from "valibot"
 import { Live25Event, plain } from "../social/sources.mts"
 import { usable } from "../shared/json.mts"
-import { Day } from "../shared/time.mts"
+import { Day, addDays } from "../shared/time.mts"
 
 /** A weekday as the registrar writes it, Monday first */
 export const LETTERS = ["M", "T", "W", "R", "F", "S", "U"] as const
@@ -100,6 +100,15 @@ export const fromLive25 = (json: unknown, fetched: number): Calendar => {
     dates.reading = sorted(dates.reading)
   return { ...calendar, noClass: sorted(calendar.noClass), holidays: sorted(calendar.holidays) }
 }
+
+/**
+ * Those of some days from a day that classes meet on, as clubs do too: within a term that's begun, not past its last
+ * day of classes where the calendar names one, and not a day without classes
+ */
+export const classDays = ({ noClass, terms }: Pick<Calendar, "noClass" | "terms">, from: Day, days: number) =>
+  Array.from({ length: days }, (_, i) => addDays(from, i))
+    .filter(day => Object.values(terms).some(({ start, end }) => start && start <= day && (!end || day <= end)))
+    .filter(day => !noClass.includes(day))
 
 /** The weekday a day's classes follow: its own, 0 for Monday, or the one it's swapped to */
 export const letterOf = (calendar: Pick<Calendar, "swaps">, day: Day, weekday: number): Letter =>

@@ -4,9 +4,11 @@ import { readFile } from "node:fs/promises"
 import * as v from "valibot"
 import { type Event, Event as EventSchema, EventsData } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromRecOfferings, merged, programOf, programUrl, REC_PROGRAMS } from "../../src/social/sources.mts"
-import { addDays, atClock } from "../../src/shared/time.mts"
+import { WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromRecInstances, fromRecOfferings, merged, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
+import { addDays, atClock, hhmm, localDay, weekday } from "../../src/shared/time.mts"
+import { classDays, fromLive25 } from "../../src/courses/calendar.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
+import { Curated, fromCurated } from "../../src/social/curated.mts"
 
 const fixture = (name: string) => readFile(new URL(`../fixtures/events/${name}`, import.meta.url), "utf8")
 const gazetteer: Gazetteer = JSON.parse(await readFile(new URL("../fixtures/data/src/map/gazetteer.json", import.meta.url), "utf8"))
@@ -19,8 +21,11 @@ const live = from25Live(rawLive, match)
 const athletics = fromAthletics(await fixture("athletics.ics"), match)
 const rawClubs = JSON.parse(await fixture("dserec.json")) as { data: DserecRow[] }
 const clubs = fromDserec(rawClubs, match)
-const program = { id: REC_PROGRAMS[3], ...programOf(await fixture("rec-program.html")) }
+const rawOrganizations = JSON.parse(await fixture("presence-clubs.json")) as { uri: string, regularMeetingTime: string }[]
+const program = { id: "8520b0bd-ad58-415b-a070-7dc7c18e06fc", ...programOf(await fixture("rec-program.html")) }
 const offerings = fromRecOfferings(await fixture("rec-offerings.html"), program, "Fall 2026", match)
+const skate = { id: "af8ff201-7146-4688-b10e-fe79418e3ff2", ...programOf(await fixture("rec-calendar-program.html")) }
+const sessions = fromRecInstances(await fixture("rec-instances.html"), skate, match)
 
 test("each calendar's answer reads into events of the one shape, each a window at a place where the text names one", () => {
   for (const event of [...presence, ...live, ...athletics, ...clubs]) {
@@ -122,7 +127,10 @@ test("merging keeps each id once, in order of start, dropping what ended before 
 
 test("the fixture's events file is what the build would make of the fixtures, and reads as events data", async () => {
   const file = v.parse(EventsData, JSON.parse(await readFile(new URL("../fixtures/data/src/map/events.json", import.meta.url), "utf8")))
-  expect(file.events).toEqual(merged([presence, live, athletics, clubs, offerings], 0))
+  const series = fromCurated(v.parse(Curated, JSON.parse(await fixture("curated.json"))), localDay(file.fetched), 7 * WEEKS, match)
+  const calendar = fromLive25(JSON.parse(await readFile(new URL("../fixtures/courses/25live.json", import.meta.url), "utf8")), file.fetched)
+  const meetings = fromPresenceClubs(rawOrganizations, classDays(calendar, localDay(file.fetched), 7 * WEEKS), match)
+  expect(file.events).toEqual(merged([presence, meetings, live, athletics, clubs, offerings, sessions, series], 0))
 })
 
 //#region DSE Rec
@@ -233,3 +241,150 @@ test("Campus Rec's offerings with spots left read as events on their day, in the
   // None left is none to sign up for
   expect(fromRecOfferings((await fixture("rec-offerings.html")).replace(/\d+ Spots available/g, "0 Spots available"), program, "Fall 2026", match)).toEqual([])
 })
+
+test("Campus Rec's programs are found by classification, those not for going to left out", async () => {
+  const classifications = classificationsOf(await fixture("rec-index.html"))
+  // Open Skate in; staff training and sport clubs, which DSE Rec tells, out
+  expect(classifications).toContain("1a8b85b7-36e2-4d4a-a99d-85dec6cb1eb9")
+  expect(classifications).not.toContain("258cf368-8f7a-4385-8317-085744b68c63")
+  expect(classifications).not.toContain("2c9a2bff-70c1-4154-85d3-101b06e21279")
+  expect(classificationUrl(classifications[0])).toMatch(/^https:\/\/crec\.unh\.edu\/Program\?classificationId=[0-9a-f-]{36}$/)
+  expect(programsOf(await fixture("rec-classification.html"))).toEqual(["af8ff201-7146-4688-b10e-fe79418e3ff2", "cd5a6a27-f8d0-4d19-ad8a-d238f4cca2c6", "05c89c79-f426-4ba3-9143-2047a3880a8f"])
+  expect(program.byCalendar).toBe(false)
+  expect(programOf(await fixture("rec-calendar-program.html"))).toMatchObject({ name: "Open Skate", byCalendar: true })
+})
+
+test("a program scheduled by calendar reads as a session each, at the building its room is in", () => {
+  expect(sessions.map(({ id }) => id)).toEqual(["rec:651dcb5a-143a-4c26-8a54-6c50c948e079-202611181815", "rec:651dcb5a-143a-4c26-8a54-6c50c948e079-202611221815"])
+  expect(sessions[0]).toMatchObject({ title: "Open Skate", start: atClock("2026-11-18", "18:15"), end: atClock("2026-11-18", "19:30"), place: "Whittemore Center Arena", where: "Ice Rink", left: 500, url: programUrl(skate.id) })
+  for (const event of sessions)
+    expect(() => v.parse(EventSchema, event)).not.toThrow()
+})
+
+/** A Fusion calendar appointment as its page writes them, on the local clock */
+const appointment = fc.record({
+  day:        day,
+  clock:      clock,
+  minutes:    fc.integer({ min: 15, max: 240 }),
+  size:       fc.integer({ min: 1, max: 500 }),
+  registered: fc.integer({ min: 0, max: 500 }),
+  room:       fc.constantFrom("Studio 1", "Studio 3", "Ice Rink ", "Swasey Indoor Pool", "Somewhere new")
+})
+
+test("a program's sessions read as events at their local times with the spots left, none when they're taken", () =>
+  fc.assert(fc.property(fc.array(appointment, { maxLength: 8 }), appointments => {
+    const local = (ms: number) => `${localDay(ms)}T${hhmm(ms)}:00`
+    const json = appointments.map(({ day, clock, minutes, size, registered, room }, i) => ({
+      ID:               `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+      StartDate:        `${day}T${clock}:00`,
+      EndDate:          local(atClock(day, clock) + minutes * 60_000),
+      Location:         room,
+      ProductName:      "Zumba",
+      NumberRegistered: registered,
+      ClassSize:        size
+    }))
+    const html = `<input id="ApptInfo" name="ApptInfo" type="hidden" value="${JSON.stringify(json).replaceAll("\"", "&quot;")}" />`
+    const events = fromRecInstances(html, { id: "p", name: "Zumba", description: "" }, match)
+    expect(events).toHaveLength(appointments.filter(({ size, registered }) => size > registered).length)
+    for (const event of events) {
+      const i = Number(event.id.slice("rec:00000000-0000-4000-8000-".length, -13))
+      expect(event.left).toBe(appointments[i].size - appointments[i].registered)
+      expect(event.start).toBe(atClock(appointments[i].day, appointments[i].clock))
+      expect(hhmm(event.end)).toBe(hhmm(event.start + appointments[i].minutes * 60_000))
+      if (appointments[i].room.startsWith("Studio"))
+        expect(event).toMatchObject({ place: "Hamel Rec Center", where: appointments[i].room })
+    }
+  })))
+
+test("an offering with no day in its title is read as its schedule's first session, a cancelled one not at all", async () => {
+  const course = await fixture("rec-course.html")
+  const lifeguard = { id: "6c690d15-ee42-43f7-b14c-88c1693597b7", name: "Full Lifeguard Certification", description: "" }
+  expect(fromRecOfferings(course, lifeguard, "Fall 2026", match)).toEqual([expect.objectContaining({
+    title: "Full American Red Cross Lifeguard Certification- Blended Learning", start: atClock("2026-11-20", "18:00"), end: atClock("2026-11-20", "20:00"), place: "Field House", where: "Swasey Indoor Pool", left: 4
+  })])
+  expect(fromRecOfferings(course.replace("<h3 class=\"card-title\">", "<h3 class=\"card-title\">CANCELLED "), lifeguard, "Fall 2026", match)).toEqual([])
+})
+
+/** A time of day on a 12-hour clock, as Campus Rec writes one, "10am" or "4:30pm" or "6:00 PM", and as "HH:MM" */
+const written = fc.record({ hour: fc.integer({ min: 1, max: 12 }), minute: fc.constantFrom(0, 15, 30, 45), pm: fc.boolean(), style: fc.constantFrom("short", "long") })
+  .map(({ hour, minute, pm, style }) => ({
+    text:  style === "short" ? `${hour}${minute ? `:${String(minute).padStart(2, "0")}` : ""}${pm ? "pm" : "am"}` : `${hour}:${String(minute).padStart(2, "0")} ${pm ? "PM" : "AM"}`,
+    clock: `${String(hour % 12 + (pm ? 12 : 0)).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
+  }))
+
+/** An offering's card as Campus Rec's page loads it, with spots left */
+const card = (title: string) =>
+  `<div class="list-wrapper"><div class="offering-card" data-offering-id="00000000-0000-4000-8000-000000000001"><h3 class="card-title">${title}</h3><p>3 Spots available</p></div>`
+
+/** The windows an offering by a title is read as, in fall 2026: one, or none where it isn't an event */
+const windowsOf = (title: string) =>
+  fromRecOfferings(card(title), program, "Fall 2026", match).map(({ start, end }) => [start, end])
+
+test("an offering's title with bare hours reads its start by its end's meridiem, or the morning before it", () => {
+  expect(windowsOf("Sunday 11/8 (9-11am): Hike")).toEqual([[atClock("2026-11-08", "09:00"), atClock("2026-11-08", "11:00")]])
+  expect(windowsOf("Sunday 11/8 (11-1pm): Hike")).toEqual([[atClock("2026-11-08", "11:00"), atClock("2026-11-08", "13:00")]])
+  expect(windowsOf("Sunday 11/8 (2-4pm): Hike")).toEqual([[atClock("2026-11-08", "14:00"), atClock("2026-11-08", "16:00")]])
+  // A program's times aren't guessed: none written with a meridiem is no window
+  expect(windowsOf("Sunday 11/8 (10-4:30): Hike")).toEqual([])
+  expect(windowsOf("Sunday 11/8 7:30 Departure")).toEqual([])
+})
+
+test("an offering's departure alone is an hour long, named for its program; two times, or a day no month has, are no window", () => {
+  expect(fromRecOfferings(card("Saturday 9/5 11:30am Departure"), program, "Fall 2026", match)).toEqual([
+    expect.objectContaining({ title: program.name, start: atClock("2026-09-05", "11:30"), end: atClock("2026-09-05", "12:30") })
+  ])
+  expect(windowsOf("Saturday 9/5 9am Departure, back by 5pm")).toEqual([])
+  expect(windowsOf("Friday 12/4 (9pm-1am): Late Climb")).toEqual([])
+  expect(windowsOf("Monday 11/31 (9-11am): Hike")).toEqual([])
+})
+
+test("an offering's title gives its day and window however the times are written, and what it is without who leads it", () =>
+  fc.assert(fc.property(day, written, written, fc.constantFrom("-", " - ", "–"), (on, from, to, dash) => {
+    const [, month, date] = on.split("-").map(Number)
+    const title = `Saturday ${month}/${date} (${from.text}${dash}${to.text}): Hike - Sam and Brady`
+    const [start, end] = [atClock(on, from.clock), atClock(on, to.clock)]
+    expect(fromRecOfferings(card(title), program, on.slice(0, 4), match)).toEqual(end > start ? [expect.objectContaining({ title: "Hike", start, end, left: 3 })] : [])
+  })))
+
+//#region Clubs
+
+/** Two weeks of days from a Monday, all of them class days */
+const fortnight = Array.from({ length: 14 }, (_, i) => addDays("2026-11-16", i))
+
+test("a club meeting every week reads as a meeting each day of its weekday, at its time, told by its start alone where it gives no end", () => {
+  const meetings = fromPresenceClubs(rawOrganizations, fortnight, match)
+  const of = (uri: string) => meetings.filter(({ id }) => id.startsWith(`presence:${uri}/`))
+  expect(of("the-socratic-society").map(({ start, end }) => [start, end])).toEqual(["2026-11-20", "2026-11-27"].map(day => [atClock(day, "14:10"), atClock(day, "15:30")]))
+  expect(of("the-socratic-society")[0]).toMatchObject({ title: "The Socratic Society meeting", where: "The Freedom Cafe", source: "presence", url: "https://unh.presence.io/organization/the-socratic-society" })
+  expect(of("unh-juggling-club")[0]).toMatchObject({ start: atClock("2026-11-16", "19:00"), end: atClock("2026-11-16", "22:00"), place: "Memorial Union Building" })
+  expect(of("french-club").map(({ start, end }) => end - start)).toEqual([0, 0])
+  expect(of("french-club")[0]).toMatchObject({ start: atClock("2026-11-16", "18:30"), place: "Murkland Hall" })
+  // An office's weekday hours, a monthly or every-other-week meeting, and one to be decided aren't weekly meetings
+  for (const uri of ["sharpp", "91-3fm-wunh", "babcock-hall-council", "health-science-club"])
+    expect(of(uri)).toEqual([])
+  for (const meeting of meetings)
+    expect(() => v.parse(EventSchema, meeting)).not.toThrow()
+})
+
+test("clubs meet only on the days given, on their own weekdays, each meeting once", () =>
+  fc.assert(fc.property(fc.uniqueArray(fc.integer({ min: 0, max: 60 }), { maxLength: 30 }), offsets => {
+    const days = offsets.map(i => addDays("2026-11-16", i))
+    const meetings = fromPresenceClubs(rawOrganizations, days, match)
+    expect(new Set(meetings.map(({ id }) => id)).size).toBe(meetings.length)
+    for (const meeting of meetings)
+      expect(days).toContain(localDay(meeting.start))
+    expect(meetings.filter(({ id }) => id.startsWith("presence:the-socratic-society/")).every(({ start }) => weekday(localDay(start)) === 4)).toBe(true)
+  })))
+
+test("classes meet within a term that's begun, before its last day where one's named, and not on a day without classes", () =>
+  fc.assert(fc.property(day, fc.integer({ min: 0, max: 120 }), fc.option(fc.integer({ min: 0, max: 120 })), fc.uniqueArray(fc.integer({ min: 0, max: 60 })), (start, length, after, off) => {
+    const noClass = off.map(i => addDays(start, i))
+    const end = after === null ? undefined : addDays(start, after)
+    const calendar = { noClass, terms: { "202610": { name: "Fall", start, ...end && { end }, reading: [] } } }
+    const days = classDays(calendar, addDays(start, -10), length + 20)
+    for (const one of days)
+      expect(one >= start && (!end || one <= end) && !noClass.includes(one)).toBe(true)
+    expect(days.length).toBe(Array.from({ length: length + 20 }, (_, i) => addDays(start, i - 10)).filter(one => one >= start && (!end || one <= end) && !noClass.includes(one)).length)
+  })))
+
+//#endregion

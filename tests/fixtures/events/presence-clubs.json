@@ -1,0 +1,58 @@
+[
+ {
+  "uri": "the-socratic-society",
+  "name": "The Socratic Society",
+  "description": "",
+  "regularMeetingTime": "2:10-3:30pm on Friday",
+  "regularMeetingLocation": "The Freedom Cafe"
+ },
+ {
+  "uri": "sharpp",
+  "name": "SHARPP",
+  "description": "",
+  "regularMeetingTime": "Open weekdays 9am-4pm, 24/7 helpline: 603-862-7233",
+  "regularMeetingLocation": "Smith Hall, Third Floor 3 Garrison Ave Durham NH 03824"
+ },
+ {
+  "uri": "french-club",
+  "name": "French Club",
+  "description": "",
+  "regularMeetingTime": "Mondays at 6:30",
+  "regularMeetingLocation": "Murkland 210 Lounge"
+ },
+ {
+  "uri": "unh-juggling-club",
+  "name": "UNH Juggling Club",
+  "description": "",
+  "regularMeetingTime": "Mondays 7 to 10 PM",
+  "regularMeetingLocation": "MUB 330/332"
+ },
+ {
+  "uri": "girl-up-at-the-university-of-new-hampshire",
+  "name": "Girl Up at the University of New Hampshire",
+  "description": "",
+  "regularMeetingTime": "Tuesdays at 5 PM",
+  "regularMeetingLocation": "MUB 115"
+ },
+ {
+  "uri": "91-3fm-wunh",
+  "name": "91.3FM WUNH",
+  "description": "",
+  "regularMeetingTime": "Last Week of Every Month",
+  "regularMeetingLocation": "MUB 133"
+ },
+ {
+  "uri": "babcock-hall-council",
+  "name": "Babcock Hall Council",
+  "description": "",
+  "regularMeetingTime": "TBD",
+  "regularMeetingLocation": "TBD"
+ },
+ {
+  "uri": "health-science-club",
+  "name": "Health Science Club",
+  "description": "",
+  "regularMeetingTime": "Bi-weekly on Tuesdays at 7pm",
+  "regularMeetingLocation": "NHH 208"
+ }
+]

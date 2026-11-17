@@ -14,7 +14,7 @@ import { rm } from "node:fs/promises"
 import { STAGED, run } from "./files.mts"
 
 const STAGES = {
-  acquire: ["map/gtfs", "map/style", "map/events", "map/rooms", "map/courses", "dining/menus", "laundry/rooms", "map/parking", "programs/prereqs"],
+  acquire: ["map/gtfs", "map/style", "map/courses", "map/events", "map/rooms", "dining/menus", "laundry/rooms", "map/parking", "programs/prereqs"],
   learn:   ["map/model", "laundry/model"]
 }
 

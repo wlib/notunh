@@ -46,6 +46,9 @@ test("a booking keeps its space, times, kind, title and organization, never who 
   expect(one({ ...aReservation, reservation_state: 99 })).toEqual([])
   expect(one({ ...aReservation, reservation_start_dt: aReservation.reservation_start_dt.slice(0, 19) })).toEqual([])
   expect(bookingsFrom({ space_reservations: { engine: "accl" } })).toEqual([])
+  // An exam taken with accommodations is never kept, however it's named or typed, so nothing of it is ever served
+  for (const event of [{ event_name: "SAS Accommodation" }, { event_name: "CHEM 403 Final", event_type_name: "SAS Accommodation Exam" }, { event_name: "Exam", organization_name: "Student Accessibility Services" }, { event_name: "SAS Testing" }, { event_name: "MATH 425 accommodated exam" }, { event_name: "Final", event_type_name: "Exam Accommodations" }])
+    expect(one({ ...aReservation, event: { ...aReservation.event, ...event } })).toEqual([])
   expect(reservationsUrl(DAY, ["532", "533"])).toBe("https://25live.collegenet.com/25live/data/unh/run/rm_reservations.json?space_id=532+533&start_dt=20261028&end_dt=20261028")
 })
 

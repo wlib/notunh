@@ -154,15 +154,23 @@ const Reservation = v.object({
 const CANCELLED = 99
 
 /**
- * A day's bookings from 25Live's reservations, but classes, "(Private)", and those cancelled, with every title, which
- * shownTo keeps back, and their organizations, but students as themselves
+ * Whether a reservation's words say an exam taken with Student Accessibility Services' accommodations, which is never
+ * told to anyone, verified or not: who sits one where is theirs alone. Dropped as it's read, before the Worker caches
+ * or answers anything of it, so a room is rather said free than its exam told
+ */
+export const isAccommodation = (words: string) =>
+  /\bSAS\b.*(?:accommodat|\bexam|\btest)|(?:accommodat|\bexam|\btest).*\bSAS\b|student accessibility|accommodat\w* (?:exam|test)|(?:exam|test)\w* accommodat/is.test(words)
+
+/**
+ * A day's bookings from 25Live's reservations, but classes, accommodated exams, "(Private)", and those cancelled, with
+ * every title, which shownTo keeps back, and their organizations, but students as themselves
  */
 export const bookingsFrom = (json: unknown): Booking[] =>
   v.parse(usable(Reservation), listed(Object(Object(json).space_reservations).space_reservation)).flatMap(({ reservation_start_dt, reservation_end_dt, reservation_state, spaces, event }) => {
     const [start, end] = [Date.parse(reservation_start_dt), Date.parse(reservation_end_dt)]
-    if (event.event_name === "(Private)" || reservation_state === CANCELLED || !(start < end))
-      return []
     const title = event.event_name.trim()
+    if (title === "(Private)" || reservation_state === CANCELLED || !(start < end) || isAccommodation([title, event.event_type_name, event.organization_name].join(" ")))
+      return []
     const org = event.organization_name?.trim().replace(/^\(Private\)$/, "")
     return [{ space: String(spaces.space_id), start, end, type: event.event_type_name?.trim() ?? "", ...title && { title }, ...org && !isPersonal({ org }) && { org } }]
   })

@@ -4,7 +4,7 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { type Event, SOURCES } from "../../src/social/event.mts"
-import { deduped, gathered, isPractice, isSame } from "../../src/social/sport.mts"
+import { deduped, gathered, isPractice, isSame, isSameMeeting } from "../../src/social/sport.mts"
 import { localDay } from "../../src/shared/time.mts"
 
 const HOUR = 3_600_000
@@ -77,4 +77,19 @@ test("a list's practices follow the rest, a lone one on a day as a muted row and
       else
         expect(isPractice(line.event)).toBe(line.isMuted)
   }))
+})
+
+test("a club's meeting and the room booked for it are one, the meeting kept with the booking's id, but not a booking elsewhere, at another time, or of another club", () => {
+  const meeting: Event = { id: "presence:safc/meeting/2026-11-17", title: "Student Activity Fee Committee (SAFC) meeting", start: at + 40 * 60_000, end: at + 2 * HOUR, place: "Memorial Union Building", where: "MUB 330s", source: "presence", url: "" }
+  const booking: Event = { id: "25live:1", title: "Student Activity Fee Commiteee", start: at, end: at + 2 * HOUR, place: "Memorial Union Building", where: "MUB 162", source: "25live", url: "" }
+  expect(isSameMeeting(meeting, booking)).toBe(true)
+  expect(deduped([booking, meeting])).toEqual([{ ...meeting, also: ["25live:1"] }])
+  expect(isSameMeeting(meeting, { ...booking, place: "Kingsbury Hall" })).toBe(false)
+  expect(isSameMeeting(meeting, { ...booking, start: at + 3 * HOUR, end: at + 4 * HOUR })).toBe(false)
+  expect(isSameMeeting(meeting, { ...booking, title: "Student Senate" })).toBe(false)
+  expect(isSameMeeting({ ...meeting, title: "Little Library Club meeting" }, { ...booking, title: "Little Library Club Fall 2026" })).toBe(true)
+  // One word is too little to go by, but a club's whole name or the initials it gives itself
+  expect(isSameMeeting(meeting, { ...booking, title: "Student" })).toBe(false)
+  expect(isSameMeeting(meeting, { ...booking, title: "SAFC Meeting" })).toBe(true)
+  expect(isSameMeeting({ ...meeting, title: "Hillel meeting" }, { ...booking, title: "Hillel" })).toBe(true)
 })

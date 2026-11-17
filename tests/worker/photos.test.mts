@@ -85,7 +85,7 @@ test("a photo the profiles show is fetched once, as published, with our user age
     expect(response.status).toBe(200)
     expect(response.headers.get("content-type")).toBe("image/webp")
     expect(response.headers.get("cache-control")).toBe("public, max-age=31536000, immutable")
-    expect(await response.json()).toEqual({ transform: { width, fit: "scale-down" }, output: { format: "image/webp" } })
+    expect(await response.json()).toEqual({ transform: { width, fit: "scale-down" }, output: { format: "image/webp", quality: 80 } })
     // Asked again, with a made-up query too, it's the edge's
     expect((await get(`${photoSrc(photo, width)}&cache=bust`)).status).toBe(200)
     expect(fetched.map(({ url }) => url)).toEqual([photo])

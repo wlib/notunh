@@ -250,11 +250,10 @@ test("Campus Rec's programs are found by classification, those not for going to 
   expect(programOf(await fixture("rec-calendar-program.html"))).toMatchObject({ name: "Open Skate", byCalendar: true })
 })
 
-test("a program scheduled by calendar reads as a session each, at the building its room is in", async () => {
-  const events = sessions
-  expect(events.map(({ id }) => id)).toEqual(["rec:651dcb5a-143a-4c26-8a54-6c50c948e079-202611181815", "rec:651dcb5a-143a-4c26-8a54-6c50c948e079-202611221815"])
-  expect(events[0]).toMatchObject({ title: "Open Skate", start: atClock("2026-11-18", "18:15"), end: atClock("2026-11-18", "19:30"), place: "Whittemore Center Arena", where: "Ice Rink", left: 500, url: programUrl(skate.id) })
-  for (const event of events)
+test("a program scheduled by calendar reads as a session each, at the building its room is in", () => {
+  expect(sessions.map(({ id }) => id)).toEqual(["rec:651dcb5a-143a-4c26-8a54-6c50c948e079-202611181815", "rec:651dcb5a-143a-4c26-8a54-6c50c948e079-202611221815"])
+  expect(sessions[0]).toMatchObject({ title: "Open Skate", start: atClock("2026-11-18", "18:15"), end: atClock("2026-11-18", "19:30"), place: "Whittemore Center Arena", where: "Ice Rink", left: 500, url: programUrl(skate.id) })
+  for (const event of sessions)
     expect(() => v.parse(EventSchema, event)).not.toThrow()
 })
 
@@ -287,7 +286,7 @@ test("a program's sessions read as events at their local times with the spots le
       const i = Number(event.id.slice("rec:00000000-0000-4000-8000-".length, -13))
       expect(event.left).toBe(appointments[i].size - appointments[i].registered)
       expect(event.start).toBe(atClock(appointments[i].day, appointments[i].clock))
-      expect(event.end - event.start).toBe(appointments[i].minutes * 60_000)
+      expect(hhmm(event.end)).toBe(hhmm(event.start + appointments[i].minutes * 60_000))
       if (appointments[i].room.startsWith("Studio"))
         expect(event).toMatchObject({ place: "Hamel Rec Center", where: appointments[i].room })
     }
@@ -308,6 +307,13 @@ const written = fc.record({ hour: fc.integer({ min: 1, max: 12 }), minute: fc.co
     text:  style === "short" ? `${hour}${minute ? `:${String(minute).padStart(2, "0")}` : ""}${pm ? "pm" : "am"}` : `${hour}:${String(minute).padStart(2, "0")} ${pm ? "PM" : "AM"}`,
     clock: `${String(hour % 12 + (pm ? 12 : 0)).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
   }))
+
+test("an offering's title with bare hours reads its start by its end's meridiem, or the morning before it", () => {
+  const card = (times: string) => `<div class="list-wrapper"><div class="offering-card" data-offering-id="00000000-0000-4000-8000-000000000001"><h3 class="card-title">Sunday 11/8 (${times}): Hike</h3><p>3 Spots available</p></div>`
+  expect(fromRecOfferings(card("9-11am"), program, "Fall 2026", match)).toEqual([expect.objectContaining({ start: atClock("2026-11-08", "09:00"), end: atClock("2026-11-08", "11:00") })])
+  expect(fromRecOfferings(card("11-1pm"), program, "Fall 2026", match)).toEqual([expect.objectContaining({ start: atClock("2026-11-08", "11:00"), end: atClock("2026-11-08", "13:00") })])
+  expect(fromRecOfferings(card("2-4pm"), program, "Fall 2026", match)).toEqual([expect.objectContaining({ start: atClock("2026-11-08", "14:00"), end: atClock("2026-11-08", "16:00") })])
+})
 
 test("an offering's title gives its day and window however the times are written, and what it is without who leads it", () =>
   fc.assert(fc.property(day, written, written, fc.constantFrom("-", " - ", "–"), (on, from, to, dash) => {

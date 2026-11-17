@@ -54,6 +54,8 @@ const listed = new Set<string>()
 for (const classification of classificationsOf(await text(REC_INDEX)))
   for (const id of programsOf(await text(classificationUrl(classification))))
     listed.add(id)
+if (!listed.size)
+  throw new Error("Campus Rec's index lists no programs")
 const programs: Event[][] = []
 for (const id of listed) {
   const program = { id, ...programOf(await text(programUrl(id))) }

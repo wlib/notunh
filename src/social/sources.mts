@@ -312,7 +312,7 @@ export const programOf = (html: string) => {
   return { name, semesters, description, byCalendar: scheduled !== undefined && scheduled === byCalendar }
 }
 
-type Program = Pick<ReturnType<typeof programOf>, "name" | "description"> & { id: string }
+type Program = { id: string, name: string, description: string }
 
 /** "10am", "11:30am", "4:30 pm" as "HH:MM" */
 const clock24 = (hours: string, minutes = "00", meridiem: string) =>
@@ -329,16 +329,14 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
  * departure alone, "11:30am", an hour long. A start with no meridiem has its end's, unless that puts it after the end
  */
 const windowOf = (day: Day, text: string) => {
-  const times = [...text.matchAll(/\b(\d{1,2})(?::(\d\d))?\s*(am|pm)?\b/gi)].filter(([, , minutes, meridiem]) => minutes || meridiem)
-  const [first, second] = times
-  if (!first || !(first[3] ?? second?.[3]))
+  const [, h1, m1, a1, h2, m2, a2] = text.match(/\b(\d{1,2})(?::(\d\d))?\s*(am|pm)?\s*[-–]\s*(\d{1,2})(?::(\d\d))?\s*(am|pm)\b/i) ?? text.match(/\b(\d{1,2})(?::(\d\d))?\s*(am|pm)\b/i) ?? []
+  if (!h1)
     return
-  const end = second && atClock(day, clock24(second[1], second[2], second[3] ?? first[3]))
-  let start = atClock(day, clock24(first[1], first[2], first[3] ?? second[3]))
-  if (end !== undefined && !first[3] && start >= end)
-    start = atClock(day, clock24(first[1], first[2], "am"))
-  const until = end ?? start + 3_600_000
-  return until > start ? { start, end: until } : undefined
+  let start = atClock(day, clock24(h1, m1, a1 ?? a2))
+  const end = h2 ? atClock(day, clock24(h2, m2, a2)) : start + 3_600_000
+  if (!a1 && start >= end)
+    start = atClock(day, clock24(h1, m1, "am"))
+  return end > start ? { start, end } : undefined
 }
 
 /**
@@ -364,7 +362,7 @@ const whatOf = (title: string, program: string) => {
   const what = title
     .replace(/^.*?\b\d{1,2}\/\d{1,2}(\s*-\s*\d{1,2}\/\d{1,2})?\b\s*(\([^)]*\))?\s*:?\s*/, "")
     // Its dates where the title starts with them: "November 20th, 21st, 22nd"
-    .replace(/^[A-Z][a-z]+ \d{1,2}(st|nd|rd|th)?(,\s*\d{1,2}(st|nd|rd|th)?)*\s+/, "")
+    .replace(new RegExp(`^(${MONTHS.join("|")})[a-z]* \\d{1,2}(st|nd|rd|th)?(,\\s*\\d{1,2}(st|nd|rd|th)?)*\\s+`), "")
     .replace(/\b\d{1,2}(:\d\d)?\s*(am|pm)?\s*-\s*\d{1,2}(:\d\d)?\s*(am|pm)\b\s*|\b\d{1,2}(:\d\d)?\s*(am|pm)\b\s*/gi, "")
     // Its leaders, whom Campus Rec names, aren't what it is: "- Liv and Elise", "with Liv and Tessa"
     .replace(/\s+(-|with)\s+[A-Z][a-z]+(\s+(and|&)\s+[A-Z][a-z]+)*\s*$/, "")
@@ -381,7 +379,7 @@ const closesOf = (card: string) => {
   return index < 0 ? undefined : atClock(dayOf(year, index + 1, date), clock24(hours, minutes, meridiem))
 }
 
-/** Campus Rec's own names for its rooms, which name no building: its studios and kitchen are in the Hamel Rec Center, its rink the Whittemore Center's */
+/** Campus Rec's own names for its rooms, which name no building: its studios, kitchen and MAC courts are in the Hamel Rec Center, its rink the Whittemore Center's */
 const REC_ROOMS: [RegExp, string][] = [[/^Studio \d|Demonstration Kitchen|^MAC /, "Hamel Rec Center"], [/^Ice Rink$/, "Whittemore Center"]]
 
 /** One session of a program to sign up for, as both of Fusion's schedules come to: its own id, title, window, room, and spots left */

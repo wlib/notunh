@@ -1,12 +1,10 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { readFile } from "node:fs/promises"
-import * as v from "valibot"
 import type { Section } from "../../src/courses/course.mts"
 import type { Event } from "../../src/social/event.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { Curated, Series, WEEKDAYS, fromCurated } from "../../src/social/curated.mts"
 import { classOf, leadsOf, listedAs, pageExcluded, passagesOf, robotsAllows, scoreOf, whenOf, wordingExcluded } from "../../src/social/leads.mts"
 import { addDays, atClock, daysBetween, localDay, weekday } from "../../src/shared/time.mts"
 
@@ -45,6 +43,12 @@ test("a range with one meridiem reads its start by its end's, unless that starts
   expect(whenOf("11-1pm on Mondays", today)?.times).toEqual([{ start: "11:00", end: "13:00" }])
   expect(whenOf("every Thursday at noon", today)?.times).toEqual([{ start: "12:00" }])
   expect(whenOf("Monday–Friday 8am-4:30pm", today)?.days).toEqual([0, 1, 2, 3, 4])
+  expect(whenOf("Open from midnight on Fridays", today)?.times).toEqual([{ start: "00:00" }])
+  // A meridiem is "am" or "pm", not an "a" or a "p" alone
+  expect(whenOf("Groups of 3-4 people meet on Friday", today)).toBeUndefined()
+  // Neither a word that starts like a month nor a day no month has is a date
+  expect(whenOf("Marketing 10 on Tuesdays 3-4pm", today)?.dates).toEqual([])
+  expect(whenOf("Tea on 2/30 from 3-4pm", today)?.dates).toEqual([])
 })
 
 test("text stating no time of day is no lead, nor a time alone with no day, date or end, nor numbers alone", () => {
@@ -83,6 +87,10 @@ test("credits, prerequisites, a front desk's hours, and a deadline with no windo
   expect(reason("Shifts fall between 8 a.m. - 4:30 p.m., Monday through Friday")).toBe("a job")
   expect(reason("Free on weekends and after 6 p.m. weekdays at the Alumni Lot parking")).toBe("parking")
   expect(reason("Open Wednesday-Sunday 12-5pm")).toBe("hours a place is open")
+  // What's open to go to isn't a place's hours, nor is a skate park's meetup parking, nor a lecture series a course
+  expect(reason("Open Skate: Fridays 1-2pm at the Whittemore Center")).toBeUndefined()
+  expect(reason("Skate park meetup Saturdays 2-4pm")).toBeUndefined()
+  expect(reason("Lecture series: Thursdays 4-5pm")).toBeUndefined()
   expect(reason("Russian Conversation Hour: 2-3pm every Friday in the Murkland G10 Lounge")).toBeUndefined()
 })
 
@@ -117,8 +125,11 @@ test("a passage a calendar already tells is listed: an event at its place on one
   })))
 
 test("people, the catalog, admissions and policies are never read, nor news over a term old", () =>
-  fc.assert(fc.property(fc.integer({ min: 0, max: 400 }), fc.webSegment(), (age, slug) => {
+  fc.assert(fc.property(fc.integer({ min: 0, max: 400 }), fc.uuid(), (age, slug) => {
     expect(pageExcluded(`https://www.unh.edu/person/${slug}`, undefined, today)).toBe("a person's page")
+    expect(pageExcluded(`https://catalog.unh.edu/undergraduate/${slug}`, undefined, today)).toBe("the course catalog")
+    expect(pageExcluded(`https://students.unh.edu/mub-policy-manual/${slug}`, undefined, today)).toBe("a policy")
+    expect(pageExcluded(`https://cola.unh.edu/languages-literatures-cultures/${slug}`, undefined, today)).toBeUndefined()
     expect(pageExcluded(`https://www.unh.edu/admissions-aid/${slug}`, undefined, today)).toBe("admissions")
     expect(pageExcluded(`https://www.unh.edu/unh-today/news/${slug}`, addDays(today, -age), today)).toBe(age > 120 ? "news over a term old" : undefined)
   })))
@@ -135,13 +146,19 @@ test("a page's passages are its <main>'s, under their headings, with nobody's ad
     const passages = passagesOf(html, "https://cola.unh.edu/x")
     expect(passages.map(({ text }) => text)).toEqual(["Russian Conversation Hour: 2-3pm every Friday. Ask (address)", "Tea is on.", "Bring a mug."])
     expect(passages[0].heading).toBe("Russian")
+    // A sentence ending in "p.m." before its days keeps them
+    expect(passagesOf("<main><p>Tea from 2 to 3 p.m. Monday through Friday. Bring a mug.</p></main>", "https://x.unh.edu").map(({ text }) => text)).toEqual(["Tea from 2 to 3 p.m. Monday through Friday.", "Bring a mug."])
     expect(JSON.stringify(passages)).not.toContain(mail)
+    expect(passagesOf("<main><p>Call (603) 862-2090 or 603-862-1234 from 2-3pm Fridays.</p></main>", "https://x.unh.edu")[0].text).toBe("Call (phone) or (phone) from 2-3pm Fridays.")
   })))
 
 test("leads are placed, scored, and left out with a reason", () => {
   const passages = passagesOf("<main><ul><li>Russian Conversation Hour: 2-3pm every Friday in the Murkland G10 Lounge</li><li>RUSS 401: MWF 10:10-11am, 4 credits</li><li>No times here</li></ul></main>", "https://cola.unh.edu/x")
-  const [lead, course] = leadsOf(passages, match, { subjects: new Set(["RUSS"]), sections: [], events: [] }, today)
-  expect(lead).toMatchObject({ place: "Murkland Hall", when: { days: [4], times: [{ start: "14:00", end: "15:00" }] } })
+  const leads = leadsOf(passages, match, { subjects: new Set(["RUSS"]), sections: [], events: [] }, today)
+  expect(leads).toHaveLength(2)
+  const [lead, course] = leads
+  // Again and again, three words of things to go to, a weekday, and a place
+  expect(lead).toMatchObject({ place: "Murkland Hall", score: 12, when: { days: [4], times: [{ start: "14:00", end: "15:00" }] } })
   expect(course).toMatchObject({ reason: "a course (RUSS 401)" })
 })
 
@@ -153,42 +170,3 @@ test("robots.txt is read as any crawler's: the longest rule deciding, an Allow w
   expect(robotsAllows(robots, "/sites/default/files/a.pdf")).toBe(false)
   fc.assert(fc.property(fc.webPath(), path => { expect(robotsAllows("", path)).toBe(true) }))
 })
-
-//#region Curated
-
-/** A series, its days within some weeks of today */
-const series = fc.record({
-  days:   fc.uniqueArray(fc.constantFrom(...WEEKDAYS), { minLength: 1, maxLength: 7 }),
-  from:   fc.integer({ min: -30, max: 30 }),
-  length: fc.integer({ min: 0, max: 120 }),
-  hour:   fc.integer({ min: 7, max: 21 })
-}).map(({ days, from, length, hour }): Series => ({
-  title: "Russian Conversation Hour", where: "Murkland G10 Lounge", days, start: `${String(hour).padStart(2, "0")}:00`, end: `${String(hour + 1).padStart(2, "0")}:00`,
-  from: addDays(today, from), until: addDays(today, from + length), url: "https://cola.unh.edu/x", passage: "2-3pm every Friday", checked: today
-}))
-
-test("a series is on its weekdays from its first day until its last, at its times, and no other day", () =>
-  fc.assert(fc.property(series, fc.integer({ min: 1, max: 60 }), (one, days) => {
-    const events = fromCurated([one], today, days, match)
-    const expected = Array.from({ length: days }, (_, i) => addDays(today, i)).filter(on => on >= one.from && on <= one.until && one.days.includes(WEEKDAYS[weekday(on)]))
-    expect(events.map(({ start }) => localDay(start))).toEqual(expected)
-    for (const event of events)
-      expect(event).toMatchObject({ source: "curated", place: "Murkland Hall", checked: today, start: atClock(localDay(event.start), one.start), end: atClock(localDay(event.start), one.end) })
-    expect(new Set(events.map(({ id }) => id)).size).toBe(events.length)
-  })))
-
-test("a series on named dates is on those alone, and one is either, not both", () => {
-  fc.assert(fc.property(series, fc.uniqueArray(fc.integer({ min: 0, max: 30 }), { minLength: 1 }), (one, offsets) => {
-    const dates = offsets.map(i => addDays(today, i))
-    const events = fromCurated([{ ...one, days: [], dates, from: today, until: addDays(today, 30) }], today, 31, match)
-    expect(events.map(({ start }) => localDay(start)).sort()).toEqual([...dates].sort())
-  }))
-  fc.assert(fc.property(series, one => { expect(v.safeParse(Curated, [{ ...one, dates: [today] }]).success).toBe(false) }))
-})
-
-test("the series kept are ones the schema takes", async () => {
-  const curated = JSON.parse(await readFile(new URL("../../src/social/curated.json", import.meta.url), "utf8"))
-  expect(() => v.parse(Curated, curated)).not.toThrow()
-})
-
-//#endregion

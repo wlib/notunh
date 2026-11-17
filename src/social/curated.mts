@@ -8,9 +8,6 @@ import { type Event, SHORT } from "./event.mts"
 import type { Matcher } from "./sources.mts"
 import { type Day, Day as DaySchema, addDays, atClock, weekday } from "../shared/time.mts"
 
-/** Where the series are kept */
-export const CURATED = "src/social/curated.json"
-
 const Clock = v.pipe(v.string(), v.regex(/^([01]\d|2[0-3]):[0-5]\d$/))
 
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const
@@ -36,7 +33,7 @@ export const Series = v.pipe(
     /** The day someone last read the page saying so */
     checked: DaySchema
   }),
-  v.check(({ days, dates }) => days.length > 0 !== (dates !== undefined && dates.length > 0), "A series is on weekdays or on dates, not both"),
+  v.check(({ days, dates }) => !days.length !== !dates?.length, "A series is on weekdays or on dates, not both"),
   v.check(({ start, end }) => start < end, "A series ends after it starts"),
   v.check(({ from, until }) => from <= until, "A series runs until after it starts")
 )
@@ -44,16 +41,16 @@ export type Series = v.InferOutput<typeof Series>
 
 export const Curated = v.array(Series)
 
-/** A series' id, the same each night: its title's words */
+/** A series' name in its sessions' ids, the same each night: its title's words */
 const slugOf = (title: string) =>
   title.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
 
 /** The series' sessions over some Durham days from one as events, each at its place where its where names one */
 export const fromCurated = (series: readonly Series[], from: Day, days: number, match: Matcher): Event[] =>
   series.flatMap(one => Array.from({ length: days }, (_, i) => addDays(from, i))
-    .filter(day => day >= one.from && day <= one.until && (one.dates?.includes(day) ?? one.days.includes(WEEKDAYS[weekday(day)])))
+    .filter(day => day >= one.from && day <= one.until && (one.dates?.includes(day) || one.days.includes(WEEKDAYS[weekday(day)])))
     .map(day => ({
-      id:      `curated:${slugOf(one.title)}-${day}`,
+      id:      `curated:${slugOf(one.title)}-${day}-${one.start.replace(":", "")}`,
       title:   one.title,
       start:   atClock(day, one.start),
       end:     atClock(day, one.end),

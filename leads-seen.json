@@ -45,6 +45,18 @@
     "url": "https://cola.unh.edu/languages-literatures-cultures/opportunities/language-conversation-groups",
     "judged": "2026-11-16"
   },
+  "1ffb365ef673653a": {
+    "verdict": "rejected",
+    "reason": "past",
+    "url": "https://students.unh.edu/get-involved/student-engagement-events/senior-programming",
+    "judged": "2026-11-16"
+  },
+  "205995611d554966": {
+    "verdict": "rejected",
+    "reason": "a crisis line, not an event",
+    "url": "https://www.unh.edu/health/about-us/emergency-after-hours-care",
+    "judged": "2026-11-16"
+  },
   "240c58e8d7cbe1da": {
     "verdict": "rejected",
     "reason": "past",
@@ -205,6 +217,12 @@
     "url": "https://www.unh.edu/health/wildcat-recovery",
     "judged": "2026-11-16"
   },
+  "76930c83fe476b85": {
+    "verdict": "rejected",
+    "reason": "a crisis line, not an event",
+    "url": "https://www.unh.edu/pacs/about-us/hours-location",
+    "judged": "2026-11-16"
+  },
   "7aa0af24aac6f627": {
     "verdict": "rejected",
     "reason": "a crisis line, not an event",
@@ -226,12 +244,6 @@
   "7d47893844405f39": {
     "verdict": "accepted",
     "url": "https://cola.unh.edu/languages-literatures-cultures/opportunities/language-conversation-groups",
-    "judged": "2026-11-16"
-  },
-  "8274f3995621c21b": {
-    "verdict": "rejected",
-    "reason": "a crisis line, not an event",
-    "url": "https://www.unh.edu/pacs/about-us/hours-location",
     "judged": "2026-11-16"
   },
   "82f4a7220c6cf2a6": {
@@ -288,12 +300,6 @@
     "url": "https://www.unh.edu/sustainability/trash-2-treasure",
     "judged": "2026-11-16"
   },
-  "9d76441b756ed9bd": {
-    "verdict": "rejected",
-    "reason": "a crisis line, not an event",
-    "url": "https://www.unh.edu/health/about-us/emergency-after-hours-care",
-    "judged": "2026-11-16"
-  },
   "9ff1033c8c2256a4": {
     "verdict": "rejected",
     "reason": "a service's drop-in hours",
@@ -304,12 +310,6 @@
     "verdict": "rejected",
     "reason": "not in Durham",
     "url": "https://students.unh.edu/support-advocacy/basic-needs/wildcat-clothing-closet",
-    "judged": "2026-11-16"
-  },
-  "a397a665c0689b31": {
-    "verdict": "rejected",
-    "reason": "a service's drop-in hours",
-    "url": "https://www.unh.edu/student-success/center-academic-resources/faculty",
     "judged": "2026-11-16"
   },
   "a51b5f525715e64b": {
@@ -340,6 +340,12 @@
     "verdict": "rejected",
     "reason": "not in Durham",
     "url": "https://www.unh.edu/global/international-students-scholars/students/pre-arrival-information",
+    "judged": "2026-11-16"
+  },
+  "b2e64eb54ed3d6ba": {
+    "verdict": "rejected",
+    "reason": "a service's drop-in hours",
+    "url": "https://www.unh.edu/pacs/services/crisis-emergency-services",
     "judged": "2026-11-16"
   },
   "b73f106cb4aff180": {
@@ -396,12 +402,6 @@
     "url": "https://students.unh.edu/campus-services/new-hampshire-memorial-union/games-room",
     "judged": "2026-11-16"
   },
-  "cba8b8cebe6c40c8": {
-    "verdict": "rejected",
-    "reason": "a service's drop-in hours",
-    "url": "https://www.unh.edu/pacs/services/crisis-emergency-services",
-    "judged": "2026-11-16"
-  },
   "cc1d352d5bf4a28e": {
     "verdict": "rejected",
     "reason": "for employers, not students",
@@ -442,6 +442,12 @@
     "verdict": "rejected",
     "reason": "online",
     "url": "https://www.unh.edu/student-success/university-writing-programs/events",
+    "judged": "2026-11-16"
+  },
+  "f4f41ce2a26ce08c": {
+    "verdict": "rejected",
+    "reason": "a service's drop-in hours",
+    "url": "https://www.unh.edu/student-success/center-academic-resources/faculty",
     "judged": "2026-11-16"
   },
   "fa43dfade87d7c51": {

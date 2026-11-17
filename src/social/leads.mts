@@ -4,13 +4,14 @@
 // or a list item of a page's <main> that states a time of day: a weekday or a date with a time, or a time range. Our
 // own patterns read them, shaped to how UNH's pages write times ("3-4pm", "12:40-1:40", "noon", "Tuesdays"), and a
 // guess of its days, times and place goes beside each. Then what isn't one is left out, cheapest first: by its page's
-// address, by its wording, as a class meeting, and as what a calendar already tells. Pure
+// address, by its wording, as a class meeting, and as what a calendar already tells. What someone made of each
+// passage (Seen) and what robots.txt lets a crawler read are here too. Pure
 
 import * as v from "valibot"
 import type { Section } from "../courses/course.mts"
-import { type Event } from "./event.mts"
+import type { Event } from "./event.mts"
 import { type Matcher, plain } from "./sources.mts"
-import { type Day, Day as DaySchema, daysBetween, hhmm, localDay, weekday } from "../shared/time.mts"
+import { type Day, Day as DaySchema, addDays, daysBetween, localDay, localMinutes, weekday } from "../shared/time.mts"
 
 /** A passage of a page, the heading it's under, and the page's address */
 export type Passage = { text: string, heading: string, url: string }
@@ -21,15 +22,16 @@ const CHROME = /<(script|style|noscript|nav|header|footer|form|svg|button)\b[\s\
 /** Tags that end a block of text */
 const BLOCK = /<\/?(?:p|li|tr|td|th|h[1-6]|div|section|article|dd|dt|br|ul|ol|table|blockquote)\b[^>]*>/gi
 
-/** An address someone's mail goes to, which a lead never carries */
+/** An address someone's mail goes to, and a phone number, which a lead never carries */
 const MAIL = /[^\s<>()"@]+@[\w-]+(\.[\w-]+)+/g
+const PHONE = /(\(\d{3}\)\s?|\b\d{3}[-.\s])\d{3}[-.]\d{4}\b/g
 
-/** A sentence's end: a stop and space before a capital, not after an initial or "a.m." */
-const SENTENCE = /(?<=[a-z0-9)][.!?])\s+(?=[A-Z])/
+/** A sentence's end: a stop and space before a capital, not after "a.m." or "p.m." */
+const SENTENCE = /(?<=[a-z0-9)][.!?])(?<![ap]\.m\.)\s+(?=[A-Z])/
 
 /**
  * The passages of a page's <main>, or none where it has none: each block's sentences, under the last heading before
- * them, addresses dropped. A list item is one passage, however many sentences
+ * them, addresses and phone numbers dropped. A list item is one passage, however many sentences
  */
 export const passagesOf = (html: string, url: string): Passage[] => {
   const main = html.match(/<main\b[\s\S]*?<\/main>/i)?.[0]
@@ -38,7 +40,7 @@ export const passagesOf = (html: string, url: string): Passage[] => {
   const passages: Passage[] = []
   let heading = ""
   for (const part of main.replace(CHROME, " ").split(/(<(?:h[1-6]|li)\b[^>]*>[\s\S]*?<\/(?:h[1-6]|li)>)/i)) {
-    const blocks = part.split(BLOCK).map(block => plain(block, 2000).replace(MAIL, "(address)")).filter(block => /\w{2}/.test(block))
+    const blocks = part.split(BLOCK).map(block => plain(block, 2000).replace(MAIL, "(address)").replace(PHONE, "(phone)")).filter(block => /\w{2}/.test(block))
     if (/^<h/i.test(part))
       heading = blocks.join(" ")
     else
@@ -57,7 +59,7 @@ const DAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 const WEEKDAY = /\b(?:(Mon|Tue|Tues|Wed|Weds|Thu|Thur|Thurs|Fri|Sat|Sun)(?:day)?s?\b\.?|(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)s?\b|(weekday|weekend)s\b)/g
 
 /** A time of day: "3", "12:40", "4:30 p.m.", "10am", with its meridiem where written */
-const TIME = String.raw`(\d{1,2})(?::([0-5]\d))?\s*([ap])?\.?\s*(?:m\b\.?)?`
+const TIME = String.raw`(\d{1,2})(?::([0-5]\d))?(?:\s*([ap])\.?\s*m\b\.?)?`
 
 /** A range of times, "3-4pm", "12:40-1:40", "9:00 AM to 5:00 PM", "noon-1pm" */
 const RANGE = new RegExp(String.raw`(?<![\d/:])(?:${TIME}|(noon))\s*(?:-|–|—|to|until)\s*(?:${TIME}|(noon|midnight))`, "gi")
@@ -68,7 +70,7 @@ const SINGLE = new RegExp(String.raw`(?<![\d/:])(?:(\d{1,2})(?::([0-5]\d))?\s*([
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
 
 /** A date, "9/16", "10/28/2026", "November 20", "Nov. 4th" */
-const DATE = /(?<![\d/])(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?![\d/])|\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?/g
+const DATE = /(?<![\d/])(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?(?![\d/])|\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(\d{4}))?/g
 
 /** Wording that says it's again and again */
 const RECURRING = /\b(every|each|weekly|biweekly|monthly|alternating|every other|ongoing|all semester|throughout the semester)\b|\b(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)days\b/i
@@ -81,7 +83,8 @@ const at = (hours: number, minutes: number, meridiem?: string) =>
 const guessed = (hours: number) =>
   hours >= 8 && hours <= 11 ? "a" : "p"
 
-export type Window = { start: string, end?: string }
+/** A time of day a passage names, "HH:MM", and its end where it names one */
+type Window = { start: string, end?: string }
 
 /** What a passage says of when: its weekdays (0 Monday), its times, its dates, and whether it's again and again */
 export type When = { days: number[], times: Window[], dates: Day[], recurring: boolean }
@@ -91,10 +94,10 @@ const dateOf = (month: number, date: number, year: number | undefined, near: Day
   if (month < 1 || month > 12 || date < 1 || date > 31)
     return
   const of = (y: number) => `${y}-${String(month).padStart(2, "0")}-${String(date).padStart(2, "0")}` as Day
-  if (year)
-    return of(year < 100 ? 2000 + year : year)
   const y = +near.slice(0, 4)
-  return [y - 1, y, y + 1].map(of).sort((a, b) => Math.abs(daysBetween(near, a)) - Math.abs(daysBetween(near, b)))[0]
+  const day = year ? of(year < 100 ? 2000 + year : year) : [y - 1, y, y + 1].map(of).sort((a, b) => Math.abs(daysBetween(near, a)) - Math.abs(daysBetween(near, b)))[0]
+  // Not "February 30"
+  return addDays(day, 0) === day ? day : undefined
 }
 
 /** What a passage says of when, as of a day, or none where it states no time of day with a day, a date or an end */
@@ -106,7 +109,7 @@ export const whenOf = (text: string, today: Day): When | undefined => {
     // Numbers alone, "grades 1-6", "won 4-0", aren't times
     if (!a1 && !a2 && !m1 && !m2 && !noon1 && !noon2)
       continue
-    const end = noon2 ? (noon2.toLowerCase() === "noon" ? "12:00" : "24:00") : undefined
+    const end = noon2 && (noon2.toLowerCase() === "noon" ? "12:00" : "24:00")
     const endMeridiem = a2 ?? (noon2 ? undefined : guessed(+h2))
     const endAt = end ?? at(+h2, +(m2 ?? 0), endMeridiem)
     let startAt = noon1 ? "12:00" : at(+h1, +(m1 ?? 0), a1 ?? endMeridiem ?? guessed(+h1))
@@ -123,7 +126,7 @@ export const whenOf = (text: string, today: Day): When | undefined => {
       continue
     const [, h, m, a, h24, m24, word] = match
     if (word)
-      times.push({ start: word.toLowerCase() === "noon" ? "12:00" : "24:00" })
+      times.push({ start: word.toLowerCase() === "noon" ? "12:00" : "00:00" })
     else if (h && +h <= 12)
       times.push({ start: at(+h, +(m ?? 0), a) })
     else if (h24 && +h24 <= 12)
@@ -142,9 +145,9 @@ export const whenOf = (text: string, today: Day): When | undefined => {
         named[i].days.push(day)
   }
   const days = [...new Set(named.flatMap(({ days }) => days))].sort()
-  const dates = [...text.matchAll(DATE)].flatMap(([, month, date, year, name, named, namedYear]) => {
+  const dates = [...text.matchAll(DATE)].flatMap(([, month, date, year, name, dateNamed, namedYear]) => {
     const day = name
-      ? dateOf(MONTHS.indexOf(name.slice(0, 3).toLowerCase()) + 1, +named, namedYear ? +namedYear : undefined, today)
+      ? dateOf(MONTHS.indexOf(name.slice(0, 3).toLowerCase()) + 1, +dateNamed, namedYear ? +namedYear : undefined, today)
       : dateOf(+month, +date, year ? +year : undefined, today)
     return day ? [day] : []
   })
@@ -173,20 +176,22 @@ const NOT_PAGES: [RegExp, string][] = [
 /** Pages of news, which are dated and tell what was rather than what's on */
 const NEWS = /\/(news|stories|story|blog|unh-today|press-releases?|newsroom)(\/|$)/
 
-/** How old news may be and still be read, about a term */
-const TERM_DAYS = 120
+/** About a term in days: how old news may be and still be read, and how far ahead classes and series are known */
+export const TERM_DAYS = 120
 
 /** Why a page is left out by its address and when it was published, if it is */
-export const pageExcluded = (url: string, published: Day | undefined, today: Day) =>
-  NOT_PAGES.find(([pattern]) => pattern.test(new URL(url).pathname) || pattern.test(new URL(url).host))?.[1] ??
-  (NEWS.test(new URL(url).pathname) && published && daysBetween(published, today) > TERM_DAYS ? "news over a term old" : undefined)
+export const pageExcluded = (url: string, published: Day | undefined, today: Day) => {
+  const { host, pathname } = new URL(url)
+  return NOT_PAGES.find(([pattern]) => pattern.test(host + pathname))?.[1] ??
+    (NEWS.test(pathname) && published && daysBetween(published, today) > TERM_DAYS ? "news over a term old" : undefined)
+}
 
 /** Wording of a class, a deadline, or hours a place is open, rather than something to go to */
 const NOT_WORDING: [RegExp, string][] = [
-  [/\b(credits?|credit hours?|prerequisites?|co-?requisites?|CRN|syllabus|syllabi|enroll(ed|ment)? in|section \d|lecture|lab section|recitation)\b/i, "a course"],
-  [/\b(office hours|business hours|hours of operation|front desk|is open|are open|we are open|will be open|closed on|opens at|closes at|building hours|desk hours|drop off hours)\b|^(open|hours)\b/i, "hours a place is open"],
+  [/\b(credits?|credit hours?|prerequisites?|co-?requisites?|CRN|syllabus|syllabi|enroll(ed|ment)? in|section \d|lab section|recitation)\b/i, "a course"],
+  [/\b(office hours|business hours|hours of operation|front desk|is open|are open|we are open|will be open|closed on|opens at|closes at|building hours|desk hours|drop off hours)\b|^hours\b|^open:?\s+(?=\d|daily|every|week|mon|tue|wed|thu|fri|sat|sun)/i, "hours a place is open"],
   [/\b(shifts?|work schedule|hours (a|per) week|student workers?)\b/i, "a job"],
-  [/\b(park(ing)?|pay-to-park|pay & display)\b/i, "parking"]
+  [/\b(parking|park (in|at|on)|pay-to-park|pay & display)\b/i, "parking"]
 ]
 
 /** Headings over hours a place is open, which every line under them is: "Fall semester building hours", "Contact us" */
@@ -219,14 +224,14 @@ const NEAR = 15
 
 /**
  * The class a passage tells, if it does: a section meeting in the room it names ("Murkland 210") on one of its
- * weekdays, starting within a quarter hour of one of its times, while the section's dates run. Another room of the
+ * weekdays, starting within a quarter hour of one of its times, until the section's last day. Another room of the
  * building isn't the same, as a lounge down the hall from a class isn't
  */
 export const classOf = (text: string, when: When, place: string | undefined, sections: readonly Section[], today: Day) => {
   if (!place || !when.days.length)
     return
   const starts = when.times.map(({ start }) => minutes(start))
-  const words = new Set(text.split(/[^\w]+/))
+  const words = new Set(text.split(/\W+/))
   return sections.find(section => section.meetings.some(meeting =>
     meeting.place === place && meeting.to >= today && words.has(meeting.where.split(" ").at(-1)!) &&
     when.days.some(day => meeting.days.includes(LETTERS[day])) &&
@@ -243,7 +248,7 @@ export const listedAs = (when: When, place: string | undefined, events: readonly
   const starts = when.times.map(({ start }) => minutes(start))
   return events.find(event => {
     const day = localDay(event.start)
-    const start = minutes(hhmm(event.start))
+    const start = localMinutes(event.start)
     return event.place === place && starts.some(time => Math.abs(time - start) <= NEAR) &&
       (when.days.includes(weekday(day)) || when.dates.includes(day))
   })
@@ -274,12 +279,12 @@ export const scoreOf = (text: string, when: When, place: string | undefined, tod
 export type Lead = Passage & { when: When, place?: string, score: number }
 
 /** Why a passage isn't a lead, as its verdict is kept */
-export type Left = Passage & { reason: string }
+type Left = Passage & { reason: string }
 
 /** What leaves a passage out, beyond its page and wording: the classes meeting, and what the calendars already tell */
-export type Known = { subjects: ReadonlySet<string>, sections: readonly Section[], events: readonly Event[] }
+type Known = { subjects: ReadonlySet<string>, sections: readonly Section[], events: readonly Event[] }
 
-/** A page's passages as leads, or each with why it's left out, those stating no time of day neither */
+/** A page's passages as leads, or each with why it's left out, those stating no time of day left out silently */
 export const leadsOf = (passages: readonly Passage[], match: Matcher, known: Known, today: Day) =>
   passages.flatMap((passage): (Lead | Left)[] => {
     const when = whenOf(passage.text, today)
@@ -298,7 +303,6 @@ export const leadsOf = (passages: readonly Passage[], match: Matcher, known: Kno
     const score = scoreOf(passage.text, when, place, today)
     return [score < 0 ? { ...passage, reason: "scored below zero" } : { ...passage, when, ...place && { place }, score }]
   })
-
 
 /** What a lead was read as, for someone to check: "Fri · 14:00–15:00 · 9/16, 9/30" */
 export const whenText = ({ days, times, dates }: When) =>

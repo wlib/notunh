@@ -41,22 +41,22 @@ const Text = (max: number) =>
 
 export const Event = v.object({
   /** Unique across sources, like "presence:take-back-the-night-4" or a pin's own id */
-  id:     v.pipe(v.string(), v.minLength(1)),
-  title:  v.pipe(Text(SHORT), v.minLength(1)),
-  start:  v.number(),
-  end:    v.number(),
+  id:      v.pipe(v.string(), v.minLength(1)),
+  title:   v.pipe(Text(SHORT), v.minLength(1)),
+  start:   v.number(),
+  end:     v.number(),
   /** A gazetteer name, or none when the text names nowhere the map knows */
-  place:  v.optional(Text(SHORT)),
+  place:   v.optional(Text(SHORT)),
   /** Where, as written: the room, the lawn, "behind the MUB" */
-  where:  Text(SHORT),
-  source: v.picklist(SOURCES),
+  where:   Text(SHORT),
+  source:  v.picklist(SOURCES),
   /** Where to read more: the source's own page, or a pin's */
-  url:    v.string(),
+  url:     v.string(),
   /** For one to sign up for, as Campus Rec's programs are: how many spots are left, and when signing up closes */
-  left:   v.optional(v.number()),
-  closes: v.optional(v.number()),
+  left:    v.optional(v.number()),
+  closes:  v.optional(v.number()),
   /** The ids other calendars tell the same thing by, where they do (src/social/sport.mts) */
-  also:   v.optional(v.array(v.string())),
+  also:    v.optional(v.array(v.string())),
   /** For one only a page says, as curated.mts keeps them: the day someone last read the page saying so */
   checked: v.optional(DaySchema)
 })

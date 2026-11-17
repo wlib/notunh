@@ -3,23 +3,25 @@
 // sitemap lists little more than people: two at a time with a pause between, as robots.txt allows, asking again only
 // for what changed (ETag, Last-Modified) since the last run, whose answers are kept in node_modules/.cache. A host that
 // answers with a challenge or a sign-in is left alone. Then each page's <main> is read into leads, those of passages
-// judged before (leads-seen.json) left out, and written to leads.md, page by page, for /refresh-events to judge.
+// judged before (leads-seen.json) left out, and written to leads.md, page by page, for /refresh-events to judge
 //
 //   node scripts/leads.mts         crawls, then writes leads.md
 //   node scripts/leads.mts --all   the same, with the passages judged before
 
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { dirname } from "node:path"
+import { setTimeout } from "node:timers/promises"
 import { fileURLToPath } from "node:url"
 import * as v from "valibot"
-import { CoursesIndex, type Section, TermFile } from "../src/courses/course.mts"
+import { CoursesIndex, type Section, TermFile, activeTerms } from "../src/courses/course.mts"
 import { Gazetteer } from "../src/places/gazetteer.mts"
 import { placeMatcher } from "../src/social/aliases.mts"
 import { Curated, fromCurated } from "../src/social/curated.mts"
 import { EventsData } from "../src/social/event.mts"
-import { type Lead, Seen, leadsOf, pageExcluded, passagesOf, robotsAllows, whenText } from "../src/social/leads.mts"
+import { type Lead, Seen, TERM_DAYS, leadsOf, pageExcluded, passagesOf, robotsAllows, whenText } from "../src/social/leads.mts"
 import { contentHash } from "../src/shared/hash.mts"
-import { type Day, addDays, localDay } from "../src/shared/time.mts"
+import { plain } from "../src/social/sources.mts"
+import { type Day, localDay } from "../src/shared/time.mts"
 import { REPO } from "./files.mts"
 
 /** The sections crawled, each a host and the path its pages are under: student life, languages, the library, Campus Rec, the arena, and the offices students drop in on */
@@ -56,6 +58,9 @@ const NOT_HTML = /\.(pdf|docx?|xlsx?|pptx?|jpe?g|png|gif|svg|webp|mp[34]|zip|ics
 /** Answers that mean a host doesn't want us: a limit, a challenge in place of the page, or a sign-in. A page refused (403) is left alone, its host not */
 const LIMITED = [429, 503]
 const CHALLENGE = /cf-chl|Just a moment\.\.\./
+
+/** What a host's robots.txt is taken to say when it can't be read for its own fault: nobody may read anything */
+const NOBODY = "User-agent: *\nDisallow: /"
 const SIGN_IN = /\/(login|signin|saml|shibboleth|idp|cas)\b|login\.|idp\.|sso\./i
 
 const inRepo = (path: string) =>
@@ -73,7 +78,6 @@ const readJson = async (path: string) =>
 
 const cache = (await readJson(CACHE)) as Record<string, Page>
 const today = localDay(Date.now())
-const pause = () => new Promise(resolve => setTimeout(resolve, PAUSE))
 
 //#region Crawling
 
@@ -83,20 +87,33 @@ const unwelcome = new Set<string>()
 /** Whether robots.txt lets anyone read a page */
 const mayRead = async (url: URL) => {
   if (!robots.has(url.host))
-    robots.set(url.host, fetch(`${url.origin}/robots.txt`, { headers: HEADERS }).then(response => response.ok ? response.text() : ""))
+    robots.set(url.host, fetch(`${url.origin}/robots.txt`, { headers: HEADERS, signal: AbortSignal.timeout(30_000) })
+      .then(response => response.ok ? response.text() : response.status >= 500 ? NOBODY : "", () => NOBODY))
   return robotsAllows(await robots.get(url.host)!, url.pathname)
 }
 
-/** A page's links within a section, without fragments, queries, or files */
+/** A page's address as it's kept, without a trailing slash */
+const addressOf = ({ origin, pathname }: URL) =>
+  `${origin}${pathname.replace(/\/$/, "") || "/"}`
+
+/** A page's links, without fragments, queries, or files */
 const linksOf = (html: string, base: URL) =>
   [...new Set([...html.matchAll(/href="([^"#]+)/g)].flatMap(([, href]) => {
     try {
-      const url = new URL(href.replace(/&amp;/g, "&"), base)
-      return url.protocol === "https:" && !url.search && !NOT_HTML.test(url.pathname) ? [`${url.origin}${url.pathname.replace(/\/$/, "") || "/"}`] : []
+      const url = new URL(href, base)
+      return url.protocol === "https:" && !url.search && !NOT_HTML.test(url.pathname) ? [addressOf(url)] : []
     } catch {
       return []
     }
   }))]
+
+/** A page's title, without the site's name after it */
+const titleOf = (html: string) =>
+  plain(html.match(/<title[^>]*>([^<]*)/)?.[1] ?? "").replace(/\s*\|.*$/, "")
+
+/** When a page was published, as news is dated */
+const publishedOf = (html: string) =>
+  html.match(/(?:article:published_time" content="|<time datetime=")(\d{4}-\d\d-\d\d)/)?.[1] as Day | undefined
 
 /** A page, asked again only if it changed, or none where it isn't one to read */
 const pageOf = async (address: string): Promise<Page | undefined> => {
@@ -108,48 +125,44 @@ const pageOf = async (address: string): Promise<Page | undefined> => {
     headers: { ...HEADERS, ...known?.etag && { "if-none-match": known.etag }, ...known?.modified && { "if-modified-since": known.modified } },
     signal:  AbortSignal.timeout(30_000)
   }).catch(() => undefined)
-  await pause()
+  await setTimeout(PAUSE)
   if (response?.status === 304 && known)
     return known
-  if (!response || SIGN_IN.test(new URL(response.url).pathname) || SIGN_IN.test(new URL(response.url).host))
+  const answered = response && new URL(response.url)
+  if (!response || !answered || SIGN_IN.test(answered.host + answered.pathname))
     return
-  const html = response.ok && response.headers.get("content-type")?.includes("text/html") ? await response.text() : ""
+  const html = response.headers.get("content-type")?.includes("text/html") ? await response.text() : ""
   if (LIMITED.includes(response.status) || CHALLENGE.test(html) && !/<main\b/i.test(html)) {
     console.warn(`${url.host} answered ${response.status} to ${address}, so it's left alone`)
     unwelcome.add(url.host)
     return
   }
-  if (!html || new URL(response.url).host !== url.host)
+  if (!response.ok || !html || answered.host !== url.host)
     return
-  const page: Page = {
-    ...response.headers.get("etag") && { etag: response.headers.get("etag")! },
-    ...response.headers.get("last-modified") && { modified: response.headers.get("last-modified")! },
-    title:     plainTitle(html),
-    main:      html.match(/<main\b[\s\S]*?<\/main>/i)?.[0] ?? "",
-    links:     linksOf(html, new URL(response.url)),
-    ...publishedOf(html) && { published: publishedOf(html) }
+  const etag = response.headers.get("etag")
+  const modified = response.headers.get("last-modified")
+  const published = publishedOf(html)
+  return {
+    ...etag && { etag },
+    ...modified && { modified },
+    title: titleOf(html),
+    main:  html.match(/<main\b[\s\S]*?<\/main>/i)?.[0] ?? "",
+    links: linksOf(html, answered),
+    ...published && { published }
   }
-  cache[address] = page
-  return page
 }
-
-const plainTitle = (html: string) =>
-  (html.match(/<title>([^<]*)/)?.[1] ?? "").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/\s*\|.*$/, "").trim()
-
-/** When a page was published, as news is dated */
-const publishedOf = (html: string) =>
-  html.match(/(?:article:published_time" content="|<time datetime=")(\d{4}-\d\d-\d\d)/)?.[1] as Day | undefined
 
 /** Every page of the sections, breadth first, each once */
 const crawl = async () => {
   const pages = new Map<string, Page>()
   for (const seed of SEEDS) {
     const scope = new URL(seed)
+    const base = scope.pathname.replace(/\/$/, "")
     const within = (address: string) => {
-      const url = new URL(address)
-      return url.host === scope.host && url.pathname.startsWith(scope.pathname.replace(/\/$/, ""))
+      const { host, pathname } = new URL(address)
+      return host === scope.host && (pathname === base || pathname.startsWith(`${base}/`))
     }
-    let level = [`${scope.origin}${scope.pathname.replace(/\/$/, "") || "/"}`]
+    let level = [addressOf(scope)]
     const seen = new Set(level)
     let read = 0
     for (let depth = 0; depth <= DEPTH && level.length && read < PAGES; depth++) {
@@ -188,11 +201,11 @@ const gazetteer = v.parse(Gazetteer, await readJson(inRepo("src/map/gazetteer.js
 const match = placeMatcher(gazetteer.places.map(place => place.name))
 const index = v.parse(CoursesIndex, await readJson(inRepo("src/courses/courses.json")))
 const sections: Section[] = []
-for (const term of index.terms.filter(({ from, to }) => to >= today && from <= addDays(today, 120)))
+for (const term of activeTerms(index.terms, Date.now(), TERM_DAYS))
   sections.push(...v.parse(TermFile, await readJson(inRepo(`public${term.file}`))).sections)
 const events = [
   ...v.parse(EventsData, await readJson(inRepo("src/map/events.json"))).events,
-  ...fromCurated(v.parse(Curated, await readJson(inRepo("src/social/curated.json"))), today, 120, match)
+  ...fromCurated(v.parse(Curated, await readJson(inRepo("src/social/curated.json"))), today, TERM_DAYS, match)
 ]
 const known = { subjects: new Set(sections.map(({ subject }) => subject)), sections, events }
 const seen = v.parse(Seen, await readJson(SEEN))
@@ -204,6 +217,7 @@ const hashOf = async (text: string) =>
 
 const found: { url: string, title: string, leads: (Lead & { hash: string })[] }[] = []
 const reasons = new Map<string, number>()
+const listed = new Set<string>()
 let stated = 0
 let judged = 0
 for (const [url, page] of pages) {
@@ -215,13 +229,18 @@ for (const [url, page] of pages) {
   const leads: (Lead & { hash: string })[] = []
   for (const lead of leadsOf(passagesOf(page.main, url), match, known, today)) {
     stated++
+    if ("reason" in lead) {
+      const reason = lead.reason.replace(/ \(.*\)$/, "")
+      reasons.set(reason, (reasons.get(reason) ?? 0) + 1)
+      continue
+    }
     const hash = await hashOf(lead.text)
-    if ("reason" in lead)
-      reasons.set(lead.reason.replace(/ \(.*\)$/, ""), (reasons.get(lead.reason.replace(/ \(.*\)$/, "")) ?? 0) + 1)
-    else if (hash in seen && !all)
+    if (hash in seen && !all)
       judged++
-    else if (!leads.some(other => other.hash === hash) && !found.some(({ leads }) => leads.some(other => other.hash === hash)))
+    else if (!listed.has(hash)) {
+      listed.add(hash)
       leads.push({ ...lead, hash })
+    }
   }
   if (leads.length)
     found.push({ url, title: page.title, leads: leads.sort((a, b) => b.score - a.score) })

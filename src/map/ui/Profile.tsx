@@ -4,14 +4,15 @@
 // (src/places/profiles.mts): under Directions, its photos as a strip that opens a viewer over everything, crediting
 // and licensing each as its license asks, then its verdict, rating and scores; below what's on there, what it is and
 // its facts, each citing its sources; and at the page's foot, who took the photos. Photos are the licensors' own,
-// never cached by the service worker, so offline each tile says what it shows instead
+// served through the Worker at a width (worker/photos.mts) and kept by the browser's own cache, never the service
+// worker's, so offline a tile not seen before says what it shows instead
 
-import { type Photo, type Profile, DIMENSIONS, rankText, thumbOf } from "../../places/profiles.mts"
+import { type Photo, type PhotoWidth, type Profile, DIMENSIONS, photoSrc, rankText } from "../../places/profiles.mts"
 
-/** A photo, or where it can't load, as offline, what it shows */
-const Shot = ({ photo, src, eager = false }: { photo: Photo, src: string, eager?: boolean }) => {
+/** A photo at a width, or where it can't load, as offline, what it shows */
+const Shot = ({ photo, width, eager = false }: { photo: Photo, width: PhotoWidth, eager?: boolean }) => {
   const img: HTMLImageElement =
-    <img src={src} alt={photo.caption} loading={eager ? "eager" : "lazy"} decoding="async" onerror={() => img.hidden = true} />
+    <img src={photoSrc(photo.url, width)} alt={photo.caption} loading={eager ? "eager" : "lazy"} decoding="async" onerror={() => img.hidden = true} />
   return <>{img}<span class="shot-alt" aria-hidden="true">{photo.caption}</span></>
 }
 
@@ -31,7 +32,7 @@ export const Photos = ({ name, photos }: { name: string, photos: readonly Photo[
   const slides = photos.map(photo =>
     <li>
       <figure>
-        <div class="shot"><Shot photo={photo} src={photo.url} /></div>
+        <div class="shot"><Shot photo={photo} width={1280} /></div>
         <figcaption>
           {photo.caption}{photo.year !== undefined && `, ${photo.year}`}
           <small><Credit photo={photo} /></small>
@@ -55,7 +56,7 @@ export const Photos = ({ name, photos }: { name: string, photos: readonly Photo[
     <>
       <ul class="photo-strip" aria-label="Photos">
         {photos.map((photo, i) =>
-          <li><button type="button" class="shot" onclick={() => open(i)}><Shot photo={photo} src={thumbOf(photo.url)} eager={i === 0} /></button></li>
+          <li><button type="button" class="shot" onclick={() => open(i)}><Shot photo={photo} width={500} eager={i === 0} /></button></li>
         )}
       </ul>
       {viewer}

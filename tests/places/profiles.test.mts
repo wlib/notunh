@@ -1,13 +1,13 @@
 // Buildings' profiles (src/places/profiles.mts): the records kept in src/places/profiles/ made into what the map
 // shows, keyed by the gazetteer's names, every problem with them found; the overall rating and rank worked out from
-// the six scores; when a building was last renovated; photos' thumbnails; and profiled buildings found in search by
-// their other names
+// the six scores; when a building was last renovated; photos' addresses, theirs and the Worker's for
+// them; and profiled buildings found in search by their other names
 
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { readFile } from "node:fs/promises"
 import * as v from "valibot"
-import { CATEGORIES, DIMENSIONS, STATUSES, THUMB_WIDTH, WEIGHTS, type Category, type Judged, type Status, eraParts, lastRenovated, ordinal, overallOf, profilesOf, ratingText, searchNamesOf, statusText, thumbOf } from "../../src/places/profiles.mts"
+import { CATEGORIES, DIMENSIONS, PHOTO_WIDTHS, STATUSES, WEIGHTS, type Category, type Judged, type Status, eraParts, lastRenovated, ordinal, overallOf, photoSrc, profilesOf, ratingText, searchNamesOf, statusText } from "../../src/places/profiles.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { createPlaceSearch } from "../../src/places/search.mts"
 import { CAMPUS } from "../../src/places/durham.mts"
@@ -22,6 +22,12 @@ const MADE = profilesOf(RECORDS, NAMES)
 const year = fc.integer({ min: 1700, max: 2100 })
 const text = fc.stringMatching(/^[A-Za-z][A-Za-z ,.]{0,30}[a-z]$/)
 const link = fc.webUrl({ validSchemes: ["https"] })
+/** A photo's address as a record may have it, on Commons or Flickr */
+const photoUrl = fc.tuple(
+  fc.constantFrom("https://upload.wikimedia.org/wikipedia/commons/", "https://thumb.wikimedia.org/wikipedia/commons/thumb/", "https://live.staticflickr.com/"),
+  fc.stringMatching(/^[A-Za-z0-9_%,()\/-]{1,30}\.jpg(\?utm_source=commons)?$/)
+).map(parts => parts.join(""))
+
 const scores = fc.record(Object.fromEntries(DIMENSIONS.map(dimension => [dimension, fc.integer({ min: 1, max: 10 })])) as Record<typeof DIMENSIONS[number], fc.Arbitrary<number>>)
 
 /** A renovation as the records have them, dated or not, said to be major or not */
@@ -45,7 +51,7 @@ const record = (names: readonly string[], dangling: fc.Arbitrary<boolean> = fc.c
     ratings:     fc.option(scores, { nil: undefined }),
     status:      fc.constantFrom(...Object.keys(STATUSES) as Status[]),
     confidence:  fc.constantFrom("high", "med", "low"),
-    photos:      fc.array(fc.record({ url: link, page: link, credit: text, license: fc.constantFrom("CC BY-SA 4.0", "CC0", "Public domain"), view: fc.constantFrom("exterior", "interior"), caption: text }), { maxLength: 3 })
+    photos:      fc.array(fc.record({ url: photoUrl, page: link, credit: text, license: fc.constantFrom("CC BY-SA 4.0", "CC0", "Public domain"), view: fc.constantFrom("exterior", "interior"), caption: text }), { maxLength: 3 })
   }).map(({ facts, dangling, ...rest }) => ({
     ...rest,
     aliases: [],
@@ -146,15 +152,18 @@ test("how a building stands is said unless it's in use, with its note", () => {
   expect(statusText({ status: "demolished" })).toBe("Demolished")
 })
 
-test("a Wikimedia thumbnail comes no wider than asked, Flickr's as its small size, and anything else as it is", () =>
-  fc.assert(fc.property(fc.integer({ min: 20, max: 4000 }), fc.stringMatching(/^[A-Za-z0-9_%]{1,20}\.jpg$/), fc.constantFrom("upload", "thumb"), (width, file, host) => {
-    const url = `https://${host}.wikimedia.org/wikipedia/commons/thumb/a/ab/${file}/${width}px-${file}`
-    const thumb = thumbOf(url)
-    expect(Number(thumb.match(/\/(\d+)px-/)![1])).toBe(Math.min(width, THUMB_WIDTH))
-    expect(thumbOf(thumb)).toBe(thumb)
-    expect(thumbOf(`https://upload.wikimedia.org/wikipedia/commons/a/ab/${file}`)).toBe(`https://upload.wikimedia.org/wikipedia/commons/a/ab/${file}`)
-    expect(thumbOf(`https://live.staticflickr.com/65535/1_${file.replace(".jpg", "")}_b.jpg`)).toMatch(/_w\.jpg$/)
-  }))
+test("a photo is asked of the Worker by its address as published, at a width, and one anywhere but Commons or Flickr isn't a record's", () =>
+  fc.assert(fc.property(
+    record([]), photoUrl, fc.constantFrom(...PHOTO_WIDTHS),
+    fc.oneof(fc.webUrl(), fc.constantFrom("http://upload.wikimedia.org/wikipedia/commons/a/ab/X.jpg", "https://upload.wikimedia.org.example.com/wikipedia/commons/a/ab/X.jpg", "https://upload.wikimedia.org/wikipedia/en/a/ab/X.jpg")),
+    (judged, url, width, elsewhere) => {
+      expect([...new URL(photoSrc(url, width), "https://notunh.app").searchParams]).toEqual([["src", url], ["w", String(width)]])
+      const problemsWith = (url: string) =>
+        profilesOf([["a.json", { ...judged, photos: [{ url, page: url, credit: "A", license: "CC0", view: "exterior", caption: "A" }] }]], NAMES).problems
+      expect(problemsWith(url)).toEqual([])
+      expect(problemsWith(elsewhere)).toEqual([expect.stringMatching(/^a\.json: photos\.0\.url/)])
+    }
+  ))
 )
 
 test("ranks read as ordinals", () => {

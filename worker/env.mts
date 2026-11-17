@@ -30,5 +30,7 @@ export type Env = {
   /** Cloudflare Email Service, which sends verification codes (mail.mts); without it, as in Previews, they're logged */
   EMAIL?:                 SendEmail,
   /** The address codes are sent from, on a domain onboarded to Email Service, a var */
-  MAIL_FROM?:             string
+  MAIL_FROM?:             string,
+  /** Cloudflare Images, which makes buildings' photos the width asked (photos.mts) */
+  IMAGES:                 ImagesBinding
 }

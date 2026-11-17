@@ -1,11 +1,12 @@
 // Buildings' profiles on a phone (src/map/ui/Profile.tsx), from the records in src/places/profiles/: a building found
 // by another name, its page saying its category, when it was built, its rating, verdict and scores, its facts citing
 // their sources, more to read, and its photos, each credited, opening a viewer over the screen; one closed without
-// photos says so; one unrated has a verdict and no rating. The photos' own origin is out of reach, as offline, so each
-// tile says what it shows instead
+// photos says so; one unrated has a verdict and no rating. Photos are asked of the Worker, a tile's narrower than the
+// viewer's, never of Wikimedia or Flickr; with no Worker here, as offline, each tile says what it shows instead
 
 import { test as base, expect, devices } from "@playwright/test"
 import { type Fixture, open, shoot, startFixture } from "./fixture.mts"
+import { photoSrc } from "../../src/places/profiles.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
   fixture: async ({}, use) => {
@@ -18,7 +19,10 @@ const test = base.extend<{ fixture: Fixture }>({
 // A rating as a page says it, whatever the records score now: "7.9 of 10 · 4th of 103"
 const RATING = /^\d+(\.\d)? of 10 · \d+(st|nd|rd|th) of \d+( · low confidence)?$/
 
-// A phone, with every other origin, like Umo, the map's tiles and Wikimedia's photos, out of reach
+// Thompson Hall's first photo, as its record has it
+const SUNSET = "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Thompson_Hall%2C_UNH_Sunset.jpg/1280px-Thompson_Hall%2C_UNH_Sunset.jpg"
+
+// A phone, with every other origin, like Umo, the map's tiles, Wikimedia and Flickr, out of reach
 const { defaultBrowserType, ...phone } = devices["iPhone 13"]
 test.use({ ...phone, viewport: { width: 390, height: 844 }, proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1" }, timezoneId: "America/New_York" })
 
@@ -41,7 +45,7 @@ test("a building found by its nickname shows its category, when it was built, it
   // Each photo's tile is its size before it loads, and here never loads, so says what it shows
   const tiles = view.locator(".photo-strip .shot")
   await expect(tiles).toHaveCount(6)
-  await expect(tiles.first().locator("img")).toHaveAttribute("src", /\/500px-Thompson_Hall%2C_UNH_Sunset\.jpg$/)
+  await expect(tiles.first().locator("img")).toHaveAttribute("src", photoSrc(SUNSET, 500))
   await expect(tiles.first().locator("img")).toBeHidden()
   await expect(tiles.first()).toContainText("Main facade and tower from the lawn in evening light")
   const box = await tiles.first().boundingBox()
@@ -61,6 +65,7 @@ test("a building found by its nickname shows its category, when it was built, it
   await tiles.nth(2).tap()
   const viewer = page.getByRole("dialog", { name: "Photos of Thompson Hall" })
   await expect(viewer).toBeVisible()
+  await expect(viewer.locator("img").first()).toHaveAttribute("src", photoSrc(SUNSET, 1280))
   const shown = viewer.locator("figure").nth(2)
   await expect(shown).toBeInViewport()
   await expect(shown.locator("figcaption")).toContainText("Tower, turret and porte-cochere arch in early spring, 2018")

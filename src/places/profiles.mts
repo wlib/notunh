@@ -43,8 +43,12 @@ export const WEIGHTS = { exterior: 4, interior: 4, character: 4, condition: 3, f
 export type Dimension = keyof typeof WEIGHTS
 export const DIMENSIONS = Object.keys(WEIGHTS) as Dimension[]
 
-/** How wide a photo's thumbnail is asked for, in pixels: a strip's tile at three device pixels a point */
-export const THUMB_WIDTH = 500
+/**
+ * The widths photos are served at, in pixels, and no others, so the Worker makes each photo twice at most: a strip's
+ * tile at three device pixels a point, and the viewer's, a phone's screen across
+ */
+export const PHOTO_WIDTHS = [500, 1280] as const
+export type PhotoWidth = typeof PHOTO_WIDTHS[number]
 
 const Text = v.pipe(v.string(), v.trim(), v.nonEmpty())
 const Link = v.pipe(v.string(), v.url(), v.regex(/^https?:\/\//, "Not a web address"))
@@ -61,8 +65,12 @@ const Source = v.object({ title: Text, publisher: v.optional(Text), url: Link })
 export type Source = v.InferOutput<typeof Source>
 
 const Photo = v.object({
-  /** The photo itself, from Wikimedia Commons or Flickr, under a license that allows reuse with credit */
-  url:        Link,
+  /**
+   * The photo itself, from Wikimedia Commons or Flickr, under a license that allows reuse with credit, about as wide
+   * as the viewer shows it where there's a choice; never shown from there, only through the Worker, which fetches it
+   * as it is here
+   */
+  url:        v.pipe(Link, v.regex(/^https:\/\/((upload|thumb)\.wikimedia\.org\/wikipedia\/commons|live\.staticflickr\.com)\//, "Not a photo on Wikimedia Commons or Flickr")),
   /** Its page there, which the credit links to */
   page:       Link,
   credit:     Text,
@@ -151,15 +159,11 @@ export const lastRenovated = ({ built, renovations }: Pick<Judged, "built" | "re
   renovations.flatMap(({ major, year }) => major && year !== undefined && (built === undefined || year > built) ? [year] : []).sort((a, b) => b - a)[0]
 
 /**
- * A photo's thumbnail, the width given or the photo itself where it's narrower. Wikimedia's thumbnails are asked for
- * by their width in the path, and Flickr's by a size letter, so those come smaller; any other is the photo itself
+ * A photo as the Worker serves it (worker/photos.mts), by its address as published, at one of the widths; under the
+ * API, so the service worker leaves it to the browser's own cache
  */
-export const thumbOf = (url: string, width = THUMB_WIDTH) => {
-  const wikimedia = url.match(/^(https:\/\/(?:upload|thumb)\.wikimedia\.org\/.+\/thumb\/.+\/)(\d+)px-([^/?#]+)$/)
-  if (wikimedia)
-    return Number(wikimedia[2]) > width ? `${wikimedia[1]}${width}px-${wikimedia[3]}` : url
-  return /^https:\/\/live\.staticflickr\.com\/.+_[bchk]\.jpg$/.test(url) ? url.replace(/_[bchk]\.jpg$/, "_w.jpg") : url
-}
+export const photoSrc = (url: string, width: PhotoWidth) =>
+  `/api/photo?${new URLSearchParams({ src: url, w: String(width) })}`
 
 const ORDINALS = new Intl.PluralRules("en-US", { type: "ordinal" })
 const SUFFIXES: Partial<Record<Intl.LDMLPluralRule, string>> = { one: "st", two: "nd", few: "rd" }

@@ -17,9 +17,21 @@ test("the calendar read from 25Live has the holidays, the swap day, the terms' d
   // Nothing timed, and nothing from another calendar, says a day is off
   const entries = live25 as { startDateTime: string, allDay?: boolean, categoryCalendar?: string }[]
   const academic = (entry: typeof entries[number]) => entry.allDay && /Academic Calendar$|Holidays$/.test(entry.categoryCalendar ?? "")
-  expect(fromLive25(entries.filter(entry => !academic(entry)), 0)).toEqual({ fetched: 0, noClass: [], swaps: {}, holidays: [], terms: {} })
+  expect(fromLive25(entries.filter(entry => !academic(entry)), 0)).toEqual({ fetched: 0, noClass: [], swaps: {}, holidays: [], terms: {}, dates: [] })
   // A window of a month says only what's in it
   expect(fromLive25(entries.filter(entry => entry.startDateTime.startsWith("2026-11-1")), 0).noClass).toEqual(["2026-11-11"])
+})
+
+test("the dates worth knowing ahead are Durham undergraduates' deadlines, registration, breaks and terms, by day, in the registrar's words less its capitals, a window by who it's for", () => {
+  const dates = calendar.dates
+  expect(dates.map(({ day }) => day)).toEqual(dates.map(({ day }) => day).sort())
+  expect(dates).toContainEqual({ day: "2026-11-26", title: "Thanksgiving Holidays", kind: "break" })
+  expect(dates).toContainEqual({ day: "2026-12-14", title: "Fall 2026 Last Day of Classes", kind: "term" })
+  // A registration window says who it's for first, its term and time after
+  expect(dates.find(({ day, kind }) => day === "2026-11-23" && kind === "registration")).toEqual({ day: "2026-11-23", kind: "registration", title: "Seniors · registration opens", audience: "senior", detail: "Spring 2027 · 8:30am" })
+  expect(dates.filter(({ kind, audience }) => kind === "registration" && audience).map(({ audience }) => audience)).toEqual(expect.arrayContaining(["senior", "junior", "sophomore", "first-year"]))
+  expect(dates.some(({ title }) => /undergraduate coursework/i.test(title))).toBe(true)
+  expect(dates.some(({ title }) => /UNH Law|CPS Online|Faculty|\bgraduate\b/i.test(title))).toBe(false)
 })
 
 test("an entry of a shape not known is left out, and the same entry twice counts once", () => {

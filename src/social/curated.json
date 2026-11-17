@@ -62,5 +62,18 @@
     "url": "https://www.unh.edu/career/career-events/career-internship-fair/employer-logistics",
     "passage": "February 23 & 24| 11AM - 3PM | Memorial Union Building",
     "checked": "2026-11-16"
+  },
+  {
+    "title": "AI Club",
+    "where": "MUB 162 or 203",
+    "days": [],
+    "dates": ["2026-11-18", "2026-12-02"],
+    "start": "18:00",
+    "end": "19:00",
+    "from": "2026-11-18",
+    "until": "2026-12-14",
+    "url": "https://unh.presence.io/organization/artificial-intelligence-club-2",
+    "passage": "AI club biweekly wednesdays at the MUB 6-7 room 162 or 203",
+    "checked": "2026-11-17"
   }
 ]

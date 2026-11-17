@@ -5,7 +5,8 @@ import type { Section } from "../../src/courses/course.mts"
 import type { Event } from "../../src/social/event.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { classOf, leadsOf, listedAs, pageExcluded, passagesOf, robotsAllows, scoreOf, whenOf, wordingExcluded } from "../../src/social/leads.mts"
+import { classOf, leadsOf, listedAs, pageExcluded, passagesOf, robotsAllows, scoreOf, wordingExcluded } from "../../src/social/leads.mts"
+import { whenOf } from "../../src/social/when.mts"
 import { addDays, atClock, daysBetween, localDay, weekday } from "../../src/shared/time.mts"
 
 const gazetteer: Gazetteer = JSON.parse(await readFile(new URL("../fixtures/data/src/map/gazetteer.json", import.meta.url), "utf8"))

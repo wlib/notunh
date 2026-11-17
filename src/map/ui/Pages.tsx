@@ -148,9 +148,9 @@ export const DayChips = ({ day, last, name, onpick }: { day: SourceNode<Calendar
 export const When = ({ start, end }: Pick<Occurrence, "start" | "end">) =>
   <><DayName day={localDay(start)} /> <ClockRange from={new Date(start)} to={new Date(end)} /></>
 
-/** An occurrence's hours as a row's time column says them: "2:10" over "– 3:30 PM" */
+/** An occurrence's hours as a row's time column says them: "2:10" over "– 3:30 PM", or its start alone where it's told no end */
 export const Span = ({ start, end }: Pick<Occurrence, "start" | "end">) =>
-  <><ClockTime at={new Date(start)} /><small>– <ClockTime at={new Date(end)} /></small></>
+  end > start ? <><ClockTime at={new Date(start)} /><small>– <ClockTime at={new Date(end)} /></small></> : <ClockTime at={new Date(start)} />
 
 /** A place by its name: the gazetteer's, else a laundry or dining building's */
 export const placeNamed = (name: string | undefined) =>

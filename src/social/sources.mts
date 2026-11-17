@@ -9,7 +9,8 @@ import * as v from "valibot"
 import { type Event, SHORT } from "./event.mts"
 import { deduped } from "./sport.mts"
 import { usable } from "../shared/json.mts"
-import { DAY, type Day, addDays, atClock, hhmm, localDay } from "../shared/time.mts"
+import { whenOf } from "./when.mts"
+import { DAY, type Day, addDays, atClock, hhmm, localDay, weekday } from "../shared/time.mts"
 
 /** Text as it's shown: tags and entities dropped, space squeezed, cut to a length */
 export const plain = (html: string, max = SHORT) =>
@@ -74,6 +75,49 @@ export const fromPresence = (json: unknown, match: Matcher): Event[] =>
       source: "presence",
       url:    `https://unh.presence.io/event/${event.uri}`
     }]
+  })
+
+/** Wildcat Link's clubs, each with when and where it says it meets, as its own pages show them */
+export const PRESENCE_CLUBS = "https://api.presence.io/unh/v1/organizations"
+
+const PresenceClub = v.object({
+  uri:                    v.string(),
+  name:                   v.string(),
+  regularMeetingTime:     v.nullish(v.string()),
+  regularMeetingLocation: v.nullish(v.string())
+})
+
+/** The longest a meeting is, longer being a place's hours */
+const LONGEST = 4 * 3_600_000
+
+/** Meeting times that don't say a club meets every week, or that aren't a club's: "Bi-weekly", "Selected Thursdays", "TBD", an office's hours */
+const NOT_WEEKLY = /bi-?weekly|every other|alternat|select|certain|some |occasional|month|first|second|third|fourth|last|tb[ad]|var(y|ies)|office hours/i
+
+/**
+ * Wildcat Link's clubs' weekly meetings on some days, from the JSON its API answers for its clubs: one each day of a
+ * weekday a club's meeting time names, where it names one weekday or more and one time ("Tuesdays from 5:00-6:00 PM",
+ * "Mondays @ 7:30 PM", which has no end and so is told as starting then). Only the meeting fields are read, never a
+ * club's description, which names its members
+ */
+export const fromPresenceClubs = (json: unknown, days: readonly Day[], match: Matcher): Event[] =>
+  v.parse(usable(PresenceClub), json).flatMap(club => {
+    const text = club.regularMeetingTime ?? ""
+    const when = days.length ? whenOf(text, days[0]) : undefined
+    const [{ start, end = start }] = when?.times ?? [{ start: "" }]
+    // Every weekday or longer than a meeting is an office's hours: "Monday-Friday, 9AM-4PM"
+    if (!when?.days.length || when.times.length !== 1 || when.dates.length || NOT_WEEKLY.test(text) || when.days.length >= 5 || atClock(days[0], end) - atClock(days[0], start) > LONGEST)
+      return []
+    const where = plain(club.regularMeetingLocation ?? "")
+    return days.filter(day => when.days.includes(weekday(day))).map(day => ({
+      id:     `presence:${club.uri}/meeting/${day}`,
+      title:  plain(`${plain(club.name, 200)} meeting`),
+      start:  atClock(day, start),
+      end:    atClock(day, end),
+      place:  match(where),
+      where,
+      source: "presence" as const,
+      url:    `https://unh.presence.io/organization/${club.uri}`
+    }))
   })
 
 //#endregion
@@ -345,7 +389,7 @@ const windowOf = (day: Day, text: string) => {
  * "Fri, Nov 20 2026" at "6:00 - 8:00 PM" in the Swasey Indoor Pool: a course over several days, or every Tuesday and
  * Thursday for four weeks, is read as its first session, as signing up for it is for all of it
  */
-const whenOf = (title: string, year: string, card: string) => {
+const scheduledOf = (title: string, year: string, card: string) => {
   const date = title.match(/\b(\d{1,2})\/(\d{1,2})\b/)
   if (date)
     return windowOf(dayOf(year, date[1], date[2]), title.slice(date.index))
@@ -412,13 +456,13 @@ const recEvents = (sessions: Session[], program: Program, match: Matcher): Event
 
 /**
  * A program's offerings in a semester as events, from the cards its page loads: those not cancelled with a day and
- * time in their title or schedule (whenOf)
+ * time in their title or schedule (scheduledOf)
  */
 export const fromRecOfferings = (html: string, program: Program, semester: string, match: Matcher): Event[] =>
   recEvents(html.split(/(?=<div class="offering-card)/).slice(1).flatMap(card => {
     const id = card.match(/data-offering-id="([0-9a-f-]{36})"/)?.[1]
     const title = plain(card.match(/<h3 class="card-title">([^<]*)/)?.[1] ?? "", 500)
-    const when = whenOf(title, semester.match(/\d{4}/)?.[0] ?? "", card)
+    const when = scheduledOf(title, semester.match(/\d{4}/)?.[0] ?? "", card)
     if (!id || !when || /^cancel/i.test(title))
       return []
     const closes = closesOf(card)

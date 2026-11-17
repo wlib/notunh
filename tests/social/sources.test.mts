@@ -4,8 +4,9 @@ import { readFile } from "node:fs/promises"
 import * as v from "valibot"
 import { type Event, Event as EventSchema, EventsData } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromRecInstances, fromRecOfferings, merged, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
-import { addDays, atClock, hhmm, localDay } from "../../src/shared/time.mts"
+import { classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromRecInstances, fromRecOfferings, merged, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
+import { addDays, atClock, hhmm, localDay, weekday } from "../../src/shared/time.mts"
+import { classDays, fromLive25 } from "../../src/courses/calendar.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { Curated, fromCurated } from "../../src/social/curated.mts"
 
@@ -20,6 +21,7 @@ const live = from25Live(rawLive, match)
 const athletics = fromAthletics(await fixture("athletics.ics"), match)
 const rawClubs = JSON.parse(await fixture("dserec.json")) as { data: DserecRow[] }
 const clubs = fromDserec(rawClubs, match)
+const rawOrganizations = JSON.parse(await fixture("presence-clubs.json")) as { uri: string, regularMeetingTime: string }[]
 const program = { id: "8520b0bd-ad58-415b-a070-7dc7c18e06fc", ...programOf(await fixture("rec-program.html")) }
 const offerings = fromRecOfferings(await fixture("rec-offerings.html"), program, "Fall 2026", match)
 const skate = { id: "af8ff201-7146-4688-b10e-fe79418e3ff2", ...programOf(await fixture("rec-calendar-program.html")) }
@@ -126,7 +128,9 @@ test("merging keeps each id once, in order of start, dropping what ended before 
 test("the fixture's events file is what the build would make of the fixtures, and reads as events data", async () => {
   const file = v.parse(EventsData, JSON.parse(await readFile(new URL("../fixtures/data/src/map/events.json", import.meta.url), "utf8")))
   const series = fromCurated(v.parse(Curated, JSON.parse(await fixture("curated.json"))), localDay(file.fetched), 21, match)
-  expect(file.events).toEqual(merged([presence, live, athletics, clubs, offerings, sessions, series], 0))
+  const calendar = fromLive25(JSON.parse(await readFile(new URL("../fixtures/courses/25live.json", import.meta.url), "utf8")), file.fetched)
+  const meetings = fromPresenceClubs(rawOrganizations, classDays(calendar, localDay(file.fetched), 21), match)
+  expect(file.events).toEqual(merged([presence, meetings, live, athletics, clubs, offerings, sessions, series], 0))
 })
 
 //#region DSE Rec
@@ -322,3 +326,46 @@ test("an offering's title gives its day and window however the times are written
     const [start, end] = [atClock(on, from.clock), atClock(on, to.clock)]
     expect(fromRecOfferings(card, program, on.slice(0, 4), match)).toEqual(end > start ? [expect.objectContaining({ title: "Hike", start, end, left: 3 })] : [])
   })))
+
+//#region Clubs
+
+/** Two weeks of days from a Monday, all of them class days */
+const fortnight = Array.from({ length: 14 }, (_, i) => addDays("2026-11-16", i))
+
+test("a club meeting every week reads as a meeting each day of its weekday, at its time, told by its start alone where it gives no end", () => {
+  const meetings = fromPresenceClubs(rawOrganizations, fortnight, match)
+  const of = (uri: string) => meetings.filter(({ id }) => id.startsWith(`presence:${uri}/`))
+  expect(of("the-socratic-society").map(({ start, end }) => [start, end])).toEqual(["2026-11-20", "2026-11-27"].map(day => [atClock(day, "14:10"), atClock(day, "15:30")]))
+  expect(of("the-socratic-society")[0]).toMatchObject({ title: "The Socratic Society meeting", where: "The Freedom Cafe", source: "presence", url: "https://unh.presence.io/organization/the-socratic-society" })
+  expect(of("unh-juggling-club")[0]).toMatchObject({ start: atClock("2026-11-16", "19:00"), end: atClock("2026-11-16", "22:00"), place: "Memorial Union Building" })
+  expect(of("french-club").map(({ start, end }) => end - start)).toEqual([0, 0])
+  expect(of("french-club")[0]).toMatchObject({ start: atClock("2026-11-16", "18:30"), place: "Murkland Hall" })
+  // An office's weekday hours, a monthly or every-other-week meeting, and one to be decided aren't weekly meetings
+  for (const uri of ["sharpp", "91-3fm-wunh", "babcock-hall-council", "health-science-club"])
+    expect(of(uri)).toEqual([])
+  for (const meeting of meetings)
+    expect(() => v.parse(EventSchema, meeting)).not.toThrow()
+})
+
+test("clubs meet only on the days given, on their own weekdays, each meeting once", () =>
+  fc.assert(fc.property(fc.uniqueArray(fc.integer({ min: 0, max: 60 }), { maxLength: 30 }), offsets => {
+    const days = offsets.map(i => addDays("2026-11-16", i))
+    const meetings = fromPresenceClubs(rawOrganizations, days, match)
+    expect(new Set(meetings.map(({ id }) => id)).size).toBe(meetings.length)
+    for (const meeting of meetings)
+      expect(days).toContain(localDay(meeting.start))
+    expect(meetings.filter(({ id }) => id.startsWith("presence:the-socratic-society/")).every(({ start }) => weekday(localDay(start)) === 4)).toBe(true)
+  })))
+
+test("classes meet within a term that's begun, before its last day where one's named, and not on a day without classes", () =>
+  fc.assert(fc.property(day, fc.integer({ min: 0, max: 120 }), fc.option(fc.integer({ min: 0, max: 120 })), fc.uniqueArray(fc.integer({ min: 0, max: 60 })), (start, length, after, off) => {
+    const noClass = off.map(i => addDays(start, i))
+    const end = after === null ? undefined : addDays(start, after)
+    const calendar = { noClass, terms: { "202610": { name: "Fall", start, ...end && { end }, reading: [] } } }
+    const days = classDays(calendar, addDays(start, -10), length + 20)
+    for (const one of days)
+      expect(one >= start && (!end || one <= end) && !noClass.includes(one)).toBe(true)
+    expect(days.length).toBe(Array.from({ length: length + 20 }, (_, i) => addDays(start, i - 10)).filter(one => one >= start && (!end || one <= end) && !noClass.includes(one)).length)
+  })))
+
+//#endregion

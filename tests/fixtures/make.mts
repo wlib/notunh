@@ -21,11 +21,11 @@ import { bundle } from "../../scripts/map/style.mts"
 import { FIXTURES } from "../../scripts/files.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { EVENTS, from25Live, fromAthletics, fromDserec, fromPresence, fromRecInstances, fromRecOfferings, merged, programOf } from "../../src/social/sources.mts"
+import { EVENTS, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromRecInstances, fromRecOfferings, merged, programOf } from "../../src/social/sources.mts"
 import { Curated, fromCurated } from "../../src/social/curated.mts"
 import { localDay } from "../../src/shared/time.mts"
 import { COURSES } from "../../src/courses/course.mts"
-import { fromLive25 } from "../../src/courses/calendar.mts"
+import { classDays, fromLive25 } from "../../src/courses/calendar.mts"
 import { placeOfCode } from "../../src/courses/buildings.mts"
 import { Page, importTerm, pageRead } from "../../src/courses/registrar.mts"
 import { publish as publishCourses } from "../../scripts/map/courses.mts"
@@ -130,7 +130,9 @@ const names = gazetteer.places.map(place => place.name)
 const match = placeMatcher(names)
 const program = { id: "8520b0bd-ad58-415b-a070-7dc7c18e06fc", ...programOf(await fixture("events/rec-program.html")) }
 const skate = { id: "af8ff201-7146-4688-b10e-fe79418e3ff2", ...programOf(await fixture("events/rec-calendar-program.html")) }
-const events = merged([fromPresence(JSON.parse(await fixture("events/presence.json")), match), from25Live(JSON.parse(await fixture("events/25live.json")), match), fromAthletics(await fixture("events/athletics.ics"), match), fromDserec(JSON.parse(await fixture("events/dserec.json")), match), fromRecOfferings(await fixture("events/rec-offerings.html"), program, program.semesters[0].name, match), fromRecInstances(await fixture("events/rec-instances.html"), skate, match), fromCurated(v.parse(Curated, JSON.parse(await fixture("events/curated.json"))), localDay(MADE), 21, match)], 0)
+const calendar = fromLive25(JSON.parse(await fixture("courses/25live.json")), MADE)
+const meetings = fromPresenceClubs(JSON.parse(await fixture("events/presence-clubs.json")), classDays(calendar, localDay(MADE), 21), match)
+const events = merged([fromPresence(JSON.parse(await fixture("events/presence.json")), match), meetings, from25Live(JSON.parse(await fixture("events/25live.json")), match), fromAthletics(await fixture("events/athletics.ics"), match), fromDserec(JSON.parse(await fixture("events/dserec.json")), match), fromRecOfferings(await fixture("events/rec-offerings.html"), program, program.semesters[0].name, match), fromRecInstances(await fixture("events/rec-instances.html"), skate, match), fromCurated(v.parse(Curated, JSON.parse(await fixture("events/curated.json"))), localDay(MADE), 21, match)], 0)
 await write(EVENTS, { fetched: MADE, events })
 
 // The rooms to book, read from 25Live's trimmed answers as the build reads the whole ones, with their NetIDs and
@@ -151,7 +153,7 @@ const imported = await Promise.all(TERMS.map(async code => {
   const pages = Array.from({ length: Math.ceil(page.data.length / 100) }, (_, i) => pageRead({ ...page, data: page.data.slice(i * 100, i * 100 + 100) }, MADE))
   return importTerm(code, pages, place)
 }))
-const courses = await publishCourses(imported, fromLive25(JSON.parse(await fixture("courses/25live.json")), MADE), MADE)
+const courses = await publishCourses(imported, calendar, MADE)
 await write(COURSES, courses.index)
 for (const [file, json] of courses.files)
   await write(`public${file}`, JSON.parse(json))

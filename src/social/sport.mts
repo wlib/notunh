@@ -22,7 +22,7 @@ export const isPractice = (event: Pick<Event, "title" | "source">) =>
 //#region The same thing, told twice
 
 /** Which calendar's telling of a thing is kept: the one surest of it */
-const RANK: Record<Source, number> = { athletics: 0, "25live": 1, dserec: 2, rec: 3, presence: 4, pin: 5, course: 6 }
+const RANK: Record<Source, number> = { athletics: 0, "25live": 1, dserec: 2, rec: 3, presence: 4, curated: 5, pin: 6, course: 7 }
 
 /** How far apart two tellings of one thing may start */
 const NEAR_MS = 30 * 60_000

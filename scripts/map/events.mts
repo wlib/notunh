@@ -1,12 +1,13 @@
 // Fetches UNH's public event calendars into src/map/events.json, one request each, as the inputs are made nightly
 // (scripts/data.mts): Presence (Wildcat Link) whole, as it answers the past month and what's upcoming; 25Live
-// Publisher a week at a time, as it answers at most 200 entries; Athletics' ICS whole; and sport clubs' events from
-// DSE Rec, the same weeks in one page, from the JSON its own pages ask for, without our User-Agent; and Campus Rec's
-// programs, each program's page then its offerings in each of its semesters. Only events are asked of DSE, never its
-// rosters or members. Each is read into the one event shape (src/social/sources.mts), placed
-// on the gazetteer by name (src/social/aliases.mts), and events already over are left out. If any calendar fails, the
-// step fails and the last night's file stays (scripts/data.mts); a build without one gets an empty list
-// (scripts/inputs.mts)
+// Publisher a week at a time, as it answers at most 200 entries; Athletics' ICS whole; sport clubs' events from DSE
+// Rec, the same weeks in one page, from the JSON its own pages ask for, without our User-Agent; and Campus Rec's
+// programs, found by classification, each program's page then its sessions or its offerings in each of its
+// semesters. Only events are asked of DSE, never its rosters or members. The series only UNH's pages tell, kept by
+// hand (src/social/curated.mts), join them over the same weeks. Each is read into the one event shape
+// (src/social/sources.mts), placed on the gazetteer by name (src/social/aliases.mts), and events already over are
+// left out. If any calendar fails, the step fails and the last night's file stays (scripts/data.mts); a build without
+// one gets an empty list (scripts/inputs.mts)
 
 import { readFile } from "node:fs/promises"
 import * as v from "valibot"
@@ -14,8 +15,10 @@ import { fileURLToPath } from "node:url"
 import { getJson } from "../../src/shared/json.mts"
 import type { Event, EventsData } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { ATHLETICS, EVENTS, PRESENCE, REC_PROGRAMS, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromRecOfferings, live25Url, merged, offeringsUrl, programOf, programUrl } from "../../src/social/sources.mts"
+import { ATHLETICS, EVENTS, PRESENCE, REC_INDEX, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromRecInstances, fromRecOfferings, instancesUrl, live25Url, merged, offeringsUrl, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
+import { Curated, fromCurated } from "../../src/social/curated.mts"
+import curated from "../../src/social/curated.json" with { type: "json" }
 import { addDays, localDay } from "../../src/shared/time.mts"
 import { writeInput } from "../files.mts"
 
@@ -45,14 +48,23 @@ const [presence, athletics, clubs, ...weeks] = await Promise.all([
 const text = (url: string) =>
   fetch(url, init).then(response => response.ok ? response.text() : Promise.reject(new Error(`${response.status} from ${url}`)))
 
-// Each program's page, then its offerings in each semester the page names, one at a time, as Fusion's a small site
+// Campus Rec's programs, each classification's listed, then each program's page, then its sessions on its calendar or
+// its offerings in each semester the page names, one at a time, as Fusion's a small site
+const listed = new Set<string>()
+for (const classification of classificationsOf(await text(REC_INDEX)))
+  for (const id of programsOf(await text(classificationUrl(classification))))
+    listed.add(id)
 const programs: Event[][] = []
-for (const id of REC_PROGRAMS) {
+for (const id of listed) {
   const program = { id, ...programOf(await text(programUrl(id))) }
-  for (const semester of program.semesters)
-    programs.push(fromRecOfferings(await text(offeringsUrl(id, semester.id)), program, semester.name, match))
+  if (program.byCalendar)
+    programs.push(fromRecInstances(await text(instancesUrl(id)), program, match))
+  else
+    for (const semester of program.semesters)
+      programs.push(fromRecOfferings(await text(offeringsUrl(id, semester.id)), program, semester.name, match))
 }
 
-const events = merged([fromPresence(presence, match), fromAthletics(athletics, match), fromDserec(clubs, match), ...weeks.map(week => from25Live(week, match)), ...programs], now)
+const series = fromCurated(v.parse(Curated, curated), today, 7 * WEEKS, match)
+const events = merged([fromPresence(presence, match), fromAthletics(athletics, match), fromDserec(clubs, match), ...weeks.map(week => from25Live(week, match)), ...programs, series], now)
 await writeInput(EVENTS, JSON.stringify({ fetched: now, events } satisfies EventsData) + "\n")
 console.log(`${events.length} events, ${events.filter(event => event.place).length} placed`)

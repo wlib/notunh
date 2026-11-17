@@ -11,7 +11,7 @@ import type { GazetteerPlace } from "../places/gazetteer.mts"
 import type { Place } from "../places/search.mts"
 import { distance } from "../geo/projection.mts"
 import { CAMPUS } from "../places/durham.mts"
-import { type Day, addDays, dayStart, localDay } from "../shared/time.mts"
+import { type Day, Day as DaySchema, addDays, dayStart, localDay } from "../shared/time.mts"
 import { usable } from "../shared/json.mts"
 
 /** Characters a title, a place's name, and a pin's `where` are kept to, and a description */
@@ -19,7 +19,7 @@ export const SHORT = 80
 export const LONG = 500
 
 /** Where events come from; a course's are dated class meetings (src/courses/course.mts), never in events.json */
-export const SOURCES = ["presence", "25live", "athletics", "dserec", "rec", "pin", "course"] as const
+export const SOURCES = ["presence", "25live", "athletics", "dserec", "rec", "curated", "pin", "course"] as const
 export type Source = typeof SOURCES[number]
 
 /** The calendars official events come from, each as a page names it, and who runs its events where that's one body, which a club's own on Wildcat Link isn't */
@@ -28,7 +28,8 @@ export const CALENDARS: Record<Exclude<Source, "pin" | "course">, { name: string
   "25live":  { name: "UNH Events Calendar", organizer: { name: "University of New Hampshire", url: "https://www.unh.edu" } },
   athletics: { name: "UNH Athletics", organizer: { name: "UNH Athletics", url: "https://unhwildcats.com" } },
   dserec:    { name: "UNH Club Sports", organizer: { name: "UNH Club Sports", url: "https://unh.dserec.com/online/clubsports" } },
-  rec:       { name: "Campus Rec programs", organizer: { name: "UNH Campus Recreation", url: "https://crec.unh.edu" } }
+  rec:       { name: "Campus Rec programs", organizer: { name: "UNH Campus Recreation", url: "https://crec.unh.edu" } },
+  curated:   { name: "UNH's website", organizer: { name: "University of New Hampshire", url: "https://www.unh.edu" } }
 }
 
 /** The calendar an event is listed on, or none for one made here or a class */
@@ -55,7 +56,9 @@ export const Event = v.object({
   left:   v.optional(v.number()),
   closes: v.optional(v.number()),
   /** The ids other calendars tell the same thing by, where they do (src/social/sport.mts) */
-  also:   v.optional(v.array(v.string()))
+  also:   v.optional(v.array(v.string())),
+  /** For one only a page says, as curated.mts keeps them: the day someone last read the page saying so */
+  checked: v.optional(DaySchema)
 })
 export type Event = v.InferOutput<typeof Event>
 

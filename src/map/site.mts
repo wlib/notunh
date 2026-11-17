@@ -74,7 +74,7 @@ export const eventResolved = (event: Event | Pin, place?: GazetteerPlace): Resol
         ? { heading: "Where", items: [{ text: place.name, href: urlOf({ kind: "place", name: place.name }), ...event.where && event.where !== place.name && { detail: event.where } }] }
         : { heading: "Where", lines: [whereOf(event)] },
       ...("description" in event && event.description ? [{ heading: "About", lines: [event.description] }] : []),
-      ...calendar ? [{ heading: "Listed on", items: [{ text: calendar.name, href: event.url }] }] : []
+      ...calendar ? [{ heading: "Listed on", items: [{ text: calendar.name, href: event.url, ...event.checked && { detail: `checked ${event.checked}` } }] }] : []
     ],
     event,
     place

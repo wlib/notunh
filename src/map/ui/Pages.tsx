@@ -857,7 +857,7 @@ const EventView = ({ id }: { id: string }) => {
         <div class="lines">
           {event.place && <LinkLine to={{ kind: "place", name: event.place }}>{event.place}</LinkLine>}
           {visit && <LinkLine to={parkingFor(visit)}>Parking</LinkLine>}
-          {!pin && <LinkLine href={event.url}>{calendarOf(event)?.name ?? "Source"}</LinkLine>}
+          {!pin && <LinkLine href={event.url}>{calendarOf(event)?.name ?? "Source"}{event.checked && <> · checked <Day of={event.checked} month="short" day="numeric" /></>}</LinkLine>}
         </div>
         {pin && <p class="view-foot muted"><Moderate pin={pin} act={act} onEdit={() => state.go({ kind: "edit", id })} onGone={() => told(undefined)} onReported={hidden => notice.value = hidden ? "Reported, and hidden." : "Reported."} /></p>}
       </>

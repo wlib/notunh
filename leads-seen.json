@@ -94,9 +94,10 @@
     "judged": "2026-11-16"
   },
   "2cd186021a253239": {
-    "verdict": "accepted",
+    "verdict": "rejected",
     "url": "https://www.unh.edu/sustainability/sustainability-fellowships",
-    "judged": "2026-11-16"
+    "judged": "2026-11-16",
+    "reason": "a one-time event 25Live lists"
   },
   "306a9ed1f9a5c63e": {
     "verdict": "rejected",

@@ -10,6 +10,8 @@ Refresh the hand-kept series in `src/social/curated.json` (schema and meaning in
    - **Accept** it into `curated.json` when it's something anyone may go to, in Durham, again and again or on dates the page names, with a weekday or dates and a start and an end the page states. Fill each field from the page: `title` as the page names it; `where` as written, which must name a place the gazetteer knows (check it with `placeMatcher` from `src/social/aliases.mts` if unsure); `days` (`Mon`…`Sun`) or `dates`, never both; `start` and `end` as `HH:MM`; `from` and `until` as the dates the page gives, else the term's (its dates are in `src/courses/courses.json` under `calendar.terms`), never past the term's end; `url`; `passage`, the words the times came from, copied verbatim; `checked`, today.
    - **Reject** it, with a short reason, as the rule it suggests: "a class", "office hours", "past", "online", "not in Durham", "times not stated", "a one-time event 25Live lists".
 
+   A one-time event is rarely worth a record: the installed `src/map/events.json` may be days old, so search UNH's calendar (25Live) for it before accepting, and reject it as "a one-time event 25Live lists" if it's there.
+
    Record every verdict in `leads-seen.json` by the lead's hash: `{ "verdict": "accepted" | "rejected", "reason": "…", "url": "…", "judged": "YYYY-MM-DD" }` (`Seen` in `src/social/leads.mts`), so it isn't asked again until its words change.
 
 3. **Check the series already kept.** For each record in `curated.json`, open its `url`. If its passage still says the same, set `checked` to today. If the times changed, update the record and its passage from the page. If the page no longer says it, or the term it was for is over, remove it.

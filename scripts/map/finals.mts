@@ -26,12 +26,13 @@ import { URL } from "node:url"
 import { unzipSync, strFromU8 } from "fflate"
 import * as v from "valibot"
 import { type CoursesIndex, CoursesIndex as IndexSchema, COURSES, TermFile } from "../../src/courses/course.mts"
-import { type Cell, type Finals, type TermFinals, EXAMINATIONS, FINALS, Finals as FinalsSchema, downloadUrl, fromSheet, merged, placerFor, scheduleLinks } from "../../src/courses/finals.mts"
+import { type Cell, type Finals, type TermFinals, EXAMINATIONS, FINALS, Finals as FinalsSchema, FinalsFormat, downloadUrl, fromSheet, merged, placerFor, scheduleLinks } from "../../src/courses/finals.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { contentHash } from "../../src/shared/hash.mts"
 import { DAY, localDay } from "../../src/shared/time.mts"
 import { REPO, STAGED, exists } from "../files.mts"
 import { ApiError, readModel, writeModel } from "../worker.mts"
+import { read as readStored } from "../../src/shared/format.mts"
 
 /** Who's asking, as every request of ours says */
 const HEADERS = { "user-agent": "notunh/1 (+https://notunh.app)" }
@@ -234,10 +235,13 @@ if (import.meta.main) {
     console.warn("The Worker deployed stores no finals yet, so none are stored tonight")
   }) : undefined
   if (stored) {
-    const before = v.safeParse(FinalsSchema, stored.state)
+    const before = readStored(FinalsFormat, stored.state)
+    // What newer code stored is left as it is, and the night fails for it (src/shared/format.mts)
+    if ("newer" in before)
+      throw new Error(`The finals stored are of version ${before.newer}, newer than this reads, so they're left as they are`)
     // Checked as the Worker checks what it reads back, so what it would read as nothing is never stored over the last
     // good
-    const finals = v.parse(FinalsSchema, merged(before.success ? before.output : undefined, read, localDay(Date.now())))
+    const finals = v.parse(FinalsSchema, merged("value" in before ? before.value : undefined, read, localDay(Date.now())))
     await writeModel(FINALS, finals, stored.revision)
     console.log(`Stored the finals of ${Object.keys(finals.terms).join(", ") || "no term"} through ${finals.through}`)
   }

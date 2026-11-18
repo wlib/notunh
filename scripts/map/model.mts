@@ -12,7 +12,7 @@
 
 import { fetchCatalog } from "../../src/transit/observations/archive.mts"
 import { EXTRACTOR, type Visit } from "../../src/transit/inference/events.mts"
-import { emptyModel, type Evaluation } from "../../src/transit/models/model.mts"
+import { ModelFormat, emptyModel, type Evaluation } from "../../src/transit/models/model.mts"
 import { fold, summarize } from "../../src/transit/models/fit.mts"
 import { contentHash } from "../../src/shared/hash.mts"
 import { localDay } from "../../src/shared/time.mts"
@@ -23,6 +23,7 @@ import { derived, health } from "../worker.mts"
 import { PREDICTOR, acquireFeed, describe, feedFor, listeningOf, score, visitsOf } from "./replay.mts"
 
 const model = await learn("buses", new URL("src/map/model.json", STAGED), {
+  by:      ModelFormat,
   empty:   emptyModel,
   prepare: async () => {
     if (await acquireFeed())

@@ -1,7 +1,8 @@
 // Learns a model through the Worker and writes it among the inputs a build pins (scripts/inputs.mts), as the Inputs
 // workflow does each night. What D1 stores is where learning carries on from, and what's written is what it stores
-// once learning's done, so the inputs carry exactly the model the Worker has, or an empty one while it has another
-// version's:
+// once learning's done, so the inputs carry exactly the model the Worker has. That's read by the model's format
+// (src/shared/format.mts): one of an older version reads as none, and is learned afresh, and one of a newer version,
+// which newer code learned, is left as stored, with an empty one written:
 // - with --store, every whole day since the stored model is folded in (from the first day there is, with --rebuild)
 //   and stored, compare-and-swap on the revision read. A day that can't be read stops learning there, keeping the
 //   days before it, and the next run carries on. A model through fewer days than the one stored, as a rebuild cut
@@ -13,6 +14,8 @@
 
 import type { URL } from "node:url"
 import type { Learned } from "../src/shared/learn.mts"
+import { type Format, read } from "../src/shared/format.mts"
+import { describeIssues } from "../src/shared/json.mts"
 import { addDays, type Day } from "../src/shared/time.mts"
 import { writeInput } from "./files.mts"
 import { readModel, writeModel } from "./worker.mts"
@@ -31,9 +34,11 @@ const stalled = (reason: string) => {
 }
 
 export const learn = async <M extends Learned, B = M>(name: string, output: URL, {
-  empty, first, last, fold, prepare, bundle = model => model as unknown as B,
+  by, empty, first, last, fold, prepare, bundle = model => model as unknown as B,
   store = process.argv.includes("--store"), rebuild = process.argv.includes("--rebuild")
 }: {
+  /** How the model stored is read */
+  by:       Format<M>,
   empty:    () => M,
   /** What learning needs first, like the timetable it replays new days against acquired */
   prepare?: () => Promise<unknown>,
@@ -48,7 +53,6 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
   store?:   boolean,
   rebuild?: boolean
 }): Promise<M> => {
-  const ofThisShape = (state: M | null) => state?.version === empty().version ? state : null
   let model = empty()
   if (!process.env.BUILD_TOKEN) {
     if (store)
@@ -56,22 +60,31 @@ export const learn = async <M extends Learned, B = M>(name: string, output: URL,
     console.warn(`${name}: no BUILD_TOKEN to reach the Worker with, so the model is empty`)
   }
   else {
-    const { state, revision } = await readModel<M>(name)
-    model = ofThisShape(state) ?? model
-    if (store) {
-      let learned = rebuild ? empty() : model
-      let day: Day | undefined
-      try {
-        await prepare?.()
-        for (day = learned.through === null ? await first() : addDays(learned.through, 1); day !== undefined && day <= last; day = addDays(day, 1))
-          learned = await fold(learned, day)
+    const { state, revision } = await readModel<unknown>(name)
+    const stored = read(by, state)
+    if ("newer" in stored)
+      (store ? stalled : console.warn)(`${name}: the model stored is of version ${stored.newer}, newer than this learns, so it's left as it is, and the model here is empty`)
+    else {
+      if ("value" in stored)
+        model = stored.value
+      else if (state !== null)
+        console.warn(`${name}: the model stored isn't read (${describeIssues(stored.issues)}), so it's learned afresh`)
+      if (store) {
+        let learned = rebuild ? empty() : model
+        let day: Day | undefined
+        try {
+          await prepare?.()
+          for (day = learned.through === null ? await first() : addDays(learned.through, 1); day !== undefined && day <= last; day = addDays(day, 1))
+            learned = await fold(learned, day)
+        }
+        catch (error) {
+          stalled(`${name}: stopped${day ? ` at ${day}` : ""}, which the next run carries on from: ${message(error)}`)
+        }
+        if (learned !== model && learned.through !== null && learned.through >= (model.through ?? ""))
+          await writeModel(name, learned, revision).catch(error => stalled(`${name}: not stored: ${message(error)}`))
+        const kept = read(by, (await readModel<unknown>(name)).state)
+        model = "value" in kept ? kept.value : empty()
       }
-      catch (error) {
-        stalled(`${name}: stopped${day ? ` at ${day}` : ""}, which the next run carries on from: ${message(error)}`)
-      }
-      if (learned !== model && learned.through !== null && learned.through >= (model.through ?? ""))
-        await writeModel(name, learned, revision).catch(error => stalled(`${name}: not stored: ${message(error)}`))
-      model = ofThisShape((await readModel<M>(name)).state) ?? empty()
     }
   }
   await writeInput(output, JSON.stringify(bundle(model)))

@@ -5,7 +5,7 @@
 
 import { addDays, localDay } from "../../src/shared/time.mts"
 import type { Known, Poll, Transition } from "../../src/laundry/infer.mts"
-import { bundle, emptyLearned, update } from "../../src/laundry/model.mts"
+import { LearnedFormat, bundle, emptyLearned, update } from "../../src/laundry/model.mts"
 import { learn } from "../learn.mts"
 import { STAGED } from "../files.mts"
 import { health, readRows } from "../worker.mts"
@@ -15,6 +15,7 @@ if (process.env.BUILD_TOKEN && !machines.length)
   throw new Error("No machine inventory to learn or bundle laundry's model for")
 
 const learned = await learn("laundry", new URL("src/laundry/usual.json", STAGED), {
+  by:    LearnedFormat,
   empty: emptyLearned,
   first: async () => {
     const { transitions: { since } } = await health()

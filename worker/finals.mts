@@ -7,8 +7,8 @@
 
 import { Hono } from "hono/tiny"
 import { drizzle } from "drizzle-orm/d1"
-import * as v from "valibot"
-import { type Finals, type Told, FINALS, Finals as FinalsSchema } from "../src/courses/finals.mts"
+import { type Finals, type Told, FINALS, FinalsFormat } from "../src/courses/finals.mts"
+import { read } from "../src/shared/format.mts"
 import type { Env } from "./env.mts"
 import { latestModel } from "./models.mts"
 import { isVerifiedAsker } from "./social.mts"
@@ -17,11 +17,11 @@ type Worker = { Bindings: Env }
 
 export const finals = new Hono<Worker>()
 
-/** The finals stored last, or none while none of this shape are */
+/** The finals stored last, or none while none this reads are, as those of another version aren't */
 export const storedFinals = async (db: D1Database): Promise<Finals | undefined> => {
   const [stored] = await latestModel(drizzle(db), FINALS)
-  const parsed = v.safeParse(FinalsSchema, stored?.state)
-  return parsed.success ? parsed.output : undefined
+  const found = read(FinalsFormat, stored?.state)
+  return "value" in found ? found.value : undefined
 }
 
 const PRIVATE = { "cache-control": "private, no-store" }

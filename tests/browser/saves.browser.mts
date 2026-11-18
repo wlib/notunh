@@ -107,7 +107,7 @@ test("a club's meeting saved from today's list is that meeting alone, in Yours, 
   await other.close()
 })
 
-test("Plan ahead shows a saved game once and activity filters show the matching session", async ({ page, fixture }) => {
+test("Plan ahead shows a saved game once and the next home game, and activity filters show the matching session", async ({ page, fixture }) => {
   const now = atClock(localDay(Date.now()), "12:00")
   const events = [
     ...[1, 6, 6 + 7 * 24].map((hours, i) => ({
@@ -115,7 +115,7 @@ test("Plan ahead shows a saved game once and activity filters show the matching 
       start: now + hours * HOUR, end: now + (hours + 1) * HOUR, where: `Studio ${i + 1}`, left: 5
     })),
     ...["Maine", "Vermont"].map((name, i) => ({
-      id: `athletics:${i}`, title: name, source: "athletics", url: "", where: "Arena",
+      id: `athletics:${i}`, title: name, source: "athletics", url: "", place: "Whittemore Center Arena", where: "Whittemore Center Arena",
       start: now + WEEK + i * HOUR, end: now + WEEK + (i + 1) * HOUR
     }))
   ]
@@ -129,6 +129,11 @@ test("Plan ahead shows a saved game once and activity filters show the matching 
   await expect(preview.getByText("Maine", { exact: true })).toHaveCount(1)
   await expect(preview.getByText("Vermont", { exact: true })).toHaveCount(1)
   expect(await preview.locator("li").count()).toBeLessThanOrEqual(3)
+  // The full term is a plan, not the Athletics schedule: the saved game, never the rest
+  await page.getByRole("button", { name: "Full term ›" }).click()
+  await expect(page.locator(".view .ahead").getByText("Maine", { exact: true })).toHaveCount(1)
+  await expect(page.locator(".view .ahead").getByText("Vermont", { exact: true })).toHaveCount(0)
+  await page.goBack()
   await page.getByRole("button", { name: /Clubs & activities/ }).click()
   await page.getByRole("button", { name: "Meets today" }).click()
   await page.getByLabel("Time of day").selectOption("evening")

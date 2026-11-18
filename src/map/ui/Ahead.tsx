@@ -1,11 +1,13 @@
 /** @jsxImportSource bruh/browser */
 
 // What's ahead: the academic calendar's deadlines, registration windows, breaks and term dates
-// (src/courses/calendar.mts), home games, one-off events from UNH's pages, and what's yours further out. The home shows
-// three rows at most: one of yours, one for everyone and one public event. The term is a page of its own, by month, its
-// registration windows narrowed to your class standing. Dates in the next few days join Yours
+// (src/courses/calendar.mts), home games, one-off events from UNH's pages, and what's yours further out. The home
+// shows three rows at most: one of yours, one for everyone and one public event. The term is a page of its own, by
+// month, its registration windows narrowed to your class standing and its games only those you've saved, as the rest
+// are Athletics' schedule, not a plan. Dates in the next few days join Yours
 
 import { r } from "bruh/reactive"
+import type { Event } from "../../social/event.mts"
 import { isGoing } from "../../social/saves.mts"
 import { groupBy } from "../../shared/group.mts"
 import { STANDINGS, type KeyDate, type Standing } from "../../courses/calendar.mts"
@@ -62,14 +64,21 @@ export const dueSoon = () => {
   return datesFrom(today, addDays(today, DUE_DAYS + 1)).filter(({ kind }) => kind !== "term")
 }
 
-/** The events between two days worth planning for: yours, saved or going, and the public ones, games and one-offs from UNH's pages */
+/** A game at home: Athletics', at a place on the map */
+const isHomeGame = ({ source, place }: Pick<Event, "source" | "place">) =>
+  source === "athletics" && place !== undefined
+
+/**
+ * The events between two days worth planning for: yours, saved or going, and the public ones, home games and one-offs
+ * from UNH's pages
+ */
 const eventsBetween = (from: CalendarDay, to: CalendarDay) =>
   [...state.events.value.events, ...state.pins.value].flatMap(event => {
     const day = localDay(event.start)
     if (day < from || day >= to)
       return []
     const mine = state.isSessionSaved(event) || isGoing(event)
-    const highlight = event.source === "athletics" || event.source === "curated" && !state.activityOf(event)
+    const highlight = isHomeGame(event) || event.source === "curated" && !state.activityOf(event)
     return mine || highlight ? [{ event, day, mine, highlight }] : []
   }).sort((a, b) => a.event.start - b.event.start)
 
@@ -106,7 +115,9 @@ export const AheadView = () => {
     const from = addDays(today, 1)
     const items = [
       ...datesFrom(from, to, standing).map(date => ({ day: date.day, row: <DateRow date={date} /> })),
-      ...eventsBetween(from, to).map(({ day, event }) => ({ day, row: <EventRow event={event} day="" /> }))
+      ...eventsBetween(from, to)
+        .filter(({ event, mine }) => mine || !isHomeGame(event))
+        .map(({ day, event }) => ({ day, row: <EventRow event={event} day="" /> }))
     ].sort((a, b) => a.day.localeCompare(b.day))
     const months = groupBy(items, ({ day }) => day.slice(0, 7))
     return <>
@@ -120,7 +131,7 @@ export const AheadView = () => {
         <h2 class="eyebrow"><Day of={`${month}-01`} month="long" /></h2>
         <ul class="rows ahead">{rows.map(({ row }) => row)}</ul>
       </>)}
-      <p class="view-foot muted">From UNH's academic calendar, Athletics and UNH's pages.</p>
+      <p class="view-foot muted">From UNH's academic calendar and UNH's pages.</p>
     </>
   })
 }

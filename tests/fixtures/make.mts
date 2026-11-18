@@ -5,7 +5,9 @@
 // have it, with no sprite or fonts. The walk, gazetteer, and rooms are whole. The events, the courses, the
 // prerequisites, the parking areas and the rooms to book are made as the inputs make them, from the trimmed answers
 // beside the data (../events/ with a copy of the curated series, ../courses/ with its made-up addresses,
-// ../programs/, ../parking/ and ../rooms/), as of one fixed day, so they're the same whenever they're made
+// ../programs/, ../parking/ and ../rooms/), as of one fixed day, so they're the same whenever they're made. The finals
+// aren't data a build installs, as only the Worker may tell them: their made-up sheet is beside the courses' answers
+// (finals.mts)
 
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
@@ -37,6 +39,7 @@ import { PARKING } from "../../src/parking/sources.mts"
 import { cached, parkingOf } from "../../scripts/map/parking.mts"
 import { ROOMS, bookingsFrom, shownTo, spacesFrom } from "../../src/courses/bookings.mts"
 import { facilitiesFrom, recBookingsFrom } from "../../src/courses/rec.mts"
+import { writeFinalsSheet } from "./finals.mts"
 
 const REPO = new URL("../../", import.meta.url)
 const ROUTES = ["Gables", "WestEdge"]
@@ -180,6 +183,9 @@ for (const [file, json] of prereqs.files)
 
 // The parking areas, checked against the copies of their sources kept
 await write(PARKING, (await parkingOf(await cached(), MADE)).data)
+
+// The fall fixture's finals, made up for its sections (finals.mts)
+await writeFinalsSheet()
 
 await write("src/laundry/rooms.json", await read("src/laundry/rooms.json"))
 await write("src/laundry/usual.json", bundleUsual(emptyLearned()))

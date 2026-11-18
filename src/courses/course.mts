@@ -22,7 +22,8 @@ import { type Day, Day as DaySchema, addDays, daysBetween, localDay } from "../s
 export const Instructor = v.object({ name: v.string(), mail: v.optional(v.string()) })
 export type Instructor = v.InferOutput<typeof Instructor>
 
-const Minute = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(1439))
+/** Minutes after midnight on Durham's clock */
+export const Minute = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(1439))
 
 export const Meeting = v.object({
   /** The weekdays, like "MWF", in M T W R F S U; empty for hours arranged */

@@ -38,14 +38,20 @@ export const toggleFavorite = (id: string) => {
 //#region The open room, at its own path, so a favorite can be bookmarked or opened from the home screen
 
 const pathname = r(location.pathname)
-addEventListener("popstate", () => pathname.value = location.pathname)
+/** Whether the open room was opened from the list in this visit, which its history entry says, so Back is to the list */
+export const isFromList = r(history.state?.isFromList === true)
+addEventListener("popstate", () => {
+  pathname.value = location.pathname
+  isFromList.value = history.state?.isFromList === true
+})
 
 export const openRoom = r(() => roomAtPath(pathname.value))
 /** Whether the path is a room's that there's no such room for, which the service worker serves this page for too */
 export const isUnknownRoom = r(() => openRoom.value === undefined && pathname.value !== "/laundry/")
 
 export const open = (id: string | undefined) => {
-  history.pushState(null, "", pathOf(id))
+  isFromList.value = id !== undefined && openRoom.peek() === undefined
+  history.pushState({ isFromList: isFromList.value }, "", pathOf(id))
   // Never which room, as it says where someone lives
   if (id)
     capture("laundry_room_opened", { favorite: favorites.value.has(id) })

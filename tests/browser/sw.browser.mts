@@ -33,7 +33,7 @@ const cachedRelease = (page: Page, path: string, cache = CACHE) =>
 const cachedFrom = (page: Page, path: string, release: string) =>
   expect.poll(() => cachedRelease(page, path), { timeout: 10_000 }).toBe(release)
 
-const RELEASE = { A: "2026-10-18T08:00:00.000Z", B: "2026-10-19T08:00:00.000Z", C: "2026-10-20T08:00:00.000Z", D: "2026-10-21T08:00:00.000Z" }
+const RELEASE = { A: "2026-10-18T08:00:00.000Z", B: "2026-10-19T08:00:00.000Z", C: "2026-10-20T08:00:00.000Z", D: "2026-10-21T08:00:00.000Z", F: "2026-10-24T08:00:00.000Z" }
 
 /** Every script and data file the page's head names */
 const named = (page: Page) =>
@@ -131,6 +131,26 @@ test("a release whose code and data both differ has its data shown in an open ta
     document.dispatchEvent(new Event("visibilitychange"))
   }).catch(() => {})
   await expect.poll(() => page.evaluate(() => [...document.scripts].some(script => script.src.includes("index-BBBBBBBB"))).catch(() => false)).toBe(true)
+})
+
+test("a release whose data means something newer, as its version says, is kept for an open tab but not shown by the code it has, which reads it once and waits for its reload", async ({ context, fixture }) => {
+  const page = await open(context, `${fixture.origin}/dining/`)
+  await cachedFrom(page, "/dining/", RELEASE.A)
+  await page.evaluate(() => void ((window as unknown as { marker: boolean }).marker = true))
+  await fixture.publish("F")
+  await page.evaluate(() => navigator.serviceWorker.controller!.postMessage({ revalidate: location.pathname }))
+  await cachedFrom(page, "/dining/", RELEASE.F)
+  // F's index is C's, renamed hall and all, but of version 1, which A's code doesn't read: it's asked for, and left
+  const asked = () => page.evaluate(() => performance.getEntriesByType("resource").filter(({ name }) => name.includes("menus-FFFFFFFF")).length)
+  await expect.poll(asked).toBe(1)
+  await page.waitForTimeout(500)
+  await expect(page.locator("main.dining")).not.toContainText(HALL_SUFFIX)
+  await expect(page.locator("main.dining")).toBeVisible()
+  expect(await page.evaluate(() => (window as unknown as { marker?: boolean }).marker)).toBe(true)
+  // The file stays kept for the page that will read it, with what the tab still shows
+  expect(await page.evaluate(async cache => !!await (await caches.open(cache)).match("/assets/menus-FFFFFFFF.json"), CACHE)).toBe(true)
+  for (const url of await named(page))
+    expect(await isFetchable(page, url), url).toBe(true)
 })
 
 test("a release with a new worker takes over an open tab without losing its files, leaving the first worker's pages to be fetched afresh", async ({ context, fixture }) => {

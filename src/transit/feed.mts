@@ -2,6 +2,7 @@
 
 import * as v from "valibot"
 import { arrayOf, objectOf, readJson } from "../shared/json.mts"
+import { format } from "../shared/format.mts"
 import { Day, HOUR, addDays, localDay, offsetAt, weekday } from "../shared/time.mts"
 
 export type Route = {
@@ -79,8 +80,9 @@ export const withIndexes = (data: FeedData): Feed => ({
   routesById: new Map(data.routes.map(route => [route.id, route]))
 })
 
+/** The timetable a page loads, read as its format says (src/shared/format.mts): its own version is the timetable's */
 export const loadFeed = (response: Response) =>
-  readJson(response, FeedData).then(withIndexes)
+  readJson(response, format(FeedData)).then(withIndexes)
 
 /** Seconds into the service day a trip gets to a stop, which is when it leaves unless it waits there */
 export const arrivalTime = (trip: Trip, position: number) =>

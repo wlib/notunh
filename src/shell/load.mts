@@ -3,13 +3,14 @@
 // and a file that doesn't fit its schema is a failed load like any other. A file that failed is asked for again past
 // every cache (cache: "reload", which the service worker honors, keeping the fresh copy over the one it had), so a
 // malformed copy a cache kept is replaced rather than read again. Failures are retried after 5 s, 15 s, 1 min, then
-// every 5 min, and at once when the page comes back into view, until the file loads or isn't wanted any more
+// every 5 min, and at once when the page comes back into view, until the file loads or isn't wanted any more. A file
+// of a newer version than the code running reads (src/shared/format.mts) isn't retried, as only newer code reads it
 //
 // The head fetches its data files itself as the page is parsed, alongside the code (Head.tsx), and a file's first
 // load takes that response
 
-import type { StandardSchemaV1 } from "@standard-schema/spec"
-import { readJson } from "../shared/json.mts"
+import { type By, isNewerFormat, readJson } from "../shared/json.mts"
+import { format } from "../shared/format.mts"
 
 /** How a file is read from its response, given the init it was fetched with, for any file it names in turn */
 export type Loader<T> = (response: Response, init: RequestInit) => Promise<T>
@@ -17,9 +18,11 @@ export type Loader<T> = (response: Response, init: RequestInit) => Promise<T>
 const RETRY_MS = [5_000, 15_000, 60_000, 5 * 60_000]
 const LOAD_TIMEOUT_MS = 60_000
 
-/** A loader of JSON that must fit a schema */
-export const jsonOf = <T,>(schema: StandardSchemaV1<unknown, T>): Loader<T> =>
-  response => readJson(response, schema)
+/** A loader of JSON of our own making, by its format, or by a schema it must fit, which is a format of version 0 */
+export const jsonOf = <T,>(by: By<T>): Loader<T> => {
+  const known = "upgrades" in by ? by : format(by)
+  return response => readJson(response, known)
+}
 
 /** The response the head started fetching for a file, if it did and no load has taken it yet */
 const started = (url: string) => {
@@ -58,8 +61,9 @@ const pause = (ms: number, signal?: AbortSignal) =>
   })
 
 /**
- * A file's value, loaded however many tries it takes, or as many as given, or failing once the signal aborts. Each
- * failure is passed to onError first, so whatever waits on the file can say so meanwhile
+ * A file's value, loaded however many tries it takes, or as many as given, or failing once the signal aborts, or at
+ * once where the file is of a newer version than this reads. Each failure is passed to onError first, so whatever
+ * waits on the file can say so meanwhile
  */
 export const loadImmutable = async <T,>(url: string, load: Loader<T>, { signal, onError = console.error, tries = Infinity }: { signal?: AbortSignal, onError?: (error: unknown) => void, tries?: number } = {}): Promise<T> => {
   for (let attempt = 0; ; attempt++) {
@@ -78,7 +82,7 @@ export const loadImmutable = async <T,>(url: string, load: Loader<T>, { signal, 
     catch (error) {
       signal?.throwIfAborted()
       onError(error)
-      if (attempt + 1 >= tries)
+      if (attempt + 1 >= tries || isNewerFormat(error))
         throw error
     }
     finally {

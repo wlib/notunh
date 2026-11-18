@@ -16,7 +16,6 @@ import { type Build, type Generation, buildOf, closureOf, isOlder, isSameBuild, 
 import { TILES_FOLDER } from "../map/basemap/tiles.mts"
 import { STYLE_ROOT } from "../map/basemap/style.mts"
 import { type CacheLike, ANY, deleteWhere, generationOf, isBrandAsset, isHashed, pageOf, prune } from "./retention.mts"
-import { CACHE as REMINDERS } from "../reminders/browser/store.mts"
 
 type Extendable = { waitUntil(promise: Promise<unknown>): void }
 type FetchLike = Extendable & { request: Request, clientId?: string, respondWith(response: Promise<Response>): void }
@@ -35,11 +34,20 @@ export type Scope = {
   location: { origin: string }
 }
 
-// Renamed whenever what's kept changes meaning, so activating deletes every older cache, the reminders' apart, which
-// pages write too (src/reminders/browser/store.mts). The first worker's pages
-// named only their code and loaded their data by URL, so what they need can't be told. Their pages are fetched
-// afresh instead, like pages not visited yet
-const CACHE = "app-v2"
+// What the cache keeps has a version, as all data that outlives its code does (src/shared/format.mts), said in its
+// name, as a cache has nowhere else to say it. It's bumped whenever what's kept changes meaning. Nothing upgrades an
+// older version's cache, which activating deletes, to be filled again from the network; the first worker's pages
+// named only their code and loaded their data by URL, so what they need can't be told, and they're fetched afresh
+// like pages not visited yet. Any other cache is left as it is: a newer version's, which only a newer worker reads,
+// and the reminders', which pages write too (src/reminders/browser/store.mts)
+const VERSION = 2
+const CACHE = `app-v${VERSION}`
+
+/** Whether a cache is an older version's of this one */
+const isOlderCache = (name: string) => {
+  const [, version] = name.match(/^app-v(\d+)$/) ?? []
+  return version !== undefined && +version < VERSION
+}
 /** Where a page's previous generation is kept, beside its current one, for windows that can't say they run it */
 const PREVIOUS = "?gen=prev"
 /**
@@ -323,7 +331,7 @@ export const start = (scope: Scope) => {
   scope.addEventListener("activate", event => {
     event.waitUntil(
       serially(async () => {
-        for (const name of (await scope.caches.keys()).filter(name => name !== CACHE && name !== REMINDERS))
+        for (const name of (await scope.caches.keys()).filter(isOlderCache))
           await scope.caches.delete(name)
         await scope.clients.claim()
         await prune(await open(), live)

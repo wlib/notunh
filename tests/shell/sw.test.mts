@@ -262,8 +262,12 @@ test("installing keeps the home page whole, and activating lets go of every olde
   await sw.install().done
   expect(sw.has("/")).toBe(true)
   expect(sw.has("/assets/home-AAAAAAAA.js")).toBe(true)
+  // A newer version's cache, as a newer worker's rolled back from is, and the reminders' aren't this worker's to delete
+  sw.stores.set("app-v3", new Map([["/", new Response("newer")]]))
+  sw.stores.set("reminders-v1", new Map([["/reminders.json", new Response("{}")]]))
   await sw.activate().done
-  expect([...sw.stores.keys()]).toEqual(["app-v2"])
+  expect([...sw.stores.keys()].sort()).toEqual(["app-v2", "app-v3", "reminders-v1"])
+  expect(await sw.stores.get("app-v3")!.get("/")!.text()).toBe("newer")
   expect(sw.paths()).toEqual(["/", "/assets/home-AAAAAAAA.js"])
   // What one of the first worker's pages needs can't be told from it. So it isn't served without its data, but
   // fetched afresh and kept whole

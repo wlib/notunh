@@ -15,7 +15,8 @@ import { ROOMS } from "../../src/laundry/rooms.mts"
 import { derived, health, readModel, readRows, request, storage, writeModel } from "../../scripts/worker.mts"
 import { learn } from "../../scripts/learn.mts"
 import { type Acquisition, inEffect } from "../../scripts/map/replay.mts"
-import { gunzipJson, gzipJson } from "../../src/shared/json.mts"
+import { gunzipJson, gzipJson, objectOf } from "../../src/shared/json.mts"
+import { format } from "../../src/shared/format.mts"
 import { fromHex } from "../../src/transit/observations/raw.mts"
 import { d1 } from "./d1.mts"
 
@@ -228,6 +229,7 @@ const learnThrough = async (version: number, last: Day, { unreadable, store = tr
   const folded: Day[] = []
   const output = pathToFileURL(`${tmpdir()}/notunh-learn-${crypto.randomUUID()}.json`)
   await learn<Model>("buses", output, {
+    by:    format(objectOf<Model>(), version),
     empty: () => ({ version, through: null }),
     first: async () => SUNDAY,
     last,
@@ -265,6 +267,27 @@ test("a run not asked to store writes the model stored as it is, or an empty one
   expect(await learnThrough(1, addDays(SUNDAY, 5), { store: false })).toEqual({ folded: [], bundled: { version: 1, through: addDays(SUNDAY, 3) } })
   expect(await learnThrough(2, addDays(SUNDAY, 5), { store: false })).toEqual({ folded: [], bundled: { version: 2, through: null } })
   expect((await readModel("buses")).revision).toBe(revision)
+})
+
+test("learning by any run of versions leaves a newer version's model as stored, writes an empty one beside it, and fails if it was to store; an older one's is learned afresh", async () => {
+  await fc.assert(fc.asyncProperty(fc.array(fc.record({ version: fc.integer({ min: 1, max: 4 }), store: fc.boolean() }), { minLength: 1, maxLength: 6 }), async runs => {
+    worker(TOKEN)
+    let stored: { version: number, through: Day } | undefined
+    const last = addDays(SUNDAY, 3)
+    for (const { version, store } of runs) {
+      process.exitCode = 0
+      const { folded, bundled } = await learnThrough(version, last, { store })
+      const isNewer = stored !== undefined && stored.version > version
+      const carried = stored?.version === version
+      expect(process.exitCode).toBe(isNewer && store ? 1 : 0)
+      expect(folded).toEqual(store && !isNewer && !carried ? daysFrom(0, 3) : [])
+      if (store && !isNewer)
+        stored = { version, through: last }
+      expect(bundled).toEqual(stored?.version === version ? stored : { version, through: null })
+      expect((await readModel("buses")).state).toEqual(stored ?? null)
+    }
+    process.exitCode = 0
+  }), { numRuns: 30 })
 })
 
 test("a rebuild cut short of the days stored stores nothing, leaving the model stored written, and one that gets there replaces it", async () => {

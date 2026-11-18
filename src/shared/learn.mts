@@ -6,7 +6,7 @@ import { type Day, daysBetween } from "./time.mts"
 export const HALF_LIFE = 28 // days
 
 export type Learned = {
-  /** Bumped when the shape changes, so a stored model of an older shape is refit rather than misread */
+  /** The version of its format (format.mts), bumped when what's learned changes shape or meaning, so one stored of an older version is learned afresh rather than misread */
   version: number,
   /** The last whole day folded in */
   through: Day | null

@@ -5,6 +5,8 @@
 
 import * as v from "valibot"
 import { foldDay, type Learned as Folded } from "../shared/learn.mts"
+import { format } from "../shared/format.mts"
+import { objectOf } from "../shared/json.mts"
 import { HOUR, localDay, localHour, weekday, addDays, dayStart, Day } from "../shared/time.mts"
 import { KINDS, type Kind, type Known, type Poll, type Status, type Transition } from "./infer.mts"
 
@@ -173,6 +175,7 @@ export type UsualWeek = NonNullable<ReturnType<typeof unpack>>
  * ended, and how much business each room did on its recent watched days
  */
 export type Learned = Folded & {
+  version:  1,
   stats:    Record<string, Partial<Record<Kind, Stats>>>,
   statuses: Record<string, Status>,
   business: Record<string, number[]>
@@ -180,6 +183,9 @@ export type Learned = Folded & {
 
 export const emptyLearned = (): Learned =>
   ({ version: 1, through: null, stats: {}, statuses: {}, business: {} })
+
+/** How what's kept is read back from the Worker (src/shared/format.mts), its contents taken on trust */
+export const LearnedFormat = format(objectOf<Learned>(), 1)
 
 const median = (values: readonly number[]) => {
   const sorted = values.toSorted((a, b) => a - b)

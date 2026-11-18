@@ -12,6 +12,7 @@ import * as v from "valibot"
 import { type UnknownBuilding, placeOfCode } from "./buildings.mts"
 import { type CourseEvent, type Section, type Term, Minute, clock, codeOf, courseOf, sectionUrl } from "./course.mts"
 import type { Entry } from "../shared/ics.mts"
+import { format } from "../shared/format.mts"
 import { on, spanOn } from "../shared/recur.mts"
 import { SITE } from "../shared/site.mts"
 import { plainDay } from "../shared/temporal.mts"
@@ -59,6 +60,9 @@ export const Finals = v.object({
   terms:   v.record(v.string(), TermFinals)
 })
 export type Finals = v.InferOutput<typeof Finals>
+
+/** How what's stored is read back (src/shared/format.mts): nothing upgrades an older version, which the next night's reading replaces */
+export const FinalsFormat = format(Finals, 1)
 
 /** What a verified device is told of a term (GET /api/finals/:term) */
 export const Told = v.object({ code: v.string(), fetched: v.number(), finals: v.record(Crn, v.array(Final)) })

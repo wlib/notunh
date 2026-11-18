@@ -100,7 +100,7 @@ test("the new-event form finds a place by what people call it, taking the first 
     const body = document.querySelector(".panel-body")!
     body.scrollTop += row.getBoundingClientRect().top - body.getBoundingClientRect().top - 40
   })
-  await add.click()
+  await add.tap()
   const where = page.locator("input[name=place]")
   const exactly = page.getByLabel("Where exactly")
   await page.getByLabel("What").fill("Pickup frisbee")

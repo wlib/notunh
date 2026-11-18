@@ -16,9 +16,10 @@ export default () =>
             <p>An unofficial guide to UNH, on one map.</p>
           </header>
 
-          {/* The one way in: the map itself over a poster that says so. The picture is a capture of the map */}
+          {/* The one way in: the map itself over a poster that says so. The picture is a capture of the map on a
+              weekday afternoon, pinned, and the same in either theme, as the map itself is */}
           <a class="way-in" href="/map/">
-            <img src="/home/map.webp" width="1600" height="1200" alt="The UNH campus from above, with Wildcat Transit's routes and today's events marked on it" fetchpriority="high" />
+            <img src="/home/map.webp" width="1600" height="1200" alt="The middle of the UNH campus from above, tilted, with Wildcat Transit's buses on Main Street and the day's events marked on its buildings" fetchpriority="high" />
             <span class="poster">
               <span class="poster-label">Buses · events · classes · dining · laundry · parking</span>
               <strong>Open the map</strong>

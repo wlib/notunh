@@ -61,7 +61,8 @@ test("a club's meeting saved from today's list is that meeting alone, in Yours, 
   await expect(save).toHaveAttribute("aria-pressed", "true")
   await expect(page.getByRole("status").filter({ hasText: `Saved ${weekdayOf(now + HOUR)}` })).toBeVisible()
   await sent
-  await expect(page.getByRole("list", { name: "Yours" }).getByText("Hillel meeting")).toBeVisible()
+  // Yours today, it's the card that leads the day, or in its place in the day's list
+  await expect(page.locator("#today").getByText("Hillel meeting").first()).toBeVisible()
   await shoot(page, "saved")
   // Next week's meeting isn't saved by it
   await page.goto(`${fixture.origin}/map/event/${encodeURIComponent(`presence:hillel/meeting/${localDay(now + HOUR + WEEK)}`)}`)
@@ -107,7 +108,7 @@ test("a club's meeting saved from today's list is that meeting alone, in Yours, 
   await other.close()
 })
 
-test("Plan ahead shows a saved game and never the rest of the schedule, and activity filters show the matching session", async ({ page, fixture }) => {
+test("Plan ahead shows a saved game once and the next home game, and activity filters show the matching session", async ({ page, fixture }) => {
   const now = atClock(localDay(Date.now()), "12:00")
   const events = [
     ...[1, 6, 6 + 7 * 24].map((hours, i) => ({
@@ -125,13 +126,15 @@ test("Plan ahead shows a saved game and never the rest of the schedule, and acti
     sessions: { "athletics:0": end }, follows: ["rec:yoga"]
   })), now + WEEK + HOUR)
   await open(page, fixture.origin)
-  // The term is a plan, not the Athletics schedule: the saved game, never the rest
-  await page.getByRole("button", { name: "Plan ahead ›" }).click()
+  const preview = page.locator(".home .ahead")
+  await expect(preview.getByText("Maine", { exact: true })).toHaveCount(1)
+  await expect(preview.getByText("Vermont", { exact: true })).toHaveCount(1)
+  expect(await preview.locator("li").count()).toBeLessThanOrEqual(3)
+  // The full term is a plan, not the Athletics schedule: the saved game, never the rest
+  await page.getByRole("button", { name: "Full term ›" }).click()
   await expect(page.locator(".view .ahead").getByText("Maine", { exact: true })).toHaveCount(1)
   await expect(page.locator(".view .ahead").getByText("Vermont", { exact: true })).toHaveCount(0)
   await page.goBack()
-  // The clubs are a row of the home's Campus view
-  await page.getByRole("button", { name: "Campus", exact: true }).click()
   await page.getByRole("button", { name: /Clubs & activities/ }).click()
   await page.getByRole("button", { name: "Meets today" }).click()
   await page.getByLabel("Time of day").selectOption("evening")

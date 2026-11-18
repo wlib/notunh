@@ -109,10 +109,10 @@ test("a section saved is your next class in Yours and in You's week, once whiche
   await expect(page.getByRole("button", { name: "Saved", exact: true })).toBeVisible()
   await page.getByRole("button", { name: "Back" }).click()
 
-  const yours = page.getByRole("list", { name: "Yours" })
-  // Next today, it leads Yours as the card
-  await expect(yours.locator(".next")).toContainText("CS 518")
-  await expect(yours.locator(".next")).toContainText("Kingsbury N343")
+  // Next today, it's the card that leads the day
+  const next = page.locator(".next")
+  await expect(next).toContainText("CS 518")
+  await expect(next).toContainText("Kingsbury N343")
   await page.getByRole("button", { name: "You", exact: true }).click()
   await expect(page.getByText("My courses · 1")).toBeVisible()
   const week = page.getByLabel("Your week")
@@ -140,8 +140,9 @@ test("Yours lists every class still to come today, not just the next, the sooner
   const [morning, afternoon] = [meetsOnly(start => start >= 8 * 60 && start < 12 * 60), meetsOnly(start => start >= 13 * 60)]
   await page.addInitScript(keys => localStorage.setItem("courses-saved", JSON.stringify(keys)), [afternoon, morning].map(section => `${fall.code}:${section.crn}`))
   await open(page, fixture.origin)
-  const rows = page.getByRole("list", { name: "Yours" }).getByRole("listitem")
-  await expect(rows).toContainText([courseOf(morning), courseOf(afternoon)])
+  // The sooner is the card too, and both are in their places in the day's list, as yours
+  await expect(page.locator(".next")).toContainText(courseOf(morning))
+  await expect(page.getByRole("list", { name: "Today" }).locator("li.yours")).toContainText([courseOf(morning), courseOf(afternoon)])
 })
 
 test.describe(() => {

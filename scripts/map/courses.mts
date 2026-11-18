@@ -23,7 +23,7 @@ import { type CoursesIndex, type TermEntry, type TermFile, COURSES, DATA_PATH, S
 import { type Calendar, fromLive25 } from "../../src/courses/calendar.mts"
 import { placeOfCode } from "../../src/courses/buildings.mts"
 import { LOOKS_LIKE_EMAIL } from "../../src/courses/email.mts"
-import { Page, type PageRead, coursesUrl, importTerm, pageRead } from "../../src/courses/registrar.mts"
+import { Page, type PageRead, TotalChanged, coursesUrl, importTerm, pageRead } from "../../src/courses/registrar.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { live25Url } from "../../src/social/sources.mts"
 import { contentHash } from "../../src/shared/hash.mts"
@@ -47,6 +47,9 @@ const CAP = 200
 /** How far back and ahead the calendar is read: any term's dates that's published are within */
 const BACK = 140
 const AHEAD = 150
+
+/** How many times a term is read at most, where its sections change as it's read, as they do while students register */
+const READS = 3
 
 /** How old a cached answer may be */
 const MAX_AGE = DAY
@@ -99,9 +102,12 @@ const calendarOf = async (today: Day, cache?: string) => {
 
 //#region Terms
 
-/** A term's pages: from a cache where every page is there and the oldest under a day old, else from the API, kept there */
-const pagesOf = async (code: string, cache?: string): Promise<PageRead[]> => {
-  if (cache) {
+/**
+ * A term's pages: from a cache where every page is there and the oldest under a day old, unless they're wanted afresh,
+ * else from the API, kept there
+ */
+const pagesOf = async (code: string, cache?: string, afresh = false): Promise<PageRead[]> => {
+  if (cache && !afresh) {
     const read: PageRead[] = []
     for (let offset = 0; ; offset += PAGE) {
       const file = `${cache}/courses-${code}-${offset}.json`
@@ -183,9 +189,21 @@ if (import.meta.main) {
   if (!calendar.noClass.length || !Object.keys(calendar.terms).length)
     throw new Error("25Live's academic calendar has no terms or no days off: has it changed its titles?")
 
+  // A term read again is read afresh, over the pages that disagreed where they're cached
+  const importOf = async (code: string) => {
+    for (let read = 1; ; read++)
+      try {
+        return await importTerm(code, await pagesOf(code, cache, read > 1), place)
+      }
+      catch (error) {
+        if (!(error instanceof TotalChanged) || read === READS)
+          throw error
+        console.warn(`${error.message}: read ${read} of ${READS}`)
+      }
+  }
   const imported = []
   for (const code of candidates(calendar, now))
-    imported.push(await importTerm(code, await pagesOf(code, cache), place))
+    imported.push(await importOf(code))
   const { index, files } = await publish(imported, calendar, now)
 
   for (const [file, json] of files)

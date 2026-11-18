@@ -12,13 +12,13 @@
   --positive:       oklch(52% 0.14 152);
   --highlight:      oklch(90% 0.14 95 / 0.6);
   --star:           oklch(68% 0.16 75);
-  /* The poster's two inks, the same in either theme as print is: UNH's blue, and one accent beside it. Only ever
-     what's yours next, the clubs' own page and the way in from the home page, never a state, which the colors above
-     are for */
+  /* The poster's two inks, the same in either theme as print is: UNH's blue, and sky, a tint of it, beside it. Only
+     ever what's yours next, the clubs' own page and the way in from the home page, never a state, which the colors
+     above are for */
   --poster:         #003591;
   --on-poster:      oklch(98.6% 0.004 85);
-  --print:          oklch(87% 0.075 235);
-  --on-print:       oklch(25% 0.1 262);
+  --sky:            oklch(87% 0.075 235);
+  --on-sky:         oklch(25% 0.1 262);
   --shadow: 0 10px 30px oklch(23% 0.03 265 / 0.16), 0 1px 3px oklch(23% 0.03 265 / 0.12);
   /* Sheets and cards, fields and cards within them, and buttons */
   --radius-l: 1.125rem;
@@ -225,8 +225,7 @@ h2 {
   line-height: 1.05;
 }
 
-/* A poster: UNH's blue with the app's arch (public/icon.svg) large and faint off its far edge, and its label in the
-   accent */
+/* A poster: UNH's blue with the app's arch (public/icon.svg) large and faint off its far edge, and its label in sky */
 .poster {
   position: relative;
   isolation: isolate;
@@ -250,18 +249,10 @@ h2 {
   pointer-events: none;
 }
 
-/* The same in the accent with the blue's ink, for what's everyone's rather than yours */
-.poster.print {
-  background: var(--print);
-  color: var(--on-print);
-}
-
-.poster.print .poster-label {
-  color: color-mix(in oklch, var(--on-print) 80%, var(--print));
-}
-
-.poster-label {
-  color: color-mix(in oklch, var(--on-print) 80%, var(--print));
+/* The same in sky with the blue's ink, for what's everyone's rather than yours */
+.poster.sky {
+  background: var(--sky);
+  color: var(--on-sky);
 }
 
 .poster-label {
@@ -269,7 +260,11 @@ h2 {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--print);
+  color: var(--sky);
+}
+
+.poster.sky .poster-label {
+  color: color-mix(in oklch, var(--on-sky) 80%, var(--sky));
 }
 
 a {

@@ -1,10 +1,11 @@
 // Calendar files (src/shared/ics.mts), for a calendar app to add or subscribe to: an event's, a curated series', a
 // section's, and a person's feed of the sections they've saved, the events they're hosting or going to, and the
 // sessions they've saved, and their saved sections' finals where they hold a verified UNH address; and an activity's
-// every session. Each is made as it's asked for from the site's own data, so one subscribed to follows a room change. The first three say only what their pages do. A feed is asked for by a token
-// alone, 128 random bits kept as one of the person's things (FEED in src/shared/sync.mts), which whoever holds can read
-// their classes by, and which they make anew to end; no device's secret is in it, and an unknown token is a 404 like
-// any other
+// every session. Each is made as it's asked for from the site's own data, so one subscribed to follows a room change.
+// The first three say only what their pages do. A feed is asked for by a token alone, 128 random bits kept as one of
+// the person's things (FEED in src/shared/sync.mts), which whoever holds can read their classes by, and their finals
+// while they're verified, and which they make anew to end; no device's secret is in it, and an unknown token is a 404
+// like any other
 //
 // And the one request the Worker makes for someone's own calendar: a feed's address that their browser can't read
 // for want of CORS, as Canvas', Google's and Outlook's can't be, fetched here and handed straight back. The address

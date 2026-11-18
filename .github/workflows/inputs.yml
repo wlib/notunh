@@ -1,12 +1,13 @@
 # Makes the inputs every build of the site installs (scripts/inputs.mts) and rebuilds the site with them: the
 # timetable, style, events, courses, menus, laundry rooms, parking areas and prerequisites acquired from upstream
 # (the catalog weekly, or as its year turns; scripts/programs/prereqs.mts), and the bus and laundry models learned
-# through the Worker (scripts/data.mts). The final exams are read and stored in the Worker with the models, never
-# published, as only it may tell them (scripts/map/finals.mts). They're published whole as the immutable release inputs-<version>, then the
-# pointer every build reads, latest.json on the inputs release, moves to it, so a build gets all of them or none. A
-# night whose acquisition fails publishes nothing, and builds keep the inputs before. What's no reason to hold the
-# rest back still fails the job, once they're published: a model that stopped learning short, or classes left without
-# a place by a building code the table lacks (scripts/map/courses.mts)
+# through the Worker (scripts/data.mts). They're published whole as the immutable release inputs-<version>, then the
+# pointer every build reads, latest.json on the inputs release, moves to it, so a build gets all of them or none. The
+# final exams are read with the learning and stored in the Worker alone, never published, as only it may tell them
+# (scripts/map/finals.mts). A night whose acquisition fails publishes nothing, and builds keep the inputs before.
+# What's no reason to hold the rest back still fails the job, once they're published: a model that stopped learning
+# short, finals that couldn't be read, or classes left without a place by a building code the table lacks
+# (scripts/map/courses.mts)
 #
 # Started each night by the Worker (worker/index.mts), which is the site's nightly clock, and by hand with
 # `gh workflow run inputs.yml`, or `-f rebuild=true` to learn the models afresh from the first day observed. Only

@@ -186,7 +186,9 @@ const Finals = () =>
     </>
   })
 
-/** My courses, a section of You: the week, the sections saved, their finals, your feed of them, and a pasted schedule */
+/**
+ * My courses, a section of You: the week, the sections saved, their finals, your feed of them, and a pasted schedule
+ */
 export const MyCourses = () => {
   state.wantCourses()
   return (

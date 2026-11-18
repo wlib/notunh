@@ -14,7 +14,7 @@ Each step makes one thing the next takes as made, pinned by version; what each k
 | Inputs | `inputs.yml`, nightly | `inputs-<version>` releases and their pointer, then the Deploy Hook |
 | Build | Workers Builds | The site and the Worker |
 
-**Inputs** is the site's nightly clock, started by the Worker's 4:17 AM cron. It acquires the timetable, style, events, courses, menus, laundry rooms, parking areas and prerequisites (`node scripts/data.mts acquire`), runs the tests, learns the bus and laundry models through the Worker (`learn --store`), builds the site to check it, publishes, and POSTs the Deploy Hook.
+**Inputs** is the site's nightly clock, started by the Worker's 4:17 AM cron. It acquires the timetable, style, events, courses, menus, laundry rooms, parking areas and prerequisites (`node scripts/data.mts acquire`), runs the tests, learns the bus and laundry models through the Worker and stores the term's finals there (`learn --store`, [courses.md](courses.md#finals)), builds the site to check it, publishes, and POSTs the Deploy Hook.
 
 - Upstream down: nothing is published, and the site keeps its inputs.
 - One learner stalled: the other still runs; compatible previous or empty outputs may be published, then the run fails. A missing required model or asset blocks publication.

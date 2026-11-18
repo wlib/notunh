@@ -10,12 +10,15 @@
 //                                                  day old, fetching and keeping there what isn't
 //
 // The page is read each night for the links, which change every term; a term whose schedule is "TBA" has none and
-// is skipped, and what's stored for it stays. Only terms the courses index lists are read, and each is placed with its
-// own sections, so the inputs being made (inputs/) or else those installed are read first. The sheet is an anonymous
-// SharePoint link that answers 403 until the cookies its redirect sets are sent back, so it's fetched as a browser
-// would, keeping those, one request at a time, saying who's asking; nothing more. A sheet that can't be fetched or
-// read fails loud and stores nothing, so the Worker keeps the last good finals, and the Inputs job fails once the rest
-// is published. A building code the table lacks is warned of, its rooms kept as written, and fails the run too
+// is skipped, and what's stored for it stays. Only terms the courses index lists are read, and of each only its own
+// sections' finals are kept, placed with them, as the sheet lists every campus and the map is Durham's, so the inputs
+// being made (inputs/) or else those installed are read first. The sheet is an anonymous SharePoint link that answers
+// 403 until the cookies its redirect sets are sent back, so it's fetched as a browser would, keeping those for the
+// host that set them, one request at a time, saying who's asking; nothing more. A page that isn't the one this reads,
+// or a sheet that can't be fetched or read or has none of the term's sections, fails loud and stores nothing, so the
+// Worker keeps the last good finals, and the Inputs job fails once the rest is published. A building code the table
+// lacks is warned of, its rooms kept as written, and fails the run too. A Worker deployed before it stored finals is
+// only warned of, as the night this first runs
 
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 // Node's URL, which its fs functions take, rather than whatever global URL the typecheck sees
@@ -28,7 +31,7 @@ import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { contentHash } from "../../src/shared/hash.mts"
 import { DAY, localDay } from "../../src/shared/time.mts"
 import { REPO, STAGED, exists } from "../files.mts"
-import { readModel, writeModel } from "../worker.mts"
+import { ApiError, readModel, writeModel } from "../worker.mts"
 
 /** Who's asking, as every request of ours says */
 const HEADERS = { "user-agent": "notunh/1 (+https://notunh.app)" }
@@ -96,30 +99,36 @@ export const sheetRows = (xlsx: Uint8Array): Cell[][] => {
 
 //#region Fetching
 
-/** Keeps the cookies a response sets, by name, over any kept before */
-const keep = (jar: Map<string, string>, response: Response) => {
+/** Each host's cookies, by name, as only the host that set them is sent them back */
+type Jar = Map<string, Map<string, string>>
+
+/** Keeps the cookies a response from a host sets, by name, over any of its kept before */
+const keep = (jar: Jar, host: string, response: Response) => {
+  const cookies = jar.get(host) ?? jar.set(host, new Map()).get(host)!
   for (const cookie of response.headers.getSetCookie()) {
     const [pair] = cookie.split(";")
     const at = pair.indexOf("=")
     if (at > 0)
-      jar.set(pair.slice(0, at).trim(), pair.slice(at + 1).trim())
+      cookies.set(pair.slice(0, at).trim(), pair.slice(at + 1).trim())
   }
 }
 
-/** The cookies kept, as a request sends them back */
-const cookieOf = (jar: ReadonlyMap<string, string>) =>
-  [...jar].map(([name, value]) => `${name}=${value}`).join("; ")
+/** A host's cookies kept, as a request to it sends them back */
+const cookieOf = (jar: Jar, host: string) =>
+  [...jar.get(host) ?? []].map(([name, value]) => `${name}=${value}`).join("; ")
 
 /**
- * A share link's file: its download, its redirects followed by hand so the cookies each sets go back with the next,
- * as any browser's would. Never a sign-in: a redirect to one, or anything but a zip at the end, fails
+ * A share link's file: its download, its redirects followed by hand so the cookies each sets go back with the next to
+ * its host, as any browser's would. Never a sign-in: a redirect to one, or anything but a zip at the end, fails
  */
 export const fetchSheet = async (link: string, ask: typeof fetch = fetch) => {
-  const jar = new Map<string, string>()
+  const jar: Jar = new Map()
   let url = downloadUrl(link)
   for (let hops = 0; hops <= REDIRECTS; hops++) {
-    const response = await ask(url, { redirect: "manual", headers: { ...HEADERS, ...jar.size && { cookie: cookieOf(jar) } }, signal: AbortSignal.timeout(60_000) })
-    keep(jar, response)
+    const { host } = new URL(url)
+    const cookie = cookieOf(jar, host)
+    const response = await ask(url, { redirect: "manual", headers: { ...HEADERS, ...cookie && { cookie } }, signal: AbortSignal.timeout(60_000) })
+    keep(jar, host, response)
     const next = response.status >= 300 && response.status < 400 ? response.headers.get("location") : null
     if (next === null) {
       const body = new Uint8Array(await response.arrayBuffer())
@@ -153,8 +162,9 @@ const inputOf = async (path: string) =>
   readFile(await exists(new URL(path, STAGED)) ? new URL(path, STAGED) : new URL(path, REPO), "utf8")
 
 /**
- * Each term's finals the page links, of the terms the index lists, placed with the term's own sections; and for each,
- * how many rows and CRNs the sheet had and how many CRNs are the term's sections
+ * Each term's finals the page links, of the terms the index lists: those of the term's own sections, which are
+ * Durham's, placed with them; and for each, how many rows the sheet had and how many of the term's sections have a
+ * final
  */
 export const readFinals = async (index: CoursesIndex, names: ReadonlySet<string>, { cache, unknown }: { cache?: string, unknown?: (code: string, message: string) => void } = {}) => {
   const html = await cachedOr(cache, "examinations.html", async () => {
@@ -164,9 +174,12 @@ export const readFinals = async (index: CoursesIndex, names: ReadonlySet<string>
     await pause()
     return response.text()
   }, path => readFile(path, "utf8"))
+  // The page says "Final Exam Schedule" of every term, linked or "TBA", so one that doesn't isn't the page this reads
+  if (!/final exam schedule/i.test(html))
+    throw new Error(`${EXAMINATIONS} names no Final Exam Schedule, so it's changed from what this reads`)
   const links = scheduleLinks(html)
   const read: Record<string, TermFinals> = {}
-  const counts: { code: string, name: string, rows: number, crns: number, matched: number, sections: number }[] = []
+  const counts: { code: string, name: string, rows: number, matched: number, sections: number }[] = []
   for (const { name, url } of links) {
     const entry = index.terms.find(term => term.name.toLowerCase() === name.toLowerCase())
     if (!entry) {
@@ -179,10 +192,14 @@ export const readFinals = async (index: CoursesIndex, names: ReadonlySet<string>
       await pause()
       return sheet
     }, async path => new Uint8Array(await readFile(path)))
-    const { finals, rows } = fromSheet(sheetRows(xlsx), placerFor(names, sections, error => unknown?.(error.code, error.message)))
     const crns = new Set(sections.map(({ crn }) => crn))
+    const { finals, rows } = fromSheet(sheetRows(xlsx), placerFor(names, sections, error => unknown?.(error.code, error.message)), crn => crns.has(crn))
+    const matched = Object.keys(finals).length
+    // A sheet with no final of any of the term's sections is an empty one or another term's, not this term's finals
+    if (!matched)
+      throw new Error(`${entry.name}'s sheet has ${rows} rows and no final of any of the term's ${sections.length} sections`)
     read[entry.code] = { name: entry.name, source: url, fetched: Date.now(), finals }
-    counts.push({ code: entry.code, name: entry.name, rows, crns: Object.keys(finals).length, matched: Object.keys(finals).filter(crn => crns.has(crn)).length, sections: sections.length })
+    counts.push({ code: entry.code, name: entry.name, rows, matched, sections: sections.length })
   }
   return { read, counts, linked: links.map(({ name }) => name) }
 }
@@ -202,18 +219,26 @@ if (import.meta.main) {
   const { read, counts, linked } = await readFinals(index, new Set(gazetteer.places.map(({ name }) => name)), { cache, unknown: (code, message) => void unplaced.set(code, message) })
 
   console.log(`The examinations page links finals for ${linked.join(", ") || "no term"}`)
-  for (const { code, name, rows, crns, matched, sections } of counts)
-    console.log(`${code} ${name}: ${rows} rows, ${crns} CRNs, ${matched} of them among the term's ${sections} sections`)
+  for (const { code, name, rows, matched, sections } of counts)
+    console.log(`${code} ${name}: ${rows} rows, the finals of ${matched} of the term's ${sections} sections`)
   for (const message of unplaced.values())
     console.warn(`${message}. Its finals' rooms are kept without a place`)
   if (unplaced.size)
     process.exitCode = 1
 
-  if (isStoring) {
-    const { state, revision } = await readModel<Finals>(FINALS)
-    const before = v.safeParse(FinalsSchema, state)
-    const finals = merged(before.success ? before.output : undefined, read, localDay(Date.now()))
-    await writeModel(FINALS, finals, revision)
+  // The Worker deployed before it knew of finals answers 404, as on the night this first runs: nothing is stored, and
+  // the night isn't failed for it, as the next deploy's Worker takes them the night after
+  const stored = isStoring ? await readModel<Finals>(FINALS).catch(error => {
+    if (!(error instanceof ApiError && error.status === 404))
+      throw error
+    console.warn("The Worker deployed stores no finals yet, so none are stored tonight")
+  }) : undefined
+  if (stored) {
+    const before = v.safeParse(FinalsSchema, stored.state)
+    // Checked as the Worker checks what it reads back, so what it would read as nothing is never stored over the last
+    // good
+    const finals = v.parse(FinalsSchema, merged(before.success ? before.output : undefined, read, localDay(Date.now())))
+    await writeModel(FINALS, finals, stored.revision)
     console.log(`Stored the finals of ${Object.keys(finals.terms).join(", ") || "no term"} through ${finals.through}`)
   }
 }

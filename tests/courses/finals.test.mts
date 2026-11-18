@@ -2,13 +2,13 @@
 // .xlsx as Excel writes one, its rows as each CRN's sittings and rooms, written as the term's meetings write them, and
 // what's kept from night to night; read back as a section's final, its event, its conflicts, and its calendar entry
 
-import { test, expect } from "vitest"
+import { test, expect, vi } from "vitest"
 import fc from "fast-check"
 import { type Cell, type Final, type Finals, MalformedSheet, conflicting, dayOf, downloadUrl, entryOfFinal, eventOfFinal, finalsOf, fromSheet, merged, placeOfFinal, placerFor, roomsOf, scheduleLinks, timesOf } from "../../src/courses/finals.mts"
 import { clock } from "../../src/courses/course.mts"
-import { sheetRows } from "../../scripts/map/finals.mts"
+import { fetchSheet, sheetRows } from "../../scripts/map/finals.mts"
 import { writeCalendar } from "../../src/shared/ics.mts"
-import { addDays, atClock, localDay } from "../../src/shared/time.mts"
+import { addDays, atClock, daysBetween, localDay } from "../../src/shared/time.mts"
 import { xlsxOf } from "../fixtures/xlsx.mts"
 import { examinations, fall, fallFinals, finalsRows, names } from "./fixtures.mts"
 
@@ -19,6 +19,10 @@ const section = (crn: string) =>
 const said = (minutes: number) =>
   `${(Math.floor(minutes / 60) + 11) % 12 + 1}:${String(minutes % 60).padStart(2, "0")}${minutes < 720 ? "am" : "pm"}`
 
+/** A day as Excel counts it */
+const serialOf = (day: string) =>
+  daysBetween("1899-12-30", day)
+
 const HEADER: Cell[] = ["CRN", "Subject", "Crse#", "Section", "Title", "Exam Date", "Times", "Bldg", "Room"]
 
 test("the examinations page links Fall 2026's schedule and leaves Spring 2027's, still TBA, out", () => {
@@ -26,6 +30,66 @@ test("the examinations page links Fall 2026's schedule and leaves Spring 2027's,
   expect(links).toEqual([{ name: "Fall 2026", url: "https://universitysystemnh.sharepoint.com/:x:/t/UNHOfficeoftheRegistrar/IQAp5iDqZ_WlRY_sr7O0MRykAYy5Zh9DhAPEmDv9VPuFEpE?e=BdhHyN" }])
   expect(new URL(downloadUrl(links[0].url)).searchParams.get("download")).toBe("1")
   expect(new URL(downloadUrl(links[0].url)).searchParams.get("e")).toBe("BdhHyN")
+})
+
+test("a term's link is found by its heading and the link's words, whatever tags are within them, and never another link of the term's", () =>
+  fc.assert(fc.property(fc.constantFrom("Fall", "Spring", "Summer", "J-Term"), fc.integer({ min: 2026, max: 2040 }), fc.boolean(), fc.boolean(), (season, year, isBold, isLinked) => {
+    const name = `${season} ${year}`
+    const said = isBold ? `<strong>${season}</strong>&nbsp;${year} ` : name
+    const schedule = isLinked ? `<a href="https://example.org/sheet?a=1&amp;b=2"><span>Final Exam Schedule</span></a>` : "Final Exam Schedule - TBA"
+    const html = `<h2>Schedules</h2><h3 class="x">${said}</h3><ul><li><a href="https://example.org/guide">General Information and Planning Guide</a></li><li>${schedule}</li></ul><h2>After</h2><a href="https://example.org/other">Final Exam Schedule</a>`
+    expect(scheduleLinks(html)).toEqual(isLinked ? [{ name, url: "https://example.org/sheet?a=1&b=2" }] : [])
+  }))
+)
+
+/** A response as a share link's hosts answer: a redirect setting cookies, a refusal, or the file */
+const answer = (status: number, { location, cookies = [], body = "" }: { location?: string, cookies?: string[], body?: string | Uint8Array<ArrayBuffer> } = {}) => {
+  const headers = new Headers(location ? { location } : {})
+  for (const cookie of cookies)
+    headers.append("set-cookie", cookie)
+  return new Response(status >= 300 && status < 400 ? null : body, { status, headers })
+}
+
+test("a sheet is fetched through its redirects with the cookies each host set sent back to that host alone, as us, and never through a sign-in", async () => {
+  vi.useFakeTimers()
+  try {
+    const sheet = xlsxOf([HEADER])
+    const asked: { url: string, cookie: string | null, agent: string | null }[] = []
+    const ask = (hops: Record<string, Response>) => (async (input: string | URL | Request, init?: RequestInit) => {
+      const headers = new Headers(init?.headers)
+      asked.push({ url: String(input), cookie: headers.get("cookie"), agent: headers.get("user-agent") })
+      expect(init?.redirect).toBe("manual")
+      return hops[String(input)]
+    }) as typeof fetch
+    const fetched = async (hops: Record<string, Response>) => {
+      const result = fetchSheet("https://share.example/:x:/s?e=abc", ask(hops)).then(body => body, (error: Error) => error)
+      await vi.runAllTimersAsync()
+      return result
+    }
+
+    expect(await fetched({
+      "https://share.example/:x:/s?e=abc&download=1": answer(302, { location: "/download?id=1", cookies: ["FedAuth=one; path=/; secure; HttpOnly", "other=two"] }),
+      "https://share.example/download?id=1":          answer(302, { location: "https://files.example/sheet.xlsx", cookies: ["other=three"] }),
+      "https://files.example/sheet.xlsx":             answer(200, { body: sheet })
+    })).toEqual(sheet)
+    expect(asked).toEqual([
+      { url: "https://share.example/:x:/s?e=abc&download=1", cookie: null, agent: "notunh/1 (+https://notunh.app)" },
+      { url: "https://share.example/download?id=1", cookie: "FedAuth=one; other=two", agent: "notunh/1 (+https://notunh.app)" },
+      { url: "https://files.example/sheet.xlsx", cookie: null, agent: "notunh/1 (+https://notunh.app)" }
+    ])
+
+    // A sign-in is never followed, a refusal or a page in the sheet's place isn't a sheet, and a loop ends
+    asked.length = 0
+    expect(await fetched({ "https://share.example/:x:/s?e=abc&download=1": answer(302, { location: "https://login.microsoftonline.com/common/oauth2/authorize" }) })).toEqual(new Error("https://share.example/:x:/s?e=abc asks for a sign-in"))
+    expect(asked).toHaveLength(1)
+    expect(await fetched({ "https://share.example/:x:/s?e=abc&download=1": answer(403) })).toBeInstanceOf(Error)
+    expect(await fetched({ "https://share.example/:x:/s?e=abc&download=1": answer(200, { body: "<html>Sign in</html>" }) })).toBeInstanceOf(Error)
+    const loop = { get: () => answer(302, { location: "https://share.example/:x:/s?e=abc&download=1" }) }
+    expect(await fetched(new Proxy({}, loop))).toEqual(new Error("https://share.example/:x:/s?e=abc redirected more than 6 times"))
+  }
+  finally {
+    vi.useRealTimers()
+  }
 })
 
 test("a sheet's times, as the registrar writes them, are the minutes said, and backwards or overnight ones aren't times", () =>
@@ -39,7 +103,7 @@ test("a sheet's times, as the registrar writes them, are the minutes said, and b
 test("an exam date is Excel's serial or the registrar's month/day/year, and anything else isn't a day", () =>
   fc.assert(fc.property(fc.integer({ min: -2000, max: 4000 }), offset => {
     const day = addDays("2026-12-15", offset)
-    const serial = Math.round((Date.parse(day) - Date.parse("1899-12-30")) / 86_400_000)
+    const serial = serialOf(day)
     expect(dayOf(serial)).toBe(day)
     const [y, m, d] = day.split("-")
     expect(dayOf(`${+m}/${+d}/${y}`)).toBe(day)
@@ -61,7 +125,7 @@ const aSheet = fc.uniqueArray(fc.record({
 test("a sheet written as Excel writes it reads back as each CRN's sittings, soonest first, each with every room listed for it", () =>
   fc.assert(fc.property(aSheet, fc.boolean(), (crns, isShuffled) => {
     const rows: Cell[][] = crns.flatMap(({ crn, sittings }) => sittings.flatMap(({ day, block: [start, end], rooms }) =>
-      rooms.map(([code, room]): Cell[] => [crn, "CS", "518", "01", "Formal Languages & Computation", Math.round((Date.parse(day) - Date.parse("1899-12-30")) / 86_400_000), `${said(start)}-${said(end)}`, code, room || undefined])))
+      rooms.map(([code, room]): Cell[] => [crn, "CS", "518", "01", "Formal Languages & Computation", serialOf(day), `${said(start)}-${said(end)}`, code, room || undefined])))
     if (isShuffled)
       rows.reverse()
     const { finals, rows: read } = fromSheet(sheetRows(xlsxOf([HEADER, ...rows])), placerFor(names, fall.sections))
@@ -108,6 +172,19 @@ test("a sheet that can't be read fails, naming the row, rather than shipping hal
   expect(() => fromSheet([HEADER, good, [...good.slice(0, 5), "Dec 16", ...good.slice(6)]], place)).toThrow(/Row 3 \(CRN 12496\)/)
   expect(() => fromSheet([HEADER, [...good.slice(0, 6), "TBA", ...good.slice(7)]], place)).toThrow(/Row 2/)
 })
+
+test("of a sheet listing every campus, only the CRNs wanted are kept, and another's building is never placed, though its row is still read", () =>
+  fc.assert(fc.property(aSheet, fc.func<[string], boolean>(fc.boolean()), (crns, isWanted) => {
+    const rows: Cell[][] = crns.flatMap(({ crn, sittings }) => sittings.flatMap(({ day, block: [start, end], rooms }) =>
+      rooms.map(([code, room]): Cell[] => [crn, "CS", "518", "01", "Formal Languages", serialOf(day), `${said(start)}-${said(end)}`, isWanted(crn) ? code : "ELSEWHERE", room || undefined])))
+    const unknown: string[] = []
+    const { finals, rows: read } = fromSheet([HEADER, ...rows], placerFor(names, fall.sections, error => void unknown.push(error.code)), isWanted)
+    expect(read).toBe(rows.length)
+    expect(Object.keys(finals).sort()).toEqual(crns.map(({ crn }) => crn).filter(crn => isWanted(crn)).sort())
+    expect(unknown).toEqual([])
+    expect(() => fromSheet([HEADER, ...rows, ["10000", "CS", "518", "01", "", "TBA", "", "KING", ""]], placerFor(names, fall.sections), () => false)).toThrow(/Row \d+ \(CRN 10000\) .*: its date, times$/)
+  }))
+)
 
 test("a building code the table lacks keeps its room as written and nowhere, and is told", () => {
   const unknown: string[] = []

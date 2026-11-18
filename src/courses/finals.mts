@@ -20,7 +20,10 @@ import { type Day, Day as DaySchema, addDays } from "../shared/time.mts"
 /** The registrar's page linking each term's schedule, once it's published, and "Final Exam Schedule - TBA" till then */
 export const EXAMINATIONS = "https://www.unh.edu/registrar/registration-resources/examinations"
 
-/** A room a final is in: a gazetteer name where the map knows the building, and the room as the registrar's meetings write it */
+/**
+ * A room a final is in: a gazetteer name where the map knows the building, and the room as the registrar's meetings
+ * write it
+ */
 export const Room = v.object({ place: v.optional(v.string()), where: v.string() })
 export type Room = v.InferOutput<typeof Room>
 
@@ -66,15 +69,19 @@ export type Told = v.InferOutput<typeof Told>
 const decoded = (html: string) =>
   html.replace(/&(amp|lt|gt|quot|#39|nbsp);/g, (_, name: string) => ({ amp: "&", lt: "<", gt: ">", quot: "\"", "#39": "'", nbsp: " " })[name]!)
 
+/** An element's text, without its tags, its spaces single */
+const textIn = (html: string) =>
+  decoded(html.replace(/<[^>]*>/g, "")).replace(/\s+/g, " ").trim()
+
 /**
  * Each term's Final Exam Schedule link on the examinations page, by the term's name as its heading says it ("Fall
  * 2026"). A term whose schedule is "TBA" has no link and isn't listed
  */
 export const scheduleLinks = (html: string) =>
-  [...html.matchAll(/<h3[^>]*>([^<]*)<\/h3>([\s\S]*?)(?=<h[23][\s>]|$)/g)].flatMap(([, heading, body]) => {
-    const name = decoded(heading).replace(/\s+/g, " ").trim()
+  [...html.matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>([\s\S]*?)(?=<h[23][\s>]|$)/g)].flatMap(([, heading, body]) => {
+    const name = textIn(heading)
     const link = [...body.matchAll(/<a\s[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)]
-      .find(([, , text]) => /^final exam schedule$/i.test(decoded(text.replace(/<[^>]*>/g, "")).trim()))
+      .find(([, , text]) => /^final exam schedule$/i.test(textIn(text)))
     return /^(Fall|Spring|Summer|J-?Term) \d{4}$/i.test(name) && link ? [{ name, url: decoded(link[1]) }] : []
   })
 
@@ -162,9 +169,11 @@ export const placerFor = (names: ReadonlySet<string>, sections: readonly Pick<Se
 /**
  * The sheet's rows as finals by CRN, each CRN's sittings soonest first, and how many rows were read: the first row
  * whose cells name the columns is the header, and each row after it with a CRN is a room of that CRN's final at its
- * time. Fails loud, naming the row, where one can't be read, so a changed sheet can't ship half read
+ * time. The sheet lists every campus, so a CRN that isn't wanted, as one that's no section of the term's, is read and
+ * left out, its building never placed. Fails loud where a row can't be read, so a changed sheet can't ship half read, naming the row and what of it,
+ * never what it says, as the nightly run's log is anyone's to read
  */
-export const fromSheet = (rows: readonly (readonly Cell[])[], place: Placer) => {
+export const fromSheet = (rows: readonly (readonly Cell[])[], place: Placer, isWanted: (crn: string) => boolean = () => true) => {
   const header = rows.findIndex(row => row.some(cell => HEADERS.crn.test(String(cell ?? "").trim())))
   if (header < 0)
     throw new MalformedSheet("No row of the sheet names a CRN column")
@@ -184,8 +193,11 @@ export const fromSheet = (rows: readonly (readonly Cell[])[], place: Placer) => 
     const crn = text("crn").padStart(5, "0")
     const day = dayOf(row[column.day])
     const times = timesOf(text("times"))
-    if (!/^\d{5}$/.test(crn) || !day || !times || !text("code"))
-      throw new MalformedSheet(`Row ${i + 1} (CRN ${crn}) isn't a final as this import reads one: ${JSON.stringify(row)}`)
+    const unread = [!/^\d{5}$/.test(crn) && "CRN", !day && "date", !times && "times", !text("code") && "building"].filter(Boolean)
+    if (!day || !times || unread.length)
+      throw new MalformedSheet(`Row ${i + 1} (CRN ${crn}) isn't a final as this import reads one: its ${unread.join(", ")}`)
+    if (!isWanted(crn))
+      continue
     const room = place(text("code").toUpperCase(), text("room"))
     const sittings = finals[crn] ??= []
     const known = sittings.find(final => final.day === day && final.start === times[0] && final.end === times[1])
@@ -227,7 +239,9 @@ export const placeOfFinal = (final: Pick<Final, "rooms">) => {
   return places.size === 1 ? [...places][0] : undefined
 }
 
-/** A final as the event it is, on its day, at its one place where it has one: what Directions, a row and the week read */
+/**
+ * A final as the event it is, on its day, at its one place where it has one: what Directions, a row and the week read
+ */
 export const eventOfFinal = (term: Pick<Term, "code">, section: Section, final: Final): CourseEvent => ({
   id:     `course:${term.code}:${section.crn}:${final.day}:final${clock(final.start).replace(":", "")}`,
   title:  `${courseOf(section)} · Final`,

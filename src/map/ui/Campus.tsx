@@ -317,7 +317,7 @@ const ClassesFact = () =>
   r(() => {
     const [next] = state.classes.value
     return next
-      ? <>Next {courseOf(next.section)} · {localDay(next.event.start) !== localDay(nowMs()) && <><DayName day={localDay(next.event.start)} /> </>}<ClockTime at={new Date(next.event.start)} /> · {next.event.where}</>
+      ? <>{next.event.start > nowMs() ? "Next" : "Now"} {courseOf(next.section)} · {localDay(next.event.start) !== localDay(nowMs()) && <><DayName day={localDay(next.event.start)} /> </>}<ClockTime at={new Date(next.event.start)} /> · {next.event.where}</>
       : "Your week, programs and rooms"
   })
 
@@ -336,7 +336,9 @@ const ParkingFact = () => {
     const free = fitting.filter(({ cost }) => cost === 0).length
     return permit
       ? <><span class="dot" /><Counted value={fitting.length} one="area fits" other="areas fit" /> your permit now</>
-      : <><span class="dot" /><Count value={free} /> free now · <Count value={fitting.length - free} /> paid · no permit</>
+      : free
+        ? <><span class="dot" /><Count value={free} /> free now · <Count value={fitting.length - free} /> paid · no permit</>
+        : <><Count value={fitting.length} /> paid now · no permit</>
   })
 }
 

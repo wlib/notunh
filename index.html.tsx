@@ -13,29 +13,23 @@ export default () =>
         <main class="page">
           <header class="intro">
             <h1 class="wordmark"><span>not</span>unh</h1>
-            <p>An unofficial guide to UNH: live buses, the campus map, events, dining menus, and laundry.</p>
+            <p>An unofficial guide to UNH, on one map.</p>
           </header>
 
-          <nav class="sections" aria-label="Sections">
-            <a href="/map/">
-              <strong>Map &amp; bus tracker</strong>
-              <span>Live Wildcat Transit buses, directions, classes, parking, and UNH events today.</span>
-              <span class="icon icon-forward" aria-hidden="true" />
-            </a>
-            <a href="/dining/">
-              <strong>Dining menus</strong>
-              <span>Today's Holloway and Philbrook menus, with hours, ingredients and allergens.</span>
-              <span class="icon icon-forward" aria-hidden="true" />
-            </a>
-            <a href="/laundry/">
-              <strong>Laundry</strong>
-              <span>Free washers and dryers in every residence hall, live.</span>
-              <span class="icon icon-forward" aria-hidden="true" />
-            </a>
-          </nav>
+          {/* The one way in: the map itself over a poster that says so. The picture is a capture of the map */}
+          <a class="way-in" href="/map/">
+            <img src="/home/map.webp" width="1600" height="1200" alt="The UNH campus from above, with Wildcat Transit's routes and today's events marked on it" fetchpriority="high" />
+            <span class="poster">
+              <span class="poster-label">Buses · events · classes · dining · laundry · parking</span>
+              <strong>Open the map</strong>
+              <span>Every bus live, what's on today, what's for lunch, and a free washer.</span>
+              <span class="way-in-go" aria-hidden="true"><span class="icon icon-forward" /></span>
+            </span>
+          </a>
 
-          <p class="muted">
-            Keep it handy: add notunh to your home screen.
+          <p class="muted straight">
+            Or straight to <a href="/dining/">dining menus</a>, <a href="/laundry/">laundry</a>, or{" "}
+            <a href="/map/buses">the buses</a>. Keep it handy: add notunh to your home screen.
           </p>
 
           <section>

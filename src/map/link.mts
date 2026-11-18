@@ -14,6 +14,7 @@
 
 import { parseKey } from "../courses/saved.mts"
 import type { Purpose, Stay } from "../parking/model.mts"
+import { segmentOf } from "../shared/slug.mts"
 import { atClock, hhmm, localDay } from "../shared/time.mts"
 
 export type Page =
@@ -57,9 +58,7 @@ export const fieldOf = (ms: number) =>
 export const fromField = (field: string | null) =>
   field && /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(field) ? atClock(field.slice(0, 10), field.slice(11)) : undefined
 
-/** A value as a path's segment: its spaces as +, a colon as it is, and anything else a segment can't hold escaped */
-export const segmentOf = (value: string) =>
-  encodeURIComponent(value).replaceAll("%20", "+").replaceAll("%3A", ":")
+export { segmentOf }
 
 /** A segment's value, trimmed, or none for one that's empty or escaped wrongly */
 const valueOf = (segment: string | undefined) => {

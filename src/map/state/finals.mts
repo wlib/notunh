@@ -1,8 +1,9 @@
 // Your finals (src/courses/finals.mts), as the Worker tells a device with a verified UNH address: each live term's,
 // asked for once the device is known to be one (You.tsx) and kept on this device alone, so a section's page and your
-// finals show offline in finals week too. The Worker refusing, as once the address is forgotten, forgets them here.
-// What's read of them: a section's sittings, and your saved sections' as events, soonest first, with those that clash.
-// Reactive values only, no DOM
+// finals show offline in finals week too. The Worker saying the device isn't one, or refusing it, as once the address
+// is forgotten or the device is no one's, forgets them here, and a term no longer live is dropped as the rest are asked
+// for. What's read of them: a section's sittings, and your saved sections' as events, soonest first, with those that
+// clash. Reactive values only, no DOM
 
 import { type DerivativeNode, r } from "bruh/reactive"
 import * as v from "valibot"
@@ -30,21 +31,29 @@ export const createFinals = ({ coursesIndex, saved, now }: { coursesIndex: Deriv
     store(KEPT, finals)
   }
 
-  /** Asks the Worker for each live term's finals, as a device it says is verified; a refusal forgets every term's */
+  /** Forgets every term's, as a device that isn't verified is told none */
+  const forgetFinals = () => {
+    if (Object.keys(told.peek()).length)
+      keep({})
+  }
+
+  /**
+   * Asks the Worker for each live term's finals, as a device it says is verified, keeping only the live terms'; a
+   * refusal forgets every term's, and the reading already kept changes nothing, so what shows it stays as it is
+   */
   const askFinals = () => {
     const codes = activeTerms(coursesIndex.peek().terms, now.peek() * 1000).map(({ code }) => code)
+    if (Object.keys(told.peek()).some(code => !codes.includes(code)))
+      keep(Object.fromEntries(Object.entries(told.peek()).filter(([code]) => codes.includes(code))))
     for (const code of codes)
       finalsIn(code).then(answer => {
         if (answer === null)
-          return keep({})
-        const { [code]: _, ...rest } = told.peek()
-        keep(answer ? { ...rest, [code]: answer } : rest)
+          return forgetFinals()
+        const { [code]: before, ...rest } = told.peek()
+        if (answer?.fetched !== before?.fetched)
+          keep(answer ? { ...rest, [code]: answer } : rest)
       }, () => {})
   }
-
-  /** Whether the Worker has told this device a term's finals */
-  const hasFinals = (term: Pick<Term, "code">) =>
-    told.value[term.code] !== undefined
 
   /** A section's final, each sitting, once told */
   const finalsOfSection = (term: Pick<Term, "code">, section: Section) =>
@@ -59,5 +68,5 @@ export const createFinals = ({ coursesIndex, saved, now }: { coursesIndex: Deriv
       .sort((a, b) => a.event.start - b.event.start)
   })
 
-  return { askFinals, hasFinals, finalsOfSection, yourFinals }
+  return { askFinals, forgetFinals, finalsOfSection, yourFinals }
 }

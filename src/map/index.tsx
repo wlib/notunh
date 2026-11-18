@@ -11,7 +11,7 @@ import { Home } from "./ui/Home.tsx"
 import { open as openReminder, topUpClasses } from "./ui/Remind.tsx"
 import { PageView, Toast, placeNamed } from "./ui/Pages.tsx"
 import { Status } from "./ui/Buses.tsx"
-import { isAsked } from "./ui/You.tsx"
+import { isAsked, refreshVerified } from "./ui/You.tsx"
 import { RideSuggestion } from "./ui/BusView.tsx"
 import { editing } from "./ui/Search.tsx"
 import { makeSheet, raise } from "./ui/sheet.mts"
@@ -26,6 +26,9 @@ import { type Kept, type Reminder, firstRide, replanned } from "../reminders/rem
 import { kept, loadKept, replan } from "./state/reminders.mts"
 
 const state = await startMap()
+
+// Who this device is, asked once there's state to keep the finals a verified one is told (state/finals.mts)
+refreshVerified()
 const { from, to, itineraries, itinerary, buildings, feed, suggested, locationProblem, plansFor, walkingTo, located, heard, page, backTo } = state
 
 // A trip kept from earlier today, or one a link plans, opens on its directions; a link asking you to approve or

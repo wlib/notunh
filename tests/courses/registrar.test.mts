@@ -1,6 +1,6 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { MalformedRow, fromDhub, importTerm, pageRead, parseTime } from "../../src/courses/registrar.mts"
+import { MalformedRow, TotalChanged, fromDhub, importTerm, pageRead, parseTime } from "../../src/courses/registrar.mts"
 import { CODES, UnknownBuilding, placeOfCode } from "../../src/courses/buildings.mts"
 import { place, rawPages, rawRows } from "./fixtures.mts"
 
@@ -26,7 +26,7 @@ test("a row the schema doesn't read fails the import, naming the row and the fie
 
 test("a term whose rows don't add up to the API's total is refused, and one that does is stamped with its oldest page's time", async () => {
   await expect(importTerm("202610", pages(rawRows, rawRows.length + 1), nowhere)).rejects.toThrow(new RegExp(`read ${rawRows.length} sections but the API says ${rawRows.length + 1}`))
-  await expect(importTerm("202610", [{ rows: rawRows.slice(0, 10), total: 20, fetched: 1 }, { rows: rawRows.slice(10, 20), total: 21, fetched: 2 }], nowhere)).rejects.toThrow(/total changed/)
+  await expect(importTerm("202610", [{ rows: rawRows.slice(0, 10), total: 20, fetched: 1 }, { rows: rawRows.slice(10, 20), total: 21, fetched: 2 }], nowhere)).rejects.toThrow(TotalChanged)
   const term = await importTerm("202610", [{ rows: rawRows.slice(0, 10), total: 20, fetched: 1234 }, { rows: rawRows.slice(10, 20), total: 20, fetched: 99 }], nowhere)
   expect(term).toMatchObject({ code: "202610", name: "Fall 2026", fetched: 99 })
   expect(term.sections.length).toBe(20)

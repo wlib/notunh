@@ -112,6 +112,9 @@ export const fromDhub = (rows: readonly unknown[], place: Placer, first = 0): Se
     return section
   })
 
+/** A term's total changed between its pages, as it does while students register: read again, it may be whole */
+export class TotalChanged extends Error {}
+
 /** A page of a term as read: its rows, the API's total, and when the API answered, by its clock where it says */
 export type PageRead = { rows: readonly unknown[], total: number, fetched: number }
 
@@ -128,7 +131,7 @@ export const importTerm = async (code: string, pages: AsyncIterable<PageRead> | 
     fetched = Math.min(fetched, page.fetched)
     total ??= page.total
     if (page.total !== total)
-      throw new Error(`${code}: the API's total changed from ${total} to ${page.total} between pages; fetch the term again`)
+      throw new TotalChanged(`${code}: the API's total changed from ${total} to ${page.total} between pages`)
   }
   if (total === undefined || sections.length !== total)
     throw new Error(`${code}: read ${sections.length} sections but the API says ${total}`)

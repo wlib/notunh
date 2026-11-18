@@ -116,3 +116,21 @@ test("the home page is the home page on a first visit and from the site, and goe
   await expect(page).toHaveURL(`${fixture.origin}/`)
   await expect(page.locator(".wordmark")).toBeVisible()
 })
+
+test("a laundry room has one way back: to the list it was opened from, else to the map", async ({ page, fixture }) => {
+  await page.goto(`${fixture.origin}/laundry/`)
+  const room = page.locator("a.room-open").first()
+  const path = await room.getAttribute("href")
+  await room.click()
+  await expect(page).toHaveURL(`${fixture.origin}${path}`)
+  await expect(page.locator(".back")).toHaveCount(1)
+  await page.locator(".back").click()
+  await expect(page).toHaveURL(`${fixture.origin}/laundry/`)
+  await expect(page.locator(".back")).toHaveText(/Map/)
+
+  // Opened at its own address, as from the map's place or a bookmark, the way back is the map's
+  await page.goto(`${fixture.origin}${path}`)
+  await expect(page.locator(".back")).toHaveCount(1)
+  await expect(page.locator(".back")).toHaveText(/Map/)
+  await expect(page.locator(".back")).toHaveAttribute("href", "/map/laundry")
+})

@@ -5,12 +5,11 @@
 
 import { r } from "bruh/reactive"
 import { KINDS, assessRoom } from "../infer.mts"
-import { pathOf, roomName } from "../rooms.mts"
-import { open, rooms, summaries } from "../state.mts"
+import { roomName } from "../rooms.mts"
+import { rooms, summaries } from "../state.mts"
 import { slug } from "../../shared/slug.mts"
 import { now } from "../../shell/lifecycle.mts"
 import { ClockTime } from "../../shell/intl.tsx"
-import { Icon } from "../../shell/ui.tsx"
 import { MachineTile, minutesUntil } from "./Machine.tsx"
 import { UsualView } from "./Usual.tsx"
 import { Free, Star, Usually } from "./common.tsx"
@@ -72,16 +71,6 @@ const Machines = ({ id }: { id: string }) =>
 
 export const RoomView = ({ id }: { id: string }) =>
   <article class="room">
-    <a
-      href={pathOf(undefined)}
-      class="back"
-      onclick={event => {
-        event.preventDefault()
-        open(undefined)
-      }}
-    >
-      <Icon name="forward" /> All rooms
-    </a>
     <header>
       <div>
         <h2>{roomName(id)}</h2>

@@ -159,16 +159,6 @@
   padding-block-start: 0.75rem;
 }
 
-.back {
-  justify-self: start;
-  padding: 0.25rem 0;
-  text-decoration: none;
-}
-
-.back .icon {
-  transform: scaleX(-1);
-}
-
 .room > header {
   display: flex;
   align-items: start;

@@ -11,7 +11,7 @@ import { Pin } from "../event.mts"
 import { Booked } from "../../courses/bookings.mts"
 import { Told } from "../../courses/finals.mts"
 import type { Day } from "../../shared/time.mts"
-import { device, deviceKept } from "../../reminders/browser/store.mts"
+import { type Device, device, deviceKept, recovered } from "../../reminders/browser/store.mts"
 import { key } from "../../reminders/browser/api.mts"
 import { readJson } from "../../shared/json.mts"
 
@@ -39,8 +39,8 @@ const command = async <T,>(method: "POST" | "PUT" | "DELETE", path: string, body
 }
 
 /** A request as this device, if it has asked anything before, so the Worker knows who's reading */
-const asThis = async (path: string) => {
-  const kept = await deviceKept().catch(() => undefined)
+const asThis = async (path: string, known?: Device) => {
+  const kept = known ?? await deviceKept().catch(() => undefined)
   const query = kept ? `${path.includes("?") ? "&" : "?"}device=${encodeURIComponent(kept.id)}` : ""
   return reach(path + query, { headers: kept ? { authorization: `Bearer ${kept.secret}` } : {} })
 }
@@ -115,9 +115,15 @@ export const deletePin = (id: string) =>
 export const report = (id: string) =>
   command("POST", `/api/pins/${encodeURIComponent(id)}/reports`, {}, v.object({ hidden: v.boolean() }))
 
-/** Who this device is to the Worker, or none while it's asked nothing, so is no one yet */
+/**
+ * Who this device is to the Worker, as itself where its storage or else its cookie keeps it (store.mts); none for a
+ * device that's asked nothing, so is no one yet, or one the Worker no longer knows
+ */
 export const me = async () => {
-  const response = await asThis("/api/me")
+  const kept = await deviceKept().catch(() => undefined) ?? await recovered()
+  if (!kept)
+    return undefined
+  const response = await asThis("/api/me", kept)
   return response.status === 401 ? undefined : readJson(response, Me)
 }
 

@@ -1,8 +1,9 @@
 // Final exams on a phone, against the Worker's app served from Node (tests/worker/serve.mts), which holds the fall
 // fixture's made-up finals (tests/fixtures/finals.mts) as the nightly run would store them, moved by whole weeks with
 // the courses so their term is under way this week. A device with no verified UNH address sees no exam time or room on
-// a section's page, only how to see them; once its address is verified, the page has the section's final and its room,
-// and You lists your saved sections' finals. Screenshots go to NOTUNH_SHOTS when it's set, from WebKit, light and dark
+// a section's page, only how to see them, and forgets any it had kept; once its address is verified, the page has the
+// section's final and its room, and You lists your saved sections' finals. Screenshots go to NOTUNH_SHOTS when it's
+// set, from WebKit, light and dark
 
 import { test as base, expect, devices, type Page } from "@playwright/test"
 import { type Fixture, type Worker, SHOTS, open, shoot, startFixture, startWorker } from "./fixture.mts"
@@ -94,6 +95,13 @@ test("a section's final is shown only once this device's UNH email is verified, 
   await expect(finalLine(page)).toContainText("Verify your UNH email in You for its time and room")
   expect(await page.evaluate(code => fetch(`/api/finals/${code}`).then(response => response.status), fall.code)).toBe(403)
   await expect(page.getByText("One of")).toHaveCount(0)
+
+  // Finals kept here from when the device was verified are forgotten once the Worker says it isn't
+  await page.evaluate(kept => localStorage.setItem("finals", JSON.stringify(kept)), { [fall.code]: { code: fall.code, fetched: 1, finals: finals.terms[fall.code].finals } })
+  await open(page, fixture.origin, CS518)
+  await expect(finalLine(page)).toContainText("Verify your UNH email in You for its time and room")
+  await expect(finalLine(page)).not.toContainText("Kingsbury N343")
+  expect(await page.evaluate(() => localStorage.getItem("finals"))).toBe("{}")
 
   // Saved, then verified in You
   await page.getByRole("button", { name: "Save", exact: true }).click()

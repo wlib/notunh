@@ -23,11 +23,16 @@ import { EventRow, Head } from "./Pages.tsx"
 /** The UNH address verified for this device's person, null for none, or undefined till the Worker's said */
 export const verified = r<string | null | undefined>(undefined)
 
-/** Takes the address the Worker says is verified, and once there is one, asks for the finals only it's told */
+/**
+ * Takes the address the Worker says is verified: with one, asks for the finals only it's told, and with none, forgets
+ * any kept here
+ */
 const verifiedAs = (address: string | null) => {
   verified.value = address
   if (address)
     state.askFinals()
+  else
+    state.forgetFinals()
 }
 
 /** How often a device showing a code asks whether it's been approved */
@@ -46,11 +51,12 @@ const asked = (() => {
   return address && code ? { kind: "verify" as const, address, code } : undefined
 })()
 
-/** Asks the Worker which address this device's person has verified */
-const refreshVerified = () =>
+/**
+ * Asks the Worker which address this device's person has verified: once the page's state has started
+ * (../index.tsx), as the finals are asked for or forgotten there, and as devices are linked
+ */
+export const refreshVerified = () =>
   void api.me().then(me => verifiedAs(me?.verified ?? null), () => {})
-
-refreshVerified()
 
 /** Linking merges both devices' people, either way round, so either side takes the other's things and address */
 const takeMerged = () => {

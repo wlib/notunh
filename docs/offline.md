@@ -14,17 +14,18 @@ Absolute URLs (canonical, `og:image`) aren't part of a build, so the worker neit
 
 ## Loading data
 
-Pages read data through `latest(name, schema)` (`src/shell/build.mts`), a reactive slot that swaps in whatever file the newest build names once it's loaded. Immutable files load through `loadImmutable` (`src/shell/load.mts`):
+Pages read data through `latest(name, format)` (`src/shell/build.mts`), a reactive slot that swaps in whatever file the newest build names once it's loaded. Immutable files load through `loadImmutable` (`src/shell/load.mts`):
 
-- A file failing its schema is a failed load. Schemas check shape and provenance, trusting big arrays of our own making.
-- A load is abandoned after a minute, and retried after 5 s, 15 s, 1 min, then every 5 min, and at once on coming back into view, until it loads or isn't wanted. Retries use `cache: "reload"`, which the worker honors, so a bad cached copy is replaced.
+- A file is read by its format ([storage.md](storage.md#versions)): its version, and that version's schema. A bare schema is a format of version 0, as every file but the model is. Schemas check shape and provenance, trusting big arrays of our own making.
+- A file failing its schema is a failed load. A load is abandoned after a minute, and retried after 5 s, 15 s, 1 min, then every 5 min, and at once on coming back into view, until it loads or isn't wanted. Retries use `cache: "reload"`, which the worker honors, so a bad cached copy is replaced.
+- A file of a newer version than the code reads is never retried: only newer code reads it.
 - A page waits for its slots' first loads; one with a fallback (the map's model) starts with it if the first try fails.
 
 **What may mix.** Files from different builds meet in a page, so each pair either matches within one file or joins only by what lasts:
 
 | Pair | Rule |
 |---|---|
-| A file and the code reading it | Must match: its schema, and the model's `version`, are checked on load |
+| A file and the code reading it | Must match: its format, version and schema, is checked on load |
 | Style and its sprite and fonts | Must match: one folder named by their hash |
 | Dining, courses and prerequisites indexes and their files (programs included); tiles manifest and its folder | Must match: named by content |
 | Timetable and model | May mix, by stop and route ids. A route keeping its id through a new path keeps its old times until relearned |
@@ -39,7 +40,7 @@ The worker serves a page from cache and fetches it behind by its own path, never
 - each is what its name says (`isKeepable`): `.js`, `.css` and `.json` answer as such, and nothing hashed answers as HTML, so a sign-in page answering 200 at a hashed URL is served but never kept;
 - each arrives whole within a minute, or the release is abandoned.
 
-Then open windows are told. Each changed data file loads into its slot, keeping the trip, page, and camera; tiles and style update in place. That holds when code differs too, as a file is checked against the code running as it loads: one that doesn't fit is tried once and left for the reload. If code differs, `src/shell/lifecycle.mts` reloads the page next time it's out of view and not busy (riding a bus sets `isBusy`), or at once if it already is. State in `src/shell/state.mts` survives the reload.
+Then open windows are told. Each changed data file loads into its slot, keeping the trip, page, and camera; tiles and style update in place. That holds when code differs too, as a file is read by its format as it loads: one the code running reads is swapped in, upgraded if it's of an older version, as after a rollback; one of a newer version, or that doesn't fit, is tried once and left for the reload, still kept in the cache for it. So a change of shape fails a schema, and a change of meaning under the same shape must bump the file's version. If code differs, `src/shell/lifecycle.mts` reloads the page next time it's out of view and not busy (riding a bus sets `isBusy`), or at once if it already is. State in `src/shell/state.mts` survives the reload.
 
 Pages also check on coming back into view and every 15 minutes in view; after an hour away, one starts fresh. A copy published before the one kept, as from a lagging edge, is ignored, which is why rolling back means publishing again ([deploying.md](deploying.md#rolling-back)).
 
@@ -57,7 +58,7 @@ Writes and prunes share one queue, so nothing is kept mid-prune. Pruning runs af
 
 On `QuotaExceededError` a put climbs a ladder (`SURRENDERABLE`): prune, then drop all tiles, then the style's fonts and sprites, each rung once per storm (till a put succeeds or a page is taken in), past the top answering uncached. Pages, what they name, and the style JSON are never surrendered.
 
-The cache name (`app-v2`) changes when what it keeps changes meaning; activation deletes older caches but `reminders-v1` ([reminders.md](reminders.md)). If an open tab's hashed file is gone (404, or offline with no copy), the worker reloads that tab once, since old code can't recover by itself; a page that answers the census retries its own files instead.
+The cache says the version of what it keeps in its name (`app-v2`), bumped when that changes meaning; activation deletes its older versions' caches and no other: not a newer version's, nor `reminders-v1` ([reminders.md](reminders.md)). If an open tab's hashed file is gone (404, or offline with no copy), the worker reloads that tab once, since old code can't recover by itself; a page that answers the census retries its own files instead.
 
 Behind the worker, pages are fetched `cache: "no-cache"`, and hashed assets are immutable (`public/_headers`). A page and its staging share an in-flight download, which Safari would otherwise make twice. Live data (`/api/*`, Umo, elsewhere) bypasses the worker. Usage events (`src/shell/usage.tsx`) go straight to PostHog; those made offline are lost if the page closes first.
 
@@ -77,6 +78,7 @@ So two quick releases can leave a tab two generations behind, its uncached files
 
 ## Tests
 
+- `tests/shared/format.test.mts`, `tests/shell/build.test.mts`: formats of any version reading data of any other, and an open page through runs of builds whose files it reads, upgrades, or leaves for the reload.
 - `tests/shell/sw.test.mts`: the worker against an in-memory world, with a named regression for each sequence that once broke it.
 - `tests/shell/sw.model.test.mts`: against a model over generated sequences of releases, windows, offline, full quotas, sign-in pages, stalls, restarts, and frozen windows.
-- `npm run test:browser` (`tests/browser/sw.browser.mts`): release sequences in Chromium and WebKit, including a rollback and an upgrade from a real earlier release built from its own commit.
+- `npm run test:browser` (`tests/browser/sw.browser.mts`): release sequences in Chromium and WebKit, including a rollback, a release whose data is of a newer version than an open tab's code reads, and an upgrade from a real earlier release built from its own commit.

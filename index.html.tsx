@@ -5,11 +5,18 @@ import { REPO } from "./src/shell/pages.mts"
 // Backward, so address harvesters reading the page or this source skip it; page.mts turns it into a link
 const EMAIL_BACKWARD = "ppa.hnuton@leinad"
 
+// The map is the app, so this device's way in once it has had it open, by the trip the map keeps for the day whether or
+// not one's planned (src/map/state/trip.mts): reached from anywhere but another of the site's pages, as typed, from the
+// home screen or from a search, this page goes on to it before it's drawn. In place of itself, so Back from the map
+// passes it by, and only from here, so a first visit, a crawler and a link from the site always see this page
+const RETURNING = `try { if (localStorage.getItem("map-trip") !== null && !document.referrer.startsWith(location.origin + "/")) location.replace("/map/") } catch {}`
+
 export default () =>
   new MetaDocument(
     <html lang="en-US">
       <Head path="/" script="/src/shell/page.mts" />
       <body>
+        <script>{RETURNING}</script>
         <main class="page">
           <header class="intro">
             <h1 class="wordmark"><span>not</span>unh</h1>

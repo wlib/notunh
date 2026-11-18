@@ -93,3 +93,26 @@ test("each page shows its header and what it does before any script runs, where 
   await shell.context().close()
   await app.context().close()
 })
+
+test("the home page is the home page on a first visit and from the site, and goes on to the map from anywhere else once this device has had it, which Back passes by", async ({ page, fixture }) => {
+  await page.goto(`${fixture.origin}/`)
+  await expect(page.locator(".wordmark")).toBeVisible()
+  await page.getByRole("link", { name: /Open the map/ }).click()
+  await expect(page).toHaveURL(`${fixture.origin}/map/`)
+  await page.waitForFunction(() => localStorage.getItem("map-trip") !== null)
+
+  // Typed, as from the home screen or a search: on to the map, in place of the home page, so Back leaves the site
+  await page.goto("about:blank")
+  await page.goto(`${fixture.origin}/`)
+  await expect(page).toHaveURL(`${fixture.origin}/map/`)
+  await page.goBack()
+  await expect(page).toHaveURL("about:blank")
+
+  // From another of the site's pages, the home page itself, which a reload keeps
+  await page.goto(`${fixture.origin}/dining/`)
+  await page.locator(".app-title").getByRole("link", { name: "notunh" }).click()
+  await expect(page).toHaveURL(`${fixture.origin}/`)
+  await page.reload()
+  await expect(page).toHaveURL(`${fixture.origin}/`)
+  await expect(page.locator(".wordmark")).toBeVisible()
+})

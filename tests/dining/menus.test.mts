@@ -4,7 +4,7 @@ import * as v from "valibot"
 import { convert, type NutrisliceFood, type NutrisliceWeek } from "../../scripts/dining/convert.mts"
 import { carried, publish } from "../../scripts/dining/publish.mts"
 import { HOUR } from "../../src/shared/time.mts"
-import { DIETS, MenusIndex, fileUrl, highlights, passes, type Food, type Meal, type SearchFood } from "../../src/dining/menus.mts"
+import { DIETS, MenusIndex, dishName, fileUrl, highlights, passes, stationName, type Food, type Meal, type SearchFood } from "../../src/dining/menus.mts"
 import { createSearch } from "../../src/dining/search.mts"
 
 const TAGS = [...DIETS, "Milk", "Egg", "Wheat", "Gluten", "Soy", "Fish", "Pork", "Guiding Stars 2 stars"]
@@ -181,25 +181,41 @@ test("a build an hour after the last still carries the files of the index before
   expect(afterC["/data/dining/shared.json"]).toBe(b.fetched + 48 * HOUR)
 })
 
+/** A dish of one word, which is neither a counter nor a side */
+const dish = word.filter(name => !/^(bar|station|specialty|smorgasbord|assorted|steamed|rice|fries|potatoes|pilaf|medley|corn|broccoli|quinoa|noodles|rolls|toast|(sauce|topping|syrup|dressing)s?)$/i.test(name))
+
 const station = fc.record({
-  name:  fc.constantFrom("Soup", "Grill", "Main Line Left", "Special Event", "Vegan Specialties", "Pizza"),
-  foods: fc.array(word.map(name => ({ name, diets: [], contains: [], file: name })), { maxLength: 5 })
+  name:  fc.constantFrom("Soup", "Grill", "Main Line Left", "Special Event", "Vegan Specialties", "Pizza", "Pasta Bar"),
+  foods: fc.array(fc.oneof(dish, fc.constantFrom("Salad Bar", "Holloway Grill Station", "Marinara Sauce", "Steamed Broccoli", "Beyond Burger Patty 4oz", "AF Vegan Mac & Cheese", "Vanilla Ice Cream - Holloway")).map(name => ({ name, diets: [], contains: [], file: name })), { maxLength: 5 })
 })
 
-test("a meal's highlights are its own dishes, each once, no more than asked, the main line's first", () => {
+test("a meal's highlights are its own dishes by the names a person says, each once, never a counter, no more than asked, mains first", () => {
   fc.assert(fc.property(fc.array(station, { maxLength: 6 }), fc.integer({ min: 0, max: 8 }), (stations, most) => {
     const meal: Meal = { meal: "lunch", stations }
     const named = highlights(meal, most)
-    const served = new Set(stations.flatMap(({ foods }) => foods.map(({ name }) => name)))
+    const dishes = stations.flatMap(({ name, foods }) => foods.map(food => ({ food: dishName(food.name), station: stationName(name) })))
+      .filter(({ food }) => food && !/\b(bar|station)\b|sauce$/i.test(food))
     expect(named.length).toBeLessThanOrEqual(most)
     expect(new Set(named.map(({ food }) => food)).size).toBe(named.length)
-    for (const { food, station } of named)
-      expect(stations.some(({ name, foods }) => name === station && foods.some(one => one.name === food))).toBe(true)
+    for (const one of named)
+      expect(dishes).toContainEqual(one)
     // Short of what's asked only when the meal has no more dishes to name
     if (named.length < most)
-      expect(named.length).toBe(served.size)
-    const lead = stations.find(({ name, foods }) => /^special/i.test(name) && foods.length) ?? stations.find(({ name, foods }) => /main line/i.test(name) && foods.length)
-    if (lead && most > 0)
-      expect(named[0].station).toBe(lead.name)
+      expect(named.length).toBe(new Set(dishes.map(({ food }) => food)).size)
+    // A side only once there's no main left to name
+    const sides = named.findIndex(({ food }) => /^steamed\b/i.test(food))
+    if (sides >= 0)
+      expect(dishes.filter(({ food }) => !/^steamed\b/i.test(food)).every(({ food }) => named.slice(0, sides).some(one => one.food === food))).toBe(true)
   }))
+})
+
+test("a dish and a station are named as a person says them", () => {
+  expect(dishName("Beyond Burger Patty 4oz")).toBe("Beyond Burger Patty")
+  expect(dishName("Veggie Griller 3.75 oz Burger")).toBe("Veggie Griller Burger")
+  expect(dishName("Sugar Cookie 1 Oz.")).toBe("Sugar Cookie")
+  expect(dishName("AF Vegan Mac & Cheese")).toBe("Vegan Mac & Cheese")
+  expect(dishName("Vanilla Ice Cream - Holloway")).toBe("Vanilla Ice Cream")
+  expect(dishName("Roasted Vegetable Ravioli w/scape Pesto (NH)")).toBe("Roasted Vegetable Ravioli w/scape Pesto")
+  expect(stationName("Main Line Left")).toBe("Main Line")
+  expect(stationName("Deli 2")).toBe("Deli")
 })

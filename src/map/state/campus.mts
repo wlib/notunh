@@ -1,8 +1,8 @@
 // What the campus is doing now, for the sheet's Campus view and the pages it leads to (ui/Campus.tsx): each dining
 // hall's standing and the meal it's serving, read from today's menu file once something shows it, and every laundry
-// room's counts as the Worker's collector last saw them, asked for only while something shows them. The hall you eat
-// at and the laundry rooms you've starred are the dining and laundry pages' own, remembered under the same keys, so
-// either side follows the other. Reactive values only, no DOM
+// room's counts as the Worker's collector last saw them, asked for only while something shows them. The
+// laundry rooms you've starred are the laundry page's own, remembered under the same key, so either side follows the
+// other. Reactive values only, no DOM
 
 import { r, watch, type DerivativeNode } from "bruh/reactive"
 import { type Status, status } from "../../dining/hours.mts"
@@ -85,9 +85,6 @@ export const createCampus = ({ menus, buildings, now }: Pick<MapData, "menus" | 
   /** The rooms starred, as the laundry page stars them */
   const starred = remembered("laundry-favorites", stored => new Set(Array.isArray(stored) ? stored.filter(isRoom) : []), set => [...set])
 
-  /** The hall the dining page opens on, as it remembers it, which opening a hall's menu from its place sets */
-  const hall = remembered("dining-hall", stored => typeof stored === "string" ? stored : null)
-
   /** Every laundry room with its building, those starred first */
   const laundry = r((): Laundry[] =>
     ROOMS
@@ -106,8 +103,6 @@ export const createCampus = ({ menus, buildings, now }: Pick<MapData, "menus" | 
     countsOf: (id: string): RoomSummary | undefined => counted.value.value?.rooms[id],
     laundry,
     starredRooms: starred,
-    toggleStarred: (id: string) => starred.value = toggled(starred.value, id),
-    /** Has the dining page open on a hall, as following a link to its menu means */
-    eatAt: (id: string) => hall.value = id
+    toggleStarred: (id: string) => starred.value = toggled(starred.value, id)
   }
 }

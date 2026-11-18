@@ -373,45 +373,55 @@ body {
   margin: 0.5rem 0 0;
 }
 
-.agenda-view {
+.agenda-part {
   display: grid;
   gap: 0.5rem;
 }
 
-.agenda-view[hidden] {
-  display: none;
+/* The second part starts well clear of the first, under a rule, so the page reads as two */
+.agenda-part + .agenda-part {
+  margin-block-start: 1.25rem;
+  padding-block-start: 0.5rem;
+  border-block-start: 1px solid var(--border);
 }
 
-/* The two views by name, in the display type: the one shown in ink over a rule, the other muted beside it */
-.views {
+/* The two parts by name, in the display type, kept at the top as the page scrolls under them: the one in view in ink
+   over a rule, the other muted beside it */
+.parts {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
   display: flex;
   align-items: baseline;
   gap: 1rem;
-  margin-block-start: 0.125rem;
+  /* As wide as a row's gold wash, which would otherwise show at its sides */
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
+  background: var(--surface);
 }
 
-.views button {
+.parts a {
   position: relative;
+  display: inline-flex;
+  align-items: center;
   min-block-size: var(--tap);
-  padding: 0;
-  border: none;
-  background: none;
   font-size: clamp(1.4rem, 6.5cqi, 1.6rem);
   font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 1.05;
+  text-decoration: none;
   color: color-mix(in oklch, var(--muted) 55%, var(--surface));
 }
 
-.views button:hover {
+.parts a:hover {
   color: var(--muted);
 }
 
-.views button[aria-pressed="true"] {
+.parts a[aria-current] {
   color: var(--text);
 }
 
-.views button[aria-pressed="true"]::after {
+.parts a[aria-current]::after {
   content: "";
   position: absolute;
   inset: auto 0 0.3rem;
@@ -420,7 +430,7 @@ body {
   background: var(--text);
 }
 
-.views .views-day.eyebrow {
+.parts .parts-day.eyebrow {
   margin: 0 0 0 auto;
   font-variant-numeric: tabular-nums;
 }
@@ -446,15 +456,6 @@ body {
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
   color: color-mix(in oklch, var(--on-poster) 82%, var(--poster));
-}
-
-.rows > li.lead {
-  grid-template-columns: minmax(0, 1fr);
-  padding-block-end: 0.25rem;
-}
-
-.rows > li.lead + li {
-  border-block-start-color: transparent;
 }
 
 /* The ways on from today, side by side */

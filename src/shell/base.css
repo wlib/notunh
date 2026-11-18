@@ -7,17 +7,18 @@
   --text:           oklch(23% 0.012 265);
   --muted:          oklch(49% 0.014 265);
   --border:         oklch(88.5% 0.009 85);
-  --accent:         oklch(42% 0.15 262);
+  --accent:         #003591;
   --on-accent:      oklch(98.6% 0.004 85);
   --positive:       oklch(52% 0.14 152);
   --highlight:      oklch(90% 0.14 95 / 0.6);
   --star:           oklch(68% 0.16 75);
-  /* The poster's two inks, cobalt and lime, the same in either theme as print is: only ever what's yours next, the
-     clubs' own page and the way in from the home page, never a state, which the colors above are for */
-  --poster:         oklch(39% 0.19 268);
+  /* The poster's two inks, the same in either theme as print is: UNH's blue, and one accent beside it. Only ever
+     what's yours next, the clubs' own page and the way in from the home page, never a state, which the colors above
+     are for */
+  --poster:         #003591;
   --on-poster:      oklch(98.6% 0.004 85);
-  --print:          oklch(92% 0.165 122);
-  --on-print:       oklch(27% 0.07 135);
+  --print:          oklch(87% 0.075 235);
+  --on-print:       oklch(25% 0.1 262);
   --shadow: 0 10px 30px oklch(23% 0.03 265 / 0.16), 0 1px 3px oklch(23% 0.03 265 / 0.12);
   /* Sheets and cards, fields and cards within them, and buttons */
   --radius-l: 1.125rem;
@@ -224,7 +225,8 @@ h2 {
   line-height: 1.05;
 }
 
-/* A poster: cobalt with lime rings spreading from its corner, as a signal does, and its label in lime */
+/* A poster: UNH's blue with the app's arch (public/icon.svg) large and faint off its far edge, and its label in the
+   accent */
 .poster {
   position: relative;
   isolation: isolate;
@@ -239,28 +241,26 @@ h2 {
   content: "";
   position: absolute;
   z-index: -1;
-  inset: auto 0 0 auto;
-  block-size: 180%;
+  inset: -35% -1.5rem -80% auto;
   aspect-ratio: 1;
-  background: repeating-radial-gradient(circle at 100% 100%, transparent 0 0.8rem, var(--print) 0.8rem 0.925rem);
-  -webkit-mask-image: radial-gradient(circle at 100% 100%, black 20%, transparent 70%);
-  mask-image: radial-gradient(circle at 100% 100%, black 20%, transparent 70%);
-  opacity: 0.9;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M253 53 Q256 51 259 53 C351 101 434 174 434 258 L434 454 L362 454 L362 266 C362 215 313 164 256 132 C199 164 150 215 150 266 L150 454 L78 454 L78 258 C78 174 161 101 253 53Z M268 166 C300 186 337 220 337 266 L337 437 Q337 440 334 438 L270 401 Q268 400 268 397Z'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M253 53 Q256 51 259 53 C351 101 434 174 434 258 L434 454 L362 454 L362 266 C362 215 313 164 256 132 C199 164 150 215 150 266 L150 454 L78 454 L78 258 C78 174 161 101 253 53Z M268 166 C300 186 337 220 337 266 L337 437 Q337 440 334 438 L270 401 Q268 400 268 397Z'/></svg>") center / contain no-repeat;
+  opacity: 0.1;
   pointer-events: none;
 }
 
-/* The same in lime with cobalt rings, for what's everyone's rather than yours */
+/* The same in the accent with the blue's ink, for what's everyone's rather than yours */
 .poster.print {
   background: var(--print);
   color: var(--on-print);
 }
 
-.poster.print::after {
-  background: repeating-radial-gradient(circle at 100% 100%, transparent 0 0.8rem, var(--poster) 0.8rem 0.925rem);
-  opacity: 0.55;
+.poster.print .poster-label {
+  color: color-mix(in oklch, var(--on-print) 80%, var(--print));
 }
 
-.poster.print .poster-label {
+.poster-label {
   color: color-mix(in oklch, var(--on-print) 80%, var(--print));
 }
 

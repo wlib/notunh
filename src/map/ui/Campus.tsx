@@ -47,7 +47,10 @@ const Standing = ({ standing }: { standing?: Status }) =>
   standing.opens  ? <>Opens <Opens at={standing.opens} /></> :
                     <>Closed</>
 
-/** The halls in a few words, as the index says them: the meal on and till when, or when the first opens */
+/**
+ * The halls in a few words, as the index says them: the meal being served, and till when the halls are open, said as
+ * the halls' hours and not the meal's, as the menus name each day's meals without their times; or when the first opens
+ */
 const DiningFact = () =>
   r(() => {
     const halls = state.hallsNow.value
@@ -57,9 +60,9 @@ const DiningFact = () =>
       const closes = open.map(hall => hall.standing!.isOpen ? wallDate(hall.standing!.closes).getTime() : 0)
       const isTogether = open.length === halls.length && closes.every(at => at === closes[0])
       return <>
-        <span class="dot" />{meal ? capitalized(meal) : "Open"}
-        {isTogether ? halls.length === 2 ? " at both halls" : "" : <> at {open.map(hall => hall.name.split(" ")[0]).join(" & ")}</>}
-        {" · till "}<ClockTime at={new Date(Math.min(...closes))} timeZone="UTC" />
+        <span class="dot" />{meal && <>{capitalized(meal)} · </>}
+        {isTogether ? halls.length === 2 ? "both halls" : "halls" : open.map(hall => hall.name.split(" ")[0]).join(" & ")}
+        {" open till "}<ClockTime at={new Date(Math.min(...closes))} timeZone="UTC" />
       </>
     }
     const next = halls.flatMap(hall => !hall.standing?.isOpen && hall.standing?.opens ? [{ hall, opens: hall.standing.opens }] : [])
@@ -111,7 +114,7 @@ const HallGlance = ({ hall }: { hall: HallNow }) => {
           </ul>
         : <p class="muted">No menu posted for today.</p>}
       <div class="lines">
-        <LinkLine href="/dining/" onclick={() => state.eatAt(hall.id)}>{hall.meal ? <>All of {hall.meal.meal}, and the week</> : "The week's menus"}</LinkLine>
+        <LinkLine href={`/dining/?hall=${hall.id}`}>{hall.meal ? <>All of {hall.meal.meal}, and the week</> : "The week's menus"}</LinkLine>
       </div>
     </section>
   )

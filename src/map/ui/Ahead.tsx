@@ -2,10 +2,11 @@
 
 // What's ahead: the academic calendar's deadlines, registration windows, breaks and term dates
 // (src/courses/calendar.mts), home games, one-off events from UNH's pages, and what's yours further out, your finals
-// among it where this device is told them (state/finals.mts). The term is a page of its own, by month, its
-// registration windows narrowed to your class standing and its games only those you've saved, as the rest are
-// Athletics' schedule, not a plan. The home links to it from Today and says its next date in Campus (Campus.tsx), and
-// dates and finals in the next few days join Yours
+// among it where this device is told them (state/finals.mts). The home shows three rows at most, one of yours, one for
+// everyone and one public event, with the ways on to the week and the term, and says the next date in Campus too
+// (Campus.tsx). The term is a page of its own, by month, its registration windows narrowed to your class standing and
+// its games only those you've saved, as the rest are Athletics' schedule, not a plan. Dates and finals in the next few
+// days join Yours
 
 import { r } from "bruh/reactive"
 import type { Event } from "../../social/event.mts"
@@ -98,6 +99,34 @@ export const nextDate = () => {
   const today = localDay(nowMs())
   return datesFrom(today, addDays(today, TERM_WEEKS * 7)).find(date => !date.audience && date.kind !== "registration")
 }
+
+export const PlanAhead = () =>
+  r(() => {
+    const today = localDay(nowMs())
+    const from = addDays(today, DUE_DAYS + 1)
+    const to = addDays(today, TERM_WEEKS * 7)
+    const dates = datesFrom(from, to)
+    const events = eventsBetween(from, to)
+    const opening = dates.find(date => date.kind === "registration" && date.audience === state.standing.value)
+    const saved = events.find(item => item.mine)
+    const [first] = finalsBetween(from, to)
+    const final = first && { day: first.final.day, yours: first }
+    const personal = [saved, opening, final].flatMap(item => item ? [item] : []).sort((a, b) => a.day.localeCompare(b.day))[0]
+    const campus = dates.find(date => !date.audience && date.kind !== "registration")
+    const highlight = events.find(item => item.highlight && item !== personal)
+    const picks = [personal, campus, highlight].flatMap(item => item ? [item] : [])
+      .sort((a, b) => a.day.localeCompare(b.day))
+    if (!picks.length)
+      return null
+    return <>
+      <h2 class="eyebrow">Plan ahead</h2>
+      <ul class="rows ahead">{picks.map(item => "event" in item ? <EventRow event={item.event} day="" /> : "yours" in item ? <FinalRow yours={item.yours} /> : <DateRow date={item} />)}</ul>
+      <nav class="onward" aria-label="Further ahead">
+        <button type="button" class="more" onclick={() => state.go({ kind: "week" })}>This week ›</button>
+        <button type="button" class="more" onclick={() => state.go({ kind: "ahead" })}>Full term ›</button>
+      </nav>
+    </>
+  })
 
 export const AheadView = () => {
   state.focusAt({ kind: "ahead" }, undefined)

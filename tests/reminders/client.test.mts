@@ -52,7 +52,7 @@ beforeEach(() => {
       return Response.json({ key: KEY })
     // No cookie keeps a device here, so a device is made
     if (url.pathname === "/api/session")
-      return new Response("No device here", { status: 401 })
+      return new Response(null, { status: 204 })
     const body = init.body ? JSON.parse(init.body as string) as { device: string, watch: unknown } : undefined
     asked.push({ method: init.method ?? "GET", path: url.pathname + url.search, device: body?.device, secret: new Headers(init.headers).get("authorization") ?? undefined, watch: body?.watch, body: init.body as string | undefined })
     if (worker === "down")

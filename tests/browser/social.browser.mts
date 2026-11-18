@@ -1,8 +1,8 @@
 // The social layer on a phone, against the Worker's app served from Node (tests/worker/serve.mts): today's list
 // plans a trip by an event's start; an event made here opens for anyone and counts them going, of its spots;
 // sharing makes a story image; an event of times to pick takes marks, its host sets one, and those who marked it
-// are asked "Going?"; its host edits it; a code links two devices, whose permit, set or removed, reaches the other;
-// and an emailed code verifies an address.
+// are asked "Going?"; its host edits it; a code links two devices, whose permit, set or removed, reaches the other; a
+// first visit asks once for a device its cookie keeps, without an error; and an emailed code verifies an address.
 // Screenshots go to NOTUNH_SHOTS when it's set
 
 import { readFileSync, writeFileSync } from "node:fs"
@@ -636,4 +636,25 @@ test("a permit set or removed on one of two linked devices reaches the other, an
   await cleared.locator(".view").getByLabel("Permit", { exact: true }).selectOption("faculty")
   await reaches(page, "faculty/staff")
   await other.close()
+})
+
+test("a first visit asks the Worker once for a device its cookie keeps, is told there's none, and logs no error", async ({ page, fixture }) => {
+  const asked: string[] = []
+  const refused: string[] = []
+  const errors: string[] = []
+  const isApi = (url: string) => URL.canParse(url) && new URL(url).pathname.startsWith("/api/")
+  page.on("request", request => void (isApi(request.url()) && asked.push(new URL(request.url()).pathname)))
+  page.on("response", response => void (isApi(response.url()) && response.status() >= 400 && refused.push(`${response.status()} ${response.url()}`)))
+  // The API's own, as the map's tiles and every other origin are out of reach here
+  page.on("console", message => void (message.type() === "error" && isApi(message.location().url) && errors.push(message.text())))
+  const answered = page.waitForResponse(response => response.url().endsWith("/api/session"))
+  await openMap(page, fixture.origin)
+  expect((await answered).status()).toBe(204)
+  await expect(page.getByRole("button", { name: "You", exact: true })).toBeVisible()
+  // Coming back to the page syncs again, and asks nothing more of the cookie
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")))
+  await page.waitForLoadState("networkidle")
+  expect(asked.filter(path => path === "/api/session")).toEqual(["/api/session"])
+  expect(refused).toEqual([])
+  expect(errors).toEqual([])
 })

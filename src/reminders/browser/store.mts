@@ -101,16 +101,32 @@ export const forget = (id: string) =>
 export const deviceKept = async () =>
   (await readDoc()).device
 
+const Session = v.object({ device: v.string(), secret: v.string() })
+
+/**
+ * What the Worker's cookie keeps, asked once a page however many ask, as everything a page loads may: a device, or
+ * none where it answers nothing (204) or anything else. Asked again only where the Worker couldn't be reached
+ */
+let session: Promise<Device | undefined> | undefined
+
+const sessionKept = () =>
+  session ??= fetch("/api/session").then(
+    async response => {
+      const found: unknown = response.status === 200 ? await response.json().catch(() => undefined) : undefined
+      return v.is(Session, found) ? { id: found.device, secret: found.secret } : undefined
+    },
+    () => session = undefined
+  )
+
 /**
  * This device's id and secret as the Worker's cookie keeps them (worker/session.mts), taken back where storage lost
- * them; one kept meanwhile, as by another tab, stays. None where there's no cookie, or no Worker to ask
+ * them; one kept meanwhile, as by another tab or a device made since, stays. None where there's no cookie, or no
+ * Worker to ask
  */
 export const recovered = async () => {
-  const session: unknown = await fetch("/api/session").then(response => response.ok ? response.json() : undefined).catch(() => undefined)
-  return v.is(Session, session) ? change(doc => doc.device ??= { id: session.device, secret: session.secret }) : undefined
+  const found = await sessionKept()
+  return found ? change(doc => doc.device ??= found) : undefined
 }
-
-const Session = v.object({ device: v.string(), secret: v.string() })
 
 /** This device's id and secret: as kept, else as the Worker's cookie keeps them, else made, the first time any tab asks */
 export const device = async () =>

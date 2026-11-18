@@ -45,7 +45,7 @@ Bus samples are one gzipped row per source per minute polled (`src/transit/obser
 | `POST /api/calendar/fetch` `{ url }` | public, rate limited | Someone's own calendar feed, fetched for a browser that CORS keeps from it and handed straight back; only a public https host by name, nothing kept or logged ([recurrence.md](recurrence.md#a-calendar-in)) |
 | `GET /api/me` | device | Who the device is |
 | `POST /api/state` `{ device, entries }` | device | Your things written since last asked; answers all kept for the person ([storage.md](storage.md#your-things-kept-for-you)) |
-| `GET /api/session` | cookie | The device's id and secret, for a browser whose storage lost them; 401 without |
+| `GET /api/session` | cookie | The device's id and secret, for a browser whose storage lost them; 204 with nothing where the cookie keeps none |
 
 Scripts use `scripts/worker.mts`: `node --env-file=.dev.vars scripts/worker.mts health|storage|rows <name> [day]`, `--local` for `npm run worker`.
 

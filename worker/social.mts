@@ -554,12 +554,13 @@ social.post("/api/state", on("sync"), limited, valid(v.object({ ...Device.entrie
   return c.json({ entries: Object.fromEntries(kept.map(({ key, ...entry }) => [key, entry])) }, 200, { "cache-control": "no-store" })
 })
 
-// The device's id and secret from the cookie that keeps them, for a device whose own storage lost them to take back
+// The device's id and secret from the cookie that keeps them, for a device whose own storage lost them to take back.
+// A browser with none, as on every first visit, is no error, so it's answered with nothing
 social.get("/api/session", on("sync"), async c => {
   const credential = credentialOf(c, undefined, true)
   const who = await asked(c.env, credential)
   if (!who)
-    return c.text("No device here", 401)
+    return c.body(null, 204, { "cache-control": "no-store" })
   c.header("set-cookie", cookieOf(credential!, isSecure(c)))
   return c.json(credential, 200, { "cache-control": "no-store" })
 })

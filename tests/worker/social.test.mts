@@ -617,8 +617,12 @@ test("a command sets the device's cookie, which alone gets its id and secret bac
   expect((await kept.json() as Kept).entries["courses-saved"].value).toEqual(["202610:12496"])
   // Not for another device it names, nor with no cookie, nor a secret that isn't the one set
   expect((await withCookie(env, setCookie, "/api/state", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ device: device("bo").id, entries: {} }) })).status).toBe(401)
-  expect((await withCookie(env, null, "/api/session")).status).toBe(401)
-  expect((await withCookie(env, `notunh-device=${ana.id}.${"x".repeat(32)}`, "/api/session")).status).toBe(401)
+  for (const cookie of [null, `notunh-device=${ana.id}.${"x".repeat(32)}`]) {
+    const none = await withCookie(env, cookie, "/api/session")
+    expect(none.status).toBe(204)
+    expect(await none.text()).toBe("")
+    expect(none.headers.get("set-cookie")).toBeNull()
+  }
 })
 
 test("linking keeps each key's newer write of the two people's, and a UNH address verified before gets a wiped device back", async () => {

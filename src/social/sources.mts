@@ -31,12 +31,12 @@ export const plain = (html: string, max = SHORT) =>
 export type Matcher = (text: string) => string | undefined
 
 /**
- * A series' first session, given its first start and its last end, as some calendars write one: the end's time of day
- * on the start's day, or the next day's when that's no later, as a dance that ends at midnight does
+ * A series' first session, given its first start and the time of day its last end is written at, as some calendars
+ * write one: that time on the start's day, or the next day's when that's no later, as a dance that ends at midnight does
  */
-const firstSession = (start: number, end: number) => {
-  const sameDay = atClock(localDay(start), hhmm(end))
-  return sameDay > start ? sameDay : atClock(addDays(localDay(start), 1), hhmm(end))
+const firstSession = (start: number, clock: string) => {
+  const sameDay = atClock(localDay(start), clock)
+  return sameDay > start ? sameDay : atClock(addDays(localDay(start), 1), clock)
 }
 
 /** A local time with no offset, "2026-11-18T18:15:00" or "2026-10-26 17:15:00", as an instant on Durham's clock */
@@ -81,7 +81,7 @@ export const fromPresence = (json: unknown, match: Matcher): Event[] =>
       id:     `presence:${event.uri}`,
       title:  plain(event.eventName),
       start,
-      end:    end - start > SPAN ? firstSession(start, end) : end,
+      end:    end - start > SPAN ? firstSession(start, hhmm(end)) : end,
       place:  match(where),
       where,
       source: "presence",
@@ -263,9 +263,10 @@ const OFF = /cancel|disapprov|declin|reject|denied/
  */
 const sessionOf = (start: string, end: string) => {
   const from = localAt(start)
-  const to = localAt(end)
   const single = end.slice(0, 10) === start.slice(0, 10)
-  return { start: from, end: single ? to : firstSession(from, to), single }
+  // The end's time of day as written, not as an instant on its own day, which a series ending at 02:00 on the day
+  // clocks spring forward would read as 03:00
+  return { start: from, end: single ? localAt(end) : firstSession(from, end.slice(11, 16)), single }
 }
 
 /**

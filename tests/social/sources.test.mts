@@ -212,6 +212,14 @@ test("any session, written whole or as a series of any length beside it, reads a
   }))
 )
 
+test("a series ending at 02:00 on the day clocks spring forward is still the same window as its first session", () => {
+  const rows = [
+    row({ calculated_start: "2026-09-29 00:00:00", calculated_end: "2026-12-27 02:00:00" }),
+    row({ id: 2, calculated_start: "2026-09-29 00:00:00", calculated_end: "2027-03-14 02:00:00" })
+  ]
+  expect(clubsOf(rows)).toHaveLength(1)
+})
+
 test("the clubs' events are asked for over Durham days, as DSE Rec's own pages ask", () => {
   const url = new URL(dserecUrl("2026-10-24", "2026-11-13"))
   expect(url.origin + url.pathname).toBe("https://unh.dserec.com/api/clubsports/online/events/list")

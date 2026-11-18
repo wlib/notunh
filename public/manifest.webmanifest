@@ -5,7 +5,7 @@
   "description": "Live UNH buses, dining menus, and laundry machines: a free, unofficial app for UNH students",
   "lang": "en-US",
   "categories": ["education", "food", "lifestyle", "navigation", "travel", "utilities"],
-  "start_url": "/",
+  "start_url": "/map/",
   "display": "standalone",
   "background_color": "#fcfaf7",
   "theme_color": "#fcfaf7",

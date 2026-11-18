@@ -35,7 +35,8 @@ const isGoal = (value: unknown): value is Goal =>
 const GOALS = "map-goals"
 
 // The trip being planned is kept for the rest of the day, so the page reloading, as it does after a while away,
-// picks it back up
+// picks it back up. That it's kept at all, planned or not, is how the home page knows this device has had the map
+// (index.html.tsx)
 const TRIP = "map-trip"
 const REPLAN_M = 50 // m moved before a trip from or to you is planned again
 

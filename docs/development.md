@@ -1,6 +1,6 @@
 # Development
 
-Node 24+. Every `*.html.tsx` is a page (vite-plugin-bruh): `/` (`index.html.tsx`), `/map/`, `/dining/`, `/laundry/`, and `/p/` (an event's light page, `src/social/`). The browser floor is Safari/iOS 16.4 (`browserslist` in `package.json`, checked by `tests/shell/compat.test.mts`).
+Node 24+. Every `*.html.tsx` is a page (vite-plugin-bruh): `/` (`index.html.tsx`, the front door: a device that's had the map open goes on to it with `location.replace` unless it came from another of the site's pages, so first visits, crawlers and the wordmark see this page and Back never returns to it; the installed app starts at `/map/`), `/map/`, `/dining/`, `/laundry/`, and `/p/` (an event's light page, `src/social/`). The browser floor is Safari/iOS 16.4 (`browserslist` in `package.json`, checked by `tests/shell/compat.test.mts`).
 
 ## Layout
 

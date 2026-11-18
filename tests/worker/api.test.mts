@@ -200,7 +200,7 @@ test("the latest model of a name is the last stored, whatever day it's through, 
   await store("buses", { through: SUNDAY })
   expect(await readModel("laundry")).toEqual({ state: { through: days.at(-1) }, revision: expect.any(String) })
   expect(sqlite.prepare("select through from models where name = 'laundry' order by through").all().map(({ through }) => through)).toEqual(days.slice(10).sort())
-  expect((await health()).models).toEqual({ buses: SUNDAY, laundry: days.at(-1) })
+  expect((await health()).models).toEqual({ buses: SUNDAY, laundry: days.at(-1), finals: null })
   await expect(writeModel("laundry", { through: null }, null)).rejects.toThrow("400")
   await expect(writeModel("laundry", { through: SUNDAY }, undefined as unknown as null)).rejects.toThrow("400")
   await expect(writeModel("anything", { through: SUNDAY }, null)).rejects.toThrow("404")
@@ -374,7 +374,7 @@ test("health says when each table's rows start and end, in its own unit, and the
     predictions: { since: null, last: null },
     transitions: { since: null, last: null },
     polls:       { since: at, last: at },
-    models:      { buses: null, laundry: null }
+    models:      { buses: null, laundry: null, finals: null }
   })
 })
 

@@ -4,11 +4,11 @@
 // on the class days of the academic calendar the courses step read; Athletics' ICS whole; sport clubs' events from
 // DSE Rec, the same weeks in one page, from the JSON its own pages ask for, without our User-Agent; and Campus Rec's
 // programs, found by classification, each program's page then its sessions or its offerings in each of its
-// semesters. Only events are asked of DSE, never its rosters or members. The series only UNH's pages tell, kept by
-// hand (src/social/curated.mts), join them over the same weeks. Each is read into the one event shape
+// semesters. Only events are asked of DSE, never its rosters or members. Each is read into the one event shape
 // (src/social/sources.mts), placed on the gazetteer by name (src/social/aliases.mts), and events already over are
-// left out. If any calendar fails, the step fails and the last night's file stays (scripts/data.mts); a build without
-// one gets an empty list (scripts/inputs.mts)
+// left out. The series only UNH's pages tell, kept by hand (src/social/curated.mts), join them as a build installs
+// them (scripts/inputs.mts). If any calendar fails, the step fails and the last night's file stays
+// (scripts/data.mts); a build without one gets an empty list (scripts/inputs.mts)
 
 import { readFile } from "node:fs/promises"
 import * as v from "valibot"
@@ -18,8 +18,6 @@ import type { Event, EventsData } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
 import { ATHLETICS, EVENTS, PRESENCE, PRESENCE_CLUBS, REC_INDEX, WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromPresenceOrgs, fromRecInstances, fromRecOfferings, instancesUrl, live25Url, merged, offeringsUrl, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
-import { Curated, fromCurated } from "../../src/social/curated.mts"
-import curated from "../../src/social/curated.json" with { type: "json" }
 import { addDays, localDay } from "../../src/shared/time.mts"
 import { COURSES, CoursesIndex } from "../../src/courses/course.mts"
 import { classDays } from "../../src/courses/calendar.mts"
@@ -75,15 +73,13 @@ const calendar = await calendarIn(new URL(COURSES, STAGED)) ?? await calendarIn(
 const orgs = fromPresenceOrgs(organizations)
 const meetings = fromPresenceClubs(orgs, calendar ? classDays(calendar, today, 7 * WEEKS) : [], match)
 
-const series = fromCurated(v.parse(Curated, curated), today, 7 * WEEKS, match)
 const events = merged([
   fromPresence(presence, match),
   meetings,
   fromAthletics(athletics, match),
   fromDserec(clubs, match),
   ...weeks.map(week => from25Live(week, match)),
-  ...programs,
-  series
+  ...programs
 ], now)
 await writeInput(EVENTS, JSON.stringify({ fetched: now, events, orgs } satisfies EventsData) + "\n")
 console.log(`${events.length} events, ${events.filter(event => event.place).length} placed`)

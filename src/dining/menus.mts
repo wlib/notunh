@@ -100,18 +100,56 @@ export type Meal = {
 }
 
 /**
- * A meal's dishes to name first, each with its station: a special's and the main line's before the rest, then a station
- * at a time in the menu's order, so none is named twice until each has been once. By the stations' names as UNH
- * Dining writes them, so a station renamed only loses its place in the order
+ * Whether a menu's item is a counter rather than a dish, as UNH Dining lists them beside the dishes: a bar, a station,
+ * a make-your-own, a sauce or a topping to go on something, an assortment
+ */
+const isCounter = (name: string) =>
+  /\b(bar|station|specialty|smorgasbord|make your own)\b|\b(sauce|topping|syrup|dressing)s?$|^assorted\b/i.test(name)
+
+/** Whether a dish is a side, which a meal is named by only once its mains are */
+const isSide = (name: string) =>
+  /^(steamed|whole kernel)\b|\b(rice|fries|potatoes|pilaf|medley|corn|broccoli|quinoa|noodles|rolls|toast)$/i.test(name)
+
+/** The stations that serve the same every day, as UNH Dining names them */
+const EVERY_DAY = /^(salad|deli|soup|pizza|dessert|yogurt|bakery|cereal|fruit)|grill|breakfast|bar$/i
+
+/**
+ * Where a station comes in naming a meal: a special, then the main line, then the rest, and last those that serve the
+ * same every day, a salad bar or any other, a deli, the grill, pizza, soup, breakfast and dessert
+ */
+const placeOf = (station: string) =>
+  /^special/i.test(station)  ? 0 :
+  /main line/i.test(station) ? 1 :
+  EVERY_DAY.test(station)    ? 3 :
+                               2
+
+/** A dish's name as a person says it, without its portion, hall or tags: "Beyond Burger Patty 4oz", "Beyond Burger Patty" */
+export const dishName = (name: string) =>
+  name.replace(/^AF\s+/, "").replace(/\s*\([^)]*\)/g, "").replace(/\s*\b\d+(\.\d+)?\s*oz\b\.?/gi, "").replace(/\s+-\s+\w+$/, "").replace(/[\s-]+$/, "").replace(/\s+/g, " ").trim()
+
+/** A station's name as a person says it, without which side of the line it is: "Main Line Left" is "Main Line" */
+export const stationName = (name: string) =>
+  name.replace(/\s+(left|right|\d+)$/i, "")
+
+/**
+ * A meal's dishes to name first, each with its station, by name as a person says them: its mains before its sides,
+ * and of each, those of the stations that change before those that serve the same every day, a special's and the
+ * main line's first, then a station at a time, so none is named twice until each has been once. Never a counter. By
+ * the names as UNH Dining writes them, so a station renamed only loses its place in the order
  */
 export const highlights = (meal: Meal, most: number) => {
-  const lead = (name: string) => /^special/i.test(name) ? 0 : /main line/i.test(name) ? 1 : 2
-  const stations = meal.stations.toSorted((a, b) => lead(a.name) - lead(b.name))
+  const stations = meal.stations
+    .map(({ name, foods }) => ({ station: stationName(name), place: placeOf(name), dishes: foods.map(({ name }) => dishName(name)).filter(name => name && !isCounter(name)) }))
+    .toSorted((a, b) => a.place - b.place)
   const named: { food: string, station: string }[] = []
-  for (let round = 0; named.length < most && stations.some(({ foods }) => foods.length > round); round++)
-    for (const { name, foods } of stations)
-      if (foods[round] && named.length < most && !named.some(({ food }) => food === foods[round].name))
-        named.push({ food: foods[round].name, station: name })
+  for (const isMain of [true, false])
+    for (const isEveryDay of [false, true]) {
+      const kept = stations.filter(({ place }) => place === 3 === isEveryDay).map(({ station, dishes }) => ({ station, dishes: dishes.filter(name => isSide(name) !== isMain) }))
+      for (let round = 0; named.length < most && kept.some(({ dishes }) => dishes.length > round); round++)
+        for (const { station, dishes } of kept)
+          if (dishes[round] && named.length < most && !named.some(({ food }) => food === dishes[round]))
+            named.push({ food: dishes[round], station })
+    }
   return named
 }
 

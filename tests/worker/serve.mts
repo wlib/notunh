@@ -2,7 +2,8 @@
 // The Worker's app served over HTTP for the browser tests (tests/browser/social.browser.mts), on a fresh in-memory
 // database (d1.mts), with the built site in a folder as its assets and a mailer that keeps the last message, which
 // GET /__mail answers, so a test can read a code the way a person reads their inbox, and BUILD_TOKEN, which a test
-// stores what the nightly run would with (finals.browser.mts). Prints the port it listens on.
+// stores what the nightly run would with (finals.browser.mts). The edge's cache never has an answer. Prints the port it
+// listens on.
 // Run as `node tests/worker/serve.mts <dist>`
 
 import { createServer } from "node:http"
@@ -18,6 +19,11 @@ import { load, resolve } from "./hooks.mts"
 // The Worker imports JSON, WebAssembly and fonts as wrangler bundles them, so Node is taught to before it's loaded
 registerHooks({ resolve, load })
 const { app } = await import("../../worker/api.mts")
+
+// The edge's cache, which Node hasn't, as one that never has the answer, so the laundry counts the map's home asks
+// for are answered from the database each time, and what's put in it after an answer is let go
+Object.assign(globalThis, { caches: { default: { match: async () => undefined, put: async () => {} } } })
+const context = { waitUntil: (promise: Promise<unknown>) => void promise.catch(() => {}), passThroughOnException: () => {} }
 
 const dist = process.argv[2]
 let last: Message | undefined
@@ -52,7 +58,7 @@ const server = createServer(async (request, response) => {
     method: request.method,
     headers: Object.fromEntries(Object.entries(request.headers).filter(([, value]) => typeof value === "string") as [string, string][]),
     body: chunks.length ? Buffer.concat(chunks) : undefined
-  }), env)
+  }), env, context as unknown as ExecutionContext)
   response.writeHead(answer.status, Object.fromEntries(answer.headers))
   response.end(Buffer.from(await answer.arrayBuffer()))
 })

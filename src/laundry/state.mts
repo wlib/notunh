@@ -2,7 +2,7 @@
 // values only, no DOM
 
 import { r, watch } from "bruh/reactive"
-import { ROOMS, pathOf, roomAtPath, roomName } from "./rooms.mts"
+import { STARRED, pathOf, readStarred, roomAtPath, roomName } from "./rooms.mts"
 import { KINDS, assessRoom, type Kind, type RoomLive, type RoomSummary, type Summaries } from "./infer.mts"
 import { Usual, emptyUsual, slotOf, unpack, type UsualWeek } from "./model.mts"
 import { getJson } from "../shared/json.mts"
@@ -25,10 +25,7 @@ export const COUNTS_FRESH_MS = 30 * 60_000
 /** The hour of the week in Durham, reaching what depends on it only when it changes */
 export const hourOfWeek = distinct(() => slotOf(now.value))
 
-const isRoom = (id: unknown): id is string =>
-  ROOMS.some(room => room.id === id)
-
-export const favorites = remembered("laundry-favorites", stored => new Set(Array.isArray(stored) ? stored.filter(isRoom) : []), set => [...set])
+export const favorites = remembered(STARRED, readStarred, set => [...set])
 
 export const toggleFavorite = (id: string) => {
   favorites.value = toggled(favorites.value, id)

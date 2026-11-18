@@ -8,7 +8,7 @@ import { r, watch, type DerivativeNode } from "bruh/reactive"
 import { type Status, status } from "../../dining/hours.mts"
 import { type Hall, type Meal, fileUrl } from "../../dining/menus.mts"
 import type { RoomSummary, Summaries } from "../../laundry/infer.mts"
-import { ROOMS } from "../../laundry/rooms.mts"
+import { ROOMS, STARRED, readStarred } from "../../laundry/rooms.mts"
 import type { Room } from "../../laundry/upstream.mts"
 import type { Building } from "../../places/buildings.mts"
 import { arrayOf, getJson } from "../../shared/json.mts"
@@ -33,9 +33,6 @@ export type HallNow = Hall & { standing?: Status, meal?: Meal }
 
 /** A laundry room with the building it's in, which the map marks */
 export type Laundry = { room: Room, building?: Building }
-
-const isRoom = (id: unknown): id is string =>
-  ROOMS.some(room => room.id === id)
 
 export const createCampus = ({ menus, buildings, now }: Pick<MapData, "menus" | "buildings"> & { now: DerivativeNode<number> }, own: Own) => {
   /** Whether anything shows the halls' meals or the rooms' counts yet, so a visit that never looks costs nothing */
@@ -83,7 +80,7 @@ export const createCampus = ({ menus, buildings, now }: Pick<MapData, "menus" | 
   }))
 
   /** The rooms starred, as the laundry page stars them */
-  const starred = remembered("laundry-favorites", stored => new Set(Array.isArray(stored) ? stored.filter(isRoom) : []), set => [...set])
+  const starred = remembered(STARRED, readStarred, set => [...set])
 
   /** Every laundry room with its building, those starred first */
   const laundry = r((): Laundry[] =>

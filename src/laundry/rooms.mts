@@ -8,6 +8,13 @@ import { slug } from "../shared/slug.mts"
 
 export const ROOMS: readonly Room[] = rooms
 
+/** Where the rooms you've starred are kept, which the laundry page and the map's laundry both read and write */
+export const STARRED = "laundry-favorites"
+
+/** The rooms starred, as kept, those still rooms */
+export const readStarred = (stored: unknown) =>
+  new Set(Array.isArray(stored) ? stored.filter((id): id is string => ROOMS.some(room => room.id === id)) : [])
+
 export const roomName = (id: string) =>
   ROOMS.find(room => room.id === id)?.name ?? id
 

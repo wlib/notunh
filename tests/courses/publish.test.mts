@@ -11,6 +11,9 @@ const imported = [fall, jterm, spring].map(({ code, name, fetched, sections }) =
 test("the terms fetched are those the calendar has running or starting within months, and published only where their sections agree", async () => {
   expect(candidates(calendar, atClock("2026-10-26", "12:00"))).toEqual(["202610", "202630", "202650"])
   expect(candidates(calendar, atClock("2027-01-20", "12:00"))).toEqual(["202630", "202650", "202670"])
+  // Fall is still fetched through its finals, and not the day after
+  expect(candidates(calendar, atClock(fall.to, "12:00"))).toContain(fall.code)
+  expect(candidates(calendar, atClock(addDays(fall.to, 1), "12:00"))).not.toContain(fall.code)
   await fc.assert(fc.asyncProperty(fc.integer({ min: -30, max: 300 }), async offset => {
     const now = atClock(addDays(fall.from, offset), "12:00")
     const { index } = await publish(imported, calendar, now)

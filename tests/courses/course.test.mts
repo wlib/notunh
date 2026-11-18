@@ -23,7 +23,7 @@ test("the import is whole: every row a section, each CRN once, in-person meeting
   for (const meeting of meetings)
     expect(meeting.where).not.toMatch(/@|\.edu/)
   expect(fall.fetched).toBeLessThan(fall.built)
-  expect(fall).toMatchObject({ code: "202610", name: "Fall 2026", from: "2026-08-31", to: "2026-12-14" })
+  expect(fall).toMatchObject({ code: "202610", name: "Fall 2026", from: "2026-08-31", to: "2026-12-22" })
 })
 
 /** The weekday a day's classes follow, as the registrar letters them: its own, or the one it's swapped to */
@@ -70,11 +70,11 @@ test("a swap day runs the other weekday's classes: 13 October 2026 follows a Wed
   expect(onDay(fall, calendar, addDays(swapDay, -7), tuesdayOnly).length).toBeGreaterThan(0)
 })
 
-test("no classes on Thanksgiving, Labor Day or Veterans Day, and classes on every other weekday of the term", () => {
+test("no classes on Thanksgiving, Labor Day or Veterans Day, and classes on every other weekday of the term till its finals", () => {
   for (const day of calendar.noClass)
     expect(onDay(fall, calendar, day)).toEqual([])
   let weekdays = 0
-  for (let day = fall.from; day <= fall.to; day = addDays(day, 1))
+  for (let day = fall.from; day <= calendar.terms[fall.code].end!; day = addDays(day, 1))
     if (weekday(day) < 5 && !calendar.noClass.includes(day)) {
       weekdays++
       expect(onDay(fall, calendar, day).length).toBeGreaterThan(50)
@@ -168,11 +168,15 @@ test("CS 518 (01) meets in N343 on Tuesday and Thursday and in N113 on Friday, a
   expect(new Set(section.meetings.map(meeting => meeting.where)).size).toBe(2)
 })
 
-test("the live terms at an instant are those running or starting within two weeks: fall alone in October, J-Term in late December, J-Term and spring overlapping in January", () => {
+test("the live terms at an instant are those running or starting within two weeks: fall alone in October, and through its finals beside J-Term in December, J-Term and spring overlapping in January", () => {
   const terms = [fall, jterm, spring]
   const live = (day: string) => activeTerms(terms, atClock(day, "12:00")).map(term => term.code)
   expect(live("2026-10-26")).toEqual(["202610"])
-  expect(live("2026-12-20")).toEqual(["202630"])
+  // A term runs through its finals, a week past its last class, so its sections and finals are there in finals week
+  expect(fall.to).toBe(calendar.terms[fall.code].finals![1])
+  expect(fall.to > calendar.terms[fall.code].end!).toBe(true)
+  expect(live(fall.to)).toEqual(["202610", "202630"])
+  expect(live(addDays(fall.to, 1))).toEqual(["202630"])
   expect(live("2027-01-20")).toEqual(["202630", "202650"])
   expect(live("2027-03-01")).toEqual(["202650"])
   // A term is live from `lead` days before it starts through its last day, never outside

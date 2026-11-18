@@ -1,7 +1,9 @@
 import { test, expect, vi, afterEach } from "vitest"
 import fc from "fast-check"
 import { buildOf, isRetained, retainOf } from "../../src/shell/manifest.mts"
-import { Model, emptyModel } from "../../src/transit/models/model.mts"
+import * as v from "valibot"
+import { format } from "../../src/shared/format.mts"
+import { ModelFormat, emptyModel } from "../../src/transit/models/model.mts"
 import { RELEASE, fakePage, headOf, leavePage } from "./page.mts"
 import { republished } from "../../scripts/republish.mts"
 import { FETCH_DATA } from "../../src/shell/Head.tsx"
@@ -112,6 +114,50 @@ test("a newer build's data that the code running can't read is tried once, and w
   expect(page.fetches.filter(url => url.includes("BBBBBBBB"))).toHaveLength(1)
   expect(page.isNewBuild.peek()).toBe(true)
 })
+
+/** A file's format as code of a version has it, upgrading from version 1 on, each version adding its mark */
+const Named = (version: number) =>
+  format(
+    v.object({ version: v.literal(version), name: v.string(), marks: v.array(v.number()) }) as v.GenericSchema<unknown, { version: number, name: string, marks: number[] }>,
+    version,
+    ...Array.from({ length: version - 1 }, (_, i) => (older: unknown) => ({ ...Object(older), version: i + 2, marks: [...Object(older).marks, i + 2] }))
+  )
+const named = (version: number, name: string) =>
+  version ? { version, name, marks: Array.from({ length: version - 1 }, (_, i) => i + 2) } : { name }
+
+test("through any run of builds, an open page swaps in each file its code reads, an older version upgraded, and leaves one of a newer version, asked for once, for the reload, which holds no other file back", () =>
+  fc.assert(fc.asyncProperty(
+    fc.integer({ min: 1, max: 3 }),
+    fc.array(fc.record({ version: fc.nat(4), isNewCode: fc.boolean() }), { minLength: 1, maxLength: 5 }),
+    async (running, builds) => {
+      const urlOf = (name: string, i: number) => `/assets/${name}-${`${i}`.padStart(8, "0")}.json`
+      const page = await load({ menus: urlOf("menus", 0), gtfs: urlOf("gtfs", 0) })
+      page.answers.set(urlOf("menus", 0), async () => named(running, "0"))
+      page.answers.set(urlOf("gtfs", 0), async () => "0")
+      const [menus, gtfs] = await Promise.all([page.latest("menus", Named(running)), page.latest<string>("gtfs")])
+      let shown = "0"
+      let isNewBuild = false
+      for (const [at, { version, isNewCode }] of builds.entries()) {
+        const i = at + 1
+        page.answers.set(urlOf("menus", i), async () => named(version, `${i}`))
+        page.answers.set(urlOf("gtfs", i), async () => `${i}`)
+        page.receive(headOf({ menus: urlOf("menus", i), gtfs: urlOf("gtfs", i) }, isNewCode ? [`/assets/index-${`${i}`.padStart(8, "0")}.js`] : undefined, `2026-10-18T08:${`${i}`.padStart(2, "0")}:00.000Z`))
+        await vi.advanceTimersByTimeAsync(20_000)
+        const isRead = version >= 1 && version <= running
+        if (isRead)
+          shown = `${i}`
+        isNewBuild ||= isNewCode
+        // Whatever its version, it's shown as the code running would have written it
+        expect(menus.peek()).toEqual(named(running, shown))
+        expect(gtfs.peek()).toBe(`${i}`)
+        expect(page.isNewBuild.peek()).toBe(isNewBuild)
+        const tries = page.fetches.filter(url => url === urlOf("menus", i)).length
+        // One of a newer version is never asked for again, and one that doesn't fit only under the code it came with
+        expect(tries).toBe(isRead || version > running || isNewCode ? 1 : 3)
+      }
+    }
+  ), { numRuns: 50 })
+)
 
 test("data is loaded again when a newer build names newer, swapped in once loaded, and kept if it can't load, which is tried again until it loads", async () => {
   const page = await load({ gtfs: "/assets/gtfs-AAAAAAAA.json" })
@@ -297,7 +343,7 @@ test("a page starts with a fallback when its data can't load the first time, if 
 test("a data file that doesn't fit its schema fails to load as any other would: first for the fallback, later keeping what was there", async () => {
   const page = await load(dataOf(["model"], ["AAAAAAAA"]))
   page.answers.set("/assets/model-AAAAAAAA.json", async () => ({ version: 4, through: null }))
-  const model = await page.latest("model", Model, emptyModel)
+  const model = await page.latest("model", ModelFormat, emptyModel)
   expect(model.peek()).toEqual(emptyModel())
   const learned = { ...emptyModel(), through: "2026-10-06" }
   page.answers.set("/assets/model-AAAAAAAA.json", async () => learned)
@@ -308,6 +354,17 @@ test("a data file that doesn't fit its schema fails to load as any other would: 
   await vi.advanceTimersByTimeAsync(60_000)
   expect(model.peek()).toEqual(learned)
   expect(console.error).toHaveBeenLastCalledWith(new Error("Unexpected JSON from /assets/model-BBBBBBBB.json: legs: Expected an object"))
+})
+
+test("a file read by a bare schema is of version 0, so one that says a version is newer, and left", async () => {
+  const page = await load({ menus: "/assets/menus-AAAAAAAA.json" })
+  page.answers.set("/assets/menus-AAAAAAAA.json", async () => ({ name: "A" }))
+  const menus = await page.latest("menus", v.object({ name: v.string() }))
+  page.answers.set("/assets/menus-BBBBBBBB.json", async () => ({ version: 1, name: "B" }))
+  page.receive(headOf({ menus: "/assets/menus-BBBBBBBB.json" }))
+  await vi.advanceTimersByTimeAsync(60_000)
+  expect(menus.peek()).toEqual({ name: "A" })
+  expect(page.fetches.filter(url => url.includes("BBBBBBBB"))).toHaveLength(1)
 })
 
 test("a page without a name throws for it", async () => {

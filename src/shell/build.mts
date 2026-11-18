@@ -1,14 +1,15 @@
 // The build a page runs and the data it loads, both named in the page's head (manifest.mts). The service worker
 // serves the page from its cache, revalidates it behind that, and posts any newer copy here. Newer data is loaded and
-// swapped in live, a newer build's with newer code too wherever it fits the code running, as each file's schema is
-// checked as it loads; one that doesn't is tried once and waits for the reload. Newer code only comes in with a
-// reload, which lifecycle.mts makes once the page is out of view. The page also asks the worker to revalidate, on coming back into view and every REVALIDATE_MS, since a
-// window that never navigates would otherwise never hear of the nightly build.
+// swapped in live, a newer build's with newer code too, as each file is read by its format as it loads
+// (src/shared/format.mts): one the code running reads is swapped in, one of a newer version waits for the reload, and
+// one that otherwise doesn't fit is tried once and waits too. Newer code only comes in with a reload, which
+// lifecycle.mts makes once the page is out of view. The page also asks the worker to revalidate, on coming back into
+// view and every REVALIDATE_MS, since a window that never navigates would otherwise never hear of the nightly build.
 //
 // Every data file is its own slot, loaded and swapped in on its own (load.mts), so a file that can't load holds no
 // other back. That's sound because what must match is matched within a slot, and the rest only meets by stable ids
 // and coordinates:
-// - Must match, and is checked or named so: a file with the code reading it (its schema, and the model's version);
+// - Must match, and is checked or named so: a file with the code reading it (its format: its version and schema);
 //   the style with its sprite and fonts (one folder named by their hash, loaded with the manifest naming it); the
 //   dining index with its files and the tiles manifest with its folder (each named by its content)
 // - May mix: the timetable with the model (stop and route ids), and both with the walk network, gazetteer, places,
@@ -19,8 +20,7 @@
 // Whatever is derived from several files is derived again from whichever are newest
 
 import { r, type DerivativeNode, type SourceNode } from "bruh/reactive"
-import type { StandardSchemaV1 } from "@standard-schema/spec"
-import { readJson } from "../shared/json.mts"
+import { type By, readJson } from "../shared/json.mts"
 import { type Generation, buildOf, isOlder, isSameCode, mergedRetain, retainOf } from "./manifest.mts"
 import { type Loader, jsonOf, loadImmutable } from "./load.mts"
 
@@ -73,8 +73,9 @@ const want = (slot: Slot, url: string, { onError, tries }: { onError?: (error: u
 /**
  * Takes in a newer copy of the page: newer data to load, and newer code to reload for. Its data is loaded whatever
  * its code, though only once where the code differs, as a file that doesn't fit the code running won't on a retry
- * either. One published before the newest announced, like a message that arrived late, changes nothing. One
- * republished since, as a rollback is, counts as newer however long ago it was built
+ * either, and a file of a newer version than the code reads is never tried again (load.mts). One published before
+ * the newest announced, like a message that arrived late, changes nothing. One republished since, as a rollback is,
+ * counts as newer however long ago it was built, and its files of older versions are upgraded as they're read
  */
 export const receive = (html: string) => {
   const next = buildOf(html)
@@ -124,13 +125,13 @@ navigator.serviceWorker?.addEventListener("controllerchange", () => void Promise
 document.addEventListener("visibilitychange", revalidate)
 
 /**
- * A data file the page's head names, loaded by a schema its JSON must fit or by a loader of its own. It's loaded
- * again whenever a newer build names a newer file, and only swapped in once loaded, so what depends on it never
- * waits. Pages await the first load, so they start with their data, however many tries that takes. With a fallback,
- * they start with that if the first try fails, and the file is swapped in once it loads. A newer build announced
- * meanwhile is loaded instead
+ * A data file the page's head names, loaded by its format, or a schema its JSON must fit as version 0, or by a loader
+ * of its own. It's loaded again whenever a newer build names a newer file, and only swapped in once loaded, so what
+ * depends on it never waits. Pages await the first load, so they start with their data, however many tries that
+ * takes. With a fallback, they start with that if the first try fails, and the file is swapped in once it loads. A
+ * newer build announced meanwhile is loaded instead
  */
-export const latest = async <T,>(name: string, by: StandardSchemaV1<unknown, T> | Loader<T> = response => readJson<T>(response), fallback?: () => T): Promise<DerivativeNode<T>> => {
+export const latest = async <T,>(name: string, by: By<T> | Loader<T> = response => readJson<T>(response), fallback?: () => T): Promise<DerivativeNode<T>> => {
   const url = announced.data[name]
   if (url === undefined)
     throw new Error(`The page names no data ${name}`)

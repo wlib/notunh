@@ -200,8 +200,9 @@ test("a model the build folds, as it's stored, always fits the schema the page l
   fc.assert(fc.property(fc.array(fc.array(lognormal(4, 0.3), { maxLength: 10 }), { minLength: 1, maxLength: 10 }), days => {
     const stored = JSON.parse(JSON.stringify(fold(days)))
     expect(v.is(Model, stored)).toBe(true)
-    expect(asModel(stored)).toBe(stored)
+    expect(asModel(stored)).toEqual(stored)
     expect(asModel({ ...stored, version: 2 })).toEqual(emptyModel())
+    expect(asModel({ ...stored, version: 5 })).toEqual(emptyModel())
   }))
 )
 

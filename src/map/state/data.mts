@@ -2,7 +2,7 @@
 
 import { r } from "bruh/reactive"
 import { boardableStops, loadFeed } from "../../transit/feed.mts"
-import { Model, emptyModel } from "../../transit/models/model.mts"
+import { ModelFormat, emptyModel } from "../../transit/models/model.mts"
 import { WalkData, loadGraph } from "../../routing/graph.mts"
 import { createWalks } from "../../routing/walks.mts"
 import { Places } from "../../places/buildings.mts"
@@ -32,7 +32,7 @@ const NICKNAMES = CHAPTERS.filter(isPlaced).flatMap(chapter => aliasesOf(chapter
 export const loadMapData = async () => {
   const [feed, model, network, gazetteerData, tiles, style, places, events, rooms, coursesIndex, prereqsIndex, parking, menus, profiles] = await Promise.all([
     latest("gtfs", loadFeed),
-    latest("model", Model, emptyModel),
+    latest("model", ModelFormat, emptyModel),
     latest("walk", WalkData),
     latest("gazetteer", Gazetteer),
     latest("tiles", TilesManifest),

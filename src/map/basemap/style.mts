@@ -9,6 +9,7 @@ import * as v from "valibot"
 import { TILE_SETS, tileTemplate } from "./tiles.mts"
 import { Retain } from "../../shell/manifest.mts"
 import { getJson, objectOf, readJson } from "../../shared/json.mts"
+import { format } from "../../shared/format.mts"
 
 export const LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
 /** Where each style's folder is, beside the tiles' */
@@ -25,10 +26,11 @@ export type LoadedStyle = StyleManifest & { style: StyleSpecification }
 
 /**
  * The manifest and its style, loaded as one. A style that can't be had is then a failed load of the manifest, retried
- * like any other (src/shell/build.mts), rather than a style the map waits on forever
+ * like any other (src/shell/build.mts), rather than a style the map waits on forever. The manifest is read as its
+ * format says (src/shared/format.mts); the style's own version is MapLibre's
  */
 export const loadStyle = async (response: Response, init: RequestInit): Promise<LoadedStyle> => {
-  const manifest = await readJson(response, StyleManifest)
+  const manifest = await readJson(response, format(StyleManifest))
   return { ...manifest, style: await getJson(manifest.url, { ...init, schema: objectOf<StyleSpecification>() }) }
 }
 // Liberty's vector tiles, and ours of what they leave out

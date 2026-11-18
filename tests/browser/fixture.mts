@@ -6,7 +6,8 @@
 // The releases are made from one build. B renames the dining page's entry chunk and bumps the release, as newer code
 // would. C renames the dining index too and changes a hall's name in it, as newer data would. D is C with a service
 // worker of other bytes, as a release changing the worker itself would be. R is A published again after them all, as
-// rolling back to it is (scripts/republish.mts).
+// rolling back to it is (scripts/republish.mts). F is C with its dining index of a newer version than the code built
+// reads (src/shared/format.mts), as a release that changes what the index means would be.
 //
 // H is the release production served before pages named their data, with its own worker (app-v1): the home and
 // dining pages and what they name of commit 061f33e's build, as `git worktree add` of that commit, `npm ci`, and
@@ -21,7 +22,7 @@ import type { AddressInfo } from "node:net"
 import { test, type Page } from "@playwright/test"
 import { republished } from "../../scripts/republish.mts"
 
-export const RELEASES = ["A", "B", "C", "D", "R", "H"] as const
+export const RELEASES = ["A", "B", "C", "D", "R", "H", "F"] as const
 
 const HISTORICAL = new URL("release-061f33e/", import.meta.url).pathname
 const DINING_FIXTURES = new URL("../fixtures/data/public/", import.meta.url).pathname
@@ -100,12 +101,17 @@ const deriveReleases = (dist: string): Record<ReleaseName, Release> => {
   menus.halls[0].name += HALL_SUFFIX
   const pageC = withRelease(html.replace(entry, entryB).replace(index, indexC), "C")
   const filesC: [string, Buffer][] = [[entryB, readFileSync(join(dist, entry))], [indexC, Buffer.from(JSON.stringify(menus))]]
+  const indexF = renamed(index, "FFFFFFFF")
   return {
     A: { pages: new Map([["/dining/index.html", withRelease(html, "A")]]), files: new Map() },
     B: { pages: new Map([["/dining/index.html", withRelease(html.replace(entry, entryB), "B")]]), files: new Map([[entryB, readFileSync(join(dist, entry))]]) },
     C: { pages: new Map([["/dining/index.html", pageC]]), files: new Map(filesC) },
     D: { pages: new Map([["/dining/index.html", withRelease(pageC, "D")]]), files: new Map([...filesC, ["/sw.js", Buffer.concat([Buffer.from("// Release D\n"), readFileSync(join(dist, "sw.js"))])]]) },
     R: { pages: new Map([["/dining/index.html", republished(withRelease(html, "A"), new Date(releaseAt("R")))]]), files: new Map() },
+    F: {
+      pages: new Map([["/dining/index.html", withRelease(html.replace(entry, entryB).replace(index, indexF), "F")]]),
+      files: new Map([[entryB, readFileSync(join(dist, entry))], [indexF, Buffer.from(JSON.stringify({ ...menus, version: 1 }))]])
+    },
     H: {
       pages: new Map(["/index.html", "/dining/index.html"].map(page => [page, readFileSync(join(HISTORICAL, page), "utf8")])),
       files: new Map([...filesUnder(HISTORICAL), ...filesUnder(DINING_FIXTURES, "data/dining/*")])

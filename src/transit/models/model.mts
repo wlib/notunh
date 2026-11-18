@@ -10,6 +10,7 @@
 // is learned
 
 import * as v from "valibot"
+import { format, read } from "../../shared/format.mts"
 import { objectOf } from "../../shared/json.mts"
 import { Day, localDay, localHour, weekday } from "../../shared/time.mts"
 
@@ -103,9 +104,18 @@ export const emptyModel = (): Model => ({
   scores:   emptyScores()
 })
 
-/** A model as stored, or an empty one for anything that isn't one, like one of an older shape */
-export const asModel = (value: unknown): Model =>
-  v.is(Model, value) ? value : emptyModel()
+/**
+ * How the model is read wherever it's kept, bundled with a page or stored by the Worker (src/shared/format.mts). Its
+ * version is bumped when its statistics change shape or meaning, and nothing upgrades an older one, which is learned
+ * afresh instead (scripts/learn.mts)
+ */
+export const ModelFormat = format(Model, 4)
+
+/** A model as stored, or an empty one for anything this doesn't read as one, like one of another version */
+export const asModel = (value: unknown): Model => {
+  const found = read(ModelFormat, value)
+  return "value" in found ? found.value : emptyModel()
+}
 
 /** Which of LEADS a forecast some seconds ahead is scored with */
 export const leadIndex = (seconds: number) => {

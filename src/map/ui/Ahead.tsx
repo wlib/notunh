@@ -1,10 +1,11 @@
 /** @jsxImportSource bruh/browser */
 
 // What's ahead: the academic calendar's deadlines, registration windows, breaks and term dates
-// (src/courses/calendar.mts), home games, one-off events from UNH's pages, and what's yours further out. The home
-// shows three rows at most: one of yours, one for everyone and one public event. The term is a page of its own, by
-// month, its registration windows narrowed to your class standing and its games only those you've saved, as the rest
-// are Athletics' schedule, not a plan. Dates in the next few days join Yours
+// (src/courses/calendar.mts), home games, one-off events from UNH's pages, and what's yours further out, your finals
+// among it where this device is told them (state/finals.mts). The home shows three rows at most: one of yours, one for
+// everyone and one public event. The term is a page of its own, by month, its registration windows narrowed to your
+// class standing and its games only those you've saved, as the rest are Athletics' schedule, not a plan. Dates and
+// finals in the next few days join Yours
 
 import { r } from "bruh/reactive"
 import type { Event } from "../../social/event.mts"
@@ -15,7 +16,7 @@ import { type Day as CalendarDay, addDays, localDay } from "../../shared/time.mt
 import { Day } from "../../shell/intl.tsx"
 import { state } from "../state/map.mts"
 import { nowMs } from "./common.tsx"
-import { EventRow, Head, Row } from "./Pages.tsx"
+import { EventRow, FinalRow, Head, Row } from "./Pages.tsx"
 
 /** How many days ahead a deadline or a break joins Yours */
 const DUE_DAYS = 3
@@ -64,6 +65,16 @@ export const dueSoon = () => {
   return datesFrom(today, addDays(today, DUE_DAYS + 1)).filter(({ kind }) => kind !== "term")
 }
 
+/** Your finals from one day to before another, those under way included, soonest first */
+const finalsBetween = (from: CalendarDay, to: CalendarDay) =>
+  state.yourFinals.value.filter(({ final, event }) => final.day >= from && final.day < to && event.end > nowMs())
+
+/** Your finals in the next few days, in Yours as they're near */
+export const finalsSoon = () => {
+  const today = localDay(nowMs())
+  return finalsBetween(today, addDays(today, DUE_DAYS + 1))
+}
+
 /** A game at home: Athletics', at a place on the map */
 const isHomeGame = ({ source, place }: Pick<Event, "source" | "place">) =>
   source === "athletics" && place !== undefined
@@ -91,7 +102,9 @@ export const PlanAhead = () =>
     const events = eventsBetween(from, to)
     const opening = dates.find(date => date.kind === "registration" && date.audience === state.standing.value)
     const saved = events.find(item => item.mine)
-    const personal = saved && (!opening || saved.day < opening.day) ? saved : opening
+    const [first] = finalsBetween(from, to)
+    const final = first && { day: first.final.day, yours: first }
+    const personal = [saved, opening, final].flatMap(item => item ? [item] : []).sort((a, b) => a.day.localeCompare(b.day))[0]
     const campus = dates.find(date => !date.audience && date.kind !== "registration")
     const highlight = events.find(item => item.highlight && item !== personal)
     const picks = [personal, campus, highlight].flatMap(item => item ? [item] : [])
@@ -100,7 +113,7 @@ export const PlanAhead = () =>
       return null
     return <>
       <h2 class="eyebrow">Plan ahead</h2>
-      <ul class="rows ahead">{picks.map(item => "event" in item ? <EventRow event={item.event} day="" /> : <DateRow date={item} />)}</ul>
+      <ul class="rows ahead">{picks.map(item => "event" in item ? <EventRow event={item.event} day="" /> : "yours" in item ? <FinalRow yours={item.yours} /> : <DateRow date={item} />)}</ul>
       <button type="button" class="more" onclick={() => state.go({ kind: "ahead" })}>Full term ›</button>
     </>
   })
@@ -117,7 +130,8 @@ export const AheadView = () => {
       ...datesFrom(from, to, standing).map(date => ({ day: date.day, row: <DateRow date={date} /> })),
       ...eventsBetween(from, to)
         .filter(({ event, mine }) => mine || !isHomeGame(event))
-        .map(({ day, event }) => ({ day, row: <EventRow event={event} day="" /> }))
+        .map(({ day, event }) => ({ day, row: <EventRow event={event} day="" /> })),
+      ...finalsBetween(from, to).map(yours => ({ day: yours.final.day, row: <FinalRow yours={yours} /> }))
     ].sort((a, b) => a.day.localeCompare(b.day))
     const months = groupBy(items, ({ day }) => day.slice(0, 7))
     return <>

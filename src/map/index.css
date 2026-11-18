@@ -1763,6 +1763,21 @@ body {
   font-weight: 500;
 }
 
+/* A final, as a row (FinalRow in ui/Pages.tsx) or in your week, in the accent as deadlines are; a clash bold */
+.final .row-time,
+.week-class.final strong {
+  color: var(--accent);
+}
+
+.week-class.final {
+  border-color: var(--accent);
+}
+
+.clash {
+  font-weight: 600;
+  color: var(--accent);
+}
+
 /* A row that leaves the map, as a chapter's to UNH's page for it */
 a.row {
   color: inherit;

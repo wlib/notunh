@@ -3,8 +3,9 @@
 // The courses beside the map's own: search's labelled groups of instructors, sections and rooms under the places
 // (Search.tsx), the instructor's row already answering with their next scheduled class, its room, and Directions;
 // and My courses, in You, the sections saved as a week, with what's in the calendars imported here beside them
-// (Calendars.tsx), your feed of them for a calendar app, and a pasted schedule saved in one go
-// (src/courses/saved.mts). Your next saved class is a row of Yours on the home (Home.tsx)
+// (Calendars.tsx) and your finals in theirs, your finals listed where this device is told them (state/finals.mts),
+// your feed of them for a calendar app, and a pasted schedule saved in one go (src/courses/saved.mts). Your next
+// saved class is a row of Yours on the home (Home.tsx)
 
 import { type DerivativeNode, r } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
@@ -24,7 +25,7 @@ import { today as currentDay } from "../../shell/lifecycle.mts"
 import { state } from "../state/map.mts"
 import { Feed } from "./Calendars.tsx"
 import { nowMs } from "./common.tsx"
-import { DayName, Row, SectionRow, directions, roomOf, sectionPage } from "./Pages.tsx"
+import { DayName, FinalRow, Row, SectionRow, directions, roomOf, sectionPage } from "./Pages.tsx"
 
 /** Done with search once a result's tapped: the field let go of, which puts the rest of the panel back */
 const blur = () =>
@@ -103,8 +104,8 @@ export const CourseResults = ({ query }: { query: DerivativeNode<string> }) =>
   })
 
 /**
- * Your week, Monday first, the coming week's from the weekend: the saved sections' classes and what's in the
- * calendars imported here, an imported class that's saved too told once, a day with nothing kept only on weekdays
+ * Your week, Monday first, the coming week's from the weekend: the saved sections' classes and finals and what's in
+ * the calendars imported here, an imported class that's saved too told once, a day with nothing kept only on weekdays
  */
 const Week = ({ courses }: { courses: Courses }) =>
   r(() => {
@@ -117,30 +118,32 @@ const Week = ({ courses }: { courses: Courses }) =>
       .map(({ day, classes }) => ({
         day,
         classes,
+        finals:  state.yourFinals.value.filter(({ final }) => final.day === day),
         imports: imports.filter(one => localDay(one.start) === day && !classes.some(({ event, section }) => isClassAt(one, section, event.start)))
       }))
-      .filter(({ classes, imports }, i) => i < 5 || classes.length || imports.length)
+      .filter(({ classes, finals, imports }, i) => i < 5 || classes.length || finals.length || imports.length)
     return (
       <div class="week" style={`--days: ${week.length}`} aria-label="Your week">
-        {week.map(({ day, classes, imports }) =>
+        {week.map(({ day, classes, finals, imports }) =>
           <div class={{ "week-day": true, today: day === now }}>
             <span class="week-name"><Day of={day} weekday="short" /></span>
             {[
               ...classes.map(({ event, term, section }) => ({ start: event.start, what: courseOf(section), where: roomOf(event.where), to: sectionPage(term, section) as Page | undefined })),
+              ...finals.map(({ event, term, section, final }) => ({ start: event.start, what: `${courseOf(section)} final`, where: final.rooms.length > 1 ? "Common" : roomOf(event.where), to: sectionPage(term, section), isFinal: true })),
               ...imports.map(({ event, start, match: { found, place } }) => ({
                 start,
                 what:  found ? courseOf(found.section) : event.title,
                 where: event.where ? roomOf(event.where) : place ?? "",
                 to:    found ? sectionPage(found.term, found.section) : place ? { kind: "place" as const, name: place } : undefined
               }))
-            ].sort((a, b) => a.start - b.start).map(({ start, what, where, to }) => {
+            ].sort((a, b) => a.start - b.start).map(({ start, what, where, to, isFinal = false }: { start: number, what: string, where: string, to?: Page, isFinal?: boolean }) => {
               const said = <>
                 <span><ClockTime at={new Date(start)} /></span>
                 <strong>{what}</strong>
                 <span class="muted truncate">{where}</span>
               </>
               return to
-                ? <button type="button" class="week-class" onclick={() => state.go(to)}>{said}</button>
+                ? <button type="button" class={{ "week-class": true, final: isFinal }} onclick={() => state.go(to)}>{said}</button>
                 : <div class="week-class">{said}</div>
             })}
           </div>
@@ -173,7 +176,17 @@ const Paste = ({ courses }: { courses: Courses }) => {
   )
 }
 
-/** My courses, a section of You: the week, the sections saved, your feed of them, and a pasted schedule */
+/** Your saved sections' finals, soonest first, where this device is told them, till the last is over */
+const Finals = () =>
+  r(() => {
+    const finals = state.yourFinals.value.filter(({ event }) => event.end > nowMs())
+    return finals.length > 0 && <>
+      <h4 class="eyebrow">Finals</h4>
+      <ul class="rows" aria-label="Your finals">{finals.map(yours => <FinalRow yours={yours} />)}</ul>
+    </>
+  })
+
+/** My courses, a section of You: the week, the sections saved, their finals, your feed of them, and a pasted schedule */
 export const MyCourses = () => {
   state.wantCourses()
   return (
@@ -196,6 +209,7 @@ export const MyCourses = () => {
                     } />
                   )}
                 </ul>
+                <Finals />
                 <Feed />
               </>
             : <p class="muted">Save a section from its page, or paste your schedule.</p>}

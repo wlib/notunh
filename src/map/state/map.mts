@@ -1,7 +1,7 @@
 // The map page's state: your location, the live buses, which you're on, your trip, today's events and what's yours of
-// them, the courses, your calendars, parking, the rooms to book, the page the sheet shows, and what the map shows.
-// Starting it starts its polling and watching, and stop ends them, so the page owns the one it starts, and a test can
-// make its own
+// them, the courses and your finals, your calendars, parking, the rooms to book, the page the sheet shows, and what
+// the map shows. Starting it starts its polling and watching, and stop ends them, so the page owns the one it starts,
+// and a test can make its own
 
 import { type MapData, loadMapData } from "./data.mts"
 import { createLocation } from "./location.mts"
@@ -16,6 +16,7 @@ import { createCalendars } from "./calendars.mts"
 import { createPage } from "./page.mts"
 import { createParkingState } from "./parking.mts"
 import { createRooms } from "./rooms.mts"
+import { createFinals } from "./finals.mts"
 import type { Own } from "../../shell/state.mts"
 
 export const createMapState = (data: MapData) => {
@@ -31,7 +32,8 @@ export const createMapState = (data: MapData) => {
   const calendars = createCalendars({ ...data, ...live, ...courses })
   const parking = createParkingState(data)
   const rooms = createRooms({ ...data, ...courses }, own)
-  const state = { ...data, ...location, ...live, ...riding, ...trip, ...today, ...saves, ...courses, ...calendars, ...parking, ...rooms, ...createPage(own) }
+  const finals = createFinals({ ...data, ...live, ...courses })
+  const state = { ...data, ...location, ...live, ...riding, ...trip, ...today, ...saves, ...courses, ...calendars, ...parking, ...rooms, ...finals, ...createPage(own) }
   return { ...state, ...createView(state), stop: () => stops.splice(0).forEach(stop => stop()) }
 }
 

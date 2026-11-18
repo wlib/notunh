@@ -5,15 +5,13 @@ import "./index.css"
 
 import { r } from "bruh/reactive"
 import { isUnknownRoom, openRoom } from "./state.mts"
-import { AppTitle } from "../shell/ui.tsx"
+import { PageHead } from "../shell/ui.tsx"
 import { RoomList } from "./ui/RoomList.tsx"
 import { RoomView } from "./ui/RoomView.tsx"
 
 const App = () =>
   <main class="laundry">
-    <header>
-      <AppTitle page="Laundry" />
-    </header>
+    <PageHead page="Laundry" sheet="/map/laundry" />
     {r(() =>
       isUnknownRoom.value ? <p class="empty muted">There's no such room. <a href="/laundry/">All rooms</a></p> :
       openRoom.value      ? <RoomView id={openRoom.value} /> :

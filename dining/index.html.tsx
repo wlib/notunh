@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { MetaDocument } from "bruh/server"
 import * as v from "valibot"
 import { Head } from "../src/shell/Head.tsx"
-import { AppTitle } from "../src/shell/ui.tsx"
+import { PageHead } from "../src/shell/ui.tsx"
 import { PAGES } from "../src/shell/pages.mts"
 import { type Meal, MEALS, MenusIndex, fileUrl } from "../src/dining/menus.mts"
 import { MINUTES_A_DAY, spansOn, wallDate } from "../src/dining/hours.mts"
@@ -62,9 +62,7 @@ export default () =>
         {/* What the app replaces once it's loaded: its header, what it does, which names the halls, and today's menus */}
         <div id="app">
           <main class="dining">
-            <header>
-              <AppTitle page="Dining" />
-            </header>
+            <PageHead page="Dining" sheet="/map/dining" />
             <section class="shell">
               <p class="muted">{PAGES["/dining/"].description}</p>
               <Today day={localDay(Date.now())} />

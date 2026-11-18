@@ -14,3 +14,13 @@ export const AppTitle = ({ page }: { page: string }) =>
 /** An icon from base.css, like "close" */
 export const Icon = ({ name }: { name: string }) =>
   <span class={`icon icon-${name}`} aria-hidden="true" />
+
+/**
+ * The head of a page of its own, like dining's: the way back to where the sheet has it, then the app's title. A visit
+ * that came from the map goes back to it as it was left (index.mts); any other follows the link
+ */
+export const PageHead = ({ page, sheet }: { page: string, sheet: string }) =>
+  <header class="page-head">
+    <a class="back" href={sheet} data-back><span aria-hidden="true">‹</span> Map</a>
+    <AppTitle page={page} />
+  </header>

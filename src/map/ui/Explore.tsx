@@ -57,7 +57,14 @@ export const ActivityView = ({ id }: { id: string }) =>
     focusOn({ kind: "activity", id }, next?.place ?? listing.place, next?.start)
     const following = r(() => state.isFollowing(listing.key))
     return <>
-      <Head kind={<>{listing.host} · {listing.interest}</>} title={listing.name} />
+      <div class="activity-head">
+        <Head kind={<>{listing.host} · {listing.interest}</>} title={listing.name} />
+        {next && <p class="next-date" aria-label="Next session">
+          <Day of={localDay(next.start)} weekday="short" />
+          <strong><Day of={localDay(next.start)} day="numeric" /></strong>
+          <ClockTime at={new Date(next.start)} />
+        </p>}
+      </div>
       <p class="view-facts">
         {listing.days.length
           ? <><strong>Every <Weekdays days={listing.days} /></strong>{listing.times === 1 ? <> · <ClockTime at={new Date(next!.start)} /></> : <> · <Count value={listing.times} /> times</>}{listing.where && ` · ${listing.where}`}</>
@@ -70,7 +77,7 @@ export const ActivityView = ({ id }: { id: string }) =>
         </button>
         <a class="button" href={listing.url} target="_blank" rel="noopener">{SOURCE_LINK[listing.kind]}</a>
       </div>
-      {r(() => following.value && <p class="view-facts muted">Its next session stays in Yours.</p>)}
+      <p class="view-facts muted">{r(() => following.value ? "Its next session stays in Yours." : "Following keeps its next session in Yours. A star saves one session alone.")}</p>
       {listing.sessions.length > 0 && <>
         <h3 class="eyebrow">Next sessions</h3>
         <ul class="rows">{listing.sessions.slice(0, 5).map(event => <EventRow event={event} day="" />)}</ul>
@@ -148,7 +155,7 @@ export const ExploreView = () => {
     </select>
   return (
     <>
-      <Head title="Clubs & activities" />
+      <Head title="Clubs & activities" poster={r(() => <Counted value={state.listings.value.filter(listing => listing.sessions.length).length} one="activity meeting" other="activities meeting" />)} />
       <div class="chips filters" role="group" aria-label="Could I go?">
         <FilterChip label="Meets today" isOn={() => filters.value.today} toggle={() => set({ today: !filters.peek().today })} />
         <FilterChip label="Drop-in" isOn={() => filters.value.dropIn} toggle={() => set({ dropIn: !filters.peek().dropIn })} />

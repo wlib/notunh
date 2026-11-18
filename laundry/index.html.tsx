@@ -1,7 +1,7 @@
 /** @jsxImportSource bruh/server */
 import { MetaDocument } from "bruh/server"
 import { Head } from "../src/shell/Head.tsx"
-import { AppTitle } from "../src/shell/ui.tsx"
+import { PageHead } from "../src/shell/ui.tsx"
 import { PAGES } from "../src/shell/pages.mts"
 import { ROOMS, pathOf } from "../src/laundry/rooms.mts"
 
@@ -19,9 +19,7 @@ export default () =>
             No counts, which would be stale */}
         <div id="app">
           <main class="laundry">
-            <header>
-              <AppTitle page="Laundry" />
-            </header>
+            <PageHead page="Laundry" sheet="/map/laundry" />
             <section class="shell">
               <p class="muted">{PAGES["/laundry/"].description}</p>
             </section>

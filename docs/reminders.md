@@ -104,6 +104,6 @@ The Worker needs a VAPID key pair as secrets; without one, reminders aren't offe
 
 - **The service worker doesn't replan**: it rewords the stored itinerary with the first bus's time; the map replans when next opened.
 - **Later buses of a trip with a change aren't watched**: the margin says whether the change still holds, and past it the push says to open notunh.
-- **Rolling back** past this storage: another entry `version` reads as nothing kept but the device, whose old watches run out on the Worker.
+- **Rolling back** past this storage: an entry of a newer `version` reads as nothing kept but the device and is never written over ([storage.md](storage.md#versions)), so no reminder is set or cancelled from the phone until the newer code is back; its watches go on at the Worker.
 - **Previews have no Durable Object binding or secrets**, so reminders are off there and `/api/push/key` 404s; whether wrangler's `previews` block takes `durable_objects` is unverified.
 - **Not verified on a device**: whether `close()` works on current iOS; push latency and alarm precision; a check's CPU in production; how a push service counts a message's size (taken as 4 KB of body).

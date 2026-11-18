@@ -119,6 +119,25 @@ test("what version 2 kept reads as version 3 without visits or queues, and is wr
   expect(storage.entriesOf(CACHE).get("/reminders.json")).toEqual({ version: 3, device: made, reminders: [kept("r1"), kept("r2")] })
 })
 
+test("what newer code kept, as any version past this one, reads as no reminders of this device's, and every change rejects, so it's never written over", async () => {
+  await fc.assert(fc.asyncProperty(fc.integer({ min: 4, max: 99 }), fc.jsonValue(), async (version, more) => {
+    storage = browserStorage()
+    vi.stubGlobal("caches", storage.caches)
+    vi.stubGlobal("navigator", { locks: storage.locks })
+    const made = { id: "AJikgiLS5iAldoCJ-ZWM2w", secret: "054QSc6VenuGjYvd9tuQB3PYiak9BNliRsV4Brc5YRM" }
+    await (await storage.caches.open(CACHE)).put("/reminders.json", new Response(JSON.stringify({ version, device: made, reminders: [kept("r1")], more })))
+    const before = storage.entriesOf(CACHE).get("/reminders.json")
+    expect(await reminders()).toEqual([])
+    expect(await reminderOf("r1")).toBeUndefined()
+    // It's still this device to the Worker and everything else, with nothing written to say so
+    expect(await deviceKept()).toEqual(made)
+    expect(await device()).toEqual(made)
+    for (const attempt of [keep(kept("r2")), forget("r1"), forgetAll(), transition("r1", "set", "cancelling"), amend("r1", reminder => ({ ...reminder }))])
+      await expect(attempt).rejects.toThrow(`version ${version}, newer than this reads`)
+    expect(storage.entriesOf(CACHE).get("/reminders.json")).toEqual(before)
+  }), { numRuns: 20 })
+})
+
 test("an amend edits one reminder under the lock, and says whether it changed it", async () => {
   await keep(kept("r1"))
   await keep(kept("r2"))

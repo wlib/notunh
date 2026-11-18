@@ -1,10 +1,16 @@
 // Fetching JSON, which the pages, the Worker, and the build all do the same way. Given a schema (any Standard Schema,
 // https://standardschema.dev), the answer is checked against it, so a file or answer of the wrong shape fails where
-// it's fetched, like a failed fetch, rather than wherever it's first misread. Ours are Valibot's, and the helpers
-// below are the few every boundary shares
+// it's fetched, like a failed fetch, rather than wherever it's first misread. Given a format (format.mts), which data
+// of our own making that outlives its code goes by, it's read as that says: an older version upgraded, and a newer
+// one refused as newer, apart from one that's wrong. Ours are Valibot's, and the helpers below are the few every
+// boundary shares
 
 import * as v from "valibot"
 import type { StandardSchemaV1 } from "@standard-schema/spec"
+import { type Format, read } from "./format.mts"
+
+/** What JSON is checked by: a schema, or a format, for what says its version */
+export type By<T> = StandardSchemaV1<unknown, T> | Format<T>
 
 // Issues named in an error, of however many
 const NAMED = 3
@@ -16,24 +22,33 @@ export const describeIssues = (issues: readonly StandardSchemaV1.Issue[]) =>
     return at ? `${at}: ${message}` : message
   }).join("; ") + (issues.length > NAMED ? `; and ${issues.length - NAMED} more` : "")
 
-/** A value as a schema makes it, or an error saying where it came from and what's wrong with it */
-export const checked = async <T,>(schema: StandardSchemaV1<unknown, T>, value: unknown, from: string | URL): Promise<T> => {
-  const result = await schema["~standard"].validate(value)
-  if (result.issues)
+/** Whether an error says data is of a newer version than the code reading it knows, which no retry changes */
+export const isNewerFormat = (error: unknown) =>
+  error instanceof DOMException && error.name === "VersionError"
+
+/**
+ * A value as a schema or a format makes it, or an error saying where it came from and what's wrong with it: a
+ * VersionError where it's of a newer version than its format reads
+ */
+export const checked = async <T,>(by: By<T>, value: unknown, from: string | URL): Promise<T> => {
+  const result = "upgrades" in by ? read(by, value) : await by["~standard"].validate(value)
+  if ("newer" in result)
+    throw new DOMException(`${from} is of version ${result.newer}, newer than this reads`, "VersionError")
+  if ("issues" in result && result.issues)
     throw new Error(`Unexpected JSON from ${from}: ${describeIssues(result.issues)}`)
-  return result.value
+  return (result as { value: T }).value
 }
 
-/** A response's JSON, as its schema makes it if it has one, or an error saying what it answered instead */
-export const readJson = async <T = unknown,>(response: Response, schema?: StandardSchemaV1<unknown, T>, from: string | URL = response.url): Promise<T> => {
+/** A response's JSON, as its schema or format makes it if it has one, or an error saying what it answered instead */
+export const readJson = async <T = unknown,>(response: Response, by?: By<T>, from: string | URL = response.url): Promise<T> => {
   if (!response.ok)
     throw new Error(`${response.status} from ${from}`)
   const body: unknown = await response.json()
-  return schema ? checked(schema, body, from) : body as T
+  return by ? checked(by, body, from) : body as T
 }
 
-/** What a URL answers with as JSON, as its schema makes it if it has one, or an error saying what it answered instead */
-export const getJson = async <T = unknown,>(url: string | URL, { schema, ...init }: RequestInit & { schema?: StandardSchemaV1<unknown, T> } = {}): Promise<T> =>
+/** What a URL answers with as JSON, as its schema or format makes it if it has one, or an error saying what it answered instead */
+export const getJson = async <T = unknown,>(url: string | URL, { schema, ...init }: RequestInit & { schema?: By<T> } = {}): Promise<T> =>
   readJson(await fetch(url, init), schema, url)
 
 /** A value as gzipped JSON, as the Worker keeps what it stores */

@@ -28,6 +28,7 @@ import { vapidOf } from "./reminders.mts"
 import { devices, emails, going, links, marks, pins, reports, state } from "./schema.mts"
 import { type Credential, cookieOf, credentialFrom } from "./session.mts"
 import { type Key, Entries, FEED, isSynced } from "../src/shared/sync.mts"
+import { type Format, readKept } from "../src/shared/format.mts"
 
 type Worker = { Bindings: Env, Variables: { who: Who, credential: Credential } }
 
@@ -413,8 +414,18 @@ social.post("/api/pins/:id/reports", on("pins"), limited, ...onPin(Device, false
 
 //#region Linking devices
 
-/** Whether a row written to state is newer than the one there, as isNewer in src/shared/sync.mts decides */
-const isNewerRow = sql`excluded."at" > ${state.at} or (excluded."at" = ${state.at} and excluded."by" > ${state.by})`
+/** The version a value kept says it is, as versionOf in src/shared/format.mts reads it: a safe whole number above 0 under version, else 0 */
+const versionSql = (value: SQL) =>
+  sql`iif(json_type(${value}, '$.version') = 'integer' and json_extract(${value}, '$.version') between 1 and 9007199254740991, json_extract(${value}, '$.version'), 0)`
+
+/**
+ * Whether a row written to state is newer than the one there, as isNewer in src/shared/sync.mts decides: of a newer
+ * version, else of the same and written later, or as late by a device that sorts after
+ */
+const isNewerRow = (() => {
+  const [written, there] = [versionSql(sql`excluded."value"`), versionSql(sql`${state.value}`)]
+  return sql`${written} > ${there} or (${written} = ${there} and (excluded."at" > ${state.at} or (excluded."at" = ${state.at} and excluded."by" > ${state.by})))`
+})()
 
 /** A row written to state in place of the one there, which isNewerRow allows */
 const keptIfNewer = { value: sql`excluded."value"`, at: sql`excluded."at"`, by: sql`excluded."by"` }
@@ -598,9 +609,9 @@ export const pinsOf = async (db: D1Database, person: string, now: number): Promi
 export const personOfFeed = async (db: D1Database, token: string) =>
   (await drizzle(db).select({ person: state.person }).from(state).where(and(sql`${state.key} = ${sql.raw(`'${FEED}'`)}`, eq(state.value, token))))[0]?.person
 
-/** What a person keeps under a key that's theirs, or none */
-export const kept = async (db: D1Database, person: string, key: Key): Promise<unknown> =>
-  (await drizzle(db).select({ value: state.value }).from(state).where(and(eq(state.person, person), eq(state.key, key))))[0]?.value
+/** What a person keeps under a key that's theirs, as its format reads it: as nothing kept where there's none or newer code wrote it */
+export const kept = async <T,>(db: D1Database, person: string, key: Key, by: Format<T>): Promise<T> =>
+  readKept(by, (await drizzle(db).select({ value: state.value }).from(state).where(and(eq(state.person, person), eq(state.key, key))))[0]?.value)
 
 /** Drops pins long over, with everything of theirs, and codes expired, as the nightly prune */
 export const pruneSocial = (db: ReturnType<typeof drizzle>, now: number) =>

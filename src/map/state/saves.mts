@@ -6,7 +6,7 @@
 import { r, type DerivativeNode } from "bruh/reactive"
 import * as v from "valibot"
 import type { Event, Pin } from "../../social/event.mts"
-import { SAVES, type Saves, isFollowed, isGoing, isSaved, isYours, readSaves, setOccurrenceSaved, setSeriesFollowed } from "../../social/saves.mts"
+import { SAVES, SavesFormat, isFollowed, isGoing, isSaved, isYours, setOccurrenceSaved, setSeriesFollowed } from "../../social/saves.mts"
 import { type Listing, directory, seriesOf } from "../../social/series.mts"
 import { STANDINGS, type Standing } from "../../courses/calendar.mts"
 import { distinct, isSameSet, remembered } from "../../shell/state.mts"
@@ -16,7 +16,7 @@ import type { MapData } from "./data.mts"
 const YOURS_MS = 7 * 86_400_000
 
 export const createSaves = ({ events, now, pins }: Pick<MapData, "events"> & { now: DerivativeNode<number>, pins: DerivativeNode<Pin[]> }) => {
-  const saves = remembered<Saves>(SAVES, readSaves)
+  const saves = remembered(SAVES, SavesFormat)
   const standing = remembered<Standing | null>("class-standing", stored => v.is(v.picklist(STANDINGS), stored) ? stored : null)
 
   // Made again each minute, as sessions end

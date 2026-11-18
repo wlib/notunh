@@ -11,6 +11,7 @@ import { type CourseEvent, type Meeting, type Section, type Term, byStart, occur
 import type { Found } from "./search.mts"
 import { type Visit, visitOf } from "../shared/visit.mts"
 import { type Day, addDays, localDay, weekday } from "../shared/time.mts"
+import { format } from "../shared/format.mts"
 
 /** Where the saved sections are kept */
 export const SAVED = "courses-saved"
@@ -25,9 +26,12 @@ export const parseKey = (key: string) => {
   return term ? { term, crn } : undefined
 }
 
-/** What's stored, which an older version may have written: well-formed keys, each once, in order */
+/** What's stored, whatever it is: well-formed keys, each once, in order */
 export const readSaved = (stored: unknown): string[] =>
   Array.isArray(stored) ? [...new Set(stored.filter((key): key is string => typeof key === "string" && parseKey(key) !== undefined))] : []
+
+/** How the saved sections are read wherever they're kept, by the page and by the Worker for your feed (src/shared/format.mts) */
+export const SavedFormat = format(readSaved)
 
 /** Whether two sections of a term are one class: the same section, or cross-listed with each other */
 export const isTwin = (a: Section, b: Section) =>

@@ -7,7 +7,7 @@
 
 import { type DerivativeNode, r } from "bruh/reactive"
 import { createCourses, createLaterTerms, laterTerms } from "../../courses/browser/terms.mts"
-import { type Dated, SAVED, datedFrom, nextOf, parseKey, readSaved, resolverOf, savedIn, withSaved, withoutSaved } from "../../courses/saved.mts"
+import { type Dated, SAVED, SavedFormat, datedFrom, nextOf, parseKey, resolverOf, savedIn, withSaved, withoutSaved } from "../../courses/saved.mts"
 import type { Found } from "../../courses/search.mts"
 import { createPrereqs, createPrograms, loadProgram } from "../../programs/browser/prereqs.mts"
 import type { Program } from "../../programs/program.mts"
@@ -20,7 +20,7 @@ import { remembered } from "../../shell/state.mts"
 export const createCoursesState = ({ coursesIndex, prereqsIndex, now }: Pick<MapData, "coursesIndex" | "prereqsIndex"> & { now: DerivativeNode<number> }) => {
   /** Whether anything has asked for the courses yet */
   const isAsked = r(false)
-  const savedKeys = remembered<string[]>(SAVED, readSaved)
+  const savedKeys = remembered(SAVED, SavedFormat)
   const { courses, hasFailed: coursesFailed } = createCourses(coursesIndex, r(() => isAsked.value || savedKeys.value.length > 0))
 
   /** Loads the live terms, if nothing has yet */

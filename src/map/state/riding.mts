@@ -17,7 +17,7 @@ import { isBusy, isVisible } from "../../shell/lifecycle.mts"
 import { type Own, remembered } from "../../shell/state.mts"
 import { HOUR } from "../../shared/time.mts"
 
-// A ride is over this long after the last word of it, though no bus ride takes nearly as long
+// A ride is over this long after it was last set, though no bus ride takes nearly as long
 const RIDE_MS = 2 * HOUR
 // Fixes kept for lining up with buses' reports, which can be this old
 const HISTORY_MS = 3 * 60_000

@@ -1221,6 +1221,53 @@ a.more {
   text-wrap: balance;
 }
 
+/* The clubs' head, a poster as wide as the sheet's content */
+.view-head.poster {
+  gap: 0.35rem;
+  padding: 1rem 5rem 1rem 0.875rem;
+}
+
+.view-head.poster h1 {
+  font-size: clamp(1.5rem, 7.5cqi, 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+}
+
+.view-head.poster p {
+  margin: 0;
+}
+
+/* An activity's head beside the day it next meets, as a ticket's stub says a date */
+.activity-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.view .next-date {
+  display: grid;
+  justify-items: center;
+  min-inline-size: 3.75rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-s);
+  background: var(--print);
+  font-size: 0.7rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--on-print);
+}
+
+.next-date strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
 .view-kind,
 .view-facts {
   font-size: 0.875rem;

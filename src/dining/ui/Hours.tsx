@@ -8,6 +8,7 @@ import type { Span } from "../menus.mts"
 import { MINUTES_A_DAY, spansOn, wallDate, type WallTime } from "../hours.mts"
 import { addDays, type Day as CalendarDay } from "../../shared/time.mts"
 import { slug } from "../../shared/slug.mts"
+import { segmentOf } from "../../map/link.mts"
 import { ClockRange, ClockTime, Day, relativeDay } from "../../shell/intl.tsx"
 
 const HOURS_PAGE = "https://www.unh.edu/dining/about/hours-operation"
@@ -71,6 +72,7 @@ export const HallHours = () =>
         </span>
         <span class="links">
           <a href={HOURS_PAGE} target="_blank" rel="noopener">Hours vary on breaks</a>
+          <a href={`/map/place/${segmentOf(hallName(hall.value))}`}>On the map</a>
           <a href={`/map/?to=dining/${slug(hallName(hall.value))}`}>Directions</a>
         </span>
       </p>

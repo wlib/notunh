@@ -50,8 +50,9 @@
   font-size: 1.15rem;
 }
 
+/* Gold, as what's yours is on the map */
 .star[aria-pressed="true"] {
-  color: var(--accent);
+  color: var(--star);
 }
 
 .usually {

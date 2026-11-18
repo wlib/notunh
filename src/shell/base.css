@@ -16,7 +16,7 @@
      clubs' own page and the way in from the home page, never a state, which the colors above are for */
   --poster:         oklch(39% 0.19 268);
   --on-poster:      oklch(98.6% 0.004 85);
-  --print:          oklch(91% 0.2 124);
+  --print:          oklch(92% 0.165 122);
   --on-print:       oklch(27% 0.07 135);
   --shadow: 0 10px 30px oklch(23% 0.03 265 / 0.16), 0 1px 3px oklch(23% 0.03 265 / 0.12);
   /* Sheets and cards, fields and cards within them, and buttons */
@@ -249,6 +249,21 @@ h2 {
   pointer-events: none;
 }
 
+/* The same in lime with cobalt rings, for what's everyone's rather than yours */
+.poster.print {
+  background: var(--print);
+  color: var(--on-print);
+}
+
+.poster.print::after {
+  background: repeating-radial-gradient(circle at 100% 100%, transparent 0 0.8rem, var(--poster) 0.8rem 0.925rem);
+  opacity: 0.55;
+}
+
+.poster.print .poster-label {
+  color: color-mix(in oklch, var(--on-print) 80%, var(--print));
+}
+
 .poster-label {
   font-size: 0.7rem;
   font-weight: 700;
@@ -321,6 +336,32 @@ a {
   margin-inline: 0.3em;
   color: var(--border);
   font-weight: 400;
+}
+
+/* The head of a page of its own (PageHead in ui.tsx): the way back to the map, as the sheet's pages have it, over the
+   app's title in the display type */
+.page-head {
+  display: grid;
+  gap: 0.125rem;
+  padding-block-end: 0.75rem;
+}
+
+.page-head .back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  min-block-size: var(--tap);
+  padding: 0;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.page-head .app-title {
+  font-size: clamp(1.5rem, 7cqi, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
 }
 
 /* Icons drawn in the text color, sized to the text */

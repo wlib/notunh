@@ -5,16 +5,14 @@ import "./index.css"
 
 import { r } from "bruh/reactive"
 import { index, isSearching } from "./state.mts"
-import { AppTitle } from "../shell/ui.tsx"
+import { PageHead } from "../shell/ui.tsx"
 import { DayTime } from "../shell/intl.tsx"
 import { Controls } from "./ui/Controls.tsx"
 import { MenuView, SearchView } from "./ui/views.tsx"
 
 const App = () =>
   <main class="dining">
-    <header>
-      <AppTitle page="Dining" />
-    </header>
+    <PageHead page="Dining" sheet="/map/dining" />
     <Controls />
     {r(() => isSearching.value ? <SearchView /> : <MenuView />)}
     <footer class="muted">

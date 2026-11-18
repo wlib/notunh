@@ -12,7 +12,7 @@ import { Page } from "../../src/courses/registrar.mts"
 import { addDays, daysBetween } from "../../src/shared/time.mts"
 import { xlsxOf } from "./xlsx.mts"
 
-/** The fall fixture's finals, Tuesday the 15th to the 22nd, and the registrar's five blocks */
+/** The day most of the fixture's finals are counted from, in finals of the 15th to the 22nd, and the five blocks */
 const FIRST = "2026-12-16"
 const BLOCKS = ["8:00am-10:00am", "10:30am-12:30pm", "1:00pm-3:00pm", "3:30pm-5:30pm", "6:00pm-8:00pm"]
 

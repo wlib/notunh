@@ -152,17 +152,22 @@ export const directory = (events: readonly Event[], orgs: readonly Org[], now: n
   return [...listed, ...unposted].sort((a, b) => a.name.localeCompare(b.name, "en"))
 }
 
-/** What a list folds into one line that opens, in the order they're listed */
+/**
+ * What a list folds into one line that opens, in the order they're listed where their next start together, practices
+ * last
+ */
 export const FOLDS = ["club", "rec", "practice"] as const
 export type FoldKind = typeof FOLDS[number]
 
-export type Fold<E extends Event = Event> = { fold: FoldKind, events: E[] }
+/** A fold's events as listed, and the one it's told by: the next to start, else the one on, else the first */
+export type Fold<E extends Event = Event> = { fold: FoldKind, events: E[], next: E }
 
 /**
- * A list's rows and folds: one-offs, curated sessions and what's yours as rows, then each kind of what recurs as one
- * fold. A practice always folds, a series' or not, as it's not for going to. Nothing is dropped
+ * A list's rows and folds as of an instant: one-offs, curated sessions and what's yours as rows, then each kind of
+ * what recurs as one fold, the fold whose next starts sooner first and practices last. A practice always folds, a
+ * series' or not, as it's not for going to. Nothing is dropped
  */
-export const folded = <E extends Event>(events: readonly E[], isRecurring: (key: string) => boolean, isYours: (event: E) => boolean) => {
+export const folded = <E extends Event>(events: readonly E[], isRecurring: (key: string) => boolean, isYours: (event: E) => boolean, now: number) => {
   const foldOf = (event: E): FoldKind | undefined => {
     if (isYours(event))
       return
@@ -181,5 +186,13 @@ export const folded = <E extends Event>(events: readonly E[], isRecurring: (key:
     else
       rows.push(event)
   }
-  return { rows, folds: FOLDS.flatMap((fold): Fold<E>[] => folds.has(fold) ? [{ fold, events: folds.get(fold)! }] : []) }
+  return {
+    rows,
+    folds: FOLDS
+      .flatMap((fold): Fold<E>[] => {
+        const events = folds.get(fold)
+        return events ? [{ fold, events, next: events.find(({ start }) => start >= now) ?? events.find(({ end }) => end > now) ?? events[0] }] : []
+      })
+      .sort((a, b) => Number(a.fold === "practice") - Number(b.fold === "practice") || a.next.start - b.next.start)
+  }
 }

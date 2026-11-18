@@ -1,8 +1,9 @@
 // What recurs, told once (src/social/series.mts): a session's series read from its id or link the same whatever day
 // it's on, a one-off never one, the directory listing each activity once, with the weekdays it meets, how to join, and
-// clubs that have posted no meeting, and a list folded with nothing dropped, what recurs gathered by kind and anything
-// yours a row of its own; and saves (src/social/saves.mts), which save exactly the session tapped and follow exactly
-// the activity named, keep a save through a merge, and let go of what's over
+// clubs that have posted no meeting, and a list folded with nothing dropped, what recurs gathered by kind, the kind
+// whose next starts sooner first and practices last, and anything yours a row of its own; and saves
+// (src/social/saves.mts), which save exactly the session tapped and follow exactly the activity named, keep a save
+// through a merge, and let go of what's over
 
 import { test, expect } from "vitest"
 import fc from "fast-check"
@@ -73,18 +74,27 @@ const LISTS = [
   practice(22), practice(25), oneOff("athletics:1"), oneOff("25live:2")
 ]
 
-test("a list folded drops nothing, keeps each one-off a row, gathers what recurs by kind, and keeps anything yours a row of its own", () => {
-  fc.assert(fc.property(fc.shuffledSubarray(LISTS), fc.shuffledSubarray(LISTS.map(({ id }) => id)), (events, yours) => {
+test("a list folded drops nothing, keeps each one-off a row, gathers what recurs by kind, sooner next first, and keeps anything yours a row of its own", () => {
+  fc.assert(fc.property(fc.shuffledSubarray(LISTS), fc.shuffledSubarray(LISTS.map(({ id }) => id)), fc.integer({ min: -1, max: 26 }), (listed, yours, days) => {
+    const events = [...listed].sort((a, b) => a.start - b.start)
     const keys = new Set(directory(LISTS, [], at(-1)).map(({ key }) => key))
     const isYours = (event: Event) => yours.includes(event.id)
-    const { rows, folds } = folded(events, key => keys.has(key), isYours)
+    const { rows, folds } = folded(events, key => keys.has(key), isYours, at(days))
     expect([...rows, ...folds.flatMap(({ events }) => events)].map(({ id }) => id).sort()).toEqual(events.map(({ id }) => id).sort())
-    expect(folds.map(({ fold }) => fold)).toEqual(FOLDS.filter(fold => folds.some(line => line.fold === fold)))
-    for (const { fold, events } of folds)
+    expect(new Set(folds.map(({ fold }) => fold)).size).toBe(folds.length)
+    // Practices last, as they're not for going to, and the rest by when their next starts
+    const isLast = ({ fold }: { fold: string }) => Number(fold === "practice")
+    for (const [i, { fold, next }] of folds.slice(1).entries())
+      expect(isLast({ fold }) - isLast(folds[i]) || next.start - folds[i].next.start || FOLDS.indexOf(fold) - FOLDS.indexOf(folds[i].fold)).toBeGreaterThan(0)
+    for (const { fold, events, next } of folds) {
+      // Told by one of its own, the soonest still to start where any is
+      expect(events).toContain(next)
+      expect(events.some(({ start }) => start >= at(days) && (start < next.start || next.start < at(days)))).toBe(false)
       for (const event of events) {
         expect(isYours(event)).toBe(false)
         expect(fold === "practice" ? isPractice(event) : seriesOf(event)?.kind === fold).toBe(true)
       }
+    }
     for (const event of rows)
       expect(isYours(event) || !isPractice(event) && !keys.has(seriesOf(event)?.key ?? "")).toBe(true)
   }))

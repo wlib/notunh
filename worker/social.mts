@@ -541,8 +541,9 @@ social.post("/api/state", on("sync"), limited, valid(v.object({ ...Device.entrie
   const db = drizzle(c.env.DB)
   const { person } = c.get("who")
   const now = Date.now()
-  // A device's clock running ahead would win every write after it, so a write is never later than now
-  const rows = Object.entries(c.req.valid("json").entries).flatMap(([key, entry]) => entry && isSynced(key) ? [{ person, key, value: entry.value, at: Math.min(entry.at, now), by: entry.by }] : [])
+  // A device's clock running ahead would win every write after it, so a write is never later than now. Each value is
+  // kept as its JSON, as a value cleared is null, which Drizzle would otherwise write as no value at all
+  const rows = Object.entries(c.req.valid("json").entries).flatMap(([key, entry]) => entry && isSynced(key) ? [{ person, key, value: sql`${JSON.stringify(entry.value)}`, at: Math.min(entry.at, now), by: entry.by }] : [])
   if (rows.length)
     await db.insert(state).values(rows).onConflictDoUpdate({
       target:   [state.person, state.key],

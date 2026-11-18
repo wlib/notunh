@@ -24,7 +24,7 @@ Bus samples are one gzipped row per source per minute polled (`src/transit/obser
 | `GET /api/health` | public | When each table's rows start and the last was stored, and the day each model runs through |
 | `GET /api/rows/:name?day=…&after=…` | token | A page of rows from one table in `worker/rows.mts` |
 | `GET /api/models/:name` | token | The latest `buses` or `laundry` model, with its revision |
-| `POST /api/models/:name` `{ expect, state }` | token | Stores only if the latest revision is still `expect` (`null` for none), else 409 |
+| `POST /api/models/:name` `{ expect, state }` | token | Stores only if the latest revision is still `expect` (`null` for none), else 409; `finals` is stored this way too |
 | `GET /api/feeds`, `GET /api/feeds/:id` | token | Timetables acquired, earliest first; one's converted JSON by SHA-256 |
 | `POST /api/feeds` (form) | token | Acquires a timetable unless it's the last one acquired |
 | `GET /api/derived/:name?day=…` | token | The manifest of a day's `visits`, `statistics`, or `evaluation`, or `null` |
@@ -34,6 +34,7 @@ Bus samples are one gzipped row per source per minute polled (`src/transit/obser
 | `GET /api/laundry/rooms[/:id]` | public | [Laundry](#laundry) |
 | `GET /api/photo?src=…&w=500\|1280` | public | A photo the served build's profiles show, by its address there, fetched as published, made no wider than `w` with the Images binding as the best of AVIF, WebP or JPEG its `Accept` names, and kept at the edge and in browsers for good; any other photo or width is 404, so it's neither an open proxy nor a way to run up transformations, and a source failing is 502 (`worker/photos.mts`) |
 | `GET /api/rooms/:day[/:space]` | public; says more to a verified device asking as itself | A day's bookings from 25Live, of the map's rooms or one of them ([courses.md](courses.md#rooms-to-book)) |
+| `GET /api/finals/:term` | a device with a verified UNH address; anyone else 403 | Every section's final in a term, as stored nightly ([courses.md](courses.md#finals)); `private, no-store` |
 | `GET /api/push/key`, `PUT`/`DELETE /api/reminders/:id`, `DELETE /api/push/devices/:device` | device | [reminders.md](reminders.md#routes) |
 | `GET /api/pins?day=…&days=…`, `/api/pins/:id`, `/p/:id`, `/map/<page>`, `/map/card/<page>` | public; says more to the device asking as itself | The public pins on a day or some days from it, one, and a shared page headed with what it's of, and its card ([deploying.md](deploying.md#search-and-sharing)) |
 | `POST /api/pins`, `PUT /api/pins/:id`, `POST /api/pins/:id/{marks,set,going,reports}`, `DELETE /api/pins/:id` | device | Make, edit (host), mark a time, set the time (host), go, report, delete (host) |

@@ -570,13 +570,20 @@ test("a later departure of the same way, chosen from your location, stays chosen
   }
 })
 
-test("newer code leaves the data as it is, for the reload that brings both in", async () => {
+test("newer code's data is swapped in where the code running reads it, the code waiting for the reload", async () => {
   const state = await load({ files: { "/assets/gtfs-BBBBBBBB.json": { ...FEED, version: "next" } } })
   const { isNewBuild } = await import("../../src/shell/build.mts")
   state.receive(headOf({ ...DATA, gtfs: "/assets/gtfs-BBBBBBBB.json" }, ["/assets/index-BBBBBBBB.js"]))
   await vi.advanceTimersByTimeAsync(0)
-  expect(state.feed.peek().version).toBe("test")
+  expect(state.feed.peek().version).toBe("next")
   expect(isNewBuild.peek()).toBe(true)
+})
+
+test("newer code's data the code running can't read leaves the data as it is, for the reload that brings both in", async () => {
+  const state = await load({ files: { "/assets/gtfs-BBBBBBBB.json": { version: "next" } } })
+  state.receive(headOf({ ...DATA, gtfs: "/assets/gtfs-BBBBBBBB.json" }, ["/assets/index-BBBBBBBB.js"]))
+  await vi.advanceTimersByTimeAsync(0)
+  expect(state.feed.peek().version).toBe("test")
 })
 
 test("parking loads with the page, and your permit is kept on this device", async () => {

@@ -58,10 +58,10 @@ const pause = (ms: number, signal?: AbortSignal) =>
   })
 
 /**
- * A file's value, loaded however many tries it takes, or failing once the signal aborts. Each failure is passed to
- * onError first, so whatever waits on the file can say so meanwhile
+ * A file's value, loaded however many tries it takes, or as many as given, or failing once the signal aborts. Each
+ * failure is passed to onError first, so whatever waits on the file can say so meanwhile
  */
-export const loadImmutable = async <T,>(url: string, load: Loader<T>, { signal, onError = console.error }: { signal?: AbortSignal, onError?: (error: unknown) => void } = {}): Promise<T> => {
+export const loadImmutable = async <T,>(url: string, load: Loader<T>, { signal, onError = console.error, tries = Infinity }: { signal?: AbortSignal, onError?: (error: unknown) => void, tries?: number } = {}): Promise<T> => {
   for (let attempt = 0; ; attempt++) {
     signal?.throwIfAborted()
     const controller = new AbortController()
@@ -78,6 +78,8 @@ export const loadImmutable = async <T,>(url: string, load: Loader<T>, { signal, 
     catch (error) {
       signal?.throwIfAborted()
       onError(error)
+      if (attempt + 1 >= tries)
+        throw error
     }
     finally {
       clearTimeout(deadline)

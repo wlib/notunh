@@ -114,6 +114,25 @@ test("a release whose data differs is loaded by an open tab and shown, without a
   expect(await page.evaluate(() => (window as unknown as { marker?: boolean }).marker)).toBe(true)
 })
 
+test("a release whose code and data both differ has its data shown in an open tab at once, and its code once the tab's out of view", async ({ context, fixture }) => {
+  const page = await open(context, `${fixture.origin}/dining/`)
+  await cachedFrom(page, "/dining/", RELEASE.A)
+  await page.evaluate(() => void ((window as unknown as { marker: boolean }).marker = true))
+  await fixture.publish("C")
+  await page.evaluate(() => navigator.serviceWorker.controller!.postMessage({ revalidate: location.pathname }))
+  await cachedFrom(page, "/dining/", RELEASE.C)
+  // C's data fits A's code, so it's shown without waiting for C's code
+  await expect(page.locator("main.dining")).toContainText(HALL_SUFFIX)
+  expect(await page.evaluate(() => (window as unknown as { marker?: boolean }).marker)).toBe(true)
+  expect(await page.evaluate(() => [...document.scripts].some(script => script.src.includes("index-BBBBBBBB")))).toBe(false)
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { get: () => "hidden" })
+    document.dispatchEvent(new Event("visibilitychange"))
+  }).catch(() => {})
+  await expect.poll(() => page.evaluate(() => [...document.scripts].some(script => script.src.includes("index-BBBBBBBB"))).catch(() => false)).toBe(true)
+})
+
 test("a release with a new worker takes over an open tab without losing its files, leaving the first worker's pages to be fetched afresh", async ({ context, fixture }) => {
   const page = await open(context, `${fixture.origin}/dining/`)
   await cachedFrom(page, "/dining/", RELEASE.A)

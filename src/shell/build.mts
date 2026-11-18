@@ -1,7 +1,8 @@
 // The build a page runs and the data it loads, both named in the page's head (manifest.mts). The service worker
-// serves the page from its cache, revalidates it behind that, and posts any newer copy here. Newer data alone is
-// loaded and swapped in live. Newer code only comes in with a reload, which lifecycle.mts makes once the page is out
-// of view. The page also asks the worker to revalidate, on coming back into view and every REVALIDATE_MS, since a
+// serves the page from its cache, revalidates it behind that, and posts any newer copy here. Newer data is loaded and
+// swapped in live, a newer build's with newer code too wherever it fits the code running, as each file's schema is
+// checked as it loads; one that doesn't is tried once and waits for the reload. Newer code only comes in with a
+// reload, which lifecycle.mts makes once the page is out of view. The page also asks the worker to revalidate, on coming back into view and every REVALIDATE_MS, since a
 // window that never navigates would otherwise never hear of the nightly build.
 //
 // Every data file is its own slot, loaded and swapped in on its own (load.mts), so a file that can't load holds no
@@ -26,8 +27,10 @@ import { type Loader, jsonOf, loadImmutable } from "./load.mts"
 const REVALIDATE_MS = 15 * 60_000
 
 const running = buildOf(document.head.outerHTML)
-/** The newest build with this page's code announced so far, whose data files are the ones wanted */
+/** The newest build with this page's code announced so far, whose data files a slot made now starts with */
 let announced = running
+/** The newest build announced so far, whatever its code, whose data files are the ones wanted */
+let newest = running
 
 /** Whether a newer build of the page's code is ready, which only a reload brings in */
 export const isNewBuild = r(false)
@@ -50,7 +53,7 @@ const firstLoads: Promise<void>[] = []
  * Wants a URL for a slot, loading it (load.mts) and swapping it in once loaded, in place of whatever else the slot was
  * loading. One wanted already is loaded or loading, so it's left as it is
  */
-const want = (slot: Slot, url: string, onError?: (error: unknown) => void) => {
+const want = (slot: Slot, url: string, { onError, tries }: { onError?: (error: unknown) => void, tries?: number } = {}) => {
   if (url === slot.wanted)
     return
   slot.loading?.abort()
@@ -59,7 +62,7 @@ const want = (slot: Slot, url: string, onError?: (error: unknown) => void) => {
   if (url === slot.loaded)
     return
   const loading = slot.loading = new AbortController()
-  loadImmutable(url, slot.load, { signal: loading.signal, onError }).then(value => {
+  loadImmutable(url, slot.load, { signal: loading.signal, onError, tries }).then(value => {
     slot.value.value = value
     slot.loaded = url
     slot.loading = undefined
@@ -68,22 +71,24 @@ const want = (slot: Slot, url: string, onError?: (error: unknown) => void) => {
 }
 
 /**
- * Takes in a newer copy of the page: newer data to load, or newer code to reload for. One published before the
- * newest announced, like a message that arrived late, changes nothing. One republished since, as a rollback is, counts
- * as newer however long ago it was built
+ * Takes in a newer copy of the page: newer data to load, and newer code to reload for. Its data is loaded whatever
+ * its code, though only once where the code differs, as a file that doesn't fit the code running won't on a retry
+ * either. One published before the newest announced, like a message that arrived late, changes nothing. One
+ * republished since, as a rollback is, counts as newer however long ago it was built
  */
 export const receive = (html: string) => {
   const next = buildOf(html)
-  if (isOlder(next, announced))
+  if (isOlder(next, newest))
     return
-  if (!isSameCode(next, running)) {
+  newest = next
+  const isNewCode = !isSameCode(next, running)
+  if (isNewCode)
     isNewBuild.value = true
-    return
-  }
-  announced = next
+  else
+    announced = next
   for (const [name, slot] of slots)
     if (name in next.data)
-      want(slot, next.data[name])
+      want(slot, next.data[name], { tries: isNewCode ? 1 : Infinity })
 }
 
 /**
@@ -133,11 +138,13 @@ export const latest = async <T,>(name: string, by: StandardSchemaV1<unknown, T> 
   const loaded = new Promise<void>(resolve => {
     const slot: Slot = { value, load: typeof by === "function" ? by : jsonOf(by), swapped: resolve }
     slots.set(name, slot)
-    want(slot, url, error => {
-      console.error(error)
-      if (fallback && value.peek() === undefined) {
-        value.value = fallback()
-        resolve()
+    want(slot, url, {
+      onError: error => {
+        console.error(error)
+        if (fallback && value.peek() === undefined) {
+          value.value = fallback()
+          resolve()
+        }
       }
     })
   })

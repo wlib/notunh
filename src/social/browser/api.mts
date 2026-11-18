@@ -3,11 +3,13 @@
 // all one device's. Reads that need no device take none, so the pin page works for anyone with the link. A refusal
 // is an error with the Worker's own words, which the UI shows as they are. A mark comes with the phone's push
 // subscription where it can have one, so the host setting that time asks it "Going?" (src/social/ask.mts). The
-// rooms' bookings are read the same way, as a verified device is told their titles (worker/rooms.mts)
+// rooms' bookings are read the same way, as a verified device is told their titles (worker/rooms.mts), and the
+// finals, which only a verified device is told (worker/finals.mts)
 
 import * as v from "valibot"
 import { Pin } from "../event.mts"
 import { Booked } from "../../courses/bookings.mts"
+import { Told } from "../../courses/finals.mts"
 import type { Day } from "../../shared/time.mts"
 import { device, deviceKept } from "../../reminders/browser/store.mts"
 import { key } from "../../reminders/browser/api.mts"
@@ -36,11 +38,16 @@ const command = async <T,>(method: "POST" | "PUT" | "DELETE", path: string, body
   return schema ? readJson(response, schema) : undefined as T
 }
 
-/** A read as this device, if it has asked anything before, so a pin says what this device has to do with it; none for a 404 */
-const read = async <T,>(path: string, schema: v.GenericSchema<unknown, T>): Promise<T | undefined> => {
+/** A request as this device, if it has asked anything before, so the Worker knows who's reading */
+const asThis = async (path: string) => {
   const kept = await deviceKept().catch(() => undefined)
   const query = kept ? `${path.includes("?") ? "&" : "?"}device=${encodeURIComponent(kept.id)}` : ""
-  const response = await reach(path + query, { headers: kept ? { authorization: `Bearer ${kept.secret}` } : {} })
+  return reach(path + query, { headers: kept ? { authorization: `Bearer ${kept.secret}` } : {} })
+}
+
+/** A read as this device, so a pin says what this device has to do with it; none for a 404 */
+const read = async <T,>(path: string, schema: v.GenericSchema<unknown, T>): Promise<T | undefined> => {
+  const response = await asThis(path)
   return response.status === 404 ? undefined : readJson(response, schema)
 }
 
@@ -50,6 +57,15 @@ export const pin = (id: string) =>
 /** What's booked on a Durham day in the rooms to book, or in one, as this device may be told (worker/rooms.mts) */
 export const bookedOn = (day: Day, space?: string) =>
   read(`/api/rooms/${day}${space === undefined ? "" : `/${space}`}`, Booked)
+
+/**
+ * A term's finals, as only a device with a verified UNH address is told them (worker/finals.mts): null where this
+ * device isn't one, and none where the term's aren't published yet
+ */
+export const finalsIn = async (term: string): Promise<Told | null | undefined> => {
+  const response = await asThis(`/api/finals/${encodeURIComponent(term)}`)
+  return response.status === 403 ? null : response.status === 404 ? undefined : readJson(response, Told)
+}
 
 /** The public pins on some Durham days from one */
 export const pinsFrom = (day: string, days: number) =>
@@ -99,9 +115,11 @@ export const deletePin = (id: string) =>
 export const report = (id: string) =>
   command("POST", `/api/pins/${encodeURIComponent(id)}/reports`, {}, v.object({ hidden: v.boolean() }))
 
-/** Who this device is to the Worker, once it's asked anything */
-export const me = () =>
-  read("/api/me", Me)
+/** Who this device is to the Worker, or none while it's asked nothing, so is no one yet */
+export const me = async () => {
+  const response = await asThis("/api/me")
+  return response.status === 401 ? undefined : readJson(response, Me)
+}
 
 /** A code for this device to show, for a device that has the identity to approve */
 export const linkCode = () =>

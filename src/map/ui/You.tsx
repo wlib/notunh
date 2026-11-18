@@ -20,8 +20,15 @@ import { nowMs } from "./common.tsx"
 import { ActivityRow } from "./Explore.tsx"
 import { EventRow, Head } from "./Pages.tsx"
 
-/** The UNH address verified for this device's person, once known, or null for none */
-export const verified = r<string | null>(null)
+/** The UNH address verified for this device's person, null for none, or undefined till the Worker's said */
+export const verified = r<string | null | undefined>(undefined)
+
+/** Takes the address the Worker says is verified, and once there is one, asks for the finals only it's told */
+const verifiedAs = (address: string | null) => {
+  verified.value = address
+  if (address)
+    state.askFinals()
+}
 
 /** How often a device showing a code asks whether it's been approved */
 const POLL_MS = 2000
@@ -41,7 +48,7 @@ const asked = (() => {
 
 /** Asks the Worker which address this device's person has verified */
 const refreshVerified = () =>
-  void api.me().then(me => verified.value = me?.verified ?? null, () => {})
+  void api.me().then(me => verifiedAs(me?.verified ?? null), () => {})
 
 refreshVerified()
 
@@ -172,8 +179,8 @@ const Email = () => {
   const confirm = () => {
     api.verify(address.peek(), code.peek()).then(
       ({ verified: done, joined }) => {
-        verified.value = done
-        // Rooms asked about since are told their bookings' titles now
+        // Rooms asked about since are told their bookings' titles now, and the finals are
+        verifiedAs(done)
         state.askAfresh()
         standing.value = joined ? "Your things are back." : undefined
         capture("email_verified")
@@ -192,7 +199,7 @@ const Email = () => {
       {r(() => verified.value
         ? <p>Verified as <strong>{verified.value}</strong>.</p>
         : <>
-            <p class="muted">To post events for everyone, or get your things back on a new device.</p>
+            <p class="muted">To see your exam rooms, post events for everyone, or get your things back on a new device.</p>
             <div class="field-row">
               {addressInput}
               <button type="button" class="button" onclick={send} disabled={isSending}>{r(() => isSending.value ? "Sending…" : isSent.value ? "Send again" : "Send code")}</button>

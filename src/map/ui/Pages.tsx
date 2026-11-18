@@ -1,15 +1,16 @@
 /** @jsxImportSource bruh/browser */
 
 // The pages the sheet shows over the home, each at a link of its own (link.mts): a section, which leads with its next
-// meeting; an instructor, with their next scheduled class and their week; a room, whether it's free and what's booked
-// and scheduled there (Rooms.tsx); a course, with what it needs and unlocks, the programs naming it, and its sections,
-// the next term's too; a place, with what's on there, the stop beside it and its own facts; an event, with Going for
-// one made here; parking near a place, and a parking area (Parking.tsx); a program, a planning view of its own
-// (Program.tsx); a stop and a bus (StopView.tsx, BusView.tsx); directions (Directions.tsx); a new event, or one of
-// yours to edit (NewEvent.tsx); you (You.tsx); and the buses (Buses.tsx). Each offers Directions and Remind for the
-// visit it leads with, which need nothing saved, and where to park for it, and says where it is, which the map marks.
-// What's said of a person is their scheduled teaching from the registrar's sections, and of a room 25Live doesn't book
-// its classes, which never make it free
+// meeting, then its final, which only a device with a verified UNH email is told (state/finals.mts); an instructor,
+// with their next scheduled class and their week; a room, whether it's free and what's booked and scheduled there
+// (Rooms.tsx); a course, with what it needs and unlocks, the programs naming it, and its sections, the next term's too;
+// a place, with what's on there, the stop beside it and its own facts; an event, with Going for one made here; parking
+// near a place, and a parking area (Parking.tsx); a program, a planning view of its own (Program.tsx); a stop and a bus
+// (StopView.tsx, BusView.tsx); directions (Directions.tsx); a new event, or one of yours to edit (NewEvent.tsx); you
+// (You.tsx); and the buses (Buses.tsx). Each offers Directions and Remind for the visit it leads with, which need
+// nothing saved, and where to park for it, and says where it is, which the map marks. What's said of a person is their
+// scheduled teaching from the registrar's sections, and of a room 25Live doesn't book its classes, which never make it
+// free
 
 import type { BruhChild } from "bruh/browser"
 import { type DerivativeNode, type Reactive, type SourceNode, r, untrack, watch } from "bruh/reactive"
@@ -21,6 +22,8 @@ import type { Courses } from "../../courses/browser/terms.mts"
 import { type Person, nextTeaching } from "../../courses/people.mts"
 import { mailto } from "../../courses/email.mts"
 import { type Dated, datedFrom, daysOf, isSaved, keyOf, patternsOf } from "../../courses/saved.mts"
+import { type Room, eventOfFinal } from "../../courses/finals.mts"
+import type { YourFinal } from "../state/finals.mts"
 import { reqsOf } from "../../programs/prereqs.mts"
 import { type Event, type Pin, LINGER, WEEK, calendarOf, eventById, placeOf, upcoming, whereOf } from "../../social/event.mts"
 import { calendarPath } from "../../social/calendar.mts"
@@ -58,7 +61,7 @@ import { Soon, StopView, departuresFrom } from "./StopView.tsx"
 import { BusView } from "./BusView.tsx"
 import { DirectionsView } from "./Directions.tsx"
 import { NewEventView } from "./NewEvent.tsx"
-import { YouView } from "./You.tsx"
+import { YouView, verified } from "./You.tsx"
 import { BusesView } from "./Buses.tsx"
 import { CalendarLine } from "./Calendars.tsx"
 import { RoomView, SpacesHere } from "./Rooms.tsx"
@@ -342,14 +345,47 @@ export const Source = ({ term, extra }: { term: Pick<Term, "fetched">, extra?: B
 /** What a list of a room's classes leaves unsaid, as the registrar schedules classes alone */
 export const CLASSES_ONLY = " · classes only; a room with none may still be booked"
 
+/** A room of a final, which opens the room's page where the map knows its building */
+const FinalRoom = ({ room }: { room: Room }) =>
+  room.place ? <Go to={{ kind: "room", where: room.where }}>{room.where}</Go> : <>{room.where}</>
+
+/**
+ * A section's final, each sitting, once this device is told it: its day, its time, and its room, or the rooms a
+ * common exam is in, one of which is yours. A device the Worker says isn't verified is told how to see it, while the
+ * term's finals are still to come
+ */
+const SectionFinal = ({ term, section, finals }: { term: Term, section: Section, finals?: [string, string] }) =>
+  r(() => {
+    const sittings = state.finalsOfSection(term, section)
+    if (sittings.length)
+      return sittings.map(final => {
+        const { start, end } = eventOfFinal(term, section, final)
+        return (
+          <Line label={sittings.length > 1 ? "Final, in part" : "Final"}>
+            <span><Day of={final.day} weekday="short" month="short" day="numeric" /> · <ClockRange from={new Date(start)} to={new Date(end)} /></span>
+            <span class="muted">{final.rooms.length > 1
+              ? <>One of <List type="disjunction" items={final.rooms.map(room => <FinalRoom room={room} />)} /></>
+              : <FinalRoom room={final.rooms[0]} />}</span>
+          </Line>
+        )
+      })
+    return verified.value === null && finals && localDay(nowMs()) <= finals[1] && meets(section) && (
+      <Line label="Final"><span class="muted">Verify your UNH email in <Go to={{ kind: "you" }}>You</Go> for its time and room</span></Line>
+    )
+  })
+
 const SectionView = ({ courses, term, section }: { courses: Courses, term: Term, section: Section }) => {
   const key = keyOf(term.code, section.crn)
   const found = { term, section }
-  /** The meeting under way, else the next, which is what Directions and Remind are for */
+  /**
+   * The meeting under way, else the next, which is what Directions and Remind are for; once there are none, its final
+   * still to come, where this device is told it
+   */
   const next = r(() => {
     const { current, next } = standing(term, section, courses.calendar, nowMs())
-    return current ?? next
+    return current ?? next ?? state.finalsOfSection(term, section).map(final => eventOfFinal(term, section, final)).find(({ end }) => end > nowMs())
   })
+  const isFinal = r(() => next.value?.key === "final")
   const nextId = r(() => next.value?.id)
   const saved = r(() => isSaved(state.savedKeys.value, found))
   const finals = courses.calendar.terms[term.code]?.finals
@@ -370,7 +406,7 @@ const SectionView = ({ courses, term, section }: { courses: Courses, term: Term,
         const visit = visitOf(event)
         return (
           <div>
-            <p class="view-label">{event.start <= nowMs() ? "Now" : "Next"}</p>
+            <p class="view-label">{event.start <= nowMs() ? "Now" : event.key === "final" ? "Final" : "Next"}</p>
             <p class="view-when"><When {...event} /></p>
             <Facts where={event.where} place={event.place} visit={visit} />
           </div>
@@ -388,10 +424,11 @@ const SectionView = ({ courses, term, section }: { courses: Courses, term: Term,
           {patternsOf(section).map(meeting => <span class="muted"><Days days={meeting.days} /> <Hours {...meeting} /> · {meeting.place === place ? roomOf(meeting.where) : meeting.where}</span>)}
           <span class="muted">to <Day of={section.to} month="short" day="numeric" /></span>
         </Line>
+        <SectionFinal term={term} section={section} finals={finals} />
         {section.instructors.map(instructor => <Line label="Instructor"><Go to={personPage(instructor)}>{instructor.name} ›</Go></Line>)}
         {r(() => {
           void nextId.value
-          const visit = next.peek() && visitOf(next.peek()!)
+          const visit = !isFinal.peek() && next.peek() && visitOf(next.peek()!)
           // For this class, meeting after meeting (src/reminders/queue.mts), saved or not
           return visit && (
             <div class="line remind-line">
@@ -510,6 +547,21 @@ const ClassRow =({ dated: { event, term, section } }: { dated: Dated }) => {
     />
   )
 }
+
+/** A final's rooms as a row says them: its room, or how many a common exam's one of */
+export const FinalWhere = ({ final }: { final: { rooms: readonly Room[] } }) =>
+  final.rooms.length > 1 ? <>One of <Counted value={final.rooms.length} one="room" other="rooms" /></> : <>{final.rooms[0]?.where}</>
+
+/** One of your finals as a row: its day and time, its section, its room, and whether it clashes with another */
+export const FinalRow = ({ yours: { term, section, final, event, clashes } }: { yours: YourFinal }) =>
+  <Row
+    class="final"
+    time={<><DayName day={final.day} /><small><ClockRange from={new Date(event.start)} to={new Date(event.end)} /></small></>}
+    what={`${codeOf(section)} · Final`}
+    sub={<FinalWhere final={final} />}
+    standing={clashes ? <strong class="clash">Clash</strong> : undefined}
+    onclick={() => state.go(sectionPage(term, section))}
+  />
 
 /** A section as a row: its weekly pattern, its code and title, where it meets, and its CRN */
 export const SectionRow = ({ term, section, aside }: { term: Term, section: Section, aside?: BruhChild }) =>

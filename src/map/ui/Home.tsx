@@ -2,14 +2,15 @@
 
 // The home, under the search: what's yours and what's on today, short enough to read with the sheet half up. First the
 // ways into the lists of their own: clubs and activities, the week, and the term ahead (Explore.tsx, Ahead.tsx). Then
-// Yours, when you have anything: your saved classes for the rest of today, or else your next (state/courses.mts), the
-// next thing in the calendars you've imported (state/calendars.mts), the sessions you've saved, the next of each
-// activity you follow and the events you're going to (state/saves.mts), the sooner first; then deadlines and breaks
-// in the next few days, the reminders set on this phone (Remind.tsx) and the trips saved here (state/trip.mts), each
-// a row that opens its page or plans its trip. Then what's on now and the next few things today (state/today.mts),
-// what recurs folded under them by kind, with making an event of your own as the last row, and the week's page for
-// the rest; then plan ahead, three rows. While the search is typed in, its suggestions lie over the list (Search.tsx),
-// which stays as it was beneath them, scrolled and opened as it was, and the sheet the size it was
+// Yours, when you have anything: your saved classes for the rest of today, or else your next (state/courses.mts), your
+// finals in the next few days (state/finals.mts), the next thing in the calendars you've imported
+// (state/calendars.mts), the sessions you've saved, the next of each activity you follow and the events you're going to
+// (state/saves.mts), the sooner first; then deadlines and breaks in the next few days, the reminders set on this phone
+// (Remind.tsx) and the trips saved here (state/trip.mts), each a row that opens its page or plans its trip. Then what's
+// on now and the next few things today (state/today.mts), what recurs folded under them by kind, with making an event
+// of your own as the last row, and the week's page for the rest; then plan ahead, three rows. While the search is typed
+// in, its suggestions lie over the list (Search.tsx), which stays as it was beneath them, scrolled and opened as it
+// was, and the sheet the size it was
 
 import { r } from "bruh/reactive"
 import { codeOf, courseOf } from "../../courses/course.mts"
@@ -19,11 +20,12 @@ import { ClockTime } from "../../shell/intl.tsx"
 import { Icon } from "../../shell/ui.tsx"
 import { capture } from "../../shell/usage.tsx"
 import type { Imported } from "../state/calendars.mts"
+import type { YourFinal } from "../state/finals.mts"
 import { state } from "../state/map.mts"
 import { nowMs, walkTo } from "./common.tsx"
-import { DayName, EventLines, EventRow, Row, placeNamed, sectionPage } from "./Pages.tsx"
+import { DayName, EventLines, EventRow, FinalWhere, Row, placeNamed, sectionPage } from "./Pages.tsx"
 import { Shortcuts } from "./Explore.tsx"
-import { DateRow, PlanAhead, dueSoon } from "./Ahead.tsx"
+import { DateRow, PlanAhead, dueSoon, finalsSoon } from "./Ahead.tsx"
 import { Reminders, currentReminders } from "./Remind.tsx"
 import { Suggestions, SearchRow, isSearching } from "./Search.tsx"
 
@@ -41,6 +43,21 @@ const ClassRow = ({ dated: { event, term, section } }: { dated: Dated }) => {
     <Row
       time={<When at={event.start} />}
       what={`${courseOf(section)} · ${event.where}`}
+      sub={leave !== undefined && leave > nowMs() ? <>leave <ClockTime at={new Date(leave)} /></> : codeOf(section)}
+      onclick={() => state.go(sectionPage(term, section))}
+    />
+  )
+}
+
+/** One of your finals as a row: when, what and where, and when to leave for it */
+const FinalRow = ({ yours: { term, section, final, event } }: { yours: YourFinal }) => {
+  const walk = walkTo(placeNamed(event.place))
+  const leave = walk === undefined ? undefined : event.start - walk * 1000
+  return (
+    <Row
+      class="final"
+      time={<When at={event.start} />}
+      what={<>{courseOf(section)} final · <FinalWhere final={final} /></>}
       sub={leave !== undefined && leave > nowMs() ? <>leave <ClockTime at={new Date(leave)} /></> : codeOf(section)}
       onclick={() => state.go(sectionPage(term, section))}
     />
@@ -83,6 +100,7 @@ const Goals = () =>
  */
 const Yours = () => {
   const due = r(dueSoon)
+  const finals = r(finalsSoon)
   const mine = state.yoursNext
   const list: HTMLUListElement =
     <ul class="rows" aria-label="Yours">
@@ -90,6 +108,7 @@ const Yours = () => {
         const imported = state.nextImport.value
         return [
           ...state.classes.value.map(dated => ({ start: dated.event.start, row: <ClassRow dated={dated} /> })),
+          ...finals.value.map(yours => ({ start: yours.event.start, row: <FinalRow yours={yours} /> })),
           ...imported ? [{ start: imported.start, row: <ImportRow imported={imported} /> }] : [],
           ...mine.value.map(event => ({ start: event.start, row: <EventRow event={event} /> }))
         ].sort((a, b) => a.start - b.start).map(({ row }) => row)
@@ -100,7 +119,7 @@ const Yours = () => {
     </ul>
   return (
     <section class="yours">
-      {r(() => (state.classes.value.length > 0 || state.nextImport.value || state.goals.value.length > 0 || currentReminders.value.length > 0 || due.value.length > 0 || mine.value.length > 0) && <h2 class="eyebrow">Yours</h2>)}
+      {r(() => (state.classes.value.length > 0 || finals.value.length > 0 || state.nextImport.value || state.goals.value.length > 0 || currentReminders.value.length > 0 || due.value.length > 0 || mine.value.length > 0) && <h2 class="eyebrow">Yours</h2>)}
       {list}
     </section>
   )

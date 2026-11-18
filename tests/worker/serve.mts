@@ -1,7 +1,8 @@
 /// <reference types="node" />
 // The Worker's app served over HTTP for the browser tests (tests/browser/social.browser.mts), on a fresh in-memory
 // database (d1.mts), with the built site in a folder as its assets and a mailer that keeps the last message, which
-// GET /__mail answers, so a test can read a code the way a person reads their inbox. Prints the port it listens on.
+// GET /__mail answers, so a test can read a code the way a person reads their inbox, and BUILD_TOKEN, which a test
+// stores what the nightly run would with (finals.browser.mts). Prints the port it listens on.
 // Run as `node tests/worker/serve.mts <dist>`
 
 import { createServer } from "node:http"
@@ -21,8 +22,12 @@ const { app } = await import("../../worker/api.mts")
 const dist = process.argv[2]
 let last: Message | undefined
 
+/** What a test stores as the nightly run would with, the Worker's own secret, which finals.browser.mts says too */
+const BUILD_TOKEN = "build-token-for-browser-tests"
+
 const env = {
   DB: d1(),
+  BUILD_TOKEN,
   ASSETS: {
     fetch: async (input: RequestInfo | URL) => {
       const { pathname } = new URL(input instanceof Request ? input.url : input)

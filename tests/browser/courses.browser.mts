@@ -129,7 +129,7 @@ test("a section saved is your next class in Yours and in You's week, once whiche
   expect(JSON.parse(await page.evaluate(() => localStorage.getItem("courses-saved")!))).toHaveLength(2)
 })
 
-test("Yours lists every class still to come today, not just the next, the sooner first", async ({ page, fixture }) => {
+test("today has every class still to come, not just the next: the sooner as the card, the rest in the day's list", async ({ page, fixture }) => {
   await page.clock.setFixedTime(tuesday("07:00"))
   await serveCourses(page)
   // Two sections meeting on Tuesdays, one only before noon and one only after
@@ -140,9 +140,9 @@ test("Yours lists every class still to come today, not just the next, the sooner
   const [morning, afternoon] = [meetsOnly(start => start >= 8 * 60 && start < 12 * 60), meetsOnly(start => start >= 13 * 60)]
   await page.addInitScript(keys => localStorage.setItem("courses-saved", JSON.stringify(keys)), [afternoon, morning].map(section => `${fall.code}:${section.crn}`))
   await open(page, fixture.origin)
-  // The sooner is the card too, and both are in their places in the day's list, as yours
+  // The sooner is the card, said there alone, and the later is in its place in the day's list, as yours
   await expect(page.locator(".next")).toContainText(courseOf(morning))
-  await expect(page.getByRole("list", { name: "Today" }).locator("li.yours")).toContainText([courseOf(morning), courseOf(afternoon)])
+  await expect(page.getByRole("list", { name: "Today" }).locator("li.yours")).toHaveText([new RegExp(courseOf(afternoon))])
 })
 
 test.describe(() => {

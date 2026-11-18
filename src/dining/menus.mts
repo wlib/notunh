@@ -99,6 +99,22 @@ export type Meal = {
   stations: { name: string, foods: FoodSummary[] }[]
 }
 
+/**
+ * A meal's dishes to name first, each with its station: a special's and the main line's before the rest, then a station
+ * at a time in the menu's order, so none is named twice until each has been once. By the stations' names as UNH
+ * Dining writes them, so a station renamed only loses its place in the order
+ */
+export const highlights = (meal: Meal, most: number) => {
+  const lead = (name: string) => /^special/i.test(name) ? 0 : /main line/i.test(name) ? 1 : 2
+  const stations = meal.stations.toSorted((a, b) => lead(a.name) - lead(b.name))
+  const named: { food: string, station: string }[] = []
+  for (let round = 0; named.length < most && stations.some(({ foods }) => foods.length > round); round++)
+    for (const { name, foods } of stations)
+      if (foods[round] && named.length < most && !named.some(({ food }) => food === foods[round].name))
+        named.push({ food: foods[round].name, station: name })
+  return named
+}
+
 export type Serving = Pick<Menu, "hall" | "day" | "meal">
 
 /** An upcoming food with what searching needs: its ingredients, and where and when it's served */

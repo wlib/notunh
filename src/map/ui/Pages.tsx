@@ -7,10 +7,10 @@
 // a place, with what's on there, the stop beside it and its own facts; an event, with Going for one made here; parking
 // near a place, and a parking area (Parking.tsx); a program, a planning view of its own (Program.tsx); a stop and a bus
 // (StopView.tsx, BusView.tsx); directions (Directions.tsx); a new event, or one of yours to edit (NewEvent.tsx); you
-// (You.tsx); and the buses (Buses.tsx). Each offers Directions and Remind for the visit it leads with, which need
-// nothing saved, and where to park for it, and says where it is, which the map marks. What's said of a person is their
-// scheduled teaching from the registrar's sections, and of a room 25Live doesn't book its classes, which never make it
-// free
+// (You.tsx); the buses (Buses.tsx); and dining, laundry and classes as the campus has them now (Campus.tsx). Each
+// offers Directions and Remind for the visit it leads with, which need nothing saved, and where to park for it, and
+// says where it is, which the map marks. What's said of a person is their scheduled teaching from the registrar's
+// sections, and of a room 25Live doesn't book its classes, which never make it free
 
 import type { BruhChild } from "bruh/browser"
 import { type DerivativeNode, type Reactive, type SourceNode, r, untrack, watch } from "bruh/reactive"
@@ -36,8 +36,6 @@ import * as social from "../../social/browser/api.mts"
 import { share as shareStory } from "../../social/story.mts"
 import { type Act, Going, Moderate, SHARED, Times } from "../../social/ui.tsx"
 import { status as hallStatus, wallDate } from "../../dining/hours.mts"
-import type { Summaries } from "../../laundry/infer.mts"
-import { getJson } from "../../shared/json.mts"
 import { boardableStops } from "../../transit/feed.mts"
 import { distance } from "../../geo/projection.mts"
 import { walkSeconds } from "../../routing/walks.mts"
@@ -53,7 +51,6 @@ import { Icon } from "../../shell/ui.tsx"
 import { minutes, nowMs, walkTo } from "./common.tsx"
 import { ArrivalOffset, Remind } from "./Remind.tsx"
 import { AreaPageView, ParkingView, parkingFor } from "./Parking.tsx"
-import { roomAtSlug } from "../../laundry/rooms.mts"
 import { Group } from "./Courses.tsx"
 import { ProgramView, ProgramsLine } from "./Program.tsx"
 import { RouteBadge } from "./common.tsx"
@@ -68,6 +65,7 @@ import { RoomView, SpacesHere } from "./Rooms.tsx"
 import { NewEvent } from "./Home.tsx"
 import { ActivityView, ExploreView, PartOf, SeriesHere, WeekView } from "./Explore.tsx"
 import { AheadView } from "./Ahead.tsx"
+import { ClassesView, DiningView, LaundryView, PlaceGlance } from "./Campus.tsx"
 import { About, PhotoCredits, Photos, Rating } from "./Profile.tsx"
 
 /** A notice for the page shown, like a link copied */
@@ -247,10 +245,13 @@ export const Line = ({ label, children }: { label: BruhChild, children?: BruhChi
 export const Go = ({ to, children }: { to: Page, children?: BruhChild }) =>
   <button type="button" class="go" onclick={() => state.go(to)}>{children}</button>
 
-/** A line that is a link on, to a page, an address, or whatever a tap does, named by what it leads to: "Parking ›" */
+/**
+ * A line that is a link on, to a page, an address, or whatever a tap does, named by what it leads to: "Parking ›". An
+ * address's tap may do something first, as a hall's menu has the dining page open on that hall
+ */
 export const LinkLine = ({ to, href, onclick, children }: { to?: Page, href?: string, onclick?: () => void, children?: BruhChild }) =>
   href !== undefined
-    ? <a class="line link-line" href={href} {...href.startsWith("/") ? {} : { target: "_blank", rel: "noopener" }}><span>{children}</span><span>›</span></a>
+    ? <a class="line link-line" href={href} onclick={onclick} {...href.startsWith("/") ? {} : { target: "_blank", rel: "noopener" }}><span>{children}</span><span>›</span></a>
     : <button type="button" class="line link-line" onclick={onclick ?? (() => state.go(to!))}><span>{children}</span><span>›</span></button>
 
 /** The room alone, "N343", where a page has already said the building */
@@ -765,34 +766,6 @@ const HallHours = ({ name }: { name: string }) =>
     )
   })
 
-/** Every laundry room's counts, asked for once a place with rooms is opened, and kept for the visit */
-let laundry: Promise<Summaries | undefined> | undefined
-const laundryCounts = () =>
-  laundry ??= getJson<Summaries>("/api/laundry/rooms").catch(() => undefined)
-
-/** What a laundry or dining building offers, inline: the hall's hours and its menus, or each room's machines free and the room */
-const Building = ({ name }: { name: string }) => {
-  const building = state.buildings.peek().find(building => building.name === name)
-  if (!building)
-    return null
-  if (building.kind === "dining")
-    return <LinkLine href="/dining/">Menus<span class="muted"> · <HallHours name={name} /></span></LinkLine>
-  const counts = r<Summaries>()
-  void laundryCounts().then(found => counts.value = found)
-  return building.rooms?.map(room => {
-    const id = roomAtSlug(room)?.id
-    return (
-      <LinkLine href={`/laundry/${room}/`}>
-        Laundry{building.rooms!.length > 1 && ` · ${roomAtSlug(room)?.name ?? room}`}
-        {r(() => {
-          const summary = id === undefined ? undefined : counts.value?.rooms[id]
-          return summary && <span class="muted"> · <Count value={summary.washer.free} /> washers, <Count value={summary.dryer.free} /> dryers free</span>
-        })}
-      </LinkLine>
-    )
-  })
-}
-
 /** How far a stop may be to count as a place's own */
 const NEARBY_M = 400
 
@@ -841,10 +814,10 @@ const ChapterFacts = ({ chapter }: { chapter: Chapter }) =>
   </p>
 
 /**
- * A place's page: its facts, a building's when it was built among them, Directions, a building's photos, verdict
- * and rating, what's on there today and this week, with a new event as the last row, the stop beside it and what it
- * offers itself, the classes under way, a building's facts, a reminder to leave to be there by a time, parking, and
- * who took the photos
+ * A place's page: its facts, a building's when it was built among them, Directions, a dining hall's meal or a
+ * residence hall's laundry (Campus.tsx), a building's photos, verdict and rating, what's on there today and this week,
+ * with a new event as the last row, the stop beside it, the classes under way, a building's facts, a reminder to leave
+ * to be there by a time, parking, and who took the photos
  */
 const PlaceView = ({ name }: { name: string }) => {
   const place = placeNamed(name)
@@ -872,6 +845,7 @@ const PlaceView = ({ name }: { name: string }) => {
         <button type="button" class="button primary" onclick={() => directions(place, name)}>Directions</button>
         <button type="button" class="button" onclick={() => share(name)}>Share</button>
       </div>
+      <PlaceGlance name={name} />
       {profile && profile.photos.length > 0 && <Photos name={name} photos={profile.photos} />}
       {profile && <Rating profile={profile} ranked={state.profiles.peek().ranked} />}
       {r(() => {
@@ -898,7 +872,6 @@ const PlaceView = ({ name }: { name: string }) => {
         {profile?.more.map(({ label, url }) => <LinkLine href={url}>{label}</LinkLine>)}
         {servicesAt(name).map(({ label, url }) => <LinkLine href={url}>{label}</LinkLine>)}
         {chapter && <LinkLine href={chapter.url}>UNH chapter page</LinkLine>}
-        <Building name={name} />
         <div class="line remind-line place-by">
           <label>Remind me to leave for here by</label>
           {time}
@@ -1081,6 +1054,9 @@ export const PageView = ({ page }: { page: Page }) => {
         page.kind === "activity"   ? <ActivityView id={page.id} /> :
         page.kind === "week"       ? <WeekView /> :
         page.kind === "ahead"      ? <AheadView /> :
+        page.kind === "dining"     ? <DiningView /> :
+        page.kind === "laundry"    ? <LaundryView /> :
+        page.kind === "classes"    ? <ClassesView /> :
                                      <EventView id={page.id} />}
       {r(() => notice.value && <p class="notice" role="status">{notice.value}</p>)}
     </section>

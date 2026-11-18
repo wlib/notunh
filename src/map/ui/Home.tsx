@@ -1,22 +1,25 @@
 /** @jsxImportSource bruh/browser */
 
-// The home, under the search: what's yours and what's on today, short enough to read with the sheet half up. First the
-// ways into the lists of their own: clubs and activities, the week, and the term ahead (Explore.tsx, Ahead.tsx). Then
-// Yours, when you have anything: your saved classes for the rest of today, or else your next (state/courses.mts), your
-// finals in the next few days (state/finals.mts), the next thing in the calendars you've imported
-// (state/calendars.mts), the sessions you've saved, the next of each activity you follow and the events you're going to
-// (state/saves.mts), the sooner first; then deadlines and breaks in the next few days, the reminders set on this phone
-// (Remind.tsx) and the trips saved here (state/trip.mts), each a row that opens its page or plans its trip. Then what's
-// on now and the next few things today (state/today.mts), what recurs folded under them by kind, with making an event
-// of your own as the last row, and the week's page for the rest; then plan ahead, three rows. While the search is typed
-// in, its suggestions lie over the list (Search.tsx), which stays as it was beneath them, scrolled and opened as it
-// was, and the sheet the size it was
+// The home, under the search, as two views named in its own type: Today, a timeline, and Campus, a directory
+// (Campus.tsx), the one last left opening again on this device. Today leads with what you're due at next, once you
+// have anything, as the one card on the page: a saved class, a final, the next thing in the calendars you've imported,
+// a session you've saved, the next of an activity you follow or an event you're going to, whichever is soonest today.
+// Then Yours, the rest of those (state/courses.mts, state/finals.mts, state/calendars.mts, state/saves.mts), the
+// sooner first, with deadlines and breaks in the next few days, the reminders set on this phone (Remind.tsx) and the
+// trips saved here (state/trip.mts), each a row that opens its page or plans its trip. Then what's on now and the next
+// few things today (state/today.mts), what recurs folded under them by kind, with making an event of your own as the
+// last row, and the ways on to the week and the term. With nothing of yours it's the day's list alone, which leads.
+// While the search is typed in, its suggestions lie over the view (Search.tsx), which stays as it was beneath them,
+// scrolled and opened as it was, and the sheet the size it was
 
 import { r } from "bruh/reactive"
+import type { BruhChild } from "bruh/browser"
 import { codeOf, courseOf } from "../../courses/course.mts"
 import type { Dated } from "../../courses/saved.mts"
+import { whereOf } from "../../social/event.mts"
 import { localDay } from "../../shared/time.mts"
-import { ClockTime } from "../../shell/intl.tsx"
+import { ClockTime, Day, minutesText } from "../../shell/intl.tsx"
+import { remembered } from "../../shell/state.mts"
 import { Icon } from "../../shell/ui.tsx"
 import { capture } from "../../shell/usage.tsx"
 import type { Imported } from "../state/calendars.mts"
@@ -24,8 +27,8 @@ import type { YourFinal } from "../state/finals.mts"
 import { state } from "../state/map.mts"
 import { nowMs, walkTo } from "./common.tsx"
 import { DayName, EventLines, EventRow, FinalWhere, Row, placeNamed, sectionPage } from "./Pages.tsx"
-import { Shortcuts } from "./Explore.tsx"
-import { DateRow, PlanAhead, dueSoon, finalsSoon } from "./Ahead.tsx"
+import { DateRow, dueSoon, finalsSoon } from "./Ahead.tsx"
+import { CampusIndex } from "./Campus.tsx"
 import { Reminders, currentReminders } from "./Remind.tsx"
 import { Suggestions, SearchRow, isSearching } from "./Search.tsx"
 
@@ -93,37 +96,107 @@ const Goals = () =>
     />
   ))
 
+/** Something of yours with a time: its row in Yours, and what the card says of it while it's next */
+type Mine = { start: number, end: number, title: string, where: BruhChild, note?: BruhChild, open: () => void, row: () => BruhChild }
+
+/** Everything of yours with a time, the sooner first: your classes, your finals, the next import, and your events */
+const mine = (): Mine[] => {
+  const imported = state.nextImport.value
+  return [
+    ...state.classes.value.map((dated): Mine => {
+      const walk = walkTo(placeNamed(dated.event.place))
+      const leave = walk === undefined ? undefined : dated.event.start - walk * 1000
+      return {
+        start: dated.event.start,
+        end:   dated.event.end,
+        title: courseOf(dated.section),
+        where: dated.event.where,
+        note:  leave !== undefined && leave > nowMs() ? <>leave <ClockTime at={new Date(leave)} /></> : undefined,
+        open:  () => state.go(sectionPage(dated.term, dated.section)),
+        row:   () => <ClassRow dated={dated} />
+      }
+    }),
+    ...finalsSoon().map((yours): Mine => {
+      const walk = walkTo(placeNamed(yours.event.place))
+      const leave = walk === undefined ? undefined : yours.event.start - walk * 1000
+      return {
+        start: yours.event.start,
+        end:   yours.event.end,
+        title: `${courseOf(yours.section)} final`,
+        where: <FinalWhere final={yours.final} />,
+        note:  leave !== undefined && leave > nowMs() ? <>leave <ClockTime at={new Date(leave)} /></> : undefined,
+        open:  () => state.go(sectionPage(yours.term, yours.section)),
+        row:   () => <FinalRow yours={yours} />
+      }
+    }),
+    ...imported ? [{
+      start: imported.start,
+      end:   imported.start,
+      title: imported.event.title,
+      where: imported.event.where || imported.match.place || "Your calendar",
+      open:  () => state.go(imported.match.found ? sectionPage(imported.match.found.term, imported.match.found.section) : imported.match.place ? { kind: "place", name: imported.match.place } : { kind: "you" }),
+      row:   () => <ImportRow imported={imported} />
+    } satisfies Mine] : [],
+    ...state.yoursNext.value.map((event): Mine => ({
+      start: event.start,
+      end:   event.end,
+      title: event.title,
+      where: whereOf(event),
+      open:  () => state.go({ kind: "event", id: event.id }),
+      row:   () => <EventRow event={event} />
+    }))
+  ].sort((a, b) => a.start - b.start)
+}
+
+/** What you're due at next today, which the card leads with: under way, or the soonest still to start */
+const nextOf = (all: Mine[]) => {
+  const now = nowMs()
+  return all.find(({ start, end }) => localDay(start) === localDay(now) && Math.max(end, start) > now)
+}
+
+// ms before something starts that the card counts down to it, rather than saying its time alone
+const SOON_MS = 60 * 60_000
+
+/** The one card on the home: what you're due at next, when, where, and when to leave, which opens it */
+const Next = ({ next }: { next: Mine }) => {
+  const till = next.start - nowMs()
+  return (
+    <button type="button" class="poster next" onclick={next.open}>
+      <span class="poster-label">{till <= 0 ? "Now" : till < SOON_MS ? `In ${minutesText(Math.max(1, Math.round(till / 60_000)))}` : "Next"}</span>
+      <strong>{next.title}</strong>
+      <span class="next-facts"><ClockTime at={new Date(next.start)} /> · {next.where}{next.note && <> · {next.note}</>}</span>
+    </button>
+  )
+}
+
 /**
- * Yours: your classes, the next thing in your calendars, the sessions you've saved, the next of each activity you
- * follow and the events you're going to, the sooner first, then deadlines and breaks in the next few days, the
- * reminders and the saved trips, as one list, when there's any
+ * Yours: what you're due at next as the card, then the rest of your classes, the next thing in your calendars, the
+ * sessions you've saved, the next of each activity you follow and the events you're going to, the sooner first, then
+ * deadlines and breaks in the next few days, the reminders and the saved trips, as one list, when there's any
  */
 const Yours = () => {
   const due = r(dueSoon)
-  const finals = r(finalsSoon)
-  const mine = state.yoursNext
+  const all = r(mine)
+  const next = r(() => nextOf(all.value))
   const list: HTMLUListElement =
     <ul class="rows" aria-label="Yours">
-      {r(() => {
-        const imported = state.nextImport.value
-        return [
-          ...state.classes.value.map(dated => ({ start: dated.event.start, row: <ClassRow dated={dated} /> })),
-          ...finals.value.map(yours => ({ start: yours.event.start, row: <FinalRow yours={yours} /> })),
-          ...imported ? [{ start: imported.start, row: <ImportRow imported={imported} /> }] : [],
-          ...mine.value.map(event => ({ start: event.start, row: <EventRow event={event} /> }))
-        ].sort((a, b) => a.start - b.start).map(({ row }) => row)
-      })}
+      {r(() => all.value.filter(item => item !== next.value).map(({ row }) => row()))}
       {r(() => due.value.map(date => <DateRow date={date} />))}
       <Reminders />
       <Goals />
     </ul>
   return (
     <section class="yours">
-      {r(() => (state.classes.value.length > 0 || finals.value.length > 0 || state.nextImport.value || state.goals.value.length > 0 || currentReminders.value.length > 0 || due.value.length > 0 || mine.value.length > 0) && <h2 class="eyebrow">Yours</h2>)}
+      {r(() => next.value && <Next next={next.value} />)}
+      {r(() => (all.value.length > (next.value ? 1 : 0) || state.goals.value.length > 0 || currentReminders.value.length > 0 || due.value.length > 0) && <h2 class="eyebrow">Yours</h2>)}
       {list}
     </section>
   )
 }
+
+/** Whether there's anything of yours to show, which the day's list is then labelled apart from */
+const hasYours = () =>
+  state.classes.value.length > 0 || finalsSoon().length > 0 || state.nextImport.value !== undefined || state.yoursNext.value.length > 0 || state.goals.value.length > 0 || currentReminders.value.length > 0 || dueSoon().length > 0
 
 /** The row that makes an event of your own, last in today's list, where the gap is */
 const NewEvent = ({ place }: { place?: string }) =>
@@ -138,7 +211,7 @@ const NEXT_FEW = 4
 
 /**
  * Today: what's on now, then the next few things later today, each kind of what recurs folded under them, with New
- * event as the last row, and the week's page for the rest
+ * event as the last row, and the week's page and the term's for the rest
  */
 const Today = () =>
   r(() => {
@@ -150,24 +223,52 @@ const Today = () =>
         <h2 class="eyebrow">Now</h2>
         <ul class="rows" aria-label="Now"><EventLines events={on} standing={<span class="on">On</span>} rows={NEXT_FEW} /></ul>
       </>}
-      <h2 class="eyebrow">{on.length ? "Later today" : "Today"}</h2>
+      {/* Under the view's own name, the day's list needs none unless something comes between them */}
+      {(on.length > 0 || hasYours()) && <h2 class="eyebrow">{on.length ? "Later today" : "On today"}</h2>}
       <ul class="rows" aria-label="Today">
         <EventLines events={later} rows={NEXT_FEW} />
         <NewEvent />
       </ul>
-      <button type="button" class="more" onclick={() => state.go({ kind: "week" })}>Browse this week ›</button>
+      <nav class="onward" aria-label="Further ahead">
+        <button type="button" class="more" onclick={() => state.go({ kind: "week" })}>This week ›</button>
+        <button type="button" class="more" onclick={() => state.go({ kind: "ahead" })}>Plan ahead ›</button>
+      </nav>
     </>
   })
+
+type View = "today" | "campus"
+
+/** The view the home shows, as last left on this device */
+const view = remembered<View>("home-view", stored => stored === "campus" ? "campus" : "today")
+
+/** The home's two views, named in its largest type, the one shown pressed, with the day beside them */
+const Views = () => {
+  const Tab = ({ of, children }: { of: View, children?: BruhChild }) =>
+    <button type="button" aria-pressed={r(() => String(view.value === of))} onclick={() => view.value = of}>{children}</button>
+  return (
+    <nav class="views" aria-label="View">
+      <Tab of="today">Today</Tab>
+      <Tab of="campus">Campus</Tab>
+      <span class="views-day eyebrow">{r(() => <Day of={localDay(nowMs())} weekday="short" month="short" day="numeric" />)}</span>
+    </nav>
+  )
+}
 
 export const Home = () =>
   <section class="home">
     <SearchRow />
     <div class="home-body">
       <div class="agenda" inert={isSearching} aria-hidden={r(() => isSearching.value ? "true" : undefined)}>
-        <Shortcuts />
-        <Yours />
-        <Today />
-        <PlanAhead />
+        <Views />
+        {/* Both stay made, so each is as it was left, scrolled and opened, when the other's put away */}
+        <div class="agenda-view" hidden={r(() => view.value !== "today")}>
+          <Yours />
+          <Today />
+        </div>
+        <div class="agenda-view" hidden={r(() => view.value !== "campus")}>
+          <CampusIndex />
+          <a class="more about" href="/">About notunh ›</a>
+        </div>
       </div>
       {r(() => isSearching.value && <Suggestions />)}
     </div>

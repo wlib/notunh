@@ -16,6 +16,7 @@ import { drawItinerary } from "./itinerary.mts"
 import { type Tap, dropPins, listenForTaps } from "./taps.mts"
 import { animateBuses } from "./buses.mts"
 import { showYou } from "./you.mts"
+import { showStatus } from "./status.mts"
 import { CAMPUS } from "../../places/durham.mts"
 
 /**
@@ -161,6 +162,7 @@ export const createMap = (
     drawItinerary(map, state)
     showFocus(map, state)
     followPage(map, state, show)
+    showStatus(map, state, show)
 
     busPosition = animateBuses(map, state.feed, state.drawn, state.focusedBuses)
     drawYou()

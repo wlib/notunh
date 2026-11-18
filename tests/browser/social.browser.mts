@@ -1,7 +1,8 @@
 // The social layer on a phone, against the Worker's app served from Node (tests/worker/serve.mts): today's list
 // plans a trip by an event's start; an event made here opens for anyone and counts them going, of its spots;
 // sharing makes a story image; an event of times to pick takes marks, its host sets one, and those who marked it
-// are asked "Going?"; its host edits it; a code links two devices; and an emailed code verifies an address.
+// are asked "Going?"; its host edits it; a code links two devices, whose permit, set or removed, reaches the other;
+// and an emailed code verifies an address.
 // Screenshots go to NOTUNH_SHOTS when it's set
 
 import { readFileSync, writeFileSync } from "node:fs"
@@ -570,7 +571,7 @@ test("an event's host edits it, its title and time, and sees it changed on its p
   await other.close()
 })
 
-test("a permit set on one of two linked devices reaches the other, and comes back to one whose storage was cleared, by its cookie", async ({ page, browser, fixture }) => {
+test("a permit set or removed on one of two linked devices reaches the other, and comes back to one whose storage was cleared, by its cookie", async ({ page, browser, fixture }) => {
   // A dozen map pages over two devices, each drawn in software beside the other tests: past test.slow()'s 90 s on a
   // busy machine, though nothing waits on a clock
   test.setTimeout(180_000)
@@ -625,5 +626,14 @@ test("a permit set on one of two linked devices reaches the other, and comes bac
   await permitOf(cleared).click()
   await cleared.locator(".view").getByLabel("Permit", { exact: true }).selectOption("commuter")
   await reaches(page, "commuter")
+
+  // The phone removes the permit, which syncs as cleared, and both devices go on syncing after it
+  await permitOf(page).click()
+  await page.locator(".view").getByLabel("Permit", { exact: true }).selectOption("")
+  await expect(permitOf(page)).toContainText("no permit")
+  await reaches(cleared, "no permit")
+  await permitOf(cleared).click()
+  await cleared.locator(".view").getByLabel("Permit", { exact: true }).selectOption("faculty")
+  await reaches(page, "faculty/staff")
   await other.close()
 })

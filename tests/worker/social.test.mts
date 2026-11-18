@@ -517,12 +517,16 @@ type Kept = { entries: Record<string, { value: unknown, at: number, by: string }
 
 /**
  * A write to a key, by a browser, at a time, of the version its code writes, said as data says it
- * (src/shared/format.mts), or of none, bare or with a version of another kind, which says nothing of its format
+ * (src/shared/format.mts), or of none, bare or with a version of another kind, which says nothing of its format, or
+ * cleared, as removing a permit writes null
  */
 const write = fc.record({
   key: fc.constantFrom(...SYNCED), value: fc.integer(), at: fc.integer({ min: 1, max: 1000 }), by: fc.constantFrom("a", "b", "c"),
-  version: fc.constantFrom(undefined, 1, 2, 3, 0, -1, 1.5, "2", null), isBare: fc.boolean()
-}).map(({ value, version, isBare, ...stamp }) => ({ ...stamp, value: isBare ? [stamp.by, stamp.at, value] : { [stamp.by]: stamp.at, value, ...version !== undefined && { version } } }))
+  version: fc.constantFrom(undefined, 1, 2, 3, 0, -1, 1.5, "2", null), shape: fc.constantFrom("said", "bare", "cleared")
+}).map(({ value, version, shape, ...stamp }) => ({
+  ...stamp,
+  value: shape === "cleared" ? null : shape === "bare" ? [stamp.by, stamp.at, value] : { [stamp.by]: stamp.at, value, ...version !== undefined && { version } }
+}))
 
 /** The newest of some writes to each key, by isNewer, as every device and the Worker order them */
 const newest = (writes: readonly { key: Key, value: unknown, at: number, by: string }[]) => {
@@ -570,6 +574,28 @@ test("a write is never kept as later than the Worker's clock, only keys kept for
   expect((await ana.ask("POST", "/api/state", { entries: { "map-goals": { at: 1, by: "a" } } })).status).toBe(400)
   // Another person's things are theirs alone
   expect((await (await device("bo").ask("POST", "/api/state", { entries: {} })).json() as Kept).entries).toEqual({})
+})
+
+test("a value cleared is kept as null, ordered as any other write, and every linked device goes on syncing", async () => {
+  const { device } = worker()
+  const [phone, laptop] = [device("phone"), device("laptop")]
+  const { code } = await (await laptop.ask("POST", "/api/link", {})).json() as { code: string }
+  await phone.ask("POST", `/api/link/${code}`, {})
+  const valuesOf = async (asking: Device, entries: Record<string, unknown> = {}) => {
+    const answer = await asking.ask("POST", "/api/state", { entries })
+    expect(answer.status, await answer.clone().text()).toBe(200)
+    return Object.fromEntries(Object.entries((await answer.json() as Kept).entries).map(([key, { value }]) => [key, value]))
+  }
+  await valuesOf(phone, { "parking-permit": { value: "commuter", at: 10, by: "p" }, "class-standing": { value: "senior", at: 10, by: "p" } })
+  // The laptop removes the permit and goes back to all windows, and the phone takes both as cleared
+  expect(await valuesOf(laptop, { "parking-permit": { value: null, at: 20, by: "l" }, "class-standing": { value: null, at: 20, by: "l" } })).toEqual({ "parking-permit": null, "class-standing": null })
+  expect(await valuesOf(phone)).toEqual({ "parking-permit": null, "class-standing": null })
+  // An older write doesn't undo the clearing, and a later one, or another key's, is kept as ever
+  expect(await valuesOf(phone, { "parking-permit": { value: "resident", at: 15, by: "p" }, "dining-hall": { value: "philbrook", at: 21, by: "p" } })).toEqual({ "parking-permit": null, "class-standing": null, "dining-hall": "philbrook" })
+  expect(await valuesOf(laptop, { "parking-permit": { value: "resident", at: 30, by: "l" } })).toEqual({ "parking-permit": "resident", "class-standing": null, "dining-hall": "philbrook" })
+  // A write of a version clears nothing of an older one's, and isn't cleared by one
+  await valuesOf(phone, { "class-standing": { value: { version: 1, standing: "senior" }, at: 40, by: "p" } })
+  expect((await valuesOf(laptop, { "class-standing": { value: null, at: 50, by: "l" } }))["class-standing"]).toEqual({ version: 1, standing: "senior" })
 })
 
 /** A request bearing only the cookie a response set, as a browser whose own storage was cleared sends */

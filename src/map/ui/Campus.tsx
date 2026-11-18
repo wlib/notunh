@@ -1,12 +1,13 @@
 /** @jsxImportSource bruh/browser */
 
 // The campus as a directory with a pulse: the home's Campus view (Home.tsx), one row for each thing the app does, in
-// the same order every visit, each saying what's so of it now in place of a description: the meal on and till when,
-// the washers free in your hall, the buses live, the next club meeting, your next class. Each row opens a page in the
-// sheet. Dining's is the two halls side by side, which is the choice there is to make, and laundry's every hall with
-// yours first, both marked on the map while they're shown (render/status.mts); classes' is your week and the ways
-// into the courses. A hall's place then leads with its meal, and a residence hall's with its machines (PlaceGlance),
-// and those link on to the pages of their own, /dining/ and /laundry/, for the week's menus and each machine
+// the same order every visit, each saying what's so of it now in place of a description: the meal on and till when, the
+// washers free in your hall, the buses live, the next club meeting, your next class, where you can park. Each row opens
+// a page in the sheet. Dining's is the two halls side by side, which is the choice there is to make, and laundry's
+// every hall with yours first, both marked on the map while they're shown (render/status.mts); classes' is your week
+// and the ways into the courses. A hall's place then leads with its meal, and a residence hall's with its machines
+// (PlaceGlance), and those link on to the pages of their own, /dining/ and /laundry/, for the week's menus and each
+// machine
 
 import { r } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
@@ -16,11 +17,14 @@ import type { Counts, RoomSummary } from "../../laundry/infer.mts"
 import { KINDS } from "../../laundry/infer.mts"
 import { pathOf, roomAtSlug } from "../../laundry/rooms.mts"
 import { courseOf } from "../../courses/course.mts"
+import { options } from "../../parking/model.mts"
 import { localDay } from "../../shared/time.mts"
 import { ClockTime, Count, Counted, Day, Minutes } from "../../shell/intl.tsx"
+import { distinct } from "../../shell/state.mts"
 import { Icon } from "../../shell/ui.tsx"
 import type { Page } from "../link.mts"
 import type { HallNow, Laundry } from "../state/campus.mts"
+import { defaultStay } from "../state/parking.mts"
 import { state } from "../state/map.mts"
 import { nextDate } from "./Ahead.tsx"
 import { Status as BusStatus } from "./Buses.tsx"
@@ -317,6 +321,25 @@ const ClassesFact = () =>
       : "Your week, programs and rooms"
   })
 
+/**
+ * Where you can park now for a couple of hours, as the parking page would rank it with nothing asked: how many areas
+ * fit your permit, or with none, how many are free and how many paid. Made again once a minute, not each second
+ */
+const ParkingFact = () => {
+  const minute = distinct(() => Math.floor(nowMs() / 60_000))
+  return r(() => {
+    const { areas } = state.parking.value
+    if (!areas.length)
+      return "Where you can park, by permit"
+    const permit = state.permit.value
+    const fitting = options(areas, { permit, purpose: "visit" }, defaultStay(minute.value * 60_000), state.holidays.value).filter(({ fits }) => fits === "yes")
+    const free = fitting.filter(({ cost }) => cost === 0).length
+    return permit
+      ? <><span class="dot" /><Counted value={fitting.length} one="area fits" other="areas fit" /> your permit now</>
+      : <><span class="dot" /><Count value={free} /> free now · <Count value={fitting.length - free} /> paid · no permit</>
+  })
+}
+
 /** The next date on the academic calendar */
 const TermFact = () =>
   r(() => {
@@ -336,7 +359,7 @@ export const CampusIndex = () => {
       <IndexRow icon="people" name="Clubs & activities" to={{ kind: "explore" }}><ClubsFact /></IndexRow>
       <IndexRow icon="calendar" name="Events this week" to={{ kind: "week" }}><WeekFact /></IndexRow>
       <IndexRow icon="classes" name="Classes" to={{ kind: "classes" }}><ClassesFact /></IndexRow>
-      <IndexRow icon="parking" name="Parking" to={{ kind: "parking" }}>Where you can park now, by permit</IndexRow>
+      <IndexRow icon="parking" name="Parking" to={{ kind: "parking" }}><ParkingFact /></IndexRow>
       <IndexRow icon="flag" name="Term dates" to={{ kind: "ahead" }}><TermFact /></IndexRow>
     </ul>
   )

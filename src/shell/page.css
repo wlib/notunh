@@ -92,11 +92,6 @@
   border-radius: 0;
 }
 
-/* The rings kept to the corner the arrow's in, clear of the words */
-.way-in .poster::after {
-  block-size: 10rem;
-}
-
 .way-in .poster > * {
   grid-column: 1;
 }

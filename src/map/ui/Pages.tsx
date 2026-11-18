@@ -250,13 +250,10 @@ export const Line = ({ label, children }: { label: BruhChild, children?: BruhChi
 export const Go = ({ to, children }: { to: Page, children?: BruhChild }) =>
   <button type="button" class="go" onclick={() => state.go(to)}>{children}</button>
 
-/**
- * A line that is a link on, to a page, an address, or whatever a tap does, named by what it leads to: "Parking ›". An
- * address's tap may do something first, as a hall's menu has the dining page open on that hall
- */
+/** A line that is a link on, to a page, an address, or whatever a tap does, named by what it leads to: "Parking ›" */
 export const LinkLine = ({ to, href, onclick, children }: { to?: Page, href?: string, onclick?: () => void, children?: BruhChild }) =>
   href !== undefined
-    ? <a class="line link-line" href={href} onclick={onclick} {...href.startsWith("/") ? {} : { target: "_blank", rel: "noopener" }}><span>{children}</span><span>›</span></a>
+    ? <a class="line link-line" href={href} {...href.startsWith("/") ? {} : { target: "_blank", rel: "noopener" }}><span>{children}</span><span>›</span></a>
     : <button type="button" class="line link-line" onclick={onclick ?? (() => state.go(to!))}><span>{children}</span><span>›</span></button>
 
 /** The room alone, "N343", where a page has already said the building */
@@ -714,14 +711,19 @@ const FoldRow = ({ fold: { fold, events, next }, day = localDay(nowMs()) }: { fo
 
 /**
  * A list's events as folded in src/social/series.mts, the same in every list: one-offs and what's yours as rows, at
- * most `rows` of them, then each kind of what recurs as one line, the sooner next first
+ * most `rows` of the one-offs, then each kind of what recurs as one line, the sooner next first. What else is yours
+ * at a time, as a saved class is on the home, is given as rows of its own and takes its place among them by when
  */
-export const EventLines = ({ events, day, standing, rows: most }: { events: (Event | Pin)[], day?: string, standing?: BruhChild, rows?: number }) =>
+export const EventLines = ({ events, day, standing, rows: most, also = [] }: { events: (Event | Pin)[], day?: string, standing?: BruhChild, rows?: number, also?: { start: number, row: BruhChild }[] }) =>
   r(() => {
     const keys = state.recurringKeys.value
     const { rows, folds } = folded(events, key => keys.has(key), state.yours, nowMs())
+    // What's yours is never what the cap leaves out
+    const kept = [...rows.filter(state.yours), ...rows.filter(event => !state.yours(event)).slice(0, most)]
     return <>
-      {rows.slice(0, most).map(event => <EventRow event={event} day={day} standing={isPractice(event) ? undefined : standing} />)}
+      {[...kept.map(event => ({ start: event.start, row: <EventRow event={event} day={day} standing={isPractice(event) ? undefined : standing} /> as BruhChild })), ...also]
+        .sort((a, b) => a.start - b.start)
+        .map(({ row }) => row)}
       {folds.map(fold => fold.events.length === 1
         ? <EventRow event={fold.events[0]} day={day} muted={fold.fold === "practice"} />
         : <FoldRow fold={fold} day={day} />)}

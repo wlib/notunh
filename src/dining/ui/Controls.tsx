@@ -5,7 +5,7 @@
 import { r, watch } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
 import { MEALS, type Filters } from "../menus.mts"
-import { index, days, hall, day, meals, menu, preferredMeal, query, isSearching, filters, toggleFilter } from "../state.mts"
+import { index, days, hall, chooseHall, day, meals, menu, preferredMeal, query, isSearching, filters, toggleFilter } from "../state.mts"
 import { Day } from "../../shell/intl.tsx"
 import { DayName, mealName } from "./common.tsx"
 import { HallHours, OpenDot } from "./Hours.tsx"
@@ -117,7 +117,7 @@ export const Controls = () =>
           options={index.value.halls.map(({ id, name }) => ({ value: id, label: <><OpenDot id={id} />{name}</> }))}
           selected={() => hall.value}
           choose={value => {
-            hall.value = value
+            chooseHall(value)
             capture("dining_hall_switched")
           }}
         />

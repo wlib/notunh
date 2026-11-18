@@ -30,10 +30,30 @@ export const days = r(() =>
 
 //#region Remembered between visits
 
-// Most people eat at one hall
-export const hall = remembered("dining-hall", stored =>
-  index.peek().halls.find(({ id }) => id === stored)?.id ?? index.peek().halls[0]?.id ?? ""
-)
+const hallOr = (id: unknown, otherwise: string) =>
+  index.peek().halls.find(hall => hall.id === id)?.id ?? otherwise
+
+// Most people eat at one hall, so the one last chosen here is remembered
+const chosenHall = remembered("dining-hall", stored => hallOr(stored, index.peek().halls[0]?.id ?? ""))
+
+/**
+ * The hall a link asks for, as a hall's place on the map links to its own menu: /dining/?hall=<id>, for this visit
+ * alone, since plenty of people eat at either as the day goes and following a link isn't choosing a hall
+ */
+const asked = hallOr(new URLSearchParams(location.search).get("hall"), "")
+
+/** The hall shown: the one a link asked for, else the one remembered, until another is chosen */
+export const hall = r(asked || chosenHall.peek())
+
+/** Shows a hall and remembers it, as choosing one here means */
+export const chooseHall = (id: string) =>
+  hall.value = chosenHall.value = id
+
+// The hall chosen on another of your devices is shown here too, but not over one a link asked for
+watch([chosenHall], () => {
+  if (!asked)
+    hall.value = chosenHall.value
+}, { skipFirst: true })
 
 /** A remembered list, keeping only items that still exist */
 const rememberedSet = (key: string, known: readonly string[]) =>
@@ -138,7 +158,7 @@ export const focusedFood = r<string>()
 
 /** Shows a meal's menu with a food on it opened */
 export const goToFood = (file: string, { hall: servedAt, day: servedOn, meal }: Serving) => {
-  hall.value = servedAt
+  chooseHall(servedAt)
   day.value = servedOn
   preferredMeal.value = meal
   focusedFood.value = file

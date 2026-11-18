@@ -80,7 +80,7 @@ A mark asks for push permission the first time, from the tap, where the browser 
 
 Everything is done as the **device**: the id and secret reminders use (`src/reminders/browser/store.mts`), made the first time anything is asked. Its first social command sets the secret's SHA-256 in `devices` and makes it a **person** of its own. A device is no longer dropped when pushes stop reaching it; its reminders are.
 
-Every command answers with the `notunh-device` cookie holding the id and secret (`worker/session.mts`): set by the Worker, `HttpOnly`, `SameSite=Lax`, `Path=/api/`, `Secure` over https, renewed for 400 days. A command bearing no secret is the cookie's device, and `GET /api/session` answers the id and secret from it, so a browser whose storage was cleared is still itself ([storage.md](storage.md#your-things-kept-for-you)).
+Every command answers with the `notunh-device` cookie holding the id and secret (`worker/session.mts`): set by the Worker, `HttpOnly`, `SameSite=Lax`, `Path=/api/`, `Secure` over https, renewed for 400 days. A command bearing no secret is the cookie's device, and `GET /api/session` answers the id and secret from it, or nothing (204) where there's none, so a browser whose storage was cleared is still itself ([storage.md](storage.md#your-things-kept-for-you)).
 
 **Your things** (saved sections and trips, permit, laundry rooms, dining hall and filters, your calendar feed's token) are kept per person in `state` via `POST /api/state` (`src/shell/sync.mts`); linked devices share them.
 

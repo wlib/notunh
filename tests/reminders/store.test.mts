@@ -146,3 +146,31 @@ test("an amend edits one reminder under the lock, and says whether it changed it
   expect(await amend("r2", reminder => ({ ...reminder, headsUp: 600 }))).toEqual({ ...kept("r2"), headsUp: 600 })
   expect(await reminders()).toEqual([kept("r1"), { ...kept("r2"), headsUp: 600 }])
 })
+
+test("a page asks the Worker's cookie for its device once however many ask, again only where it couldn't reach it, and still sees a device made since", async () => {
+  let answer: () => Response | Promise<Response> = () => { throw new TypeError("Failed to fetch") }
+  const asked = vi.fn(async () => answer())
+  vi.stubGlobal("fetch", asked)
+  vi.resetModules()
+  const store = await import("../../src/reminders/browser/store.mts")
+  // Unreachable, as offline: none, and asked again the next time
+  expect(await store.recovered()).toBeUndefined()
+  answer = () => new Response(null, { status: 204 })
+  expect(await Promise.all([store.recovered(), store.recovered(), store.deviceKept()])).toEqual([undefined, undefined, undefined])
+  expect(await store.recovered()).toBeUndefined()
+  expect(asked).toHaveBeenCalledTimes(2)
+  // A device made since is the one every later ask sees, without asking the cookie again
+  const made = await store.device()
+  expect(await store.device()).toEqual(made)
+  expect(asked).toHaveBeenCalledTimes(2)
+
+  // Another page, whose storage was cleared, takes back what the cookie keeps, once
+  storage = browserStorage()
+  vi.stubGlobal("caches", storage.caches)
+  vi.stubGlobal("navigator", { locks: storage.locks })
+  vi.resetModules()
+  const cleared = await import("../../src/reminders/browser/store.mts")
+  answer = () => Response.json({ device: made.id, secret: made.secret })
+  expect(await Promise.all([cleared.recovered(), cleared.device(), cleared.device()])).toEqual([made, made, made])
+  expect(asked).toHaveBeenCalledTimes(3)
+})

@@ -2,12 +2,12 @@
 // search, a section's, person's, room's, course's or place's page, a saved section, or a class reminder; the terms to
 // come, for a course's page or one of their sections; the prerequisites, for a section's or course's page; the
 // programs' list, for a course's or program's page, and each program's file as it's opened. And the sections saved
-// (src/courses/saved.mts), with your next class and how a class reminder's queue resolves. Classes are never markers
-// or rows in the week: only your next class is, in Yours. Reactive values only, no DOM
+// (src/courses/saved.mts), with your classes for the rest of today, or else your next, and how a class reminder's
+// queue resolves. Classes are never markers or rows in the week: only yours are, in Yours. Reactive values only, no DOM
 
 import { type DerivativeNode, r } from "bruh/reactive"
 import { createCourses, createLaterTerms, laterTerms } from "../../courses/browser/terms.mts"
-import { SAVED, nextOf, parseKey, readSaved, resolverOf, savedIn, withSaved, withoutSaved } from "../../courses/saved.mts"
+import { type Dated, SAVED, datedFrom, nextOf, parseKey, readSaved, resolverOf, savedIn, withSaved, withoutSaved } from "../../courses/saved.mts"
 import type { Found } from "../../courses/search.mts"
 import { createPrereqs, createPrograms, loadProgram } from "../../programs/browser/prereqs.mts"
 import type { Program } from "../../programs/program.mts"
@@ -45,8 +45,16 @@ export const createCoursesState = ({ coursesIndex, prereqsIndex, now }: Pick<Map
   const unsave = (found: Found) =>
     savedKeys.value = withoutSaved(savedKeys.peek(), found)
 
-  /** Your next saved class to start, for Yours */
-  const nextClass = r(() => courses.value && nextOf(saved.value, courses.value.calendar, now.value * 1000))
+  /** Your saved classes for Yours: the rest of today's, one under way among them, or else the next to start */
+  const classes = r((): Dated[] => {
+    const live = courses.value
+    if (!live)
+      return []
+    const at = now.value * 1000
+    const today = datedFrom(saved.value, live.calendar, at, 1)
+    const next = today.length ? undefined : nextOf(saved.value, live.calendar, at)
+    return next ? [next] : today
+  })
 
   /** A class reminder's visits to come, by its section's key, from the courses as they are now, or nothing while its term is still to load */
   const resolveClass: Resolver = key => {
@@ -84,5 +92,5 @@ export const createCoursesState = ({ coursesIndex, prereqsIndex, now }: Pick<Map
     return programFiles.get(file)!
   }
 
-  return { courses, coursesFailed, wantCourses, later, laterTerms: laterListed, wantLater, savedKeys, saved, save, unsave, nextClass, resolveClass, prereqs, wantPrereqs, programs, wantPrograms, programIn }
+  return { courses, coursesFailed, wantCourses, later, laterTerms: laterListed, wantLater, savedKeys, saved, save, unsave, classes, resolveClass, prereqs, wantPrereqs, programs, wantPrograms, programIn }
 }

@@ -3,7 +3,7 @@ import fc from "fast-check"
 import { readFile } from "node:fs/promises"
 import { LETTERS } from "../../src/courses/calendar.mts"
 import { type Section, clock, courseOf, meets, sessionOf } from "../../src/courses/course.mts"
-import { type Imported, type Kept, createMatcher, importedFrom, importedOn, keptOf, readKept, withKept } from "../../src/courses/imported.mts"
+import { type Imported, type Kept, createMatcher, importedFrom, importedOn, isClassAt, keptOf, readKept, withKept } from "../../src/courses/imported.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
 import { type Rule, WEEKDAYS, between, occurrences, weekly } from "../../src/shared/recur.mts"
 import { dayAt, instantAt, plainDay } from "../../src/shared/temporal.mts"
@@ -95,6 +95,19 @@ test("an event with no code in the room a class meets in, when it meets, is that
   fc.assert(fc.property(inTerm, anyClock, (from, start) => {
     expect(matchOf(event("Call home", "", between(fall.from, fall.to, weekly("Tue")), start), from)).toEqual({})
     expect(matchOf(event("ROOM 101 walkthrough", "Zoom", between(fall.from, fall.to, weekly("Tue")), start), from)).toEqual({})
+  }))
+})
+
+test("an imported class is one told already when it's that section's, or one's cross-listed with it, within a quarter of an hour of its start", () => {
+  const pair = fall.sections.find(section => section.crossListed.some(crn => fall.sections.some(other => other.crn === crn)))!
+  const twin = fall.sections.find(({ crn }) => pair.crossListed.includes(crn))!
+  const another = fall.sections.find(({ crn, crossListed }) => crn !== pair.crn && crn !== twin.crn && !crossListed.includes(pair.crn))!
+  fc.assert(fc.property(fc.integer({ min: 0, max: 2 ** 41 }), fc.integer({ min: -90, max: 90 }), (start, minutes) => {
+    const imported = { event: event("Lecture", "", between(fall.from, fall.to, weekly("Tue")), "10:10"), start, end: start, match: { found: { term: fall, section: pair } } }
+    for (const section of [pair, twin])
+      expect(isClassAt(imported, section, start + minutes * 60_000)).toBe(Math.abs(minutes) <= 15)
+    expect(isClassAt(imported, another, start)).toBe(false)
+    expect(isClassAt({ ...imported, match: {} }, pair, start)).toBe(false)
   }))
 })
 

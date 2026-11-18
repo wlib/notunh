@@ -13,6 +13,7 @@ import * as v from "valibot"
 import type { Calendar } from "./calendar.mts"
 import { type Meeting, type Section, type Term, sessionOf } from "./course.mts"
 import { roomKey } from "./rooms.mts"
+import { isTwin } from "./saved.mts"
 import type { Found } from "./search.mts"
 import type { Matcher } from "../social/sources.mts"
 import { getOrCreate } from "../shared/group.mts"
@@ -87,9 +88,12 @@ export type Match = { found?: Found, place?: string }
 /** How near a class's start an event's must be to be that class, in minutes */
 const NEAR = 15
 
-/** Whether an imported event on a day is a class told already: its section's, starting about when the event does */
+/**
+ * Whether an imported event on a day is a class told already: its section's, or one's cross-listed with it, starting
+ * about when the event does
+ */
 export const isClassAt = ({ start, match }: DatedImport & { match: Match }, section: Section, at: number) =>
-  match.found?.section === section && Math.abs(at - start) <= NEAR * 60_000
+  match.found !== undefined && isTwin(match.found.section, section) && Math.abs(at - start) <= NEAR * 60_000
 
 /** How many days from the day asked an event's occurrences are compared with the classes meeting then */
 const SAMPLED_DAYS = 28

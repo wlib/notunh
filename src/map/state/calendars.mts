@@ -1,13 +1,15 @@
 // Your calendars on the map: those you've imported (src/courses/imported.mts), kept on this device alone, each event
 // matched to the section it's a meeting of and the place it's at once the courses have loaded, for the week in You
-// and the next of them in Yours; and the address of your own feed, of your saved sections and the events you're
+// and the next of them in Yours that isn't a class you've saved, which is told as that; and the address of your own feed, of your saved sections and the events you're
 // going to (worker/calendar.mts), by a token made the first time it's asked for and kept as one of your things, so
 // your other devices share it. Reactive values only, no DOM
 
 import { type DerivativeNode, r } from "bruh/reactive"
 import { addressOf, fetchCalendar, readCalendar } from "../../courses/browser/calendars.mts"
 import type { Courses } from "../../courses/browser/terms.mts"
-import { type DatedImport, type Kept, type Match, KEY, STALE_MS, createMatcher, importedOn, keptOf, readKept, withKept } from "../../courses/imported.mts"
+import { type DatedImport, type Kept, type Match, KEY, STALE_MS, createMatcher, importedOn, isClassAt, keptOf, readKept, withKept } from "../../courses/imported.mts"
+import { datedFrom } from "../../courses/saved.mts"
+import type { Found } from "../../courses/search.mts"
 import { placeMatcher } from "../../social/aliases.mts"
 import { calendarPath } from "../../social/calendar.mts"
 import { placeNames } from "../../social/event.mts"
@@ -27,7 +29,7 @@ export type Imported = DatedImport & { match: Match }
 /** How many days from today the next imported event is looked for */
 const AHEAD = 7
 
-export const createCalendars = ({ gazetteer, courses, wantCourses, now }: Pick<MapData, "gazetteer"> & { courses: DerivativeNode<Courses | undefined>, wantCourses: () => void, now: DerivativeNode<number> }) => {
+export const createCalendars = ({ gazetteer, courses, saved, wantCourses, now }: Pick<MapData, "gazetteer"> & { courses: DerivativeNode<Courses | undefined>, saved: DerivativeNode<Found[]>, wantCourses: () => void, now: DerivativeNode<number> }) => {
   const calendars = remembered<Kept[]>(KEY, readKept)
 
   /** Whether Temporal is here, which an event's days are asked through: loaded once there's a calendar to read */
@@ -49,9 +51,17 @@ export const createCalendars = ({ gazetteer, courses, wantCourses, now }: Pick<M
   const importsOn = (from: Day, days: number): Imported[] =>
     isReady.value ? importedOn(calendars.value.flatMap(({ events }) => events), from, days).map(dated => ({ ...dated, match: matcher.value?.(dated.event, from) ?? {} })) : []
 
-  /** The coming days' imported events, read once a day, and the next of them not yet over, for Yours */
+  /**
+   * The coming days' imported events, read once a day, and the next of them not yet over, for Yours, but a saved
+   * section's class, which Yours tells as that or leaves for its day
+   */
   const coming = r(() => importsOn(today.value, AHEAD))
-  const nextImport = r(() => coming.value.find(({ end }) => end > now.value * 1000))
+  const nextImport = r(() => {
+    const at = now.value * 1000
+    const left = coming.value.filter(({ end }) => end > at)
+    const classes = left.length && courses.value ? datedFrom(saved.value, courses.value.calendar, at, AHEAD) : []
+    return left.find(one => !classes.some(({ event, section }) => isClassAt(one, section, event.start)))
+  })
 
   const keep = (one: Kept) => {
     calendars.value = withKept(calendars.peek(), one)

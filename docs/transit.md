@@ -85,7 +85,7 @@ Moments the Worker wasn't listening aren't scored. Bump `FORECAST` (`forecast.mt
 
 The 1-minute chain figure isn't buses lingering: of Oct 19's 861 chain forecasts in that bin, 196 had the bus already past the stop (a median 6 to 14 min early) while it really left 10 to 60 min later, carrying 83 % of the bin's error with a chain sd of 11 s: confident misses at mid-trip stops, mostly on the Gables loop. Scored into the ratios, they'd put the 1-minute band scale at 2.03; left out, it's 1.27. **Open:** how a followed bus on a loop gets placed 10 to 60 minutes ahead of itself (`placed` in `forecast.mts` takes the scheduled visit nearest in time, and a loop visits a stop twice); the reviewer's `rv-tail.mts` lists the stops. Until it's fixed, the Worker calls a bus gone only once its scheduled time has gone too ([reminders.md](reminders.md)).
 
-**Versions.** The model's shape `version` is 4; a stored model of another version is refit from the first day observed.
+**Versions.** The model's format `version` is 4 ([storage.md](storage.md#versions)); a stored model of an older version is refit from the first day observed, and one of a newer version is left as stored.
 
 **Learning.** `scripts/learn.mts` continues from the model D1 stores, folds in each whole day since, and stores the result compare-and-swap. A day it can't read stops it there; the next night carries on. A rebuild (`gh workflow run inputs.yml -f rebuild=true`, or `npm run model -- --store --rebuild`) runs to the end in one job, reusing matching derived data, and isn't stored if cut short; a model of a new version is stored however far it gets.
 

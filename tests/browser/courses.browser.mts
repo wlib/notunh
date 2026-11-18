@@ -6,7 +6,7 @@
 
 import { test as base, expect, devices, type BrowserContext, type Page } from "@playwright/test"
 import { type Fixture, open, shoot, startFixture } from "./fixture.mts"
-import type { CoursesIndex, Section, TermFile } from "../../src/courses/course.mts"
+import { type CoursesIndex, type Section, type TermFile, courseOf } from "../../src/courses/course.mts"
 import { emptyCalendar } from "../../src/courses/calendar.mts"
 import { addDays, atClock, daysBetween, localDay, weekday } from "../../src/shared/time.mts"
 import { fall } from "../courses/fixtures.mts"
@@ -125,6 +125,21 @@ test("a section saved is your next class in Yours and in You's week, once whiche
   await page.getByRole("button", { name: "Save", exact: true }).click()
   await expect(page.getByText("My courses · 2")).toBeVisible()
   expect(JSON.parse(await page.evaluate(() => localStorage.getItem("courses-saved")!))).toHaveLength(2)
+})
+
+test("Yours lists every class still to come today, not just the next, the sooner first", async ({ page, fixture }) => {
+  await page.clock.setFixedTime(tuesday("07:00"))
+  await serveCourses(page)
+  // Two sections meeting on Tuesdays, one only before noon and one only after
+  const tuesdays = (section: Section) =>
+    section.meetings.filter(meeting => meeting.days.includes("T"))
+  const meetsOnly = (isThen: (start: number) => boolean) =>
+    fall.sections.find(section => tuesdays(section).length > 0 && tuesdays(section).every(meeting => isThen(meeting.start)))!
+  const [morning, afternoon] = [meetsOnly(start => start >= 8 * 60 && start < 12 * 60), meetsOnly(start => start >= 13 * 60)]
+  await page.addInitScript(keys => localStorage.setItem("courses-saved", JSON.stringify(keys)), [afternoon, morning].map(section => `${fall.code}:${section.crn}`))
+  await open(page, fixture.origin)
+  const rows = page.getByRole("list", { name: "Yours" }).getByRole("listitem")
+  await expect(rows).toContainText([courseOf(morning), courseOf(afternoon)])
 })
 
 test.describe(() => {

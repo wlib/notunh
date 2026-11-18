@@ -30,7 +30,7 @@ export const readSaved = (stored: unknown): string[] =>
   Array.isArray(stored) ? [...new Set(stored.filter((key): key is string => typeof key === "string" && parseKey(key) !== undefined))] : []
 
 /** Whether two sections of a term are one class: the same section, or cross-listed with each other */
-const isTwin = (a: Section, b: Section) =>
+export const isTwin = (a: Section, b: Section) =>
   a.crn === b.crn || a.crossListed.includes(b.crn) || b.crossListed.includes(a.crn)
 
 /** The sections saved among the terms given, in the order saved, each class once: a key of a term not given drops out */

@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url"
 import { getJson } from "../../src/shared/json.mts"
 import type { Event, EventsData } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { ATHLETICS, EVENTS, PRESENCE, PRESENCE_CLUBS, REC_INDEX, WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromRecInstances, fromRecOfferings, instancesUrl, live25Url, merged, offeringsUrl, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
+import { ATHLETICS, EVENTS, PRESENCE, PRESENCE_CLUBS, REC_INDEX, WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromPresenceOrgs, fromRecInstances, fromRecOfferings, instancesUrl, live25Url, merged, offeringsUrl, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { Curated, fromCurated } from "../../src/social/curated.mts"
 import curated from "../../src/social/curated.json" with { type: "json" }
@@ -72,7 +72,8 @@ for (const id of listed) {
 const calendarIn = async (file: URL) =>
   await exists(file) ? v.parse(CoursesIndex, JSON.parse(await readFile(file, "utf8"))).calendar : undefined
 const calendar = await calendarIn(new URL(COURSES, STAGED)) ?? await calendarIn(new URL(`../../${COURSES}`, import.meta.url))
-const meetings = fromPresenceClubs(organizations, calendar ? classDays(calendar, today, 7 * WEEKS) : [], match)
+const orgs = fromPresenceOrgs(organizations)
+const meetings = fromPresenceClubs(orgs, calendar ? classDays(calendar, today, 7 * WEEKS) : [], match)
 
 const series = fromCurated(v.parse(Curated, curated), today, 7 * WEEKS, match)
 const events = merged([
@@ -84,5 +85,5 @@ const events = merged([
   ...programs,
   series
 ], now)
-await writeInput(EVENTS, JSON.stringify({ fetched: now, events } satisfies EventsData) + "\n")
+await writeInput(EVENTS, JSON.stringify({ fetched: now, events, orgs } satisfies EventsData) + "\n")
 console.log(`${events.length} events, ${events.filter(event => event.place).length} placed`)

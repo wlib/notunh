@@ -28,7 +28,8 @@ const showFocus = (map: MapLibre, state: MapState) => {
   const marker = new Marker({ element, anchor: "center" })
   watch([state.page, state.focus], () => {
     const focus = state.focus.value?.view === viewOf(state.page.value) ? state.focus.value : undefined
-    map.setLayoutProperty("event-labels", "visibility", focus ? "none" : "visible")
+    for (const layer of ["event-labels", "yours-labels"])
+      map.setLayoutProperty(layer, "visibility", focus ? "none" : "visible")
     if (!focus)
       return void marker.remove()
     const { place: { lon, lat }, label } = focus

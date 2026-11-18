@@ -1,9 +1,9 @@
 // Your things kept for you as a person, beside each device's own copy: saved sections, saved trips, your permit, your
-// laundry rooms, your dining hall and filters, and the token your calendar feed is asked for by. Each is one key, whose
-// last write wins, by when it was made and then by which device made it, so every device and the Worker settle on the
-// same value whatever order they hear of writes in. The Worker decides, by isNewer, and each device keeps what it
-// answers but for what it's written since it asked. Pure: the pages keep and send (src/shell/state.mts,
-// src/shell/sync.mts), the Worker stores (worker/social.mts)
+// laundry rooms, your dining hall and filters, the token your calendar feed is asked for by, the sessions you've saved
+// and activities you follow, and your class standing. Each is one key, whose last write wins, by when it was made and
+// then by which device made it, so every device and the Worker settle on the same value whatever order they hear of
+// writes in. The Worker decides, by isNewer, and each device keeps what it answers but for what it's written since it
+// asked. Pure: the pages keep and send (src/shell/state.mts, src/shell/sync.mts), the Worker stores (worker/social.mts)
 
 import * as v from "valibot"
 
@@ -16,7 +16,9 @@ export const SYNCED = [
   "dining-hall",
   "dining-diets",
   "dining-avoid",
-  "calendar-feed"
+  "calendar-feed",
+  "events-saved",
+  "class-standing"
 ] as const
 
 /**

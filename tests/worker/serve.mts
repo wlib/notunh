@@ -37,6 +37,9 @@ const server = createServer(async (request, response) => {
   const url = new URL(request.url!, "http://notunh.app")
   if (url.pathname === "/__mail")
     return response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(last ?? null))
+  // A building's photo is fetched from where it's published and made by the Images binding, neither of which is here
+  if (url.pathname === "/api/photo")
+    return response.writeHead(200, { "content-type": "image/svg+xml" }).end(`<svg xmlns="http://www.w3.org/2000/svg"/>`)
   const chunks: Buffer[] = []
   for await (const chunk of request)
     chunks.push(chunk as Buffer)

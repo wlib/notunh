@@ -21,7 +21,7 @@ import { bundle } from "../../scripts/map/style.mts"
 import { FIXTURES } from "../../scripts/files.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { EVENTS, WEEKS, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromRecInstances, fromRecOfferings, merged, programOf } from "../../src/social/sources.mts"
+import { EVENTS, WEEKS, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromPresenceOrgs, fromRecInstances, fromRecOfferings, merged, programOf } from "../../src/social/sources.mts"
 import { Curated, fromCurated } from "../../src/social/curated.mts"
 import { localDay } from "../../src/shared/time.mts"
 import { COURSES } from "../../src/courses/course.mts"
@@ -132,9 +132,10 @@ const program = { id: "8520b0bd-ad58-415b-a070-7dc7c18e06fc", ...programOf(await
 const skate = { id: "af8ff201-7146-4688-b10e-fe79418e3ff2", ...programOf(await fixture("events/rec-calendar-program.html")) }
 const calendar = fromLive25(JSON.parse(await fixture("courses/25live.json")), MADE)
 const made = localDay(MADE)
+const orgs = fromPresenceOrgs(JSON.parse(await fixture("events/presence-clubs.json")))
 const events = merged([
   fromPresence(JSON.parse(await fixture("events/presence.json")), match),
-  fromPresenceClubs(JSON.parse(await fixture("events/presence-clubs.json")), classDays(calendar, made, 7 * WEEKS), match),
+  fromPresenceClubs(orgs, classDays(calendar, made, 7 * WEEKS), match),
   from25Live(JSON.parse(await fixture("events/25live.json")), match),
   fromAthletics(await fixture("events/athletics.ics"), match),
   fromDserec(JSON.parse(await fixture("events/dserec.json")), match),
@@ -142,7 +143,7 @@ const events = merged([
   fromRecInstances(await fixture("events/rec-instances.html"), skate, match),
   fromCurated(v.parse(Curated, JSON.parse(await fixture("events/curated.json"))), made, 7 * WEEKS, match)
 ], 0)
-await write(EVENTS, { fetched: MADE, events })
+await write(EVENTS, { fetched: MADE, events, orgs })
 
 // The rooms to book, read from 25Live's trimmed answers as the build reads the whole ones, with their NetIDs and
 // titles made up: the spaces placed, and the one day of bookings kept, as anyone is told them

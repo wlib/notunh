@@ -26,6 +26,29 @@ export const TermDates = v.object({
 })
 export type TermDates = v.InferOutput<typeof TermDates>
 
+/**
+ * What kind of date the academic calendar names: a deadline, registration opening or closing, a break, or a term's
+ * start, end or finals
+ */
+export const DATE_KINDS = ["deadline", "registration", "break", "term"] as const
+
+/** Undergraduates' class standings, as registration opens to each in turn */
+export const STANDINGS = ["first-year", "sophomore", "junior", "senior"] as const
+export type Standing = typeof STANDINGS[number]
+
+/**
+ * A date worth knowing ahead, as the registrar words it, but for whom it's not about; a registration window says who
+ * it's for first, "Seniors · registration opens", with the term and time after
+ */
+export const KeyDate = v.object({
+  day:      Day,
+  title:    v.string(),
+  kind:     v.picklist(DATE_KINDS),
+  audience: v.optional(v.picklist(STANDINGS)),
+  detail:   v.optional(v.string())
+})
+export type KeyDate = v.InferOutput<typeof KeyDate>
+
 export const Calendar = v.object({
   /** When 25Live was read, epoch ms */
   fetched:  v.number(),
@@ -36,12 +59,14 @@ export const Calendar = v.object({
   /** University holidays, when commuter and faculty lots open to all and meters are free */
   holidays: v.array(Day),
   /** By term code, like 202610 */
-  terms:    v.record(v.string(), TermDates)
+  terms:    v.record(v.string(), TermDates),
+  /** Deadlines, registration, breaks and the terms' dates, by day, for Durham's undergraduates; none from before they were kept */
+  dates:    v.optional(v.array(KeyDate), [])
 })
 export type Calendar = v.InferOutput<typeof Calendar>
 
 export const emptyCalendar = (): Calendar =>
-  ({ fetched: 0, noClass: [], swaps: {}, holidays: [], terms: {} })
+  ({ fetched: 0, noClass: [], swaps: {}, holidays: [], terms: {}, dates: [] })
 
 const SEASONS = { "10": "Fall", "30": "J-Term", "50": "Spring", "70": "Summer" } as const
 export type Season = typeof SEASONS[keyof typeof SEASONS]
@@ -60,6 +85,42 @@ export const termName = (code: string) => {
   return `${SEASONS[half]} ${half === "10" ? year : year + 1}`
 }
 
+/** Dates for someone other than Durham's undergraduates, or for staff, which a student needn't be told */
+const NOT_OURS = /UNH Law|CPS Online|TSAS|Faculty|Census|Early Alert|Degree Conferral|Term \d\b|\bgrad(?:uate)?\b|Ph\.D|Continuing Education|without Webcat|Midsemester$|Webcat registration continues/i
+
+/** The kind of date a title names, or none for one that isn't worth knowing ahead */
+const kindOf = (title: string): KeyDate["kind"] | undefined =>
+  /registration (begins|closes|reopens)/i.test(title)                      ? "registration" :
+  /Classes Begin|Last Day of Classes|Final Exams|Classes Resume/i.test(title) ? "term" :
+  /LAST DAY|deadline|Due date/i.test(title)                                ? "deadline" :
+  /^No Classes|Thanksgiving|Recess|Midsemester Break/i.test(title)         ? "break" :
+                                                                             undefined
+
+/** Each standing as the registrar names it, and as a list says it */
+const AUDIENCES: [RegExp, Standing, string][] = [
+  [/\bSENIORS?\b/i, "senior", "Seniors"],
+  [/\bJUNIORS?\b/i, "junior", "Juniors"],
+  [/\bSOPHOMORES?\b/i, "sophomore", "Sophomores"],
+  [/\bFRESHM[AE]N\b|first[- ]year/i, "first-year", "First-years"]
+]
+
+/**
+ * A registration window as a list says it, who it's for first: "Spring 2027 registration begins for Durham and
+ * Manchester SENIORS at 8:30am" is "Seniors · registration opens", "Spring 2027 · 8:30am"
+ */
+const windowOf = (title: string): Pick<KeyDate, "title" | "audience" | "detail"> | undefined => {
+  const found = AUDIENCES.find(([words]) => words.test(title))
+  const [, term, action, time] = title.match(/^(\w+ \d{4}) registration (begins|closes|reopens)\b.*?(?: at ([\d:]+\s*[ap]m))?$/i) ?? []
+  if (!found || !term)
+    return
+  const [, audience, said] = found
+  return { title: `${said} · registration ${action.toLowerCase() === "closes" ? "closes" : "opens"}`, audience, detail: [term, time].filter(Boolean).join(" · ") }
+}
+
+/** A title as a list says it: the registrar's capitals and "Durham and Manchester" let go */
+const titleOf = (title: string) =>
+  title.replace(/LAST DAY/g, "Last day").replace(/ (for )?(current )?Durham (and|&) Manchester/g, "").replace(/\b(SENIORS|JUNIORS|SOPHOMORES|FRESHMEN|FRESHMAN)\b/g, word => word.toLowerCase()).replace(/ \((Durham\/Manchester Courses|See event details[^)]*)\)/g, "")
+
 const NAMED: Record<string, Letter> = { monday: "M", tuesday: "T", wednesday: "W", thursday: "R", friday: "F", saturday: "S", sunday: "U" }
 
 /** The calendar from 25Live's entries, any of its calendars, those of a shape not known left out */
@@ -74,6 +135,11 @@ export const fromLive25 = (json: unknown, fetched: number): Calendar => {
     if (!allDay || canceled || seen.has(key) || !/Academic Calendar$|Holidays$/.test(categoryCalendar))
       continue
     seen.add(key)
+    const kind = categoryCalendar.endsWith("Academic Calendar") && !NOT_OURS.test(title) ? kindOf(title) : undefined
+    if (kind) {
+      const opening = kind === "registration" ? windowOf(title) : undefined
+      calendar.dates.push({ day, kind, ...opening ?? { title: titleOf(title) } })
+    }
     if (/University Holiday/.test(title) && categoryCalendar.endsWith("Holidays"))
       calendar.holidays.push(day)
     if (/^No Classes|No Classes$|Thanksgiving Holidays|Spring Recess|Midsemester Break/.test(title) && !/Law/.test(title))
@@ -100,7 +166,7 @@ export const fromLive25 = (json: unknown, fetched: number): Calendar => {
   const sorted = (days: string[]) => [...new Set(days)].sort()
   for (const dates of Object.values(calendar.terms))
     dates.reading = sorted(dates.reading)
-  return { ...calendar, noClass: sorted(calendar.noClass), holidays: sorted(calendar.holidays) }
+  return { ...calendar, noClass: sorted(calendar.noClass), holidays: sorted(calendar.holidays), dates: calendar.dates.sort((a, b) => a.day.localeCompare(b.day)) }
 }
 
 /**

@@ -1,11 +1,10 @@
-// What kind of thing an event is, the same thing told by more than one calendar, and a list's practices gathered
-// (src/social/sport.mts): told once whatever order, the same again on its own answer, and nothing ever dropped
+// What kind of thing an event is, and the same thing told by more than one calendar (src/social/sport.mts): told
+// once whatever order, the same again on its own answer, and nothing ever dropped
 
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { type Event, SOURCES } from "../../src/social/event.mts"
-import { deduped, gathered, isPractice, isSame } from "../../src/social/sport.mts"
-import { localDay } from "../../src/shared/time.mts"
+import { deduped, isPractice, isSame, isSameMeeting } from "../../src/social/sport.mts"
 
 const HOUR = 3_600_000
 const at = Date.UTC(2026, 9, 31, 15)
@@ -59,22 +58,17 @@ test("telling each thing once drops nothing, is the same whatever order, and the
   }))
 })
 
-test("a list's practices follow the rest, a lone one on a day as a muted row and more as one line, and every event is in exactly one line", () => {
-  fc.assert(fc.property(events, made => {
-    const lines = gathered(made)
-    const listed = lines.flatMap(line => "event" in line ? [line.event] : line.practices)
-    expect(listed.map(event => event.id).sort()).toEqual(made.map(event => event.id).sort())
-    const firstPractice = lines.findIndex(line => !("event" in line) || line.isMuted)
-    expect(firstPractice === -1 || lines.slice(firstPractice).every(line => !("event" in line) || line.isMuted)).toBe(true)
-    const days = lines.flatMap(line => "event" in line ? (line.isMuted ? [localDay(line.event.start)] : []) : [localDay(line.practices[0].start)])
-    expect(new Set(days).size).toBe(days.length)
-    for (const line of lines)
-      if ("practices" in line) {
-        expect(line.practices.length).toBeGreaterThan(1)
-        expect(line.practices.every(isPractice)).toBe(true)
-        expect(new Set(line.practices.map(event => localDay(event.start))).size).toBe(1)
-      }
-      else
-        expect(isPractice(line.event)).toBe(line.isMuted)
-  }))
+test("a club's meeting and the room booked for it are one, the meeting kept with the booking's id, but not a booking elsewhere, at another time, or of another club", () => {
+  const meeting: Event = { id: "presence:safc/meeting/2026-11-17", title: "Student Activity Fee Committee (SAFC) meeting", start: at + 40 * 60_000, end: at + 2 * HOUR, place: "Memorial Union Building", where: "MUB 330s", source: "presence", url: "" }
+  const booking: Event = { id: "25live:1", title: "Student Activity Fee Commiteee", start: at, end: at + 2 * HOUR, place: "Memorial Union Building", where: "MUB 162", source: "25live", url: "" }
+  expect(isSameMeeting(meeting, booking)).toBe(true)
+  expect(deduped([booking, meeting])).toEqual([{ ...meeting, also: ["25live:1"] }])
+  expect(isSameMeeting(meeting, { ...booking, place: "Kingsbury Hall" })).toBe(false)
+  expect(isSameMeeting(meeting, { ...booking, start: at + 3 * HOUR, end: at + 4 * HOUR })).toBe(false)
+  expect(isSameMeeting(meeting, { ...booking, title: "Student Senate" })).toBe(false)
+  expect(isSameMeeting({ ...meeting, title: "Little Library Club meeting" }, { ...booking, title: "Little Library Club Fall 2026" })).toBe(true)
+  // One word is too little to go by, but a club's whole name or the initials it gives itself
+  expect(isSameMeeting(meeting, { ...booking, title: "Student" })).toBe(false)
+  expect(isSameMeeting(meeting, { ...booking, title: "SAFC Meeting" })).toBe(true)
+  expect(isSameMeeting({ ...meeting, title: "Hillel meeting" }, { ...booking, title: "Hillel" })).toBe(true)
 })

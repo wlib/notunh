@@ -134,7 +134,8 @@ test("a calendar imported from a file or a link stays on the phone, and shows in
   await week.getByRole("button", { name: /PSYC 401/ }).first().click()
   await expect(page).toHaveURL(/\/map\/section\/202610\/\d{5}$/)
   await page.goto(`${fixture.origin}/map/`)
-  await expect(page.getByRole("list", { name: "Yours" }).getByRole("listitem")).toHaveText([/^12:00 PMCall homeYour calendar$/, /^2:10 PMCS 518 · Kingsbury N343/])
+  // The academic calendar's dates due soon are in Yours too, beside what's asked of here
+  await expect(page.getByRole("list", { name: "Yours" }).locator("li:not(.date)")).toHaveText([/^12:00 PMCall homeYour calendar$/, /^2:10 PMCS 518 · Kingsbury N343/])
 
   // Removed, it's gone from the week and from the phone
   await page.goto(`${fixture.origin}/map/you`)

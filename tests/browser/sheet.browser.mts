@@ -6,6 +6,7 @@
 // fixtures' map never loads, having no tiles
 
 import { test as base, expect, devices, type Page } from "@playwright/test"
+import { localDay } from "../../src/shared/time.mts"
 import { type Fixture, open, startFixture } from "./fixture.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
@@ -153,10 +154,11 @@ test("the sheet keeps its height through Directions and Back, from home and from
   await holds(page, tall)
 })
 
-test("an event's row opens its page at once: never loading, the week beneath it untouched, and only the page's own dates made", async ({ page, fixture }) => {
+test("an event's row opens its page at once: never loading, the home beneath it untouched, and only the page's own dates made", async ({ page, fixture }) => {
   await withWeeks(page, Date.now())
-  await open(page, fixture.origin, "/map/")
-  const row = page.locator(".agenda").getByRole("button", { name: /Event 30\b/ }).first()
+  // A place's week, the longest list of events there is
+  await open(page, fixture.origin, "/map/place/Huddleston+Hall")
+  const row = page.locator(".view").getByRole("button", { name: /Event 30\b/ }).first()
   await expect(row).toBeVisible()
   await row.scrollIntoViewIfNeeded()
 
@@ -192,34 +194,25 @@ test("an event's row opens its page at once: never loading, the week beneath it 
   await expect(page.getByRole("heading", { name: "Event 30" })).toBeVisible()
 })
 
-test("Back, the sheet's or the browser's, returns to the week and to a place's events scrolled as they were left", async ({ page, fixture }) => {
+test("Back, the sheet's or the browser's, returns to a place's events scrolled as they were left, and Forward and Back again each where it was", async ({ page, fixture }) => {
   test.slow()
   await withWeeks(page, Date.now())
-  await open(page, fixture.origin, "/map/")
+  await open(page, fixture.origin, "/map/place/Huddleston+Hall")
   const back = page.locator(".back")
-  const week = page.locator(".agenda")
-  await expect(week.getByRole("button", { name: /Event 30\b/ }).first()).toBeVisible()
-
-  // Further down the week than it first shows, a week later
-  await page.getByRole("button", { name: "Later ›" }).tap()
-  const later = week.getByRole("button", { name: /Event 70\b/ }).first()
-  for (const leave of [() => back.tap(), () => page.goBack()]) {
-    const scrolled = await scrollToRow(page, later)
-    expect(scrolled).toBeGreaterThan(1000)
-    await later.tap()
-    await expect(page.getByRole("heading", { name: "Event 70" })).toBeVisible()
-    expect(await scrollOf(page)).toBe(0)
-    await leave()
-    await expect(later).toBeVisible()
-    expect(await scrollOf(page)).toBe(scrolled)
-  }
-
-  // And Forward to the event, and Back to the week again, each where it was
+  const later = page.locator(".view").getByRole("button", { name: /Event 15\b/ }).first()
+  await expect(later).toBeVisible()
+  await later.tap()
+  await expect(page.getByRole("heading", { name: "Event 15" })).toBeVisible()
+  await page.goBack()
+  await expect(page.getByRole("heading", { name: "Huddleston Hall" })).toBeVisible()
+  const scrolled = await scrollToRow(page, later)
+  await later.tap()
+  await page.goBack()
   await page.goForward()
-  await expect(page.getByRole("heading", { name: "Event 70" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Event 15" })).toBeVisible()
   await page.goBack()
   await expect(later).toBeVisible()
-  expect(await scrollOf(page)).toBeGreaterThan(1000)
+  expect(await scrollOf(page)).toBe(scrolled)
 
   // A place's page, opened from an event's, and made anew as Back returns to it
   await later.tap()
@@ -234,6 +227,27 @@ test("Back, the sheet's or the browser's, returns to the week and to a place's e
     await expect(page.getByRole("heading", { name: "Huddleston Hall" })).toBeVisible()
     expect(await scrollOf(page)).toBe(scrolled)
   }
+})
+
+test("Back keeps the week fold expanded at the session that opened the detail page", async ({ page, fixture }) => {
+  const now = Date.now()
+  await page.clock.setFixedTime(now)
+  const events = Array.from({ length: 20 }, (_, i) => ({
+    id: `presence:club-${i}/meeting/${localDay(now)}`, title: `Club ${i} meeting`,
+    start: now, end: now + 3_600_000, where: "MUB", source: "presence", url: ""
+  }))
+  await page.route(/\/assets\/events-[\w-]+\.json$/, route => route.fulfill({ json: { events, fetched: now } }))
+  await open(page, fixture.origin, "/map/week")
+  const fold = page.locator(".view details").filter({ has: page.locator("summary", { hasText: "Club meetings" }) })
+  await fold.locator("summary").click()
+  const session = fold.getByRole("button", { name: /Club 18 meeting/ }).first()
+  const scrolled = await scrollToRow(page, session)
+  expect(scrolled).toBeGreaterThan(0)
+  await session.tap()
+  await expect(page.getByRole("heading", { name: "Club 18 meeting" })).toBeVisible()
+  await page.goBack()
+  await expect(session).toBeVisible()
+  expect(await scrollOf(page)).toBe(scrolled)
 })
 
 test("a trip's ends are marked on the map only while its directions are shown, though Back keeps the trip", async ({ page, fixture }) => {
@@ -336,8 +350,9 @@ const finger = async (page: Page, x: number, y: number, by: number, { steps = 10
 test("a pull up from half moves the sheet to tall and runs on into scrolling the content, and a pull down from in the content runs back to its top and on into lowering the sheet", async ({ page, fixture }) => {
   test.slow()
   await withWeeks(page, Date.now())
-  await open(page, fixture.origin, "/map/")
-  await expect(page.locator(".agenda .row").first()).toBeVisible()
+  // A place's week, the longest list of events there is
+  await open(page, fixture.origin, "/map/place/Huddleston+Hall")
+  await expect(page.locator(".view .row").first()).toBeVisible()
   const half = await sheetHeight(page)
   const tallest = await page.evaluate(() => document.querySelector("#app")!.clientHeight - 4 * parseFloat(getComputedStyle(document.documentElement).fontSize))
   const x = 195
@@ -394,9 +409,10 @@ test("a pull up from half moves the sheet to tall and runs on into scrolling the
 test("a flick down on the content at its top lowers the sheet, and at tall a pull up is the content's own scroll", async ({ page, fixture }) => {
   test.slow()
   await withWeeks(page, Date.now())
-  await open(page, fixture.origin, "/map/")
+  // A place's week, the longest list of events there is
+  await open(page, fixture.origin, "/map/place/Huddleston+Hall")
   const panel = page.locator(".panel")
-  await expect(page.locator(".agenda .row").first()).toBeVisible()
+  await expect(page.locator(".view .row").first()).toBeVisible()
   const half = await sheetHeight(page)
   const x = 195
 
@@ -442,7 +458,8 @@ test("a flick down on the content at its top lowers the sheet, and at tall a pul
   }, { x, y: 500, dx, dy })
   expect(await prevented(0, -3)).toBe(false)
   expect(await prevented(0, 3)).toBe(true)
-  expect(await prevented(8, 3)).toBe(false)
+  // A move to the right on a page is its swipe back's, never the content's scroll
+  expect(await prevented(8, 3)).toBe(true)
   await holds(page, tall)
   // Below tall, either way is the sheet's
   await page.locator(".grabber").tap()
@@ -521,7 +538,7 @@ test("a swipe to the right takes a page back, following the finger, to the page 
     const box = (await page.getByRole("heading", { name: heading }).boundingBox())!
     return box.y + box.height / 2
   }
-  await page.getByRole("list", { name: "Now" }).getByRole("button", { name: /Honors Drop In Advising/ }).tap()
+  await page.getByRole("list", { name: "Now" }).locator(".row", { hasText: "Honors Drop In Advising" }).tap()
   await expect(page.getByRole("heading", { name: "Honors Drop In Advising" })).toBeVisible()
   await page.locator(".lines").getByRole("button", { name: /Huddleston Hall/ }).tap()
   await expect(page.getByRole("heading", { name: "Huddleston Hall" })).toBeVisible()

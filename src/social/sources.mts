@@ -8,7 +8,7 @@
 // offering's title are, are read by when.mts
 
 import * as v from "valibot"
-import { type Event, SHORT } from "./event.mts"
+import { type Event, type Org, SHORT } from "./event.mts"
 import { deduped } from "./sport.mts"
 import { usable } from "../shared/json.mts"
 import { MONTH, datesOf, timesOf, whenOf } from "./when.mts"
@@ -96,8 +96,18 @@ const PresenceClub = v.object({
   uri:                    v.string(),
   name:                   v.string(),
   regularMeetingTime:     v.nullish(v.string()),
-  regularMeetingLocation: v.nullish(v.string())
+  regularMeetingLocation: v.nullish(v.string()),
+  categories:             v.nullish(v.array(v.string()))
 })
+
+/** Wildcat Link's clubs, every one, as browsing lists them: name, page, its meeting time and place as words, and its categories */
+export const fromPresenceOrgs = (json: unknown): Org[] =>
+  v.parse(usable(PresenceClub), json).flatMap(club => {
+    const name = plain(club.name)
+    const meets = plain(club.regularMeetingTime ?? "")
+    const where = plain(club.regularMeetingLocation ?? "")
+    return name ? [{ key: `presence:${club.uri}`, name, url: `https://unh.presence.io/organization/${club.uri}`, ...meets && { meets }, ...where && { where }, categories: club.categories ?? [] }] : []
+  })
 
 /** The longest a meeting is, longer being a place's hours */
 const LONGEST = 4 * HOUR
@@ -114,9 +124,9 @@ const NOT_WEEKLY = /bi-?weekly|every other|alternat|select|certain|some |occasio
  * or "Mondays @ 7:30 PM", which has no end and so is told as starting then). Only the meeting fields are read, never
  * a club's description, which names its members
  */
-export const fromPresenceClubs = (json: unknown, days: readonly Day[], match: Matcher): Event[] =>
-  v.parse(usable(PresenceClub), json).flatMap(club => {
-    const text = club.regularMeetingTime ?? ""
+export const fromPresenceClubs = (orgs: readonly Org[], days: readonly Day[], match: Matcher): Event[] =>
+  orgs.flatMap(club => {
+    const text = club.meets ?? ""
     const when = days.length ? whenOf(text, days[0]) : undefined
     if (!when?.days.length || when.times.length !== 1 || when.dates.length || NOT_WEEKLY.test(text))
       return []
@@ -124,16 +134,16 @@ export const fromPresenceClubs = (json: unknown, days: readonly Day[], match: Ma
     // Every weekday, or longer than a meeting, is an office's hours: "Monday-Friday, 9AM-4PM"
     if (when.days.length >= 5 || atClock(days[0], end) - atClock(days[0], start) > LONGEST)
       return []
-    const where = plain(club.regularMeetingLocation ?? "")
+    const where = club.where ?? ""
     return days.filter(day => when.days.includes(weekday(day))).map(day => ({
-      id:     `presence:${club.uri}/meeting/${day}`,
+      id:     `${club.key}/meeting/${day}`,
       title:  plain(`${club.name} meeting`),
       start:  atClock(day, start),
       end:    atClock(day, end),
       place:  match(where),
       where,
       source: "presence" as const,
-      url:    `https://unh.presence.io/organization/${club.uri}`
+      url:    club.url
     }))
   })
 

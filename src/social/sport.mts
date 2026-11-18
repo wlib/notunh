@@ -1,14 +1,13 @@
 // What kind of thing an event is, as far as anyone looking for something to go to cares, read the same whatever
-// calendar it came from: a game, meet or tournament anyone can come to, or a practice, a hold, a camp, a rehearsal,
-// a tryout, which goes on there but isn't for going to; and the same game said by more than one calendar told once.
+// calendar it came from: a game, meet or tournament anyone can come to, or a practice, a hold, a camp, a rehearsal, a
+// tryout, which goes on there but isn't for going to; and the same game said by more than one calendar told once.
 // Athletics' ICS, DSE Rec's club sports and 25Live each say some of the same things in their own words ("UNH Women's
-// Ice Hockey vs Holy Cross", "Women's Ice Hockey game: Holy Cross"), so lists and the map go by this alone, never by
-// a source. Nothing is dropped: a practice is gathered or drawn quieter, and an event told twice keeps the others'
-// ids in `also`. Pure
+// Ice Hockey vs Holy Cross", "Women's Ice Hockey game: Holy Cross"), so lists and the map go by this alone, never by a
+// source; and a club's meeting with the room booked for it is one. Nothing is dropped: a practice is gathered or drawn
+// quieter, and an event told twice keeps the others' ids in `also`. Pure
 
 import type { Event, Source } from "./event.mts"
 import { groupBy } from "../shared/group.mts"
-import { localDay } from "../shared/time.mts"
 
 /** Words of a game or meet, which win over a practice's: "Camper Appreciation Night" is a hockey game's */
 const GAME = /\bvs\.?\s|\bversus\b|\bgame\b|\bmeet\b|\bmatch\b|\btournament\b|\bscrimmage\b|\bplay day\b|\bregatta\b|\binvitational\b|\bchampionship/i
@@ -56,8 +55,36 @@ export const isSame = (a: Event, b: Event) => {
   return fewer.size > 0 && shared >= Math.max(2, Math.ceil(fewer.size * 0.75))
 }
 
+/** A club's weekly meeting, as Wildcat Link's clubs say (sources.mts) */
+const isMeeting = (event: Event) =>
+  event.source === "presence" && /\/meeting\/\d{4}-\d\d-\d\d$/.test(event.id)
+
+/** A club's meeting is kept over the room booked for it, so a series and a save of either keep their place */
 const rankOf = (event: Event) =>
-  `${RANK[event.source]} ${event.id}`
+  `${isMeeting(event) ? -1 : RANK[event.source]} ${event.id}`
+
+/** Words saying nothing of which club a booking is for: the term, the year, that it's a meeting */
+const BOOKING_FILLER = /^(fall|spring|summer|winter|meetings?|general|weekly|\d+)$/
+
+/**
+ * Whether a room booked on 25Live is a club's meeting Wildcat Link tells too: at the same place, at overlapping times,
+ * and most of the booking's words in the club's name, so "Student Activity Fee Commiteee" is the meeting of the
+ * "Student Activity Fee Committee (SAFC)", and "Little Library Club Fall 2026" the Little Library Club's
+ */
+export const isSameMeeting = (a: Event, b: Event) => {
+  const [meeting, booking] = isMeeting(a) ? [a, b] : [b, a]
+  if (!isMeeting(meeting) || booking.source !== "25live" || !meeting.place || meeting.place !== booking.place || !(meeting.start < booking.end && booking.start < meeting.end))
+    return false
+  const club = wordsOf(meeting.title.replace(/ meeting$/, ""))
+  const booked = [...wordsOf(booking.title)].filter(word => !BOOKING_FILLER.test(word))
+  // One word is too little to go by, but a club's whole name or the initials it gives itself
+  if (booked.length < 2)
+    return booked.length === 1 && club.has(booked[0]) && (club.size === 1 || meeting.title.toLowerCase().includes(`(${booked[0]})`))
+  return booked.filter(word => club.has(word)).length >= Math.ceil(booked.length * 0.75)
+}
+
+/** How far apart a meeting and its room's booking may start: an hour, as a room's booked ahead of a meeting */
+const BOOKED_AHEAD_MS = 60 * 60_000
 
 /**
  * Events with each thing told once: every group of tellings that are the same, by isSame and what's the same as
@@ -70,10 +97,11 @@ export const deduped = (events: readonly Event[]): Event[] => {
   // Only events near in time can be the same, so each is compared with those starting soon after it
   const order = events.map((_, i) => i).sort((a, b) => events[a].start - events[b].start)
   for (const [n, i] of order.entries())
-    for (const j of order.slice(n + 1)) {
-      if (events[j].start - events[i].start > NEAR_MS)
+    for (let k = n + 1; k < order.length; k++) {
+      const j = order[k]
+      if (events[j].start - events[i].start > BOOKED_AHEAD_MS)
         break
-      if (isSame(events[i], events[j]))
+      if (isSame(events[i], events[j]) || isSameMeeting(events[i], events[j]))
         parent[root(i)] = root(j)
     }
   return [...groupBy(events.keys(), root).values()].map(group => {
@@ -84,23 +112,3 @@ export const deduped = (events: readonly Event[]): Event[] => {
 }
 
 //#endregion
-
-/** A list's line: an event, quieter if it's a practice, or a day's practices, gathered to say as one */
-export type Line<E extends Event = Event> = { event: E, isMuted: boolean } | { practices: E[], place?: string }
-
-/**
- * A list of events with each day's practices after the rest, gathered into one line where there's more than one, so
- * a list of what's on isn't a list of practices, and a lone practice takes no more room as its own row than as a line
- */
-export const gathered = <E extends Event,>(events: readonly E[]): Line<E>[] => {
-  const practices = groupBy(events.filter(isPractice), event => localDay(event.start))
-  return [
-    ...events.filter(event => !isPractice(event)).map(event => ({ event, isMuted: false })),
-    ...[...practices.values()].map(practices => {
-      if (practices.length === 1)
-        return { event: practices[0], isMuted: true }
-      const places = new Set(practices.map(event => event.place ?? event.where))
-      return { practices, place: places.size === 1 ? [...places][0] : undefined }
-    })
-  ]
-}

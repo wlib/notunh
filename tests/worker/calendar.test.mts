@@ -14,6 +14,7 @@ import { type CoursesIndex, type TermFile, meets, occurrences, termOf } from "..
 import type { EventsData } from "../../src/social/event.mts"
 import { calendarPath } from "../../src/social/calendar.mts"
 import { slugOf } from "../../src/social/curated.mts"
+import { seriesOf } from "../../src/social/series.mts"
 import { readEvents } from "../../src/shared/ics.mts"
 import { spansOf } from "../../src/shared/recur.mts"
 import { plainDay } from "../../src/shared/temporal.mts"
@@ -37,14 +38,17 @@ vi.setSystemTime(Date.parse(`${addDays(live.from, 30)}T16:00:00Z`))
 const PAGE = `<html><head><meta name="release" content="2026-10-07T00:00:00Z"><link rel="data" href="/src/courses/courses.json" data-name="courses"><link rel="data" href="/src/map/events.json" data-name="events"></head></html>`
 
 /** A Worker over the fixtures' site, with a fresh database, and a device of it */
-const worker = () => {
+const worker = (published = events) => {
   const env = {
     DB: d1(),
     ASSETS: {
       fetch: async (input: RequestInfo | URL) => {
         const { pathname } = new URL(input instanceof Request ? input.url : input)
+        // Other events than the fixtures' are a release of their own, as the site's files are kept by release
+        if (pathname === "/src/map/events.json")
+          return Response.json({ fetched: Date.now(), events: published })
         return pathname === "/map/"
-          ? new Response(PAGE, { headers: { "content-type": "text/html" } })
+          ? new Response(PAGE.replace("2026-10-07T00:00:00Z", published === events ? "original" : "merged"), { headers: { "content-type": "text/html" } })
           : readFile(new URL(pathname.startsWith("/data/") ? `public${pathname}` : pathname.slice(1), DATA)).then(body => new Response(body), () => new Response("", { status: 404 }))
       }
     }
@@ -124,6 +128,30 @@ test("a feed is a person's saved sections and the events they host or go to, by 
   await post("/api/state", { device, entries: { "calendar-feed": { at: 2, by: "browser", value: "u".repeat(22) } } }, secret)
   expect((await get(calendarPath("feed", token))).status).toBe(404)
   expect((await get(calendarPath("feed", "u".repeat(22)))).status).toBe(200)
+})
+
+test("a feed has the sessions saved, each under the id it was saved by, not every session of an activity followed, which its own address has; and anyone with the address reads it, verified or not", async () => {
+  const [device, secret, token] = ["s".repeat(16), "secret-of-s-device", "v".repeat(22)]
+  const ahead = events.filter(event => event.end > Date.now())
+  const session = ahead.find(event => seriesOf(event))!
+  const key = seriesOf(session)!.key
+  const sessions = ahead.filter(event => seriesOf(event)?.key === key)
+  // Saved as another calendar's id told it, before the two tellings were merged
+  const alias = "25live:previous"
+  const { get, post } = worker(events.map(event => event === session ? { ...event, also: [alias] } : event))
+  await post("/api/state", { device, entries: {
+    "calendar-feed": { at: 1, by: "browser", value: token },
+    "events-saved":  { at: 1, by: "browser", value: { sessions: { [alias]: session.end }, follows: [key] } }
+  } }, secret)
+  // Asked as a calendar app asks, with no cookie or secret
+  const feedFile = await get(calendarPath("feed", token))
+  expect(await feedFile.clone().text()).toContain(`UID:${alias}@notunh.app`)
+  expect(await (await get(calendarPath("event", alias))).text()).toContain(`UID:${alias}@notunh.app`)
+  const feed = await told(feedFile)
+  expect(feed.map(({ title }) => title)).toEqual([session.title])
+  const all = await told(await get(calendarPath("activity", key)))
+  expect(all).toHaveLength(sessions.length)
+  expect((await get(calendarPath("activity", "presence:no-such-club"))).status).toBe(404)
 })
 
 //#region The one address asked for someone

@@ -97,7 +97,7 @@ const installMapData = async (version: string) => {
 
 /** What a later source is where there's none: no events, no terms, no prerequisites, no rooms; parking always has its fixtures' */
 const EMPTY: Record<string, unknown> = {
-  [EVENTS]:  { fetched: 0, events: [] } satisfies EventsData,
+  [EVENTS]:  { fetched: 0, events: [], orgs: [] } satisfies EventsData,
   [COURSES]: emptyIndex(),
   [PREREQS]: NO_PREREQS,
   [ROOMS]:   NO_ROOMS

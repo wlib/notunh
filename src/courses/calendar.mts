@@ -26,6 +26,10 @@ export const TermDates = v.object({
 })
 export type TermDates = v.InferOutput<typeof TermDates>
 
+/** A term's last day, where the calendar gives one: its finals' last, else its classes' */
+export const lastDay = ({ end, finals }: Pick<TermDates, "end" | "finals">) =>
+  finals?.[1] ?? end
+
 /**
  * What kind of date the academic calendar names: a deadline, registration opening or closing, a break, or a term's
  * start, end or finals

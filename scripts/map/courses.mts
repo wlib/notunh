@@ -20,7 +20,7 @@ import { appendFile, readFile, readdir, stat, writeFile, mkdir } from "node:fs/p
 import { fileURLToPath } from "node:url"
 import * as v from "valibot"
 import { type CoursesIndex, type TermEntry, type TermFile, COURSES, DATA_PATH, Section, termSpan } from "../../src/courses/course.mts"
-import { type Calendar, fromLive25 } from "../../src/courses/calendar.mts"
+import { type Calendar, fromLive25, lastDay } from "../../src/courses/calendar.mts"
 import { placeOfCode } from "../../src/courses/buildings.mts"
 import { LOOKS_LIKE_EMAIL } from "../../src/courses/email.mts"
 import { Page, type PageRead, TotalChanged, coursesUrl, importTerm, pageRead } from "../../src/courses/registrar.mts"
@@ -142,7 +142,8 @@ const isAhead = (today: Day, { from, to }: { from: Day, to: Day }) =>
  * or starting within AHEAD days. Their sections then say for certain (termSpan)
  */
 export const candidates = (calendar: Calendar, now: number) =>
-  Object.entries(calendar.terms).flatMap(([code, { start, end }]) => {
+  Object.entries(calendar.terms).flatMap(([code, { start, ...dates }]) => {
+    const end = lastDay(dates)
     const from = start ?? (end && addDays(end, -42))
     const to = end ?? (start && addDays(start, 140))
     return from && to && isAhead(localDay(now), { from, to }) ? [code] : []

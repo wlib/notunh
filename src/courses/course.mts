@@ -11,7 +11,7 @@
 // /data/courses/ named by its content, loaded only when wanted (src/courses/browser/terms.mts)
 
 import * as v from "valibot"
-import { type Calendar, Calendar as CalendarSchema, emptyCalendar, meetingRule } from "./calendar.mts"
+import { type Calendar, Calendar as CalendarSchema, emptyCalendar, lastDay, meetingRule } from "./calendar.mts"
 import type { Event } from "../social/event.mts"
 import { arrayOf } from "../shared/json.mts"
 import { type Rule, type Session, between, occursOn, spanOn } from "../shared/recur.mts"
@@ -231,14 +231,16 @@ export const standing = (term: Pick<Term, "code">, section: Section, calendar: C
 }
 
 /**
- * A term's dates: the calendar's where it names them, else the earliest and latest of its sections'. Fall ends in
- * December, J-Term runs in January and Spring starts late in January, so two terms are often live at once
+ * A term's dates: the calendar's where it names them, else the earliest and latest of its sections'. A term runs
+ * through its finals (lastDay in calendar.mts), so it's live, its sections saved and its finals told, till the last of
+ * them. Fall ends in December, J-Term runs in January and Spring starts late in January, so two terms are often live at
+ * once
  */
 export const termSpan = (code: string, calendar: Calendar, sections: readonly Pick<Section, "from" | "to">[]) => {
   const dates = calendar.terms[code]
   return {
     from: dates?.start ?? sections.reduce((min, { from }) => from < min ? from : min, "9999-12-31"),
-    to:   dates?.end ?? sections.reduce((max, { to }) => to > max ? to : max, "0000-01-01")
+    to:   (dates && lastDay(dates)) ?? sections.reduce((max, { to }) => to > max ? to : max, "0000-01-01")
   }
 }
 

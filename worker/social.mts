@@ -562,6 +562,10 @@ social.get("/api/me", async c => {
   return c.json({ person: who.person, verified: await verifiedOf(drizzle(c.env.DB), who.person, Date.now()) ?? null }, 200, { "cache-control": "no-store" })
 })
 
+/** Whether a person holds a verified UNH address, as their calendar feed asks of them (calendar.mts) */
+export const isVerifiedPerson = async (db: D1Database, person: string, now: number) =>
+  await verifiedOf(drizzle(db), person, now) !== undefined
+
 /**
  * Whether a read is asked by a device, by its secret or cookie, whose person holds a verified UNH address. Asked
  * without making the device one, as a read alone never does

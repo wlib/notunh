@@ -1,15 +1,17 @@
 // What learning stores whole (scripts/learn.mts):
 // - the models, each by name and the day it runs through. The latest of each is the last stored, whatever day it runs
-//   through, and the last KEEP writes are kept to roll back to
+//   through, and the last KEEP writes are kept to roll back to. The final exams read each night are stored the same
+//   way, by the day they were read (scripts/map/finals.mts), as what only the Worker may say (worker/finals.mts)
 // - every timetable acquired, kept for as long as the observations it interprets, which is forever
 
 import type { DrizzleD1Database } from "drizzle-orm/d1"
 import { and, asc, desc, eq, lt, max, sql } from "drizzle-orm"
 import type { Day } from "../src/shared/time.mts"
+import { FINALS } from "../src/courses/finals.mts"
 import { feeds, models } from "./schema.mts"
 
-/** What's learned: the map's buses and laundry's rooms */
-export const MODELS = ["buses", "laundry"]
+/** What's stored whole: the map's buses and laundry's rooms, learned, and the final exams, read */
+export const MODELS = ["buses", "laundry", FINALS]
 
 // Writes kept of each name: a month of nightly models
 const KEEP = 30

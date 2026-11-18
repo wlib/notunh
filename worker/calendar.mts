@@ -1,7 +1,7 @@
 // Calendar files (src/shared/ics.mts), for a calendar app to add or subscribe to: an event's, a curated series', a
 // section's, and a person's feed of the sections they've saved, the events they're hosting or going to, and the
-// sessions they've saved; and an activity's every session. Each is made as it's asked for from the site's own data, so
-// one subscribed to follows a room change. The first three say only what their pages do. A feed is asked for by a token
+// sessions they've saved, and their saved sections' finals where they hold a verified UNH address; and an activity's
+// every session. Each is made as it's asked for from the site's own data, so one subscribed to follows a room change. The first three say only what their pages do. A feed is asked for by a token
 // alone, 128 random bits kept as one of the person's things (FEED in src/shared/sync.mts), which whoever holds can read
 // their classes by, and which they make anew to end; no device's secret is in it, and an unknown token is a 404 like
 // any other
@@ -30,13 +30,15 @@ import { seriesOf } from "../src/social/series.mts"
 import { CoursesIndex, TermFile, codeOf, termOf } from "../src/courses/course.mts"
 import { entriesOf as sectionEntries } from "../src/courses/ics.mts"
 import { SAVED, readSaved, savedIn } from "../src/courses/saved.mts"
+import { entryOfFinal, finalsOf } from "../src/courses/finals.mts"
 import { notOver, termsOf } from "../src/map/site.mts"
 import { writeCalendar } from "../src/shared/ics.mts"
 import { describeIssues } from "../src/shared/json.mts"
 import { FeedToken } from "../src/shared/sync.mts"
 import type { Env } from "./env.mts"
 import { siteOf } from "./site.mts"
-import { kept, limited, personOfFeed, pinsOf, publicPin } from "./social.mts"
+import { isVerifiedPerson, kept, limited, personOfFeed, pinsOf, publicPin } from "./social.mts"
+import { storedFinals } from "./finals.mts"
 
 type Worker = { Bindings: Env }
 
@@ -98,10 +100,11 @@ calendars.get("/api/calendar/activity/:file", async c => {
   return name ? served(c, name, writeCalendar(name, sessions.map(entryOf), Date.now(), REFRESH), CACHE.shared) : missing(c)
 })
 
-// A person's feed, by its token: the sections they've saved in the terms not over, the events they host or are going
-// to, and the sessions of UNH's events they've saved, each under the id it was saved by, so one merged with another
-// calendar's telling keeps its place in a calendar app. An activity followed isn't in it, as its own address has every
-// session. Made of the public events and pins alone, never of bookings, as whoever holds the address reads it
+// A person's feed, by its token: the sections they've saved in the terms not over, with their finals where the person
+// holds a verified UNH address, as only they may be told them, the events they host or are going to, and the sessions
+// of UNH's events they've saved, each under the id it was saved by, so one merged with another calendar's telling keeps
+// its place in a calendar app. An activity followed isn't in it, as its own address has every session. Made of the
+// public events and pins alone, never of bookings, as whoever holds the address reads it
 calendars.get("/api/calendar/feed/:file", async c => {
   const token = named(c.req.param("file"))
   const person = token && v.is(FeedToken, token) ? await personOfFeed(c.env.DB, token) : undefined
@@ -109,11 +112,15 @@ calendars.get("/api/calendar/feed/:file", async c => {
     return missing(c)
   const now = Date.now()
   const site = siteOf(c.env)
-  const [terms, { calendar }, saved, pins, saves, { events }] = await Promise.all([
+  const [terms, { calendar }, saved, pins, saves, { events }, finals] = await Promise.all([
     termsOf(site, notOver(now)), site.named("courses", CoursesIndex), kept(c.env.DB, person, SAVED), pinsOf(c.env.DB, person, now),
-    kept(c.env.DB, person, SAVES).then(readSaves), site.named("events", EventsData)
+    kept(c.env.DB, person, SAVES).then(readSaves), site.named("events", EventsData),
+    isVerifiedPerson(c.env.DB, person, now).then(isVerified => isVerified ? storedFinals(c.env.DB) : undefined)
   ])
-  const classes = savedIn(readSaved(saved), terms).flatMap(({ term, section }) => sectionEntries(term, section, calendar))
+  const classes = savedIn(readSaved(saved), terms).flatMap(({ term, section }) => [
+    ...sectionEntries(term, section, calendar),
+    ...finalsOf(finals?.terms[term.code]?.finals, section).map((final, i) => entryOfFinal(term, section, final, i))
+  ])
   const sessions = events.flatMap(event => {
     const id = event.end + LINGER > now ? savedId(saves, event) : undefined
     return id ? [entryOf({ ...event, id })] : []

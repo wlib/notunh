@@ -2078,63 +2078,6 @@ a.more {
   font-weight: 600;
 }
 
-/* The map's own word on the two pages (render/status.mts): at each hall, its standing, and at each residence hall,
-   its washers free, lit where there's one */
-.status-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.35em;
-  padding: 0.25rem 0.6rem;
-  border: none;
-  border-radius: 999px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  font-size: 0.75rem;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  color: var(--text);
-}
-
-.status-pill .dot {
-  margin: 0;
-}
-
-.status-pill[data-open="false"] {
-  color: var(--muted);
-}
-
-/* A residence hall's washers free, as a disc no bigger than the number: lit where there's one, quiet where there's none */
-.status-pill.count {
-  justify-content: center;
-  min-inline-size: 1.5rem;
-  block-size: 1.5rem;
-  padding: 0 0.3rem;
-  border: 2px solid var(--surface);
-  background: var(--positive);
-  box-shadow: 0 1px 3px oklch(23% 0.03 265 / 0.3);
-  color: var(--surface);
-}
-
-.status-pill.count[data-open="false"] {
-  background: var(--surface-raised);
-  color: var(--muted);
-}
-
-.status-pill.count[data-yours="true"] {
-  z-index: 1;
-  outline: none;
-  border-color: var(--star);
-}
-
-.status-pill[data-open="false"] .dot {
-  background: var(--border);
-}
-
-.status-pill[data-yours="true"] {
-  outline: 2px solid var(--star);
-}
-
 /* A row that leaves the map, as a chapter's to UNH's page for it */
 a.row {
   color: inherit;

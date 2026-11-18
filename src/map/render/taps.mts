@@ -117,7 +117,7 @@ export const dropPins = (map: MapLibre, state: { page: Reactive<Page | undefined
  */
 export const listenForTaps = (map: MapLibre, state: { buildings: Reactive<readonly Building[]>, gazetteer: Reactive<readonly GazetteerPlace[]> }, onTap: (tap: Tap) => void) => {
   map.on("mousemove", event => {
-    const isTappable = ["vehicles", "stops", "events", "buildings", "chapters"].some(layer => nearestWithin(map, event.point, layer))
+    const isTappable = ["vehicles", "stops", "events", "status", "buildings", "chapters"].some(layer => nearestWithin(map, event.point, layer))
     map.getCanvas().style.cursor = isTappable ? "pointer" : ""
   })
 
@@ -133,6 +133,11 @@ export const listenForTaps = (map: MapLibre, state: { buildings: Reactive<readon
     const marked = nearestWithin(map, event.point, "events")
     if (marked)
       return onTap({ kind: "place", name: marked.properties.place })
+
+    // What a page's marks say of the halls or the laundry, while they stand in for the buildings' own (status.mts)
+    const said = nearestWithin(map, event.point, "status")
+    if (said)
+      return onTap({ kind: "place", name: said.properties.name })
 
     const building = nearestWithin(map, event.point, "buildings")
     if (building && state.buildings.peek()[building.id as number])

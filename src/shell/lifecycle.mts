@@ -3,7 +3,7 @@
 // have long since evicted the page anyway, and what was on screen an hour ago is stale. It also reloads for newer
 // code, which nothing else can bring in. Neither happens while the page is busy with something a reload would lose,
 // like a bus ride, and a deferred reload waits until the page is out of view, so no one sees it. Newer data needs no
-// reload, as pages swap it in live (build.mts)
+// reload, as pages swap it in live, a newer build's too while its code waits (build.mts)
 
 import { r, watch } from "bruh/reactive"
 import { HOUR, localDay } from "../shared/time.mts"

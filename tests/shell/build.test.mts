@@ -87,7 +87,7 @@ test("a data file keeps what it names, by its shape, and anything else keeps not
   expect(["/assets/b.js", "/data/dining/y.json", "/data/map/tiles/2026-10-10/campus/16/1/1.pbf", "/data/map/tiles/2026-10-17"].map(keep)).toEqual([false, false, false, false])
 })
 
-test("a newer copy of the same code loads its newer data, and one of newer code waits for a reload", () =>
+test("a newer copy loads its newer data, whatever its code, and one of newer code waits for a reload", () =>
   fc.assert(fc.asyncProperty(names, fc.array(hash, { minLength: 1 }), fc.array(hash, { minLength: 1 }), code, code, async (names, before, after, scripts, nextScripts) => {
     const page = await load(dataOf(names, before), scripts)
     for (const url of [...Object.values(dataOf(names, before)), ...Object.values(dataOf(names, after))])
@@ -98,9 +98,20 @@ test("a newer copy of the same code loads its newer data, and one of newer code 
     const isSameCode = scripts.join() === nextScripts.join()
     expect(page.isNewBuild.peek()).toBe(!isSameCode)
     for (const name of names)
-      expect(loaded[name].peek()).toBe(dataOf(names, isSameCode ? after : before)[name])
+      expect(loaded[name].peek()).toBe(dataOf(names, after)[name])
   }))
 )
+
+test("a newer build's data that the code running can't read is tried once, and waits for the reload", async () => {
+  const page = await load({ gtfs: "/assets/gtfs-AAAAAAAA.json" })
+  page.answers.set("/assets/gtfs-AAAAAAAA.json", async () => "A")
+  const gtfs = await page.latest<string>("gtfs")
+  page.receive(headOf({ gtfs: "/assets/gtfs-BBBBBBBB.json" }, ["/assets/index-BBBBBBBB.js"]))
+  await vi.advanceTimersByTimeAsync(10 * 60_000)
+  expect(gtfs.peek()).toBe("A")
+  expect(page.fetches.filter(url => url.includes("BBBBBBBB"))).toHaveLength(1)
+  expect(page.isNewBuild.peek()).toBe(true)
+})
 
 test("data is loaded again when a newer build names newer, swapped in once loaded, and kept if it can't load, which is tried again until it loads", async () => {
   const page = await load({ gtfs: "/assets/gtfs-AAAAAAAA.json" })

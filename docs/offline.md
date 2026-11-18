@@ -39,7 +39,7 @@ The worker serves a page from cache and fetches it behind by its own path, never
 - each is what its name says (`isKeepable`): `.js`, `.css` and `.json` answer as such, and nothing hashed answers as HTML, so a sign-in page answering 200 at a hashed URL is served but never kept;
 - each arrives whole within a minute, or the release is abandoned.
 
-Then open windows are told. If only data differs, each changed file loads into its slot, keeping the trip, page, and camera; tiles and style update in place. If code differs, `src/shell/lifecycle.mts` reloads the page next time it's out of view and not busy (riding a bus sets `isBusy`), or at once if it already is. State in `src/shell/state.mts` survives the reload.
+Then open windows are told. Each changed data file loads into its slot, keeping the trip, page, and camera; tiles and style update in place. That holds when code differs too, as a file is checked against the code running as it loads: one that doesn't fit is tried once and left for the reload. If code differs, `src/shell/lifecycle.mts` reloads the page next time it's out of view and not busy (riding a bus sets `isBusy`), or at once if it already is. State in `src/shell/state.mts` survives the reload.
 
 Pages also check on coming back into view and every 15 minutes in view; after an hour away, one starts fresh. A copy published before the one kept, as from a lagging edge, is ignored, which is why rolling back means publishing again ([deploying.md](deploying.md#rolling-back)).
 

@@ -27,7 +27,7 @@ import { calendarPath } from "../../social/calendar.mts"
 import { slugIn } from "../../social/curated.mts"
 import { isUnset } from "../../social/marks.mts"
 import { isPractice } from "../../social/sport.mts"
-import { type FoldKind, folded, seriesOf } from "../../social/series.mts"
+import { type Fold, type FoldKind, folded, seriesOf } from "../../social/series.mts"
 import { askOf } from "../../social/ask.mts"
 import * as social from "../../social/browser/api.mts"
 import { share as shareStory } from "../../social/story.mts"
@@ -635,9 +635,8 @@ const FOLDED: Record<FoldKind, string> = { club: "Club meetings", rec: "Campus R
 const openFolds = new Set<string>()
 
 /** What recurs on a day as one line that opens to show each: "Club meetings · 25 today" over "Next: Hillel meeting · MUB 120" */
-const FoldRow = ({ fold, events, day = localDay(nowMs()) }: { fold: FoldKind, events: (Event | Pin)[], day?: string }) => {
+const FoldRow = ({ fold: { fold, events, next }, day = localDay(nowMs()) }: { fold: Fold<Event | Pin>, day?: string }) => {
   const now = nowMs()
-  const next = events.find(event => event.start >= now) ?? events.find(event => event.end > now) ?? events[0]
   const id = `${location.pathname}:${day}:${fold}:${events[0].start <= now ? "now" : "later"}`
   const isToday = day === localDay(now)
   const details: HTMLDetailsElement =
@@ -657,17 +656,17 @@ const FoldRow = ({ fold, events, day = localDay(nowMs()) }: { fold: FoldKind, ev
 
 /**
  * A list's events as folded in src/social/series.mts, the same in every list: one-offs and what's yours as rows, at
- * most `rows` of them, then each kind of what recurs as one line
+ * most `rows` of them, then each kind of what recurs as one line, the sooner next first
  */
 export const EventLines = ({ events, day, standing, rows: most }: { events: (Event | Pin)[], day?: string, standing?: BruhChild, rows?: number }) =>
   r(() => {
     const keys = state.recurringKeys.value
-    const { rows, folds } = folded(events, key => keys.has(key), state.yours)
+    const { rows, folds } = folded(events, key => keys.has(key), state.yours, nowMs())
     return <>
       {rows.slice(0, most).map(event => <EventRow event={event} day={day} standing={isPractice(event) ? undefined : standing} />)}
-      {folds.map(({ fold, events }) => events.length === 1
-        ? <EventRow event={events[0]} day={day} muted={fold === "practice"} />
-        : <FoldRow fold={fold} events={events} day={day} />)}
+      {folds.map(fold => fold.events.length === 1
+        ? <EventRow event={fold.events[0]} day={day} muted={fold.fold === "practice"} />
+        : <FoldRow fold={fold} day={day} />)}
     </>
   })
 

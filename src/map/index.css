@@ -448,6 +448,15 @@ body {
   color: color-mix(in oklch, var(--on-poster) 82%, var(--poster));
 }
 
+.rows > li.lead {
+  grid-template-columns: minmax(0, 1fr);
+  padding-block-end: 0.25rem;
+}
+
+.rows > li.lead + li {
+  border-block-start-color: transparent;
+}
+
 /* The ways on from today, side by side */
 .onward {
   display: flex;

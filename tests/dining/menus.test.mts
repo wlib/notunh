@@ -4,7 +4,7 @@ import * as v from "valibot"
 import { convert, type NutrisliceFood, type NutrisliceWeek } from "../../scripts/dining/convert.mts"
 import { carried, publish } from "../../scripts/dining/publish.mts"
 import { HOUR } from "../../src/shared/time.mts"
-import { DIETS, MenusIndex, fileUrl, passes, type Food, type Meal, type SearchFood } from "../../src/dining/menus.mts"
+import { DIETS, MenusIndex, fileUrl, highlights, passes, type Food, type Meal, type SearchFood } from "../../src/dining/menus.mts"
 import { createSearch } from "../../src/dining/search.mts"
 
 const TAGS = [...DIETS, "Milk", "Egg", "Wheat", "Gluten", "Soy", "Fish", "Pork", "Guiding Stars 2 stars"]
@@ -179,4 +179,27 @@ test("a build an hour after the last still carries the files of the index before
   expect(Object.keys(afterC).sort()).toEqual(["/data/dining/a.json", "/data/dining/b.json", "/data/dining/shared.json"])
   expect(afterC["/data/dining/a.json"]).toBe(night + 48 * HOUR)
   expect(afterC["/data/dining/shared.json"]).toBe(b.fetched + 48 * HOUR)
+})
+
+const station = fc.record({
+  name:  fc.constantFrom("Soup", "Grill", "Main Line Left", "Special Event", "Vegan Specialties", "Pizza"),
+  foods: fc.array(word.map(name => ({ name, diets: [], contains: [], file: name })), { maxLength: 5 })
+})
+
+test("a meal's highlights are its own dishes, each once, no more than asked, the main line's first", () => {
+  fc.assert(fc.property(fc.array(station, { maxLength: 6 }), fc.integer({ min: 0, max: 8 }), (stations, most) => {
+    const meal: Meal = { meal: "lunch", stations }
+    const named = highlights(meal, most)
+    const served = new Set(stations.flatMap(({ foods }) => foods.map(({ name }) => name)))
+    expect(named.length).toBeLessThanOrEqual(most)
+    expect(new Set(named.map(({ food }) => food)).size).toBe(named.length)
+    for (const { food, station } of named)
+      expect(stations.some(({ name, foods }) => name === station && foods.some(one => one.name === food))).toBe(true)
+    // Short of what's asked only when the meal has no more dishes to name
+    if (named.length < most)
+      expect(named.length).toBe(served.size)
+    const lead = stations.find(({ name, foods }) => /^special/i.test(name) && foods.length) ?? stations.find(({ name, foods }) => /main line/i.test(name) && foods.length)
+    if (lead && most > 0)
+      expect(named[0].station).toBe(lead.name)
+  }))
 })

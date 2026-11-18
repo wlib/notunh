@@ -110,7 +110,9 @@ test("a section saved is your next class in Yours and in You's week, once whiche
   await page.getByRole("button", { name: "Back" }).click()
 
   const yours = page.getByRole("list", { name: "Yours" })
-  await expect(yours).toContainText("CS 518 · Kingsbury N343")
+  // Next today, it leads Yours as the card
+  await expect(yours.locator(".next")).toContainText("CS 518")
+  await expect(yours.locator(".next")).toContainText("Kingsbury N343")
   await page.getByRole("button", { name: "You", exact: true }).click()
   await expect(page.getByText("My courses · 1")).toBeVisible()
   const week = page.getByLabel("Your week")

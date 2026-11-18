@@ -170,7 +170,7 @@ const Next = ({ next }: { next: Mine }) => {
 }
 
 /**
- * Yours: what you're due at next as the card, then the rest of your classes, the next thing in your calendars, the
+ * Yours: what you're due at next as the card, the list's first, then the rest of your classes, the next thing in your calendars, the
  * sessions you've saved, the next of each activity you follow and the events you're going to, the sooner first, then
  * deadlines and breaks in the next few days, the reminders and the saved trips, as one list, when there's any
  */
@@ -180,6 +180,7 @@ const Yours = () => {
   const next = r(() => nextOf(all.value))
   const list: HTMLUListElement =
     <ul class="rows" aria-label="Yours">
+      {r(() => next.value && <li class="lead"><Next next={next.value} /></li>)}
       {r(() => all.value.filter(item => item !== next.value).map(({ row }) => row()))}
       {r(() => due.value.map(date => <DateRow date={date} />))}
       <Reminders />
@@ -187,8 +188,8 @@ const Yours = () => {
     </ul>
   return (
     <section class="yours">
-      {r(() => next.value && <Next next={next.value} />)}
-      {r(() => (all.value.length > (next.value ? 1 : 0) || state.goals.value.length > 0 || currentReminders.value.length > 0 || due.value.length > 0) && <h2 class="eyebrow">Yours</h2>)}
+      {/* The card says what it leads, so the list is named only without one */}
+      {r(() => !next.value && (all.value.length > 0 || state.goals.value.length > 0 || currentReminders.value.length > 0 || due.value.length > 0) && <h2 class="eyebrow">Yours</h2>)}
       {list}
     </section>
   )

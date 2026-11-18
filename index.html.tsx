@@ -24,9 +24,10 @@ export default () =>
           </header>
 
           {/* The one way in: the map itself over a poster that says so. The picture is a capture of the map on a
-              weekday afternoon, pinned, and the same in either theme, as the map itself is */}
+              weekday afternoon, pinned, and the same in either theme, as the map itself is; at 1000 px wide for the
+              column at its widest on a phone's or a laptop's screen, and 600 for a screen that needs no more */}
           <a class="way-in" href="/map/">
-            <img src="/home/map.webp" width="1600" height="1200" alt="The middle of the UNH campus from above, tilted, with Wildcat Transit's buses on Main Street and the day's events marked on its buildings" fetchpriority="high" />
+            <img src="/home/map-1000.webp" srcset="/home/map-600.webp 600w, /home/map-1000.webp 1000w" sizes="(min-width: 34rem) 31.5rem, calc(100vw - 2.5rem)" width="1000" height="750" alt="The middle of the UNH campus from above, tilted, with Wildcat Transit's buses on Main Street and the day's events marked on its buildings" fetchpriority="high" />
             <span class="poster">
               <span class="poster-label">Buses · events · classes · dining · laundry · parking</span>
               <strong>Open the map</strong>

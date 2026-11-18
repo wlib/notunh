@@ -4,7 +4,8 @@
 // NOTUNH_MAP_DATA names: a version, or for the inputs, a folder laid out as the repository, given by a path starting
 // with . or /, like ./inputs once made. With NOTUNH_OFFLINE, as pull requests are checked, the fixtures
 // (tests/fixtures/data/) stand in for both and nothing is fetched. So a build never decides what to fetch or learn:
-// it installs what it's given, or fails.
+// it installs what it's given, or fails. Only the series kept by hand (src/social/curated.json) are the repository's
+// own, told among the events as they're installed, but offline, where the fixtures' stay as made.
 //
 //   node scripts/inputs.mts              installs them, keeping what the site serves now beside them for the pages
 //                                        open on it, then matches the places. public/inputs.json, served with the site,
@@ -25,8 +26,11 @@ import { contentHash } from "../src/shared/hash.mts"
 import { localDay } from "../src/shared/time.mts"
 import { TilesManifest } from "../src/map/basemap/tiles.mts"
 import { FIXTURES, PUBLIC, REPO, STAGED, exists, isOffline, keepServed, run } from "./files.mts"
-import { EVENTS } from "../src/social/sources.mts"
-import type { EventsData } from "../src/social/event.mts"
+import { EVENTS, WEEKS, merged } from "../src/social/sources.mts"
+import { EventsData } from "../src/social/event.mts"
+import { Curated, fromCurated } from "../src/social/curated.mts"
+import { placeMatcher } from "../src/social/aliases.mts"
+import { Gazetteer } from "../src/places/gazetteer.mts"
 import { NO_PREREQS, PREREQS } from "../src/programs/prereqs.mts"
 import { OSM_PARKING } from "../src/parking/sources.mts"
 import { deployed } from "./site.mts"
@@ -121,11 +125,26 @@ const keepPublished = async (name: string) =>
   (await keepServed(namedBy(await deployed("/map/", name, v.object({ files: v.array(v.string()) }))))).length
 
 /**
+ * Tells the series kept by hand (src/social/curated.json) over the weeks ahead among the events installed, in place
+ * of any an older generation told, so a series added or changed is on the site the next build, not the next night
+ */
+const tellCurated = async () => {
+  const now = Date.now()
+  const installed = v.parse(EventsData, JSON.parse(await readFile(inRepo(EVENTS), "utf8")))
+  const gazetteer = v.parse(Gazetteer, JSON.parse(await readFile(inRepo("src/map/gazetteer.json"), "utf8")))
+  const curated = v.parse(Curated, JSON.parse(await readFile(inRepo("src/social/curated.json"), "utf8")))
+  const series = fromCurated(curated, localDay(now), 7 * WEEKS, placeMatcher(gazetteer.places.map(place => place.name)))
+  const events = merged([installed.events.filter(event => event.source !== "curated"), series], now)
+  await writeFile(inRepo(EVENTS), JSON.stringify({ ...installed, events } satisfies EventsData) + "\n")
+  console.log(`${series.length} sessions of ${curated.length} curated series`)
+}
+
+/**
  * Installs the inputs and the map data in place of whatever was installed, everything under public/data/ included,
- * then keeps beside them what the site serves now, matches the places and makes the buildings' profiles. Offline,
- * the fixtures are both, and nothing's kept. A later source the generation lacks stays as it was installed or comes
- * from the fixtures for npm run dev, and is empty for a build, but for parking, whose fixtures' rules are as good as
- * a night old
+ * then keeps beside them what the site serves now, tells the curated series, matches the places and makes the
+ * buildings' profiles. Offline, the fixtures are both, and nothing's kept. A later source the generation lacks stays
+ * as it was installed or comes from the fixtures for npm run dev, and is empty for a build, but for parking, whose
+ * fixtures' rules are as good as a night old
  */
 const install = async ({ inputs, "map-data": mapData }: Installed) => {
   const folder = folderOf(inputs)
@@ -157,6 +176,9 @@ const install = async ({ inputs, "map-data": mapData }: Installed) => {
       await mkdir(new URL(".", new URL(file, REPO)), { recursive: true }).then(() => writeFile(new URL(file, REPO), data))
     console.log(`${path} ${from}, as inputs ${inputs} have none`)
   }
+  // The fixtures' series stay as told the day they were made, which their tests are pinned to
+  if (!isOffline)
+    await tellCurated()
   for (const script of ["map/places.mts", "map/profiles.mts"])
     await run(process.execPath, [fileURLToPath(new URL(script, import.meta.url))])
   await writeFile(RECORD, JSON.stringify({ inputs, "map-data": mapData } satisfies Installed))

@@ -1,7 +1,8 @@
 # Makes the inputs every build of the site installs (scripts/inputs.mts) and rebuilds the site with them: the
 # timetable, style, events, courses, menus, laundry rooms, parking areas and prerequisites acquired from upstream
 # (the catalog weekly, or as its year turns; scripts/programs/prereqs.mts), and the bus and laundry models learned
-# through the Worker (scripts/data.mts). They're published whole as the immutable release inputs-<version>, then the
+# through the Worker (scripts/data.mts). The final exams are read and stored in the Worker with the models, never
+# published, as only it may tell them (scripts/map/finals.mts). They're published whole as the immutable release inputs-<version>, then the
 # pointer every build reads, latest.json on the inputs release, moves to it, so a build gets all of them or none. A
 # night whose acquisition fails publishes nothing, and builds keep the inputs before. What's no reason to hold the
 # rest back still fails the job, once they're published: a model that stopped learning short, or classes left without
@@ -51,7 +52,8 @@ jobs:
         run: node scripts/data.mts acquire
       # Nothing is written to the Worker until the code that writes it passes its checks, on the fixtures
       - run: NOTUNH_OFFLINE=1 node scripts/inputs.mts && npm run typecheck && npm test
-      # A model that didn't learn every day fails the job, but only once what was learned is published
+      # A model that didn't learn every day, or finals that couldn't be read, fail the job, but only once what was
+      # learned is published
       - id: learn
         run: node scripts/data.mts learn --store ${{ inputs.rebuild && '--rebuild' || '' }}
         continue-on-error: true
@@ -69,7 +71,7 @@ jobs:
           notes: The timetable, style, events, courses, menus, laundry rooms, parking areas, prerequisites, and models a build of the site installs, made by the Inputs workflow, whole in one archive with a manifest of its hashes
           deploy-hook: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}
       - if: steps.learn.outcome == 'failure'
-        run: echo "::error::Learning stopped short; its log says where" && exit 1
+        run: echo "::error::Learning or the finals stopped short; its log says where" && exit 1
       - if: ${{ !cancelled() && steps.acquire.outputs.unplaced }}
         run: |
           echo "::error::Classes have no place till their building codes are in src/courses/buildings.mts: $UNPLACED" && exit 1

@@ -4,7 +4,8 @@
 //   node scripts/data.mts acquire    the timetable, style, events, rooms to book, courses, menus, laundry rooms,
 //                                    parking areas, and prerequisites, from upstream
 //   node scripts/data.mts learn      the bus and laundry models, through the Worker (scripts/learn.mts), with
-//                                    --store to learn and store, --rebuild, and --local
+//                                    --store to learn and store, --rebuild, and --local; and the final exams, read
+//                                    and stored in the Worker alone, as only it may tell them (scripts/map/finals.mts)
 //
 // and with neither, both, and then the site built from them (`npm run fresh`), so the whole sequence runs locally.
 // Acquiring starts inputs/ afresh, with the map data the pointer names installed first, as the events and courses are
@@ -15,7 +16,7 @@ import { STAGED, run } from "./files.mts"
 
 const STAGES = {
   acquire: ["map/gtfs", "map/style", "map/courses", "map/events", "map/rooms", "dining/menus", "laundry/rooms", "map/parking", "programs/prereqs"],
-  learn:   ["map/model", "laundry/model"]
+  learn:   ["map/model", "laundry/model", "map/finals"]
 }
 
 export const runStage = async (names: readonly string[], flags: string[], execute: (command: string, args: string[]) => Promise<unknown> = run) => {

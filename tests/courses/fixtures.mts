@@ -1,9 +1,13 @@
 // What the courses' tests read: trimmed copies of the registrar's answers for Fall 2026, J-Term 2027 and Spring 2027
 // (tests/fixtures/courses/, the subjects CS, IT, CEE, PSYC, DS, NURS and CHEM in fall and fewer in spring, with the
 // sections cross-listed with them, every row cut to the fields the import reads and every address made up), and
-// 25Live's academic calendar over the year, all imported here as scripts/map/courses.mts imports them
+// 25Live's academic calendar over the year, all imported here as scripts/map/courses.mts imports them; and the
+// examinations page and a Final Exam Schedule made up for the fall sections (tests/fixtures/finals.mts), read as
+// scripts/map/finals.mts reads them
 
 import { readFile } from "node:fs/promises"
+// Node's URL, which its fs functions take, rather than whatever global URL the typecheck sees
+import { URL } from "node:url"
 import fc from "fast-check"
 import * as v from "valibot"
 import { fromLive25 } from "../../src/courses/calendar.mts"
@@ -12,12 +16,15 @@ import { placeOfCode } from "../../src/courses/buildings.mts"
 import { Page, importTerm, pageRead } from "../../src/courses/registrar.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { addDays } from "../../src/shared/time.mts"
+import { fromSheet, placerFor } from "../../src/courses/finals.mts"
+import { sheetRows } from "../../scripts/map/finals.mts"
 
 const read = async (path: string) =>
   JSON.parse(await readFile(new URL(`../fixtures/${path}`, import.meta.url), "utf8")) as unknown
 
 const gazetteer = v.parse(Gazetteer, await read("data/src/map/gazetteer.json"))
-export const place = placeOfCode(new Set(gazetteer.places.map(({ name }) => name)))
+export const names = new Set(gazetteer.places.map(({ name }) => name))
+export const place = placeOfCode(names)
 
 export const live25 = await read("courses/25live.json") as unknown[]
 export const calendar = fromLive25(live25, 0)
@@ -42,3 +49,11 @@ export const rawRows = rawPages["202610"].data
 export const aDay = fc.integer({ min: -10, max: 130 }).map(offset => addDays(fall.from, offset))
 export const aClock = fc.integer({ min: 0, max: 1439 }).map(clock)
 
+
+/** The examinations page, cut to its schedules */
+export const examinations = await readFile(new URL("../fixtures/courses/examinations.html", import.meta.url), "utf8")
+
+/** The fall fixture's Final Exam Schedule, its rows, and its finals placed with the fall term's sections */
+export const finalsSheet = new Uint8Array(await readFile(new URL("../fixtures/courses/finals-202610.xlsx", import.meta.url)))
+export const finalsRows = sheetRows(finalsSheet)
+export const fallFinals = fromSheet(finalsRows, placerFor(names, fall.sections)).finals

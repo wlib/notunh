@@ -210,12 +210,12 @@ export const share = (title: string) => {
 /**
  * A page's head, whose title is the page's heading while the map's own is hidden: its name, which a Back to it says,
  * short where the title's long, over what kind of thing it is where the title alone doesn't say. The clubs' is a
- * poster in the print's lime, with what it gathers under its name, the one page in the sheet that is
+ * poster in sky, with what it gathers under its name, the one page in the sheet that is
  */
 export const Head = ({ kind, title, name, poster }: { kind?: BruhChild, title: string, name?: string, poster?: BruhChild }) => {
   state.name.value = name ?? title
   return (
-    <header class={poster ? "view-head poster print" : "view-head"}>
+    <header class={poster ? "view-head poster sky" : "view-head"}>
       {kind && <p class="view-kind">{kind}</p>}
       <h1>{title}</h1>
       {poster && <p class="poster-label">{poster}</p>}

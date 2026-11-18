@@ -1262,13 +1262,13 @@ a.more {
   min-inline-size: 3.75rem;
   padding: 0.4rem 0.5rem;
   border-radius: var(--radius-s);
-  background: var(--print);
+  background: var(--sky);
   font-size: 0.7rem;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--on-print);
+  color: var(--on-sky);
 }
 
 .next-date strong {

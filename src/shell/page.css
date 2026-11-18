@@ -115,8 +115,8 @@
   inline-size: 3rem;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: var(--print);
-  color: var(--on-print);
+  background: var(--sky);
+  color: var(--on-sky);
   font-size: 1.35rem;
   transition: translate 150ms;
 }

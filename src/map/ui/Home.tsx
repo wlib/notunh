@@ -5,13 +5,13 @@
 // what you're due at next, once you have anything, as the one card, a saved class, a final, the next thing in the
 // calendars you've imported, a session you've saved, the next of an activity you follow or an event you're going to,
 // whichever is soonest or under way; then what's on now and the next few things today (state/today.mts) with the rest
-// of what's yours today in its place among them by its time, washed in gold, the card's own too, what recurs folded
-// under them by kind, and making an event of your own as the last row. Then Yours beyond today, the sooner first
+// of what's yours today in its place among them by its time, washed in gold, the card's own event too, what recurs
+// folded under them by kind, and making an event of your own as the last row. Then Yours beyond today, the sooner first
 // (state/courses.mts, state/finals.mts, state/calendars.mts, state/saves.mts), with deadlines and breaks in the next
 // few days, the reminders set on this phone (Remind.tsx) and the trips saved here (state/trip.mts); then plan ahead,
-// three rows, and the week. With nothing of yours it's the day's list alone, which leads. While the search is typed
-// in, its suggestions lie over the page (Search.tsx), which stays as it was beneath them, scrolled and opened as it
-// was, and the sheet the size it was
+// three rows, and the week. With nothing of yours it's the day's list alone, which leads. While the search is typed in,
+// its suggestions lie over the page (Search.tsx), which stays as it was beneath them, scrolled and opened as it was,
+// and the sheet the size it was
 
 import { r } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
@@ -235,11 +235,11 @@ const Today = ({ yours }: { yours: YoursNow }) =>
   r(() => {
     const now = nowMs()
     const { all, next } = yours.value
-    // The card says what's next and the list stays the whole day, so what's starred in it stays where it was starred.
-    // What else is yours today that isn't an event takes its place by its time
+    // The card says what's next and the day's events stay whole under it, so one starred stays where it was starred.
+    // What else is yours today, which has no star, takes its place by its time, but for the card's own, said already
     const on = state.todayList.value.filter(event => event.start <= now && now < event.end)
     const later = state.todayList.value.filter(event => event.start > now)
-    const also = all.filter(item => !item.event && isToday(item) && item.start > now).map(({ start, row }) => ({ start, row: row() }))
+    const also = all.filter(item => item !== next && !item.event && isToday(item) && item.start > now).map(({ start, row }) => ({ start, row: row() }))
     return <>
       {next && <Next next={next} />}
       {on.length > 0 && <>

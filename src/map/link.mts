@@ -1,12 +1,13 @@
 // The page the map's sheet shows over the home as a link of its own that can be shared and reopened: a section, an
 // instructor, a room, a course, a place, an event, parking near a place, a parking area, a program, a stop, a bus,
-// directions, a new event, an event of yours to edit, you, the buses, the clubs and activities, an activity, the week
-// and the term ahead. A page is a path under /map/, its kind then what it's of: /map/section/202610/12496,
+// directions, a new event, an event of yours to edit, you, the buses, the clubs and activities, an activity, the week,
+// the term ahead, and dining, laundry and classes as the campus has them now. A page is a path under /map/, its kind
+// then what it's of: /map/section/202610/12496,
 // /map/person/<id>, /map/room/Kingsbury+N343, /map/course/CS+518, /map/place/Kingsbury+Hall, /map/event/<id>,
 // /map/parking/Kingsbury+Hall or /map/parking for anywhere, /map/area/B, /map/program/<slug> or /map/program for the
 // list, /map/stop/<id>, /map/bus/<id>, /map/new/<place> or /map/new, /map/edit/<id>, /map/directions, /map/you,
-// /map/buses, /map/explore, /map/activity/<key>, /map/week and /map/ahead. Each value is one segment, its spaces as +
-// and anything else a path can't hold escaped. What changes on a page in place stays a query: a program's course in
+// /map/buses, /map/explore, /map/activity/<key>, /map/week, /map/ahead, /map/dining, /map/laundry and /map/classes.
+// Each value is one segment, its spaces as + and anything else a path can't hold escaped. What changes on a page in place stays a query: a program's course in
 // focus, ?course=CS+518, and parking's stay and what it's for, ?arrive=2026-10-27T06:30&leave=2026-10-27T08:30&for=class
 // on Durham's clock, never ?to=, which plans a trip from the home. Read by the map (state/page.mts) and by the Worker,
 // which previews a link to one (worker/preview.mts). No DOM
@@ -36,12 +37,15 @@ export type Page =
   | { kind: "activity", id: string }
   | { kind: "week" }
   | { kind: "ahead" }
+  | { kind: "dining" }
+  | { kind: "laundry" }
+  | { kind: "classes" }
 
 /** What parking's pages are asked for besides: the stay, and what it's for, else now and for a visit */
 export type Parking = { stay?: Stay, purpose?: Purpose }
 
 /** The kinds of page a path names */
-const KINDS: readonly string[] = ["section", "person", "room", "course", "place", "event", "parking", "area", "program", "stop", "bus", "new", "edit", "directions", "you", "buses", "explore", "activity", "week", "ahead"] satisfies Page["kind"][]
+const KINDS: readonly string[] = ["section", "person", "room", "course", "place", "event", "parking", "area", "program", "stop", "bus", "new", "edit", "directions", "you", "buses", "explore", "activity", "week", "ahead", "dining", "laundry", "classes"] satisfies Page["kind"][]
 
 const PURPOSES: readonly string[] = ["class", "errand", "event", "visit"] satisfies Purpose[]
 
@@ -99,7 +103,7 @@ export const pageOf = (pathname: string, search = ""): Page | undefined => {
   // A new event, at a place where one's named
   if (kind === "new")
     return { kind, ...value && { place: value } }
-  if (kind === "directions" || kind === "you" || kind === "buses" || kind === "explore" || kind === "week" || kind === "ahead")
+  if (kind === "directions" || kind === "you" || kind === "buses" || kind === "explore" || kind === "week" || kind === "ahead" || kind === "dining" || kind === "laundry" || kind === "classes")
     return segments.length ? undefined : { kind }
   if (!value)
     return

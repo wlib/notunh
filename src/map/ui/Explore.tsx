@@ -110,14 +110,6 @@ export const SeriesResults = ({ query }: { query: DerivativeNode<string> }) =>
     return found.length > 0 && <Group label="Clubs & activities">{found.map(listing => <ActivityRow listing={listing} />)}</Group>
   })
 
-/** The home's ways into its lists, under the search, so they're there with the sheet half up */
-export const Shortcuts = () =>
-  <nav class="chips shortcuts" aria-label="Browse">
-    <button type="button" class="chip" onclick={() => state.go({ kind: "explore" })}>Clubs &amp; activities ›</button>
-    <button type="button" class="chip" onclick={() => state.go({ kind: "week" })}>This week ›</button>
-    <button type="button" class="chip" onclick={() => state.go({ kind: "ahead" })}>Plan ahead ›</button>
-  </nav>
-
 /** Parts of a day, by the minute after midnight they start at, for "Could I go this evening?" */
 const PARTS = { morning: [0, 12 * 60], afternoon: [12 * 60, 17 * 60], evening: [17 * 60, 24 * 60] } as const
 type Part = keyof typeof PARTS

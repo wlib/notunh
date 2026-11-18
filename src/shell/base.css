@@ -12,6 +12,12 @@
   --positive:       oklch(52% 0.14 152);
   --highlight:      oklch(90% 0.14 95 / 0.6);
   --star:           oklch(68% 0.16 75);
+  /* The poster's two inks, cobalt and lime, the same in either theme as print is: only ever what's yours next, the
+     clubs' own page and the way in from the home page, never a state, which the colors above are for */
+  --poster:         oklch(39% 0.19 268);
+  --on-poster:      oklch(98.6% 0.004 85);
+  --print:          oklch(91% 0.2 124);
+  --on-print:       oklch(27% 0.07 135);
   --shadow: 0 10px 30px oklch(23% 0.03 265 / 0.16), 0 1px 3px oklch(23% 0.03 265 / 0.12);
   /* Sheets and cards, fields and cards within them, and buttons */
   --radius-l: 1.125rem;
@@ -210,6 +216,47 @@ h2 {
   letter-spacing: -0.01em;
 }
 
+/* The one display style, for a name said large: a view's, a page's, the wordmark's */
+.display {
+  font-size: clamp(1.5rem, 7cqi, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+/* A poster: cobalt with lime rings spreading from its corner, as a signal does, and its label in lime */
+.poster {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: none;
+  border-radius: var(--radius-m);
+  background: var(--poster);
+  color: var(--on-poster);
+}
+
+.poster::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: auto 0 0 auto;
+  block-size: 180%;
+  aspect-ratio: 1;
+  background: repeating-radial-gradient(circle at 100% 100%, transparent 0 0.8rem, var(--print) 0.8rem 0.925rem);
+  -webkit-mask-image: radial-gradient(circle at 100% 100%, black 20%, transparent 70%);
+  mask-image: radial-gradient(circle at 100% 100%, black 20%, transparent 70%);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.poster-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--print);
+}
+
 a {
   color: var(--accent);
   text-underline-offset: 0.15em;
@@ -236,11 +283,22 @@ a {
 
 /* Section titles in lists of things, like a menu's stations */
 .eyebrow {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 650;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--muted);
+}
+
+/* Lit beside what's so right now: open, free, live */
+.dot {
+  display: inline-block;
+  inline-size: 0.5em;
+  aspect-ratio: 1;
+  margin-inline-end: 0.4em;
+  border-radius: 50%;
+  background: var(--positive);
+  vertical-align: 0.1em;
 }
 
 /* The app's name, then the page's, with the name leading home */
@@ -310,6 +368,39 @@ a {
 
 .icon-person {
   --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><circle cx='12' cy='8' r='4'/><path d='M4.5 20.5a7.5 7.5 0 0 1 15 0'/></svg>");
+}
+
+/* The campus index's marks, the laundry's and dining's as the map draws them on their buildings (render/icons.mts) */
+.icon-dining {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M19 3v12h-5c-.02 -3.68 .18 -7.4 5 -12z M19 15v6 M8 3v18 M5 3v3a3 3 0 0 0 6 0v-3'/></svg>");
+}
+
+.icon-laundry {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M16 14a4 4 0 1 1 -8 0a4 4 0 1 1 8 0 M8.5 6.5h.01 M11.5 6.5h.01'/></svg>");
+}
+
+.icon-bus {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M6 4h12a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2z M4 11h16 M8 18v2.5 M16 18v2.5 M8 14.5h.01 M16 14.5h.01'/></svg>");
+}
+
+.icon-people {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M12 8a3 3 0 1 1 -6 0a3 3 0 0 1 6 0z M3.5 19.5a5.5 5.5 0 0 1 11 0 M15.5 5.2a3 3 0 0 1 0 5.6 M17.5 14.4a5.5 5.5 0 0 1 3 5.1'/></svg>");
+}
+
+.icon-calendar {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M4 6.5a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z M4 9.5h16 M8 3v3 M16 3v3 M8 13.5h3 M8 16.5h6'/></svg>");
+}
+
+.icon-classes {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M2.5 9 12 4.5 21.5 9 12 13.5z M6.5 11.2v4.3c1.5 1.6 3.4 2.3 5.5 2.3s4 -.7 5.5 -2.3v-4.3 M21.5 9v5'/></svg>");
+}
+
+.icon-parking {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z M10 16.5v-9h2.75a2.75 2.75 0 0 1 0 5.5h-2.75'/></svg>");
+}
+
+.icon-flag {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M5.5 21v-17 M5.5 4.5h12l-2.5 4 2.5 4h-12'/></svg>");
 }
 
 .icon-navigate {

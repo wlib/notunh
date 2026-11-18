@@ -285,17 +285,8 @@ body {
   color: var(--on-accent);
 }
 
-.dot {
-  display: inline-block;
-  inline-size: 0.5em;
-  aspect-ratio: 1;
-  margin-inline-end: 0.4em;
-  border-radius: 50%;
-  background: var(--positive);
-  vertical-align: 0.1em;
-}
-
-/* Home: the search, with You in it and Directions beside it, then the week as one list (ui/Home.tsx, ui/Search.tsx) */
+/* Home: the search, with You in it and Directions beside it, then its two views, Today's list and Campus's index
+   (ui/Home.tsx, ui/Campus.tsx, ui/Search.tsx) */
 
 .home,
 .agenda {
@@ -380,6 +371,127 @@ body {
 
 .agenda .eyebrow {
   margin: 0.5rem 0 0;
+}
+
+.agenda-view {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.agenda-view[hidden] {
+  display: none;
+}
+
+/* The two views by name, in the display type: the one shown in ink over a rule, the other muted beside it */
+.views {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-block-start: 0.125rem;
+}
+
+.views button {
+  position: relative;
+  min-block-size: var(--tap);
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: clamp(1.4rem, 6.5cqi, 1.6rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  color: color-mix(in oklch, var(--muted) 55%, var(--surface));
+}
+
+.views button:hover {
+  color: var(--muted);
+}
+
+.views button[aria-pressed="true"] {
+  color: var(--text);
+}
+
+.views button[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0.3rem;
+  block-size: 0.1875rem;
+  border-radius: 999px;
+  background: var(--text);
+}
+
+.views .views-day.eyebrow {
+  margin: 0 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* What you're due at next: the one poster in the sheet, short enough to leave the list under it in view half up */
+.next {
+  display: grid;
+  gap: 0.125rem;
+  inline-size: 100%;
+  padding: 0.75rem 5.5rem 0.8rem 0.875rem;
+  text-align: start;
+}
+
+.next strong {
+  font-size: 1.2rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.next-facts {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--on-poster) 82%, var(--poster));
+}
+
+/* The ways on from today, side by side */
+.onward {
+  display: flex;
+  gap: 1.5rem;
+}
+
+/* The campus index: a mark, a name, and what's so of it now */
+.rows .row.index-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  padding-block: 0.55rem;
+}
+
+.index-row .row-what strong {
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.index-row .row-what .muted {
+  font-size: 0.825rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A thing's mark, in ink on the raised surface: the index's, as the map's own markers are drawn */
+.mark {
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  aspect-ratio: 1;
+  border-radius: var(--radius-s);
+  background: var(--surface-raised);
+  font-size: 1.15rem;
+}
+
+a.more {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.more.about {
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .yours {
@@ -1102,8 +1214,10 @@ body {
 }
 
 .view-head h1 {
-  font-size: clamp(1.2rem, 5.5cqi, 1.4rem);
-  line-height: 1.15;
+  font-size: clamp(1.3rem, 6cqi, 1.5rem);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
   text-wrap: balance;
 }
 
@@ -1721,7 +1835,7 @@ body {
 }
 
 /* Chips in one line that scrolls sideways to the sheet's edges, with room for the tap each takes around it, as a room's days have */
-.chips:is(.interests, .shortcuts, .filters, .standing) {
+.chips:is(.interests, .filters, .standing) {
   flex-wrap: nowrap;
   align-items: center;
   overflow-x: auto;
@@ -1730,13 +1844,8 @@ body {
   padding: 0.25rem var(--inset);
 }
 
-.chips:is(.interests, .shortcuts, .filters, .standing)::-webkit-scrollbar {
+.chips:is(.interests, .filters, .standing)::-webkit-scrollbar {
   display: none;
-}
-
-.chips.shortcuts .chip {
-  color: var(--accent);
-  font-weight: 600;
 }
 
 /* A filter's day and time of day, native pickers, with its chips as tall beside them */
@@ -1776,6 +1885,197 @@ body {
 .clash {
   font-weight: 600;
   color: var(--accent);
+}
+
+/* Dining and laundry in the sheet (ui/Campus.tsx): a hall's row, with its standing and what the meal leads with; a
+   place's glance, a few dishes or a room's machines, between rules; and every hall's washers and dryers in columns */
+.rows .row.hall-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding-block: 0.7rem;
+}
+
+.hall-row .row-what {
+  gap: 0.125rem;
+}
+
+.hall-row .row-what strong {
+  font-size: 1.05rem;
+  letter-spacing: -0.015em;
+}
+
+.hall-standing {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hall-row .hall-dishes {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-block-start: 0.2rem;
+  text-wrap: pretty;
+}
+
+.hall-meal {
+  font-size: 0.7rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.glance {
+  display: grid;
+  gap: 0.25rem;
+  margin-block: 0.25rem;
+  padding-block: 0.75rem 0;
+  border-block: 1px solid var(--border);
+}
+
+.glance .lines > .line:last-child {
+  font-weight: 600;
+}
+
+.glance-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* The star's tap, without its height */
+  margin-block: -0.75rem;
+}
+
+.dishes {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dishes li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding-block: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.dishes li + li,
+.glance .dishes + .lines {
+  border-block-start: 1px solid var(--border);
+}
+
+.dishes .muted {
+  flex: none;
+  max-inline-size: 45%;
+  font-size: 0.8rem;
+}
+
+.machines {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.machines > :first-child {
+  inline-size: 4.25rem;
+}
+
+.pips {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+
+.pip {
+  inline-size: 0.55rem;
+  aspect-ratio: 1;
+  border-radius: 0.15rem;
+  background: var(--border);
+}
+
+.pip.free {
+  background: var(--positive);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+}
+
+.rooms > li.rooms-head,
+.rows .row.room-row {
+  grid-template-columns: minmax(0, 1fr) 4.25rem 4.25rem;
+  gap: 0.5rem;
+}
+
+.rooms > li.rooms-head {
+  padding-inline-end: var(--tap);
+  padding-block: 0.25rem 0.35rem;
+}
+
+.room-row {
+  font-size: 0.9rem;
+}
+
+.room-row strong {
+  font-weight: 600;
+}
+
+/* The map's own word on the two pages (render/status.mts): at each hall, its standing, and at each residence hall,
+   its washers free, lit where there's one */
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.25rem 0.6rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 0.75rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.status-pill .dot {
+  margin: 0;
+}
+
+.status-pill[data-open="false"] {
+  color: var(--muted);
+}
+
+/* A residence hall's washers free, as a disc no bigger than the number: lit where there's one, quiet where there's none */
+.status-pill.count {
+  justify-content: center;
+  min-inline-size: 1.5rem;
+  block-size: 1.5rem;
+  padding: 0 0.3rem;
+  border: 2px solid var(--surface);
+  background: var(--positive);
+  box-shadow: 0 1px 3px oklch(23% 0.03 265 / 0.3);
+  color: var(--surface);
+}
+
+.status-pill.count[data-open="false"] {
+  background: var(--surface-raised);
+  color: var(--muted);
+}
+
+.status-pill.count[data-yours="true"] {
+  z-index: 1;
+  outline: none;
+  border-color: var(--star);
+}
+
+.status-pill[data-open="false"] .dot {
+  background: var(--border);
+}
+
+.status-pill[data-yours="true"] {
+  outline: 2px solid var(--star);
 }
 
 /* A row that leaves the map, as a chapter's to UNH's page for it */

@@ -6,7 +6,9 @@ import { r, watch, type DerivativeNode } from "bruh/reactive"
 //#region Remembered between visits
 
 // In localStorage where the browser allows it. Storage can throw, as in private browsing or when full, and what
-// comes back may have been written by an older version of the app, so it's read as unknown
+// comes back may have been written by older code or newer, as another tab's, a page cached from an earlier release, or
+// another of your devices' is, so it's read as unknown, by a format (src/shared/format.mts): what older code kept is
+// upgraded as it's read, and what newer code kept is neither read nor written over, by any key's write
 //
 // What's yours of it (SYNCED in src/shared/sync.mts) is kept for you by the Worker too, with this as its cache:
 // read here, offline included, written here first, each write stamped with when and by which browser, and sent up by
@@ -14,10 +16,11 @@ import { r, watch, type DerivativeNode } from "bruh/reactive"
 // entry beside the values, SYNC
 
 import { type Entries, type Key, type Stamp, SYNCED, isSynced } from "../shared/sync.mts"
+import { type Format, format, read, readKept, versionOf } from "../shared/format.mts"
 import { randomBase64Url } from "../shared/base64url.mts"
 
-/** A remembered value, or null if there's none or it can't be read */
-export const stored = (key: string): unknown => {
+/** What's kept under a key as it is, whatever its version, or null if there's nothing or it can't be read */
+const kept = (key: string): unknown => {
   try {
     return JSON.parse(localStorage.getItem(key) ?? "null")
   }
@@ -26,11 +29,27 @@ export const stored = (key: string): unknown => {
   }
 }
 
+/** A remembered value of no version, or null if there's none, it can't be read, or newer code kept it as a version */
+export const stored = (key: string): unknown => {
+  const value = kept(key)
+  return versionOf(value) ? null : value
+}
+
+/**
+ * Keeps a value under a key, unless what's there says a newer version than it does: only newer code wrote that, and
+ * only code as new writes over it
+ * @returns whether it's kept
+ */
 export const store = (key: string, value: unknown) => {
   try {
+    if (versionOf(kept(key)) > versionOf(value))
+      return false
     localStorage.setItem(key, JSON.stringify(value))
+    return true
   }
-  catch {}
+  catch {
+    return false
+  }
 }
 
 /** The entry with what's yours: who this browser is to its stamps, each key's stamp, and the keys still to send */
@@ -55,16 +74,16 @@ export const syncing = (): Sync => {
     return { by: found.by, stamps, pending }
   }
   const by = randomBase64Url(12)
-  const kept = SYNCED.filter(key => stored(key) !== null)
-  const sync: Sync = { by, stamps: Object.fromEntries(kept.map(key => [key, { at: 0, by }])), pending: kept }
+  const had = SYNCED.filter(key => kept(key) !== null)
+  const sync: Sync = { by, stamps: Object.fromEntries(had.map(key => [key, { at: 0, by }])), pending: had }
   store(SYNC, sync)
   return sync
 }
 
-/** What's yours to send: each key still pending, as kept, with its stamp */
+/** What's yours to send: each key still pending, as kept, whatever its version, with its stamp */
 export const pendingEntries = (): Entries => {
   const { stamps, pending } = syncing()
-  return Object.fromEntries(pending.flatMap(key => stamps[key] ? [[key, { ...stamps[key], value: stored(key) }]] : []))
+  return Object.fromEntries(pending.flatMap(key => stamps[key] ? [[key, { ...stamps[key], value: kept(key) }]] : []))
 }
 
 /** What follows each synced key's value on this page, to show what's taken from another device */
@@ -77,11 +96,15 @@ export const onWritten = (heard: () => void) => {
   return () => written.delete(heard)
 }
 
-/** Takes values newer than this browser's, as the Worker had them from your other devices, with their stamps */
+/**
+ * Takes values newer than this browser's, as the Worker had them from your other devices, with their stamps. Each is
+ * kept as it came, whatever its version, so one newer code wrote stays whole here for the code that reads it
+ */
 export const take = (entries: Entries, pending: readonly Key[]) => {
   const sync = syncing()
   for (const [key, entry] of Object.entries(entries) as [Key, NonNullable<Entries[Key]>][]) {
-    store(key, entry.value)
+    if (!store(key, entry.value))
+      continue
     sync.stamps[key] = { at: entry.at, by: entry.by }
     for (const follow of followers.get(key) ?? [])
       follow(entry.value)
@@ -100,27 +123,25 @@ const stampWrite = (key: Key) => {
 }
 
 /**
- * A value remembered between visits under a key. Stored values go through read, since they may be anything, and
- * values to store go through write when they aren't JSON as they are. One that's yours is stamped as it's written,
- * not as it's first read, and follows what's taken from your other devices
+ * A value remembered between visits under a key, read by a format that reads anything, or by a function that does,
+ * which is a format of version 0. Values to store go through write when they aren't JSON as they are. It's kept only
+ * once it's other than what's there as this code reads it, so reading is never a write of its own: what older code
+ * kept stays as it was until it's changed, and what's taken from your other devices stays as it came. One that's
+ * yours is stamped as it's written, and follows what's taken. What newer code kept reads as nothing kept and is left
+ * as it is: the value here is then this page's alone, neither kept nor sent, until code that reads what's there runs
  */
-export const remembered = <T,>(key: string, read: (stored: unknown) => T, write: (value: T) => unknown = value => value) => {
-  const value = r(read(stored(key)))
-  let isFirst = true
+export const remembered = <T,>(key: string, by: Format<T> | ((stored: unknown) => T), write: (value: T) => unknown = value => value) => {
+  const known = typeof by === "function" ? format(by) : by
+  const value = r(readKept(known, kept(key)))
   watch([value], () => {
     const json = write(value.value)
-    const isChange = !isFirst && JSON.stringify(json) !== JSON.stringify(stored(key))
-    isFirst = false
-    store(key, json)
-    if (isChange && isSynced(key))
+    if (JSON.stringify(json) !== JSON.stringify(write(readKept(known, kept(key)))) && store(key, json) && isSynced(key))
       stampWrite(key)
   })
-  // What's taken is kept as this page reads it, so reading it isn't a write of its own
   if (isSynced(key)) {
     const follow = (taken: unknown) => {
-      const next = read(taken)
-      store(key, write(next))
-      value.value = next
+      if (!("newer" in read(known, taken)))
+        value.value = readKept(known, taken)
     }
     followers.set(key, (followers.get(key) ?? new Set()).add(follow))
   }

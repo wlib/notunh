@@ -152,6 +152,13 @@ test("a feed has the sessions saved, each under the id it was saved by, not ever
   const all = await told(await get(calendarPath("activity", key)))
   expect(all).toHaveLength(sessions.length)
   expect((await get(calendarPath("activity", "presence:no-such-club"))).status).toBe(404)
+  // What newer code keeps, as a version this Worker doesn't read, is left out of the feed rather than misread, and
+  // stays as it's kept, whatever older code writes after
+  const newer = { version: 1, saved: [{ id: alias, end: session.end }] }
+  await post("/api/state", { device, entries: { "events-saved": { at: 2, by: "browser", value: newer } } }, secret)
+  expect(await told(await get(calendarPath("feed", token)))).toEqual([])
+  const older = await post("/api/state", { device, entries: { "events-saved": { at: 3, by: "browser", value: { sessions: {}, follows: [] } } } }, secret)
+  expect((await older.json() as { entries: Record<string, unknown> }).entries["events-saved"]).toEqual({ at: 2, by: "browser", value: newer })
 })
 
 //#region The one address asked for someone

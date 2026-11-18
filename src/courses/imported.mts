@@ -49,7 +49,7 @@ export const Kept = v.object({
 })
 export type Kept = v.InferOutput<typeof Kept>
 
-/** What's stored, which an older version may have written: the calendars that still read as ones */
+/** What's stored, whatever it is: the calendars that still read as ones */
 export const readKept = (stored: unknown): Kept[] =>
   Array.isArray(stored) ? stored.filter((one): one is Kept => v.is(Kept, one)) : []
 

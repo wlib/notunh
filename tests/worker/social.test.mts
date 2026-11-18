@@ -515,9 +515,14 @@ test("each kill switch answers 503 for its feature and nothing else", async () =
 
 type Kept = { entries: Record<string, { value: unknown, at: number, by: string }> }
 
-/** A write to a key, by a browser, at a time */
-const write = fc.record({ key: fc.constantFrom(...SYNCED), value: fc.integer(), at: fc.integer({ min: 1, max: 1000 }), by: fc.constantFrom("a", "b", "c") })
-  .map(({ value, ...stamp }) => ({ ...stamp, value: { [stamp.by]: stamp.at, value } }))
+/**
+ * A write to a key, by a browser, at a time, of the version its code writes, said as data says it
+ * (src/shared/format.mts), or of none, bare or with a version of another kind, which says nothing of its format
+ */
+const write = fc.record({
+  key: fc.constantFrom(...SYNCED), value: fc.integer(), at: fc.integer({ min: 1, max: 1000 }), by: fc.constantFrom("a", "b", "c"),
+  version: fc.constantFrom(undefined, 1, 2, 3, 0, -1, 1.5, "2", null), isBare: fc.boolean()
+}).map(({ value, version, isBare, ...stamp }) => ({ ...stamp, value: isBare ? [stamp.by, stamp.at, value] : { [stamp.by]: stamp.at, value, ...version !== undefined && { version } } }))
 
 /** The newest of some writes to each key, by isNewer, as every device and the Worker order them */
 const newest = (writes: readonly { key: Key, value: unknown, at: number, by: string }[]) => {

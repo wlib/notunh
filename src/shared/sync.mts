@@ -3,9 +3,14 @@
 // and activities you follow, and your class standing. Each is one key, whose last write wins, by when it was made and
 // then by which device made it, so every device and the Worker settle on the same value whatever order they hear of
 // writes in. The Worker decides, by isNewer, and each device keeps what it answers but for what it's written since it
-// asked. Pure: the pages keep and send (src/shell/state.mts, src/shell/sync.mts), the Worker stores (worker/social.mts)
+// asked. A value says its format's version as all data does (format.mts), and travels and is stored as it is, so a
+// device on older code holds what newer code wrote without reading it, and a write of an older version never wins
+// over a newer one's, however late it was made: what a device on older code writes before it's heard of the newer
+// isn't kept. Pure: the pages keep and send (src/shell/state.mts, src/shell/sync.mts), the Worker stores
+// (worker/social.mts)
 
 import * as v from "valibot"
+import { versionOf } from "./format.mts"
 
 /** The keys kept for you, each a page's own localStorage key, and nothing else is taken */
 export const SYNCED = [
@@ -46,9 +51,16 @@ export type Entry = Stamp & { value: unknown }
 
 export type Entries = Partial<Record<Key, Entry>>
 
-/** Whether a write is newer than another, or than none: later, or as late and by a device that sorts after */
-export const isNewer = (a: Stamp, b: Stamp | undefined) =>
-  !b || a.at > b.at || (a.at === b.at && a.by > b.by)
+/**
+ * Whether a write is newer than another, or than none: of a newer version, else of the same and later, or as late and
+ * by a device that sorts after
+ */
+export const isNewer = (a: Entry, b: Entry | undefined) => {
+  if (!b)
+    return true
+  const [va, vb] = [versionOf(a.value), versionOf(b.value)]
+  return va > vb || (va === vb && (a.at > b.at || (a.at === b.at && a.by > b.by)))
+}
 
 /** Two sets of entries as one, the newer of each key's */
 export const merged = (a: Entries, b: Entries): Entries => {

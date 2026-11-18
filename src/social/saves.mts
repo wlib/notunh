@@ -6,6 +6,7 @@
 import * as v from "valibot"
 import { type Event, type Pin, LINGER } from "./event.mts"
 import { seriesOf } from "./series.mts"
+import { format } from "../shared/format.mts"
 
 /** The synced key saves are kept under */
 export const SAVES = "events-saved"
@@ -23,6 +24,9 @@ export const NO_SAVES: Saves = { sessions: {}, follows: [] }
 /** Saves as kept, or none for anything else */
 export const readSaves = (stored: unknown): Saves =>
   v.is(Saves, stored) ? stored : NO_SAVES
+
+/** How saves are read wherever they're kept, by the page and by the Worker for your feed (src/shared/format.mts) */
+export const SavesFormat = format(readSaves)
 
 /** The id an event was saved by, if it's saved: its own, or any it's also told by, so a merge keeps the save */
 export const savedId = (saves: Saves, event: Pick<Event, "id" | "also">) =>

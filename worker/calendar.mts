@@ -26,11 +26,11 @@ import curated from "../src/social/curated.json"
 import { Curated, entriesOf as seriesEntries, slugOf } from "../src/social/curated.mts"
 import { entryOf } from "../src/social/calendar.mts"
 import { EventsData, LINGER, eventById } from "../src/social/event.mts"
-import { SAVES, readSaves, savedId } from "../src/social/saves.mts"
+import { SAVES, SavesFormat, savedId } from "../src/social/saves.mts"
 import { seriesOf } from "../src/social/series.mts"
 import { CoursesIndex, TermFile, codeOf, termOf } from "../src/courses/course.mts"
 import { entriesOf as sectionEntries } from "../src/courses/ics.mts"
-import { SAVED, readSaved, savedIn } from "../src/courses/saved.mts"
+import { SAVED, SavedFormat, savedIn } from "../src/courses/saved.mts"
 import { entryOfFinal, finalsOf } from "../src/courses/finals.mts"
 import { notOver, termsOf } from "../src/map/site.mts"
 import { writeCalendar } from "../src/shared/ics.mts"
@@ -114,11 +114,11 @@ calendars.get("/api/calendar/feed/:file", async c => {
   const now = Date.now()
   const site = siteOf(c.env)
   const [terms, { calendar }, saved, pins, saves, { events }, finals] = await Promise.all([
-    termsOf(site, notOver(now)), site.named("courses", CoursesIndex), kept(c.env.DB, person, SAVED), pinsOf(c.env.DB, person, now),
-    kept(c.env.DB, person, SAVES).then(readSaves), site.named("events", EventsData),
+    termsOf(site, notOver(now)), site.named("courses", CoursesIndex), kept(c.env.DB, person, SAVED, SavedFormat), pinsOf(c.env.DB, person, now),
+    kept(c.env.DB, person, SAVES, SavesFormat), site.named("events", EventsData),
     isVerifiedPerson(c.env.DB, person, now).then(isVerified => isVerified ? storedFinals(c.env.DB) : undefined)
   ])
-  const classes = savedIn(readSaved(saved), terms).flatMap(({ term, section }) => [
+  const classes = savedIn(saved, terms).flatMap(({ term, section }) => [
     ...sectionEntries(term, section, calendar),
     ...finalsOf(finals?.terms[term.code]?.finals, section).map((final, i) => entryOfFinal(term, section, final, i))
   ])

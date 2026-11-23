@@ -227,15 +227,17 @@ export const ruleOfRRule = (rrule: string, first: Temporal.PlainDate, time: Temp
 
 /** A VEVENT as read: what it is, and when, as a session by its own zone's clock */
 export type Read = {
-  uid:     string,
-  title:   string,
-  where:   string,
-  url?:    string,
+  uid:         string,
+  title:       string,
+  where:       string,
+  /** What it says of itself, as written, line breaks kept */
+  description: string,
+  url?:        string,
   /** The zone its days and times of day are in */
-  zone:    string,
+  zone:        string,
   /** Its first day there, which a VEVENT with no rule is on alone */
-  day:     Day,
-  session: Session
+  day:         Day,
+  session:     Session
 }
 
 /**
@@ -274,13 +276,14 @@ export const readEvents = (text: string, floating = TIME_ZONE): Read[] => {
     const excepted = recurrence ? [] : daysOf([...stampsOf(event.EXDATE, floating), ...moved.get(uid) ?? []])
     const base = repeated ? (added.length ? any(repeated, on(...added)) : repeated) : on(day, ...added)
     return [{
-      uid:     recurrence ? `${uid}/${recurrence.value}` : uid,
-      title:   textOf(event.SUMMARY?.[0]).trim(),
-      where:   textOf(event.LOCATION?.[0]).trim(),
+      uid:         recurrence ? `${uid}/${recurrence.value}` : uid,
+      title:       textOf(event.SUMMARY?.[0]).trim(),
+      where:       textOf(event.LOCATION?.[0]).trim(),
+      description: textOf(event.DESCRIPTION?.[0]),
       ...event.URL?.[0] && { url: event.URL[0].value.trim() },
       zone,
       day,
-      session: {
+      session:     {
         rule:  excepted.length ? except(base, on(...excepted)) : base,
         start: clockOf(time),
         end:   clockOf(until.toPlainTime()),

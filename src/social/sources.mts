@@ -8,7 +8,7 @@
 // offering's title are, are read by when.mts
 
 import * as v from "valibot"
-import { type Event, type Org, SHORT } from "./event.mts"
+import { type Event, type Org, type Result, SHORT, WEEK } from "./event.mts"
 import { deduped } from "./sport.mts"
 import { usable } from "../shared/json.mts"
 import { MONTH, datesOf, timesOf, whenOf } from "./when.mts"
@@ -211,16 +211,68 @@ export const from25Live = (json: unknown, match: Matcher): Event[] =>
 
 export const ATHLETICS = "https://unhwildcats.com/calendar.ashx/calendar.ics"
 
-/** Athletics' home games, from Sidearm's ICS (src/shared/ics.mts): those in Durham, by their venue, which the gazetteer knows */
-export const fromAthletics = (ics: string, match: Matcher): Event[] =>
-  readEvents(ics).flatMap(({ uid, title: summary, where, url, zone, day, session }) => {
-    const [, venue] = where.match(/^Durham, N\.H\., (.+)$/) ?? []
+/** A result, as Athletics writes it on the line under a game's title once it's final */
+const SCORE = /^([WLT]) (\d+)-(\d+)(?: (.+))?$/
+const PLACE = /^(\d+)(?:st|nd|rd|th) place\b/i
+
+/** What went past the usual time, as a score says it: a shootout's "SO", else overtime's "OT" or "2OT", else nothing */
+const extraOf = (text: string) => {
+  if (/shootout/i.test(text))
+    return "SO"
+  const [, times] = text.match(/\b(\d?)(?:OT|overtime)\b/i) ?? []
+  return times === undefined ? undefined : `${times}OT`
+}
+
+/**
+ * A game's result as Athletics writes it, our score first: "W 3-1", "T 0-0", "W 2-1 Overtime" (said as "W 2-1 OT"),
+ * "L 3-4 OT Shootout" or "T 4-4 (OT) - BU Wins Shootout, 3-2" (as "SO"); or a meet's "8th place, 177 points". A
+ * meet's standing after one of its days ("2nd place, 116 points (Day 1)") isn't a result, nor is anything else
+ */
+export const resultOf = (line: string): Result | undefined => {
+  const text = line.trim()
+  const [, outcome, us, them, rest = ""] = text.match(SCORE) ?? []
+  const extra = extraOf(rest)
+  if (outcome)
+    return { outcome: outcome as "W" | "L" | "T", us: Number(us), them: Number(them), ...extra && { extra } }
+  const [, place] = text.match(PLACE) ?? []
+  return place && !/\(Day \d+\)/i.test(text) ? { outcome: "placed", place: Number(place) } : undefined
+}
+
+/**
+ * Athletics' games and meets, home and away, from Sidearm's ICS (src/shared/ics.mts), each with its game: the sport
+ * and who against, read from its title ("Women's Ice Hockey vs Maine - Pink in the Rink"), whether it's in Durham,
+ * and the result its description gives under the title once it's final. One in Durham is placed by its venue, which
+ * the gazetteer knows, and one elsewhere nowhere, whatever its venue's called. Postponed ones are left out
+ */
+export const gamesOf = (ics: string, match: Matcher): Event[] =>
+  readEvents(ics).flatMap(({ uid, title: summary, where, description, url, zone, day, session }) => {
     const id = uid.match(/^vcal_(\d+)-/)?.[1]
-    if (!venue || !id || !summary || summary.startsWith("POSTPONED"))
+    if (!id || !summary || summary.startsWith("POSTPONED"))
       return []
-    const title = plain(summary.replace(/^\[[WLT]\] /, "").replace(/^University of New Hampshire /, "UNH "))
-    return [{ id: `athletics:${id}`, title, ...spanOn(session, plainDay(day), zone), place: match(venue), where: plain(venue), source: "athletics", url: (url ?? "https://unhwildcats.com").replace(/&amp;/g, "&") }]
+    const named = plain(summary.replace(/^\[[A-Z]\] /, "").replace(/^University of New Hampshire /, "UNH "), Infinity)
+    const [, sport, opponent] = named.match(/^(?:UNH )?(.+?) (?:vs\.?|at) (.+?)(?: - .*)?$/) ?? []
+    const home = /^Durham, N\.H\.(,|$)/.test(where)
+    const venue = where.match(/^Durham, N\.H\., (.+)$/)?.[1]
+    const result = resultOf(description.split("\n")[1] ?? "")
+    return [{
+      id:     `athletics:${id}`,
+      title:  named.slice(0, SHORT),
+      ...spanOn(session, plainDay(day), zone),
+      place:  venue && match(venue),
+      where:  plain(venue ?? where),
+      source: "athletics",
+      url:    (url ?? "https://unhwildcats.com").replace(/&amp;/g, "&"),
+      game:   { sport: plain(sport ?? named.replace(/^UNH /, "")), opponent: plain(opponent ?? ""), home, ...result && { result } }
+    }]
   })
+
+/** Athletics' home games, those in Durham, as lists of what's on campus have them */
+export const fromAthletics = (ics: string, match: Matcher): Event[] =>
+  gamesOf(ics, match).filter(event => event.game?.home)
+
+/** The games events.json keeps, soonest first: those played, as far back as Athletics lists, and those in the week to come */
+export const gamesKept = (games: readonly Event[], now: number): Event[] =>
+  games.filter(game => game.start < now + WEEK * DAY).sort((a, b) => a.start - b.start)
 
 //#endregion
 

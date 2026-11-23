@@ -132,6 +132,11 @@ test("Today leads with the halls serving, each opening its menu, says which open
   await expect(holloway).toContainText(/Lunch \S/)
   await shoot(page, "dining-open")
 
+  // Searching for food finds each hall's menu too
+  await page.getByPlaceholder("Search campus").fill("lunch")
+  await expect(page.getByRole("region", { name: "Dining" }).getByRole("link")).toHaveCount(2)
+  await page.getByPlaceholder("Search campus").fill("")
+
   await holloway.tap()
   await expect(page).toHaveURL(/\/dining\/\?hall=holloway-commons-dining$/)
   await expect(page.locator(".stations .station").first()).toBeVisible()

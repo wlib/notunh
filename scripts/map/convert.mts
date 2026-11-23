@@ -115,13 +115,27 @@ export const smoothShape = (shape: Coordinates[]) => {
   return smooth.filter((point, i) => isEnd(i) || length(point, smooth[i - 1]) > 0.5).map(toCoordinates)
 }
 
-const DAY_COLUMNS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+/** Where buses don't do what the timetable says: on a route, at a stop, from a service day's time on, in seconds */
+export type Correction = { route: string, stop: string, from: number, pickup?: false, dropOff?: false }
+
+// The Evening Connector's last loop of the night, due at West Edge after midnight, ends in the yard beside 10 West Edge
+// Drive, where the bus parks, rather than at the Lodges. Of 45 such loops in Umo's fixes from Oct 7 to Nov 20, 2026
+// (the observations releases), 10 went on to West Edge Lot and 4 to the Lodges, against 482 and 485 of the 487 loops
+// before each bus's last. UNH's schedule says 7 PM to midnight (unh.edu/transportation/evening-connector). So nobody
+// gets on at 10 West Edge Drive, from where the bus goes no further, or at West Edge Lot, nor off beyond
+export const CORRECTIONS: Correction[] = [
+  { route: "Evening", stop: "173", from: 24 * 3600, pickup: false },
+  { route: "Evening", stop: "169", from: 24 * 3600, pickup: false, dropOff: false },
+  { route: "Evening", stop: "181", from: 24 * 3600, dropOff: false }
+]
+
+const DAY_COLUMNS =["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 /** GTFS's YYYYMMDD as a Day, or "" for none */
 const dayOf = (date = "") =>
   date.replace(/^(\d{4})(\d\d)(\d\d)$/, "$1-$2-$3")
 
-export const convert = (table: (name: string) => Row[]): FeedData => {
+export const convert = (table: (name: string) => Row[], corrections = CORRECTIONS): FeedData => {
   const [feedInfo] = table("feed_info.txt")
 
   const routes: Route[] = table("routes.txt").map(route => {
@@ -179,12 +193,20 @@ export const convert = (table: (name: string) => Row[]): FeedData => {
     // A stop's departure, or its arrival where that's all it has, and the other way round
     const times = interpolateTimes(stopTimes.map(stopTime => parseTime(stopTime.departure_time || stopTime.arrival_time)), along)
     const arrivals = interpolateTimes(stopTimes.map(stopTime => parseTime(stopTime.arrival_time || stopTime.departure_time)), along)
-    // Stops where nobody can get on, before the last, and where nobody can get off, after the first. Pickup at the
-    // last stop and drop-off at the first never happen anyway
-    const positions = (column: string, isMeaningful: (i: number) => boolean) =>
-      stopTimes.flatMap((stopTime, i) => stopTime[column] === "1" && isMeaningful(i) ? [i] : [])
-    const noPickup = positions("pickup_type", i => i < last)
-    const noDropOff = positions("drop_off_type", i => i > 0)
+    // Stops where nobody can get on, before the last, and where nobody can get off, after the first, as the feed or a
+    // correction says. Pickup at the last stop and drop-off at the first never happen anyway
+    const positions = (column: string, rule: "pickup" | "dropOff", isMeaningful: (i: number) => boolean) =>
+      stopTimes.flatMap((stopTime, i) => {
+        const isCorrected = corrections.some(correction =>
+          correction[rule] === false &&
+          correction.route === trip.route_id &&
+          correction.stop === stopTime.stop_id &&
+          times[i] >= correction.from
+        )
+        return (stopTime[column] === "1" || isCorrected) && isMeaningful(i) ? [i] : []
+      })
+    const noPickup = positions("pickup_type", "pickup", i => i < last)
+    const noDropOff = positions("drop_off_type", "dropOff", i => i > 0)
 
     return {
       id:       trip.trip_id,

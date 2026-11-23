@@ -291,6 +291,45 @@ test("a tap leaves the sheet as it is, and the page scrolled under it, as iOS do
   await holds(page, height)
 })
 
+test("the sheet is lifted above the keyboard however iOS reports the viewport while it shows a field, and set back down once it's gone", async ({ page, fixture }) => {
+  await open(page, fixture.origin, "/map/")
+  const search = page.getByPlaceholder("Search campus")
+  await search.tap()
+  const height = await sheetHeight(page)
+
+  /**
+   * The keyboard over the bottom px given, as iOS has it while it scrolls the page to show a field: the visual viewport
+   * short of the layout viewport by that much, and innerHeight saying the same, as if it weren't there
+   */
+  const keyboard = (covered: number) => page.evaluate(covered => {
+    const shown = document.documentElement.clientHeight - covered
+    Object.defineProperty(visualViewport!, "height", { configurable: true, get: () => shown })
+    Object.defineProperty(window, "innerHeight", { configurable: true, get: () => shown })
+    visualViewport!.dispatchEvent(new Event("resize"))
+  }, covered)
+  /** Where the sheet's bottom edge is, and its top, once it's still */
+  const edges = async () => {
+    await framesOn(page)
+    await page.waitForFunction(() => !document.querySelector(".panel")!.classList.contains("moving"))
+    return page.locator(".panel").evaluate(panel => {
+      const { top, bottom } = panel.getBoundingClientRect()
+      return { top: Math.round(top), bottom: Math.round(bottom) }
+    })
+  }
+  const screen = await page.evaluate(() => document.documentElement.clientHeight)
+
+  await keyboard(300)
+  const lifted = await edges()
+  expect(lifted.bottom).toBe(screen - 300)
+  expect(lifted.top).toBeGreaterThanOrEqual(0)
+
+  // The keyboard gone, the sheet's back at the bottom, as tall as it was
+  await search.blur()
+  await keyboard(0)
+  expect((await edges()).bottom).toBe(screen)
+  expect(await sheetHeight(page)).toBe(height)
+})
+
 /** Where the sheet is on screen this instant, mid-drag included */
 const sheetNow = (page: Page) =>
   page.evaluate(() => Math.round(innerHeight - document.querySelector(".panel")!.getBoundingClientRect().top))

@@ -57,6 +57,6 @@ export const diningNow = <H extends Standing,>(halls: H[], now: WallTime): Dinin
  * today, and else now's, as a menu is for the day it's read
  */
 export const mealHour = (standing: Status | undefined, now: WallTime) => {
-  const opens = standing && !standing.isOpen ? standing.opens : undefined
+  const opens = opensOf({ standing })
   return Math.floor((opens?.day === now.day ? opens.minute : now.minute) / 60)
 }

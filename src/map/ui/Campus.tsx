@@ -83,7 +83,7 @@ const DiningFact = () =>
  */
 const HallRow = ({ hall, toMenu = false }: { hall: HallNow, toMenu?: boolean }) => {
   const walk = walkTo(placeNamed(hall.name))
-  const dishes = hall.meal ? highlights(hall.meal, toMenu ? 3 : 4) : []
+  const dishes = hall.meal ? highlights(hall.meal, 4) : []
   const what =
     <span class="row-what">
       <strong class="truncate">{hall.name}</strong>
@@ -103,23 +103,20 @@ const HallRow = ({ hall, toMenu = false }: { hall: HallNow, toMenu?: boolean }) 
  * Dining in Today, near its top, while a hall is serving or about to: each such hall's row, which opens its menu.
  * Otherwise it steps aside, as Campus says when the next opens
  */
-export const DiningSoon = () =>
-  r(() => {
-    const { serving } = state.dining.value
-    return serving.length > 0 && <>
-      <h2 class="eyebrow">Dining</h2>
-      <ul class="rows halls" aria-label="Dining">{serving.map(hall => <HallRow hall={hall} toMenu />)}</ul>
-    </>
-  })
+export const DiningSoon = ({ halls }: { halls: HallNow[] }) =>
+  <>
+    <h2 class="eyebrow">Dining</h2>
+    <ul class="rows halls" aria-label="Dining">{halls.map(hall => <HallRow hall={hall} toMenu />)}</ul>
+  </>
 
-// What searching for food means, each word typed matched by its start, or matching one's start
-const FOOD_WORDS = ["dining", "menu", "food", "eat", "meal", "breakfast", "brunch", "lunch", "dinner"]
+// What searching for food means, a word typed being the start of one of them: "menu" as much as "menus"
+const FOOD_WORDS = ["dining", "menus", "food", "eating", "meals", "breakfast", "brunch", "lunch", "dinner"]
 
 /** The halls for a search that means food, each row its menu, open or not */
 export const DiningResults = ({ query }: { query: DerivativeNode<string> }) =>
   r(() => {
     const words = query.value.trim().toLocaleLowerCase().split(/\s+/)
-    const isFood = words.some(word => word.length >= 3 && FOOD_WORDS.some(food => food.startsWith(word) || word.startsWith(food)))
+    const isFood = words.some(word => word.length >= 3 && FOOD_WORDS.some(food => food.startsWith(word)))
     const halls = state.hallsNow.value
     return isFood && halls.length > 0 && <Group label="Dining">{halls.map(hall => <HallRow hall={hall} toMenu />)}</Group>
   })

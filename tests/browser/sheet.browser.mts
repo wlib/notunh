@@ -135,6 +135,9 @@ test("Today leads with the halls serving, each opening its menu, says which open
   // Searching for food finds each hall's menu too
   await page.getByPlaceholder("Search campus").fill("lunch")
   await expect(page.getByRole("region", { name: "Dining" }).getByRole("link")).toHaveCount(2)
+  // A name that merely starts with a food word, like Eaton House, finds none
+  await page.getByPlaceholder("Search campus").fill("eaton")
+  await expect(page.getByRole("region", { name: "Dining" })).toHaveCount(0)
   await page.getByPlaceholder("Search campus").fill("")
 
   await holloway.tap()

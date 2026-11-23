@@ -2,12 +2,12 @@
 
 // The campus as a directory with a pulse: the home's Campus view (Home.tsx), one row for each thing the app does, in
 // the same order every visit, each saying what's so of it now in place of a description: the meal on and till when, the
-// washers free in your hall, the buses live, the next club meeting, your next class, where you can park, and UNH's
-// teams' latest result, which opens the scores (Sports.tsx). Each row opens a page in the sheet. Dining's is the two
-// halls side by side, which is the choice there is to make, and laundry's every hall with yours first, both marked on
-// the map while they're shown (render/status.mts); classes' is your week and the ways into the courses. A hall's place
-// then leads with its meal, and a residence hall's with its machines (PlaceGlance), and those link on to the pages of
-// their own, /dining/ and /laundry/, for the week's menus and each machine
+// washers free in your hall, the buses live, the next club meeting, your next class, where you can park. Each row opens
+// a page in the sheet. Dining's is the two halls side by side, which is the choice there is to make, and laundry's
+// every hall with yours first, both marked on the map while they're shown (render/status.mts); classes' is your week
+// and the ways into the courses. A hall's place then leads with its meal, and a residence hall's with its machines
+// (PlaceGlance), and those link on to the pages of their own, /dining/ and /laundry/, for the week's menus and each
+// machine
 
 import { r } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
@@ -30,8 +30,8 @@ import { nextDate } from "./Ahead.tsx"
 import { Status as BusStatus } from "./Buses.tsx"
 import { minutes, nowMs, walkTo } from "./common.tsx"
 import { MyCourses } from "./Courses.tsx"
-import { SportsFact } from "./Sports.tsx"
 import { DayName, Head, LinkLine, placeNamed } from "./Pages.tsx"
+import { SportsFact } from "./Sports.tsx"
 
 const capitalized = (word: string) =>
   word[0].toUpperCase() + word.slice(1)
@@ -361,10 +361,10 @@ export const CampusIndex = () => {
       <IndexRow icon="bus" name="Buses" to={{ kind: "buses" }}><BusStatus /></IndexRow>
       <IndexRow icon="people" name="Clubs & activities" to={{ kind: "explore" }}><ClubsFact /></IndexRow>
       <IndexRow icon="calendar" name="Events this week" to={{ kind: "week" }}><WeekFact /></IndexRow>
+      <IndexRow icon="trophy" name="Sports" to={{ kind: "sports" }}><SportsFact /></IndexRow>
       <IndexRow icon="classes" name="Classes" to={{ kind: "classes" }}><ClassesFact /></IndexRow>
       <IndexRow icon="parking" name="Parking" to={{ kind: "parking" }}><ParkingFact /></IndexRow>
       <IndexRow icon="flag" name="Term dates" to={{ kind: "ahead" }}><TermFact /></IndexRow>
-      <IndexRow icon="trophy" name="Sports" to={{ kind: "sports" }}><SportsFact /></IndexRow>
     </ul>
   )
 }

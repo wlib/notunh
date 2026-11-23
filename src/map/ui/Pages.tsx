@@ -66,9 +66,9 @@ import { NewEvent } from "./Home.tsx"
 import { ActivityView, ExploreView, PartOf, SeriesHere, WeekView } from "./Explore.tsx"
 import { AheadView } from "./Ahead.tsx"
 import { ClassesView, DiningView, LaundryView, PlaceGlance } from "./Campus.tsx"
+import { About, PhotoCredits, Photos, Rating } from "./Profile.tsx"
 import { FinalScore, SportsView } from "./Sports.tsx"
 import { againstOf } from "../sports.mts"
-import { About, PhotoCredits, Photos, Rating } from "./Profile.tsx"
 
 /** A notice for the page shown, like a link copied */
 const notice = r<string>()
@@ -1067,10 +1067,10 @@ export const PageView = ({ page }: { page: Page }) => {
         page.kind === "activity"   ? <ActivityView id={page.id} /> :
         page.kind === "week"       ? <WeekView /> :
         page.kind === "ahead"      ? <AheadView /> :
+        page.kind === "sports"     ? <SportsView /> :
         page.kind === "dining"     ? <DiningView /> :
         page.kind === "laundry"    ? <LaundryView /> :
         page.kind === "classes"    ? <ClassesView /> :
-        page.kind === "sports"     ? <SportsView /> :
                                      <EventView id={page.id} />}
       {r(() => notice.value && <p class="notice" role="status">{notice.value}</p>)}
     </section>

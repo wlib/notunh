@@ -228,8 +228,9 @@ const NewEvent = ({ place }: { place?: string }) =>
 const NEXT_FEW = 4
 
 /**
- * Today, one day read down: the card, then dining while it's on, then what's on now, then the next few things later today with the rest of
- * what's yours today among them by its time, each kind of what recurs folded under them, and New event as the last row
+ * Today, one day read down: the card, then dining while it's on, then what's on now, then the next few things later
+ * today with the rest of what's yours today among them by its time, each kind of what recurs folded under them, and
+ * New event as the last row
  */
 const Today = ({ yours }: { yours: YoursNow }) =>
   r(() => {
@@ -240,16 +241,16 @@ const Today = ({ yours }: { yours: YoursNow }) =>
     const on = state.todayList.value.filter(event => event.start <= now && now < event.end)
     const later = state.todayList.value.filter(event => event.start > now)
     const also = all.filter(item => item !== next && !item.event && isToday(item) && item.start > now).map(({ start, row }) => ({ start, row: row() }))
-    const isDining = state.dining.value.serving.length > 0
+    const { serving } = state.dining.value
     return <>
       {next && <Next next={next} />}
-      <DiningSoon />
+      {serving.length > 0 && <DiningSoon halls={serving} />}
       {on.length > 0 && <>
         <h2 class="eyebrow">Now</h2>
         <ul class="rows" aria-label="Now"><EventLines events={on} standing={<span class="on">On</span>} rows={NEXT_FEW} /></ul>
       </>}
       {/* Under the part's own name, the day's list needs none unless something comes between them */}
-      {(on.length > 0 || next || isDining) && <h2 class="eyebrow">{on.length ? "Later today" : "Today"}</h2>}
+      {(on.length > 0 || next || serving.length > 0) && <h2 class="eyebrow">{on.length ? "Later today" : "Today"}</h2>}
       <ul class="rows" aria-label="Today">
         <EventLines events={later} rows={NEXT_FEW} also={also} />
         <NewEvent />

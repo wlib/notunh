@@ -1,7 +1,8 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { createCourseSearch, crnsIn, parseCode, parseRoom } from "../../src/courses/search.mts"
+import { byCourse, createCourseSearch, crnsIn, parseCode, parseRoom } from "../../src/courses/search.mts"
 import { createPeople } from "../../src/courses/people.mts"
+import { courseOf } from "../../src/courses/course.mts"
 import { fall, spring } from "./fixtures.mts"
 
 const search = createCourseSearch([fall], createPeople([fall]))
@@ -83,3 +84,40 @@ test("searching several terms puts the earlier term's sections first", () => {
   if (firstSpring >= 0)
     expect(found.slice(firstSpring).every(({ term }) => term === spring)).toBe(true)
 })
+
+/** A query cased any which way, letter by letter */
+const anyCase = (text: string) =>
+  fc.array(fc.boolean(), { minLength: text.length, maxLength: text.length }).map(upper => [...text].map((letter, i) => upper[i] ? letter.toUpperCase() : letter.toLowerCase()).join(""))
+
+test("unlimited, any section's own code in any spacing or case finds it, under its course, and only that course", () =>
+  fc.assert(fc.property(fc.constantFrom(...fall.sections).chain(section => fc.tuple(fc.constant(section), anyCase(section.subject), fc.constantFrom("", " ", "  ", "-", " - "), fc.constantFrom("", " ", "\t"))), ([section, subject, gap, pad]) => {
+    const found = byCourse(search(`${pad}${subject}${gap}${section.number}${pad}`, Infinity).sections)
+    expect(found.flatMap(({ sections }) => sections.map(({ section }) => section.crn))).toContain(section.crn)
+    expect(found.every(({ code }) => code.startsWith(courseOf(section)))).toBe(true)
+  }), { numRuns: 200 })
+)
+
+test("unlimited, any section's title in any case finds its course", () =>
+  fc.assert(fc.property(fc.constantFrom(...fall.sections).chain(section => fc.tuple(fc.constant(section), anyCase(section.title))), ([section, title]) => {
+    const codes = byCourse(search(title, Infinity).sections).map(({ code }) => code)
+    expect(codes).toContain(courseOf(section))
+  }), { numRuns: 100 })
+)
+
+test("a limit caps every group, and none lists everything", () => {
+  const big = Object.entries(Object.groupBy(fall.sections, courseOf)).map(([code, sections]) => ({ code, count: sections!.length })).sort((a, b) => b.count - a.count)[0]
+  expect(search(big.code).sections.length).toBe(Math.min(8, big.count))
+  expect(search(big.code, Infinity).sections.length).toBe(fall.sections.filter(section => courseOf(section).startsWith(big.code)).length)
+  expect(search(big.code, 1).sections).toHaveLength(1)
+})
+
+test("byCourse keeps every section once, a term's course together, in the order first found", () =>
+  fc.assert(fc.property(fc.array(fc.constantFrom(...fall.sections, ...spring.sections.slice(0, 50)).map(section => ({ term: fall.sections.includes(section) ? fall : spring, section }))), found => {
+    const courses = byCourse(found)
+    expect(courses.flatMap(({ sections }) => sections).toSorted((a, b) => found.indexOf(a) - found.indexOf(b))).toEqual(found)
+    expect(new Set(courses.map(({ term, code }) => `${term.code} ${code}`)).size).toBe(courses.length)
+    expect(courses.every(({ term, code, sections }) => sections.every(one => one.term === term && courseOf(one.section) === code))).toBe(true)
+    const firsts = courses.map(({ sections }) => found.indexOf(sections[0]))
+    expect(firsts).toEqual(firsts.toSorted((a, b) => a - b))
+  }))
+)

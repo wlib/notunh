@@ -38,6 +38,7 @@ export type Page =
   | { kind: "activity", id: string }
   | { kind: "week" }
   | { kind: "ahead" }
+  | { kind: "sports" }
   | { kind: "dining" }
   | { kind: "laundry" }
   | { kind: "classes" }
@@ -46,7 +47,7 @@ export type Page =
 export type Parking = { stay?: Stay, purpose?: Purpose }
 
 /** The kinds of page a path names */
-const KINDS: readonly string[] = ["section", "person", "room", "course", "place", "event", "parking", "area", "program", "stop", "bus", "new", "edit", "directions", "you", "buses", "explore", "activity", "week", "ahead", "dining", "laundry", "classes"] satisfies Page["kind"][]
+const KINDS: readonly string[] = ["section", "person", "room", "course", "place", "event", "parking", "area", "program", "stop", "bus", "new", "edit", "directions", "you", "buses", "explore", "activity", "week", "ahead", "dining", "laundry", "classes", "sports"] satisfies Page["kind"][]
 
 const PURPOSES: readonly string[] = ["class", "errand", "event", "visit"] satisfies Purpose[]
 
@@ -102,7 +103,7 @@ export const pageOf = (pathname: string, search = ""): Page | undefined => {
   // A new event, at a place where one's named
   if (kind === "new")
     return { kind, ...value && { place: value } }
-  if (kind === "directions" || kind === "you" || kind === "buses" || kind === "explore" || kind === "week" || kind === "ahead" || kind === "dining" || kind === "laundry" || kind === "classes")
+  if (kind === "directions" || kind === "you" || kind === "buses" || kind === "explore" || kind === "week" || kind === "ahead" || kind === "dining" || kind === "laundry" || kind === "classes" || kind === "sports")
     return segments.length ? undefined : { kind }
   if (!value)
     return

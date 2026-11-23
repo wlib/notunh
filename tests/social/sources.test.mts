@@ -2,10 +2,10 @@ import { test, expect } from "vitest"
 import fc from "fast-check"
 import { readFile } from "node:fs/promises"
 import * as v from "valibot"
-import { type Event, Event as EventSchema, EventsData } from "../../src/social/event.mts"
+import { type Event, Event as EventSchema, EventsData, Result } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromPresenceOrgs, fromRecInstances, fromRecOfferings, merged, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
-import { addDays, atClock, hhmm, localDay, weekday } from "../../src/shared/time.mts"
+import { WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromPresenceOrgs, fromRecInstances, fromRecOfferings, gamesKept, gamesOf, merged, programOf, programUrl, programsOf, resultOf } from "../../src/social/sources.mts"
+import { DAY, addDays, atClock, hhmm, localDay, weekday } from "../../src/shared/time.mts"
 import { classDays, fromLive25 } from "../../src/courses/calendar.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
 import { Curated, fromCurated } from "../../src/social/curated.mts"
@@ -19,6 +19,7 @@ const rawLive = JSON.parse(await fixture("25live.json")) as unknown[]
 const presence = fromPresence(rawPresence, match)
 const live = from25Live(rawLive, match)
 const athletics = fromAthletics(await fixture("athletics.ics"), match)
+const games = gamesOf(await fixture("athletics.ics"), match)
 const rawClubs = JSON.parse(await fixture("dserec.json")) as { data: DserecRow[] }
 const clubs = fromDserec(rawClubs, match)
 const rawOrganizations = JSON.parse(await fixture("presence-clubs.json")) as { uri: string, regularMeetingTime: string }[]
@@ -131,7 +132,119 @@ test("the fixture's events file is what the build would make of the fixtures, an
   const calendar = fromLive25(JSON.parse(await readFile(new URL("../fixtures/courses/25live.json", import.meta.url), "utf8")), file.fetched)
   const meetings = fromPresenceClubs(fromPresenceOrgs(rawOrganizations), classDays(calendar, localDay(file.fetched), 7 * WEEKS), match)
   expect(file.events).toEqual(merged([presence, meetings, live, athletics, clubs, offerings, sessions, series], 0))
+  expect(file.games).toEqual(gamesKept(games, file.fetched))
 })
+
+//#region Games and their results
+
+test("a result reads as Athletics writes it, our score first, what went past the usual time said short", () => {
+  expect(resultOf("W 3-1")).toEqual({ outcome: "W", us: 3, them: 1 })
+  expect(resultOf("T 0-0")).toEqual({ outcome: "T", us: 0, them: 0 })
+  expect(resultOf("L 2-7")).toEqual({ outcome: "L", us: 2, them: 7 })
+  expect(resultOf("W 202-149")).toEqual({ outcome: "W", us: 202, them: 149 })
+  expect(resultOf("W 2-1 Overtime")).toEqual({ outcome: "W", us: 2, them: 1, extra: "OT" })
+  expect(resultOf("L 76-81 OT")).toEqual({ outcome: "L", us: 76, them: 81, extra: "OT" })
+  expect(resultOf("W 5-4 2OT")).toEqual({ outcome: "W", us: 5, them: 4, extra: "2OT" })
+  expect(resultOf("L 3-4 OT Shootout")).toEqual({ outcome: "L", us: 3, them: 4, extra: "SO" })
+  expect(resultOf("T 4-4 (OT) - BU Wins Shootout, 3-2")).toEqual({ outcome: "T", us: 4, them: 4, extra: "SO" })
+  expect(resultOf(" 8th place, 177 points")).toEqual({ outcome: "placed", place: 8 })
+  expect(resultOf(" 2nd place, 721 points (Final)")).toEqual({ outcome: "placed", place: 2 })
+})
+
+test("a meet's standing after one of its days, a stream's link, or nothing at all isn't a result", () => {
+  expect(resultOf(" 2nd place, 116 points (Day 1)")).toBeUndefined()
+  expect(resultOf("Streaming Video: https://www.espn.com/watch")).toBeUndefined()
+  expect(resultOf("TV: ESPN+")).toBeUndefined()
+  expect(resultOf("")).toBeUndefined()
+})
+
+const anOutcome = fc.constantFrom("W" as const, "L" as const, "T" as const)
+const aScore = fc.nat({ max: 300 })
+
+test("any score Athletics could write reads back as written", () =>
+  fc.assert(fc.property(anOutcome, aScore, aScore, fc.constantFrom("", " OT", " Overtime", " 3OT", " OT Shootout"), (outcome, us, them, written) => {
+    const extra = written === "" ? undefined : /Shootout/.test(written) ? "SO" : written === " Overtime" ? "OT" : written.trim()
+    expect(resultOf(`${outcome} ${us}-${them}${written}`)).toEqual({ outcome, us, them, ...extra && { extra } })
+  }))
+)
+
+test("any place a meet ends in reads back, but a day's standing", () =>
+  fc.assert(fc.property(fc.integer({ min: 1, max: 400 }), fc.nat(), fc.option(fc.integer({ min: 1, max: 5 }), { nil: undefined }), (place, points, day) => {
+    const ordinal = place % 10 === 1 && place % 100 !== 11 ? "st" : place % 10 === 2 && place % 100 !== 12 ? "nd" : place % 10 === 3 && place % 100 !== 13 ? "rd" : "th"
+    const line = ` ${place}${ordinal} place, ${points} points${day ? ` (Day ${day})` : ""}`
+    expect(resultOf(line)).toEqual(day ? undefined : { outcome: "placed", place })
+  }))
+)
+
+test("whatever a line says, it's a result of the one shape or none", () =>
+  fc.assert(fc.property(fc.string(), line => {
+    const result = resultOf(line)
+    expect(result === undefined || v.is(Result, result)).toBe(true)
+  }))
+)
+
+test("each game, home and away, reads with its sport, who against, where, and its result once there's one", () => {
+  for (const game of games) {
+    expect(() => v.parse(EventSchema, game)).not.toThrow()
+    expect(game.game?.sport).not.toMatch(/^UNH|University| vs | at /)
+  }
+  const byId = (id: string) => games.find(game => game.id === `athletics:${id}`)!
+  expect(byId("9695").game).toEqual({ sport: "Men's Soccer", opponent: "Dartmouth", home: true, result: { outcome: "T", us: 0, them: 0 } })
+  expect(byId("9655").game).toMatchObject({ sport: "Field Hockey", opponent: "Miami (Ohio)", home: true })
+  expect(byId("9584")).toMatchObject({ place: undefined, where: "St. Paul, Minn., Lee & Penny Anderson Arena", game: { sport: "Women's Ice Hockey", opponent: "St. Thomas", home: false, result: { outcome: "L", us: 2, them: 7 } } })
+  expect(byId("9662").game?.result).toEqual({ outcome: "W", us: 2, them: 1, extra: "OT" })
+  expect(byId("9588").game?.result).toEqual({ outcome: "T", us: 4, them: 4, extra: "SO" })
+  expect(byId("9778").game).toEqual({ sport: "Women's Cross Country", opponent: "America East Championship", home: false, result: { outcome: "placed", place: 8 } })
+  // Not yet played as the fixtures were made, so the calendar gave no result
+  expect(byId("9555").game).toEqual({ sport: "Men's Ice Hockey", opponent: "Vermont", home: false })
+})
+
+test("an away game is placed nowhere, the home games are the events, and a postponed game isn't a game", () => {
+  expect(games.filter(game => !game.game?.home).every(game => game.place === undefined)).toBe(true)
+  expect(games.filter(game => game.game?.home)).toEqual(athletics)
+  expect(games.some(game => game.title.includes("POSTPONED"))).toBe(false)
+  expect(games.length).toBeGreaterThan(athletics.length)
+})
+
+/** Athletics' calendar of one game, as it writes one: its title, where, and under the title its result once it's final */
+const calendarOf = (summary: string, location: string, result?: string) => [
+  "BEGIN:VCALENDAR",
+  "BEGIN:VEVENT",
+  "UID:vcal_1-admin.unhwildcats.com",
+  "DTSTART:20261121T180000Z",
+  "DTEND:20261121T210000Z",
+  `LOCATION:${location.replaceAll(",", "\\,")}`,
+  `SUMMARY:${summary}`,
+  `DESCRIPTION:${summary}\\n${result ? `${result}\\n` : ""}TV: ESPN+\\n`,
+  "END:VEVENT",
+  "END:VCALENDAR"
+].join("\r\n")
+
+test("a game away from Durham that Athletics says vs of is at neither's, and one it gives a venue of ours with no town is at home", () => {
+  // As Athletics wrote them in November 2026: a tournament's semifinal in Baltimore, and a meet at Swasey Pool
+  const [semifinal] = gamesOf(calendarOf("[W] University of New Hampshire Women's Volleyball vs Bryant - Semifinal Round", "Baltimore, Md., Chesapeake Employers Insurance Arena", "W 3-2"), match)
+  expect(semifinal).toMatchObject({ place: undefined, where: "Baltimore, Md., Chesapeake Employers Insurance Arena" })
+  expect(semifinal.game).toEqual({ sport: "Women's Volleyball", opponent: "Bryant", home: false, neutral: true, result: { outcome: "W", us: 3, them: 2 } })
+  const [meet] = gamesOf(calendarOf("University of New Hampshire Women's Swimming and Diving vs Maine", ", Swasey Pool"), match)
+  expect(meet).toMatchObject({ place: "Field House", where: "Swasey Pool", game: { sport: "Women's Swimming and Diving", opponent: "Maine", home: true } })
+  // A venue the map doesn't know, with no town, is nobody's home here, and Durham in another state isn't ours
+  const [elsewhere] = gamesOf(calendarOf("University of New Hampshire Women's Gymnastics vs West Chester", ", SECU Arena"), match)
+  expect(elsewhere).toMatchObject({ place: undefined, where: "SECU Arena", game: { home: false, neutral: true } })
+  const [duke] = gamesOf(calendarOf("University of New Hampshire Men's Basketball at Duke", "Durham, N.C., Cameron Indoor Stadium"), match)
+  expect(duke).toMatchObject({ place: undefined, game: { opponent: "Duke", home: false } })
+  expect(duke.game).not.toHaveProperty("neutral")
+  const [townOnly] = gamesOf(calendarOf("University of New Hampshire Men's Cross Country vs Maine", "Durham, N.H."), match)
+  expect(townOnly).toMatchObject({ place: undefined, where: "Durham, N.H.", game: { home: true } })
+})
+
+test("the games kept are those played and those in the week to come, soonest first", () =>
+  fc.assert(fc.property(fc.shuffledSubarray(games), fc.integer({ min: Math.min(...games.map(game => game.start)) - 30 * DAY, max: Math.max(...games.map(game => game.start)) + 30 * DAY }), (some, now) => {
+    const kept = gamesKept(some, now)
+    expect(kept.map(game => game.start)).toEqual(some.map(game => game.start).filter(start => start < now + 7 * DAY).sort((a, b) => a - b))
+  }))
+)
+
+//#endregion
 
 //#region DSE Rec
 

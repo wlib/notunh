@@ -135,4 +135,48 @@ DESCRIPTION:[T] University of New Hampshire Women's Ice Hockey vs Boston Univers
 URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9588&amp;sport_id=14
 PRIORITY:3
 END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9593-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20261024T230000Z
+DTEND:20261025T020000Z
+LOCATION:Cambridge\, Mass., Bright-Landry Hockey Center
+SUMMARY:[W] University of New Hampshire Women's Ice Hockey at Harvard
+DESCRIPTION:[W] University of New Hampshire Women's Ice Hockey at Harvard\nW 3-0\nStreaming Video: https://www.espn.com/watch/player/_/eventCalendarId/401903986?gameId=401903986&sourceLang=en&om-navmethod=espn:globalsearch:results\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9593&amp;sport_id=14
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9662-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20261029T170000Z
+DTEND:20261029T200000Z
+LOCATION:Smithfield\, R.I., Steven '69 and Lily Cowen Field
+SUMMARY:[W] University of New Hampshire Field Hockey at Bryant
+DESCRIPTION:[W] University of New Hampshire Field Hockey at Bryant\nW 2-1 Overtime\nTV: AmericaEast.tv\nStreaming Video: https://americaeast.com/watch/default.aspx?Live=18098&path=new_hampshire\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9662&amp;sport_id=2
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9778-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20261030T150000Z
+DTEND:20261030T180000Z
+LOCATION:Albany\, N.Y.
+SUMMARY:[N] University of New Hampshire Women's Cross Country at America East Championship - Hosted by University at Albany
+DESCRIPTION:[N] University of New Hampshire Women's Cross Country at America East Championship - Hosted by University at Albany\n 8th place, 177 points\nTV: ESPN+\nStreaming Video: https://www.espn.com/watch/player/_/id/220ec538-5af5-4088-8278-af5d4c1e66af#bucketId=2\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9778&amp;sport_id=12
+PRIORITY:3
+END:VEVENT
+BEGIN:VEVENT
+UID:vcal_9555-admin.unhwildcats.com
+DTSTAMP:20261024T041146Z
+DTSTART:20261030T230000Z
+DTEND:20261031T020000Z
+LOCATION:Burlington\, Vt., Gutterson Fieldhouse
+SUMMARY:University of New Hampshire Men's Ice Hockey at Vermont
+DESCRIPTION:University of New Hampshire Men's Ice Hockey at Vermont\nTV: ESPN+\nRadio: Radio: 610 AM, 96.7 FM, 930 AM\nStreaming Video: https://www.espn.com/watch/player/_/eventCalendarId/401904798?gameId=401904798&sourceLang=en&om-navmethod=espn:globalsearch:results\nStreaming Audio: https://thevarsitynetwork.com/audioapplink/source/oas-1064/content/unh:allaccess-Live-807\nTickets: https://uvmathletics.evenue.net/event/MHK26/05\n
+URL:https://admin.unhwildcats.com/calendar.aspx?game_id=9555&amp;sport_id=6
+PRIORITY:3
+END:VEVENT
 END:VCALENDAR

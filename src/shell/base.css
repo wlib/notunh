@@ -435,6 +435,10 @@ a {
   --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z M10 16.5v-9h2.75a2.75 2.75 0 0 1 0 5.5h-2.75'/></svg>");
 }
 
+.icon-trophy {
+  --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M7.5 4h9v5a4.5 4.5 0 0 1 -9 0z M7.5 6h-3a3.5 3.5 0 0 0 3.5 4.5 M16.5 6h3a3.5 3.5 0 0 1 -3.5 4.5 M12 13.5v4 M8 20.5h8 M9.5 17.5h5'/></svg>");
+}
+
 .icon-flag {
   --icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M5.5 21v-17 M5.5 4.5h12l-2.5 4 2.5 4h-12'/></svg>");
 }

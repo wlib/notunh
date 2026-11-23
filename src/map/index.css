@@ -2634,3 +2634,24 @@ a.go {
   margin: 0.25rem 0;
   font-size: 0.9rem;
 }
+
+/* A game played, as a row of the scores (ui/Sports.tsx): the sport and who against, and the score, a win in green */
+.score-row .row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+}
+
+.score {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.row-state .score {
+  font-size: 0.9rem;
+}
+
+.score-W {
+  color: var(--positive);
+}

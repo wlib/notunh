@@ -22,6 +22,7 @@ import { DiningResults } from "./Campus.tsx"
 import { ChapterKind, EventResults, placeNamed } from "./Pages.tsx"
 import { ProgramResults } from "./Program.tsx"
 import { SeriesResults } from "./Explore.tsx"
+import { SportResults } from "./Sports.tsx"
 import { SpaceResults, wantRoomsFor } from "./Rooms.tsx"
 import { HOUR, hhmm, nextAt } from "../../shared/time.mts"
 
@@ -336,6 +337,7 @@ export const Suggestions = () => {
       {r(() => options.value.map((option, i) => !isFar(option) && <Option option={option} i={i} />))}
     </ul>
     {editing.peek() !== "from" && <><SpaceResults query={query} /><CourseResults query={query} />{editing.peek() === "search" && <DiningResults query={query} />}<ParkingResults query={query} /><SeriesResults query={query} /><EventResults query={query} /><ProgramResults query={query} /><ChapterResults query={query} /></>}
+    {editing.peek() === "search" && <SportResults query={query} />}
     {r(() => elsewhere.value.length > 0 &&
       <ul class="suggestions" role="listbox" aria-label="Further off">
         {options.value.map((option, i) => isFar(option) && <Option option={option} i={i} />)}

@@ -40,6 +40,30 @@ export const calendarOf = ({ source }: Pick<Event, "source">) =>
 export const Text = (max: number) =>
   v.pipe(v.string(), v.trim(), v.maxLength(max))
 
+/**
+ * How a game ended, as Athletics posts it once it's final: won, lost or tied, by our score and theirs, with what went
+ * past the usual time as written ("OT", "2OT", "OT Shootout"); or for a meet of many teams, the place we came
+ */
+export const Result = v.variant("outcome", [
+  v.object({ outcome: v.picklist(["W", "L", "T"]), us: v.number(), them: v.number(), extra: v.optional(Text(SHORT)) }),
+  v.object({ outcome: v.literal("placed"), place: v.number() })
+])
+export type Result = v.InferOutput<typeof Result>
+
+/** One of UNH's teams' games or meets, as Athletics lists it: the sport, who against, whether in Durham, and how it ended */
+export const Game = v.object({
+  /** "Women's Ice Hockey" */
+  sport:    v.pipe(Text(SHORT), v.minLength(1)),
+  /** "Maine", or a meet's name */
+  opponent: Text(SHORT),
+  /** In Durham */
+  home:     v.boolean(),
+  /** At neither's: away from Durham, though Athletics says "vs" of it, as of a tournament's game or a meet */
+  neutral:  v.optional(v.boolean()),
+  result:   v.optional(Result)
+})
+export type Game = v.InferOutput<typeof Game>
+
 export const Event = v.object({
   /** Unique across sources, like "presence:take-back-the-night-4" or a pin's own id */
   id:      v.pipe(v.string(), v.minLength(1)),
@@ -59,7 +83,9 @@ export const Event = v.object({
   /** The ids other calendars tell the same thing by, where they do (src/social/sport.mts) */
   also:    v.optional(v.array(v.string())),
   /** For one only a page says, as curated.mts keeps them: the day someone last read the page saying so */
-  checked: v.optional(DaySchema)
+  checked: v.optional(DaySchema),
+  /** For a game of UNH's teams, Athletics': who's playing, and once it's over, the result */
+  game:    v.optional(Game)
 })
 export type Event = v.InferOutput<typeof Event>
 
@@ -83,10 +109,11 @@ export const Org = v.object({
 export type Org = v.InferOutput<typeof Org>
 
 /**
- * The build's events.json: when it was fetched, every event, and Wildcat Link's clubs, those of a shape this code
- * doesn't know left out; none from before clubs were kept
+ * The build's events.json: when it was fetched, every event, Wildcat Link's clubs, and Athletics' games home and away,
+ * played and in the week to come, each with its game, those of a shape this code doesn't know left out; none from
+ * before clubs or games were kept
  */
-export const EventsData = v.object({ fetched: v.number(), events: usable(Event), orgs: v.optional(usable(Org), []) })
+export const EventsData = v.object({ fetched: v.number(), events: usable(Event), orgs: v.optional(usable(Org), []), games: v.optional(usable(Event), []) })
 export type EventsData = v.InferOutput<typeof EventsData>
 
 /** A candidate time of an event whose time is still to pick (marks.mts); its index among the event's times is its id */

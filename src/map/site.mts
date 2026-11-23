@@ -5,6 +5,7 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { type Page, urlOf } from "./link.mts"
+import { againstOf, scoreOf } from "./sports.mts"
 import { plain, areaPreview, coursePreview, eventPreview, meetingWhen, parkingPreview, personPreview, placePreview, programPreview, programsPreview, roomPreview, roomsOf, sectionPreview, spacePreview, stopPreview, weeklyOf, whenOf } from "../social/preview.mts"
 import { type Event, type Pin, EventsData, calendarOf, eventById, gazetteerPlaceOf, whereOf } from "../social/event.mts"
 import { type GazetteerPlace, Gazetteer } from "../places/gazetteer.mts"
@@ -75,6 +76,7 @@ export const eventResolved = (event: Event | Pin, place?: GazetteerPlace): Resol
   return {
     preview: eventPreview(event),
     parts:   [
+      ...event.game?.result ? [{ heading: "Final", lines: [[scoreOf(event.game.result), againstOf(event.game)].filter(Boolean).join(" ")] }] : [],
       place
         ? { heading: "Where", items: [{ text: place.name, href: urlOf({ kind: "place", name: place.name }), ...event.where && event.where !== place.name && { detail: event.where } }] }
         : { heading: "Where", lines: [whereOf(event)] },
@@ -170,8 +172,8 @@ const stopResolved = async (site: Site, id: string, now: number): Promise<Resolv
 export const resolve = async (site: Site, page: Page, now: number): Promise<Resolved | undefined> => {
   switch (page.kind) {
     case "event": {
-      const { events } = await site.named("events", EventsData)
-      const event = eventById(events, page.id)
+      const { events, games } = await site.named("events", EventsData)
+      const event = eventById([...events, ...games], page.id)
       if (!event)
         return
       const { places } = await site.named("gazetteer", Gazetteer)

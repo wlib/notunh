@@ -32,6 +32,7 @@ import { Status as BusStatus } from "./Buses.tsx"
 import { minutes, nowMs, walkTo } from "./common.tsx"
 import { Group, MyCourses } from "./Courses.tsx"
 import { DayName, Head, LinkLine, placeNamed } from "./Pages.tsx"
+import { SportsFact } from "./Sports.tsx"
 
 const capitalized = (word: string) =>
   word[0].toUpperCase() + word.slice(1)
@@ -389,6 +390,7 @@ export const CampusIndex = () => {
       <IndexRow icon="bus" name="Buses" to={{ kind: "buses" }}><BusStatus /></IndexRow>
       <IndexRow icon="people" name="Clubs & activities" to={{ kind: "explore" }}><ClubsFact /></IndexRow>
       <IndexRow icon="calendar" name="Events this week" to={{ kind: "week" }}><WeekFact /></IndexRow>
+      <IndexRow icon="trophy" name="Sports" to={{ kind: "sports" }}><SportsFact /></IndexRow>
       <IndexRow icon="classes" name="Classes" to={{ kind: "classes" }}><ClassesFact /></IndexRow>
       <IndexRow icon="parking" name="Parking" to={{ kind: "parking" }}><ParkingFact /></IndexRow>
       <IndexRow icon="flag" name="Term dates" to={{ kind: "ahead" }}><TermFact /></IndexRow>

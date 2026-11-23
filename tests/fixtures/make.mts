@@ -23,7 +23,7 @@ import { bundle } from "../../scripts/map/style.mts"
 import { FIXTURES } from "../../scripts/files.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { EVENTS, WEEKS, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromPresenceOrgs, fromRecInstances, fromRecOfferings, merged, programOf } from "../../src/social/sources.mts"
+import { EVENTS, WEEKS, from25Live, fromAthletics, fromDserec, gamesKept, gamesOf, fromPresence, fromPresenceClubs, fromPresenceOrgs, fromRecInstances, fromRecOfferings, merged, programOf } from "../../src/social/sources.mts"
 import { Curated, fromCurated } from "../../src/social/curated.mts"
 import { localDay } from "../../src/shared/time.mts"
 import { COURSES } from "../../src/courses/course.mts"
@@ -146,7 +146,7 @@ const events = merged([
   fromRecInstances(await fixture("events/rec-instances.html"), skate, match),
   fromCurated(v.parse(Curated, JSON.parse(await fixture("events/curated.json"))), made, 7 * WEEKS, match)
 ], 0)
-await write(EVENTS, { fetched: MADE, events, orgs })
+await write(EVENTS, { fetched: MADE, events, orgs, games: gamesKept(gamesOf(await fixture("events/athletics.ics"), match), MADE) })
 
 // The rooms to book, read from 25Live's trimmed answers as the build reads the whole ones, with their NetIDs and
 // titles made up: the spaces placed, and the one day of bookings kept, as anyone is told them

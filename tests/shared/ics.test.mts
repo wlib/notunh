@@ -192,11 +192,12 @@ test("a time in another zone is that zone's time, whichever of the two has chang
 
 //#region Real feeds
 
-test("Athletics' calendar reads whole: every game a time in UTC, its venue unescaped", async () => {
+test("Athletics' calendar reads whole: every game a time in UTC, its venue unescaped, its description's lines kept", async () => {
   const events = readEvents(await fixture("events/athletics.ics"))
-  expect(events).toHaveLength(12)
+  expect(events).toHaveLength(16)
   expect(events.every(({ zone, session }) => zone === "UTC" && "on" in session.rule)).toBe(true)
   expect(events[0]).toMatchObject({ uid: "vcal_9584-admin.unhwildcats.com", where: "St. Paul, Minn., Lee & Penny Anderson Arena", day: "2026-09-25", session: { start: "19:00", end: "22:00" } })
+  expect(events[0].description.split("\n").slice(0, 2)).toEqual(["[L] University of New Hampshire Women's Ice Hockey at St. Thomas", "L 2-7"])
 })
 
 test("a Canvas feed reads as its events at a time, each in UTC, long lines unfolded and text unescaped, what's due on a whole day left out", async () => {

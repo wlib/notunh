@@ -66,6 +66,8 @@ import { NewEvent } from "./Home.tsx"
 import { ActivityView, ExploreView, PartOf, SeriesHere, WeekView } from "./Explore.tsx"
 import { AheadView } from "./Ahead.tsx"
 import { ClassesView, DiningView, LaundryView, PlaceGlance } from "./Campus.tsx"
+import { FinalScore, SportsView } from "./Sports.tsx"
+import { againstOf } from "../sports.mts"
 import { About, PhotoCredits, Photos, Rating } from "./Profile.tsx"
 
 /** A notice for the page shown, like a link copied */
@@ -81,9 +83,9 @@ const known = new Map<string, Pin>()
 export const learn = (id: string, pin: Pin | undefined) =>
   pin ? known.set(id, pin) : known.delete(id)
 
-/** An event by its id, or another calendar's id for it, if it's one of the build's or a public pin listed, as it is there, so its page shows at once */
+/** An event by its id, or another calendar's id for it, if it's one of the build's, a game played, or a public pin listed, as it is there, so its page shows at once */
 const listedEvent = (id: string): Event | Pin | undefined =>
-  eventById([...state.pins.peek(), ...state.events.peek().events], id)
+  eventById([...state.pins.peek(), ...state.events.peek().events, ...state.events.peek().games], id)
 
 /** Minutes after midnight on Durham's clock as a range, "2:10 – 3:30 PM", as the registrar's patterns are */
 export const Hours = ({ start, end }: Pick<Meeting, "start" | "end">) =>
@@ -926,7 +928,8 @@ const ScheduledNow = ({ name }: { name: string }) =>
 /**
  * An event: when and where, Directions and Remind for getting there by its start, and for one made here, its
  * description, Going, the times to pick while its time is unset, its story to share, and editing, deleting or
- * reporting it; for UNH's, where it's from, as a line in the foot
+ * reporting it; for UNH's, where it's from, as a line in the foot; for a game played, the sport and who against as
+ * its title, then its final score, and nothing to save, add or get there by
  */
 const EventView = ({ id }: { id: string }) => {
   /** The curated series it's a session of, if it's one's */
@@ -961,7 +964,9 @@ const EventView = ({ id }: { id: string }) => {
     const event = found.value
     const pin = event.source === "pin" ? event as Pin : undefined
     const unset = isUnset(event)
-    const visit = unset ? undefined : visitOf(event)
+    const { game } = event
+    const result = game?.result
+    const visit = unset || result ? undefined : visitOf(event)
     focusOn({ kind: "event", id }, event.place, visit && event.start)
     const isAsked = pin && !unset && !pin.isGoing && pin.chosen !== undefined && (pin.marked?.includes(pin.chosen) ?? false)
     const shareIt = () => pin
@@ -969,7 +974,7 @@ const EventView = ({ id }: { id: string }) => {
       : share(event.title)
     const actions = <>
       {pin && !unset && <Going pin={pin} act={act} />}
-      {!pin && <button type="button" class="button save-button" aria-pressed={r(() => state.isSessionSaved(event) ? "true" : "false")} onclick={() => saveSession(event, !state.isSessionSaved(event))}>
+      {!pin && !result && <button type="button" class="button save-button" aria-pressed={r(() => state.isSessionSaved(event) ? "true" : "false")} onclick={() => saveSession(event, !state.isSessionSaved(event))}>
         <Icon name="star" /> {r(() => state.isSessionSaved(event) ? "Saved" : "Save")}
       </button>}
       {event.left !== undefined && <a class="button" href={event.url} target="_blank" rel="noopener">Sign up</a>}
@@ -977,7 +982,8 @@ const EventView = ({ id }: { id: string }) => {
     </>
     return (
       <>
-        <Head kind={pin && <>A UNH student{pin.spots !== undefined && <> · <Counted value={pin.spots} one="spot" other="spots" /></>}</>} title={event.title} />
+        <Head kind={pin && <>A UNH student{pin.spots !== undefined && <> · <Counted value={pin.spots} one="spot" other="spots" /></>}</>} title={game?.result ? `${game.sport} ${againstOf(game)}`.trim() : event.title} />
+        {result && <FinalScore result={result} />}
         <p class="view-when">{unset ? "Time to pick" : <When {...event} />}</p>
         <Facts where={whereOf(event)} place={event.place} />
         <PartOf event={event} />
@@ -991,7 +997,7 @@ const EventView = ({ id }: { id: string }) => {
         <div class="lines">
           {event.place && <LinkLine to={{ kind: "place", name: event.place }}>{event.place}</LinkLine>}
           {visit && <LinkLine to={parkingFor(visit)}>Parking</LinkLine>}
-          {!unset && <CalendarLine path={calendarPath("event", id)} subscribe={series && calendarPath("series", series)} />}
+          {!unset && !result && <CalendarLine path={calendarPath("event", id)} subscribe={series && calendarPath("series", series)} />}
           {!pin && <LinkLine href={event.url}>{calendarOf(event)?.name ?? "Source"}{event.checked && <> · checked <Day of={event.checked} month="short" day="numeric" /></>}</LinkLine>}
         </div>
         {pin && <p class="view-foot muted"><Moderate pin={pin} act={act} onEdit={() => state.go({ kind: "edit", id })} onGone={() => told(undefined)} onReported={hidden => notice.value = hidden ? "Reported, and hidden." : "Reported."} /></p>}
@@ -1064,6 +1070,7 @@ export const PageView = ({ page }: { page: Page }) => {
         page.kind === "dining"     ? <DiningView /> :
         page.kind === "laundry"    ? <LaundryView /> :
         page.kind === "classes"    ? <ClassesView /> :
+        page.kind === "sports"     ? <SportsView /> :
                                      <EventView id={page.id} />}
       {r(() => notice.value && <p class="notice" role="status">{notice.value}</p>)}
     </section>

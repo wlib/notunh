@@ -1,5 +1,6 @@
 // What the campus is doing now, for the sheet's Campus view and the pages it leads to (ui/Campus.tsx): each dining
-// hall's standing and the meal it's serving, read from today's menu file once something shows it, and every laundry
+// hall's standing and the meal it's serving, read from today's menu file once something shows it, and what dining as
+// a whole is doing (src/dining/now.mts), which Today, Campus and the search all say, and every laundry
 // room's counts as the Worker's collector last saw them, asked for only while something shows them. The
 // laundry rooms you've starred are the laundry page's own, remembered under the same key, so either side follows the
 // other. Reactive values only, no DOM
@@ -7,13 +8,14 @@
 import { r, watch, type DerivativeNode } from "bruh/reactive"
 import { type Status, status } from "../../dining/hours.mts"
 import { type Hall, type Meal, fileUrl } from "../../dining/menus.mts"
+import { diningNow, mealHour } from "../../dining/now.mts"
 import type { RoomSummary, Summaries } from "../../laundry/infer.mts"
 import { ROOMS, STARRED, readStarred } from "../../laundry/rooms.mts"
 import type { Room } from "../../laundry/upstream.mts"
 import type { Building } from "../../places/buildings.mts"
 import { arrayOf, getJson } from "../../shared/json.mts"
 import { slug } from "../../shared/slug.mts"
-import { localDay, localHour, localMinutes } from "../../shared/time.mts"
+import { localDay, localMinutes } from "../../shared/time.mts"
 import { jsonOf, loadImmutable } from "../../shell/load.mts"
 import { live, poll } from "../../shell/poll.mts"
 import { type Own, distinct, remembered, toggled } from "../../shell/state.mts"
@@ -28,7 +30,10 @@ const MEALS = jsonOf(arrayOf<Meal>())
 export const mealAt = (hour: number) =>
   hour < 10 ? "breakfast" : hour < 15 ? "lunch" : "dinner"
 
-/** A hall now: whether it's open and till when, and the meal it's serving or serves next, once today's menu has loaded */
+/**
+ * A hall now: whether it's open and till when, and the meal it's serving, or serves as it opens later today, once
+ * today's menu has loaded
+ */
 export type HallNow = Hall & { standing?: Status, meal?: Meal }
 
 /** A laundry room with the building it's in, which the map marks */
@@ -57,20 +62,26 @@ export const createCampus = ({ menus, buildings, now }: Pick<MapData, "menus" | 
     return () => loading.abort()
   }))
 
+  /** Durham's wall clock at the minute */
+  const wall = r(() => ({ day: day.value, minute: localMinutes(minute.value * 60_000) }))
+
   /** Each hall now, once asked for */
-  const halls = r((): HallNow[] => {
-    const at = minute.value * 60_000
-    const wanted = mealAt(localHour(at))
-    return menus.value.halls.map(hall => {
+  const halls = r((): HallNow[] =>
+    menus.value.halls.map(hall => {
       const hours = menus.value.hours[hall.id]
       const meals = served.value[hall.id] ?? []
+      const standing = hours && status(hours, wall.value)
+      const wanted = mealAt(mealHour(standing, wall.value))
       return {
         ...hall,
-        standing: hours && status(hours, { day: localDay(at), minute: localMinutes(at) }),
-        meal:     meals.find(({ meal }) => meal === wanted) ?? meals.find(({ meal }) => meal === "brunch") ?? meals.at(-1)
+        standing,
+        meal: meals.find(({ meal }) => meal === wanted) ?? meals.find(({ meal }) => meal === "brunch") ?? meals.at(-1)
       }
     })
-  })
+  )
+
+  /** What dining is doing now, as one shape for everything that says so */
+  const dining = r(() => diningNow(halls.value, wall.value))
 
   /** Every laundry room's counts, as last answered, and how asking is going */
   const counted = live<Summaries>()
@@ -95,6 +106,7 @@ export const createCampus = ({ menus, buildings, now }: Pick<MapData, "menus" | 
     /** Starts asking for the rooms' counts, as something shows them */
     wantCounts: () => wantsCounts.value = true,
     hallsNow: halls,
+    dining,
     laundryCounts: counted,
     /** A room's counts, where they've been heard */
     countsOf: (id: string): RoomSummary | undefined => counted.value.value?.rooms[id],

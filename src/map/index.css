@@ -1974,6 +1974,11 @@ a.more {
   text-wrap: pretty;
 }
 
+/* In Today, a hall's dishes on one line, so both halls fit the sheet half up */
+.agenda .hall-row .hall-dishes {
+  -webkit-line-clamp: 1;
+}
+
 .hall-meal {
   font-size: 0.7rem;
   font-weight: 650;

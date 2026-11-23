@@ -2,12 +2,13 @@
 // changing the sheet's size, and the sheet keeps its height from page to page, Directions and Back included, unless
 // it's dragged. A trip's ends are marked only on its directions. A page opens at once, and Back, the sheet's or the
 // browser's, returns to the list it was opened from scrolled as it was; so does a swipe to the right, which the page
-// follows. The camera following only the page shown is tested in tests/map/camera.test.mts and page.test.mts, as the
-// fixtures' map never loads, having no tiles
+// follows. Today leads with the dining halls while one is serving or about to, each opening its menu. The camera
+// following only the page shown is tested in tests/map/camera.test.mts and page.test.mts, as the fixtures' map never
+// loads, having no tiles
 
 import { test as base, expect, devices, type Page } from "@playwright/test"
 import { localDay } from "../../src/shared/time.mts"
-import { type Fixture, open, startFixture } from "./fixture.mts"
+import { type Fixture, open, shoot, startFixture } from "./fixture.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
   fixture: async ({}, use) => {
@@ -114,6 +115,43 @@ test("searching lays suggestions over the week, keeping the sheet's size, and cl
   await expect(week).toBeVisible()
   await expect(search).toHaveValue("")
   await holds(page, height)
+})
+
+// The dining fixtures' menus are for October 7 and 8, 2026, a Wednesday and Thursday, when both halls open 7:15 AM
+// to 9:00 PM. Durham's clock, as the page is on New York's
+const at = (time: string) =>
+  new Date(`2026-10-07T${time}:00-04:00`)
+
+test("Today leads with the halls serving, each opening its menu, says which open soon, and steps aside for the night", async ({ page, fixture }) => {
+  await page.clock.setFixedTime(at("12:00"))
+  await open(page, fixture.origin, "/map/")
+  const dining = page.locator("#today").getByRole("list", { name: "Dining" })
+  const holloway = dining.getByRole("link", { name: /Holloway Commons/ })
+  await expect(dining.getByRole("link")).toHaveCount(2)
+  await expect(holloway).toContainText(/Open till 9:00\sPM/)
+  await expect(holloway).toContainText(/Lunch \S/)
+  await shoot(page, "dining-open")
+
+  await holloway.tap()
+  await expect(page).toHaveURL(/\/dining\/\?hall=holloway-commons-dining$/)
+  await expect(page.locator(".stations .station").first()).toBeVisible()
+
+  await page.clock.setFixedTime(at("06:30"))
+  await page.goto(`${fixture.origin}/map/`)
+  await expect(dining.getByRole("link")).toHaveCount(2)
+  await expect(holloway).toContainText(/Opens 7:15\sAM/)
+  await shoot(page, "dining-soon")
+
+  await page.clock.setFixedTime(at("22:30"))
+  await page.reload()
+  await expect(page.locator("#campus").getByRole("button", { name: /^Dining/ })).toContainText(/Closed · Holloway opens Thu 7:15\sAM/)
+  await expect(dining).toHaveCount(0)
+  await shoot(page, "dining-closed")
+  // Where Campus says when the next opens, scrolled to at once
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.locator(".parts").getByRole("link", { name: "Campus" }).tap()
+  await expect(page.locator(".parts a[aria-current]")).toHaveText("Campus")
+  await shoot(page, "dining-closed-campus")
 })
 
 test("the sheet keeps its height through Directions and Back, from home and from a place, and a drag's height after", async ({ page, fixture }) => {

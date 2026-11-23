@@ -7,7 +7,8 @@
 // every hall with yours first, both marked on the map while they're shown (render/status.mts); classes' is your week
 // and the ways into the courses. A hall's place then leads with its meal, and a residence hall's with its machines
 // (PlaceGlance), and those link on to the pages of their own, /dining/ and /laundry/, for the week's menus and each
-// machine
+// machine. Dining is the one thing Today shows too, near its top while a hall is serving or about to, each hall's row
+// there going straight to its menu (DiningSoon)
 
 import { r } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
@@ -51,6 +52,10 @@ const Standing = ({ standing }: { standing?: Status }) =>
   standing.opens  ? <>Opens <Opens at={standing.opens} /></> :
                     <>Closed</>
 
+/** A hall's first word, as people say it: "Holloway", "Philbrook" */
+const shortName = (name: string) =>
+  name.split(" ")[0]
+
 /**
  * The halls in a few words, as the index says them: the meal being served, and till when the halls are open, said as
  * the halls' hours and not the meal's, as the menus name each day's meals without their times; or when the first opens
@@ -58,39 +63,54 @@ const Standing = ({ standing }: { standing?: Status }) =>
 const DiningFact = () =>
   r(() => {
     const halls = state.hallsNow.value
-    const open = halls.filter(hall => hall.standing?.isOpen)
-    const meal = (open[0] ?? halls[0])?.meal?.meal
+    const { open, next } = state.dining.value
     if (open.length) {
-      const closes = open.map(hall => hall.standing!.isOpen ? wallDate(hall.standing!.closes).getTime() : 0)
+      const meal = open[0].meal?.meal
+      const closes = open.map(({ standing }) => wallDate(standing.closes).getTime())
       const isTogether = open.length === halls.length && closes.every(at => at === closes[0])
       return <>
         <span class="dot" />{meal && <>{capitalized(meal)} · </>}
-        {isTogether ? halls.length === 2 ? "both halls" : "halls" : open.map(hall => hall.name.split(" ")[0]).join(" & ")}
+        {isTogether ? halls.length === 2 ? "both halls" : "halls" : open.map(hall => shortName(hall.name)).join(" & ")}
         {" open till "}<ClockTime at={new Date(Math.min(...closes))} timeZone="UTC" />
       </>
     }
-    const next = halls.flatMap(hall => !hall.standing?.isOpen && hall.standing?.opens ? [{ hall, opens: hall.standing.opens }] : [])
-      .sort((a, b) => wallDate(a.opens).getTime() - wallDate(b.opens).getTime())[0]
-    return next ? <>Closed · {next.hall.name.split(" ")[0]} opens <Opens at={next.opens} /></> : halls.length ? "Closed" : "Menus and hall hours"
+    return next ? <>Closed · {shortName(next.hall.name)} opens <Opens at={next.opens} /></> : halls.length ? "Closed" : "Menus and hall hours"
   })
 
-/** A hall as the dining page's row: its standing, the walk there, and what the meal leads with, which opens its place */
-const HallRow = ({ hall }: { hall: HallNow }) => {
+/**
+ * A hall as a row: its standing, the walk there, and what the meal leads with, which opens its place on the map, or
+ * its menu where the row is the quick way there, as on the home
+ */
+const HallRow = ({ hall, toMenu = false }: { hall: HallNow, toMenu?: boolean }) => {
   const walk = walkTo(placeNamed(hall.name))
-  const dishes = hall.meal ? highlights(hall.meal, 4) : []
+  const dishes = hall.meal ? highlights(hall.meal, toMenu ? 3 : 4) : []
+  const what =
+    <span class="row-what">
+      <strong class="truncate">{hall.name}</strong>
+      <span class="hall-standing"><Standing standing={hall.standing} />{walk !== undefined && <span class="muted"> · <Minutes value={minutes(walk)} /> walk</span>}</span>
+      {dishes.length > 0 && <span class="muted hall-dishes"><span class="hall-meal">{capitalized(hall.meal!.meal)}</span> {dishes.map(({ food }) => food).join(", ")}</span>}
+    </span>
   return (
     <li>
-      <button type="button" class="row hall-row" onclick={() => state.go({ kind: "place", name: hall.name })}>
-        <span class="row-what">
-          <strong class="truncate">{hall.name}</strong>
-          <span class="hall-standing"><Standing standing={hall.standing} />{walk !== undefined && <span class="muted"> · <Minutes value={minutes(walk)} /> walk</span>}</span>
-          {dishes.length > 0 && <span class="muted hall-dishes"><span class="hall-meal">{capitalized(hall.meal!.meal)}</span> {dishes.map(({ food }) => food).join(", ")}</span>}
-        </span>
-        <span class="row-state" aria-hidden="true">›</span>
-      </button>
+      {toMenu
+        ? <a class="row hall-row" href={`/dining/?hall=${hall.id}`}>{what}<span class="row-state" aria-hidden="true">›</span></a>
+        : <button type="button" class="row hall-row" onclick={() => state.go({ kind: "place", name: hall.name })}>{what}<span class="row-state" aria-hidden="true">›</span></button>}
     </li>
   )
 }
+
+/**
+ * Dining in Today, near its top, while a hall is serving or about to: each such hall's row, which opens its menu.
+ * Otherwise it steps aside, as Campus says when the next opens
+ */
+export const DiningSoon = () =>
+  r(() => {
+    const { serving } = state.dining.value
+    return serving.length > 0 && <>
+      <h2 class="eyebrow">Dining</h2>
+      <ul class="rows halls" aria-label="Dining">{serving.map(hall => <HallRow hall={hall} toMenu />)}</ul>
+    </>
+  })
 
 /** Dining in the sheet: the two halls beside each other, as the choice between them is the one there is to make */
 export const DiningView = () => {

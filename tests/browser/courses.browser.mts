@@ -75,6 +75,7 @@ test("searching an instructor's name answers with a row holding their next class
   await expect(page.locator(".view .rows")).toContainText("IT 791 (01)")
   await expect(page.locator(".view .rows")).toContainText("Kingsbury N113 · different room")
   await expect(page.locator(".view .line").last()).toContainText("Email")
+  await expect(page.locator(".view").getByRole("link", { name: /RateMyProfessors/ })).toHaveAttribute("href", /\/1231\?q=David\+Benedetto$/)
   // No address anywhere, but You's placeholder for your own
   expect(await page.content()).not.toMatch(/mailto:|(?<!"you)@\w+\.edu/)
 })
@@ -90,6 +91,11 @@ test("a section's page, at its own link, leads with its next meeting, then Direc
   await expect(view.locator(".view-facts").first()).toContainText("Kingsbury N343")
   await expect(view.locator(".view-actions .button")).toHaveText(["Directions", "Save", "Share"])
   await expect(view.locator(".line").first()).toContainText("N113")
+  // Each instructor links out to their RateMyProfessors search, in a tab of its own, and nothing of it is read here
+  const rmp = view.locator(".line", { hasText: "Instructor" }).getByRole("link", { name: "RateMyProfessors ›" })
+  await expect(rmp).toHaveAttribute("href", "https://www.ratemyprofessors.com/search/professors/1231?q=David+Benedetto")
+  await expect(rmp).toHaveAttribute("target", "_blank")
+  await expect(rmp).toHaveAttribute("rel", "noopener")
   await shoot(page, "section")
 
   // Directions plans getting there by its start, and Back comes back to the page

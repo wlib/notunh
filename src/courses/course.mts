@@ -138,6 +138,22 @@ export const sectionUrl = (term: string, crn: string) =>
 export const registrarUrl = (term: string, crn: string) =>
   `https://courses.unh.edu/class/${term}/${crn}`
 
+// RateMyProfessors' "University of New Hampshire (all campuses)", Durham, NH, by its search at
+// ratemyprofessors.com/search/schools?q=New Hampshire Durham, whose link is /school/1231 (November 2026)
+const RMP_SCHOOL = "1231"
+
+/** A name standing in for an instructor not yet named, whom no search would find */
+const UNNAMED = /^\s*(staff|tba|tbd|to be (announced|determined))?\s*$/i
+
+/**
+ * RateMyProfessors' search for an instructor at UNH, which is only linked to: it has no API and its terms forbid
+ * scraping, so nothing of it is read or shown here. Undefined for "Staff" and the like
+ */
+export const rmpUrl = (name: string) =>
+  UNNAMED.test(name)
+    ? undefined
+    : `https://www.ratemyprofessors.com/search/professors/${RMP_SCHOOL}?${new URLSearchParams({ q: name })}`
+
 /** Whether a section ever meets at a time the map can show */
 export const meets = (section: Section) =>
   section.meetings.some(meeting => meeting.days.length > 0)

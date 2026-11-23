@@ -2185,7 +2185,18 @@ a.row {
   min-inline-size: 0;
 }
 
-.paste textarea {
+/* Adding sections: the field, a code, title, CRNs or a pasted schedule, and the sections found under it by course */
+.add-courses {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* A section found says where it meets and who teaches it in full, to tell yours from the rest */
+.add-courses .row-what .muted {
+  white-space: normal;
+}
+
+.add-courses textarea {
   min-inline-size: 0;
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--border);

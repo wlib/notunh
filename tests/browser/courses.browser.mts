@@ -123,10 +123,60 @@ test("a section saved is your next class in Yours and in You's week, once whiche
 
   // A pair cross-listed with each other, pasted, is one class
   const pair = fall.sections.find(section => section.crossListed.some(crn => fall.sections.some(other => other.crn === crn)) && section.meetings.some(meeting => meeting.days))!
-  await page.getByLabel("Your schedule, pasted").fill(`${pair.crn} ${pair.crossListed[0]}`)
+  await page.getByLabel("Add courses").fill(`${pair.crn} ${pair.crossListed[0]}`)
   await page.getByRole("button", { name: "Save", exact: true }).click()
   await expect(page.getByText("My courses · 2")).toBeVisible()
   expect(JSON.parse(await page.evaluate(() => localStorage.getItem("courses-saved")!))).toHaveLength(2)
+})
+
+test("a code typed in You lists its course's sections as it's typed, one tap saves one, and it's in Yours", async ({ page, fixture }) => {
+  await page.clock.setFixedTime(tuesday("09:00"))
+  await serveCourses(page)
+  await open(page, fixture.origin, "/map/you")
+  const field = page.getByLabel("Add courses")
+  await field.click()
+  await field.pressSequentially("cs518")
+  const course = page.getByRole("region", { name: "CS 518" })
+  const row = course.locator("li", { hasText: "12496" })
+  await expect(row).toContainText("CS 518 (01)")
+  await expect(row).toContainText("Kingsbury N343")
+  await expect(row).toContainText("Benedetto")
+  // Above the keyboard's top, wherever the field sits in You
+  await expect(row).toBeInViewport()
+  await shoot(page, "add-by-code")
+
+  await row.getByRole("button", { name: "Save CS 518 (01)" }).click()
+  await expect(row.getByRole("button", { name: "Save CS 518 (01)" })).toHaveAttribute("aria-pressed", "true")
+  await expect(page.getByText("My courses · 1")).toBeVisible()
+  await expect(page.getByRole("list", { name: "Saved sections" })).toContainText("CS 518 (01)")
+  await shoot(page, "add-saved")
+
+  // Tapped again, it's forgotten, and saved again it's your next class on the home
+  await row.getByRole("button", { name: "Save CS 518 (01)" }).click()
+  await expect(page.getByText("My courses", { exact: true })).toBeVisible()
+  await row.getByRole("button", { name: "Save CS 518 (01)" }).click()
+  await page.goto(`${fixture.origin}/map/`)
+  await expect(page.locator(".next")).toContainText("CS 518")
+})
+
+test("a title typed in You finds its course by name, a few courses at first and the rest on asking", async ({ page, fixture }) => {
+  await page.clock.setFixedTime(tuesday("09:00"))
+  await serveCourses(page)
+  await open(page, fixture.origin, "/map/you")
+  const field = page.getByLabel("Add courses")
+  await field.fill("software engineering")
+  await expect(page.getByRole("region", { name: "CS 518" })).toContainText("12496")
+  await shoot(page, "add-by-title")
+
+  const courses = page.locator(".add-courses").getByRole("region")
+  await field.fill("psychology")
+  await expect(courses).toHaveCount(5)
+  const more = page.getByRole("button", { name: /^\d+ more courses$/ })
+  const rest = Number((await more.textContent())!.match(/\d+/)![0])
+  await shoot(page, "add-more")
+  await more.click()
+  await expect(courses).toHaveCount(5 + rest)
+  await expect(more).toBeHidden()
 })
 
 test("today has every class still to come, not just the next: the sooner as the card, the rest in the day's list", async ({ page, fixture }) => {

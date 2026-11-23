@@ -4,8 +4,8 @@
 // (Search.tsx), the instructor's row already answering with their next scheduled class, its room, and Directions;
 // and My courses, in You, the sections saved as a week, with what's in the calendars imported here beside them
 // (Calendars.tsx) and your finals in theirs, your finals listed where this device is told them (state/finals.mts),
-// your feed of them for a calendar app, and a pasted schedule saved in one go (src/courses/saved.mts). Your next
-// saved class is a row of Yours on the home (Home.tsx)
+// your feed of them for a calendar app, and adding sections by code, title or CRN, or a pasted schedule's in one go
+// (src/courses/saved.mts). Your next saved class is a row of Yours on the home (Home.tsx)
 
 import { type DerivativeNode, r } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
@@ -14,9 +14,9 @@ import { codeOf, courseOf } from "../../courses/course.mts"
 import { isClassAt } from "../../courses/imported.mts"
 import type { Courses } from "../../courses/browser/terms.mts"
 import { type Person, nextTeaching } from "../../courses/people.mts"
-import { crnsIn } from "../../courses/search.mts"
+import { type Found, byCourse, crnsIn, hasCrns } from "../../courses/search.mts"
 import { spaceFor } from "../../courses/spaces.mts"
-import { weekOf } from "../../courses/saved.mts"
+import { isSaved, weekOf } from "../../courses/saved.mts"
 import { visitOf } from "../../shared/visit.mts"
 import { addDays, localDay, weekday } from "../../shared/time.mts"
 import { ClockTime, Count, Counted, Day } from "../../shell/intl.tsx"
@@ -152,28 +152,92 @@ const Week = ({ courses }: { courses: Courses }) =>
     )
   })
 
-/** A schedule pasted from Banner or WebCat, its CRNs that the live terms know saved */
-const Paste = ({ courses }: { courses: Courses }) => {
+/** How many courses adding lists before offering the rest */
+const SHOWN = 5
+
+/**
+ * A section's star, which saves it to My courses, or forgets it once it's saved, its row kept in sight as the saved
+ * list above it grows or shrinks, as Safari keeps no scroll anchored
+ */
+const SaveSection = ({ found }: { found: Found }) => {
+  const star: HTMLButtonElement =
+    <button
+      type="button"
+      class="star"
+      aria-label={`Save ${codeOf(found.section)}`}
+      aria-pressed={r(() => String(isSaved(state.savedKeys.value, found)))}
+      onclick={() => {
+        if (isSaved(state.savedKeys.peek(), found))
+          state.unsave(found)
+        else
+          state.save(found)
+        requestAnimationFrame(() => star.closest("li")?.scrollIntoView({ block: "nearest" }))
+      }}
+    >
+      <Icon name="star" />
+    </button>
+  return star
+}
+
+/**
+ * Adding courses, from one field: a code in any spelling or a title lists the matching courses' sections as it's
+ * typed, each saved or forgotten with its star, by the search the map's is (src/courses/search.mts) over the live
+ * terms; and a schedule pasted from Banner or WebCat, or CRNs, lists the sections it names, which Save saves at once
+ */
+const Add = ({ courses }: { courses: Courses }) => {
+  const query = r("")
+  const isPasted = r(() => hasCrns(query.value))
+  /** Whether every course found is listed, not just the first few, till the query changes */
+  const isAll = r(false)
   /** How many sections the last paste saved, once there's been one */
   const standing = r<number>()
-  const text: HTMLTextAreaElement = <textarea rows={2} aria-label="Your schedule, pasted" placeholder="Paste your schedule, or CRNs" />
+  const text: HTMLTextAreaElement =
+    <textarea
+      rows={1}
+      aria-label="Add courses"
+      placeholder="Course, CRN, or your pasted schedule"
+      oninput={() => {
+        query.value = text.value
+        isAll.value = false
+        standing.value = undefined
+      }}
+    />
   const add = () => {
     const found = crnsIn(text.value, courses.terms)
     for (const section of found)
       state.save(section)
     standing.value = found.length
     if (found.length)
-      text.value = ""
+      query.value = text.value = ""
   }
-  return (
-    <div class="paste">
+  const results = r(() => {
+    const found = byCourse(courses.search(query.value, Infinity).sections)
+    if (!found.length)
+      return query.value.trim() && !isPasted.value && <p class="muted">No courses match that.</p>
+    // Under a field low in the sheet, the sections are past its edge until the sheet is scrolled to them
+    requestAnimationFrame(() => wrapper.scrollIntoView({ block: "nearest" }))
+    return <>
+      {(isAll.value ? found : found.slice(0, SHOWN)).map(({ term, code, sections }) =>
+        <Group label={courses.terms.length > 1 ? `${code} · ${term.name}` : code}>
+          {sections.map(found =>
+            <SectionRow {...found} class={r(() => isSaved(state.savedKeys.value, found) ? "yours" : undefined)} aside={<SaveSection found={found} />} />
+          )}
+        </Group>
+      )}
+      {!isAll.value && found.length > SHOWN &&
+        <button type="button" class="go" onclick={() => isAll.value = true}><Counted value={found.length - SHOWN} one="more course" other="more courses" /></button>}
+    </>
+  })
+  const wrapper =
+    <div class="add-courses">
       <div class="field-row">
         {text}
-        <button type="button" class="button" onclick={add}>Save</button>
+        {r(() => isPasted.value && <button type="button" class="button" onclick={add}>Save</button>)}
       </div>
       {r(() => standing.value !== undefined && <p class="muted" role="status">{standing.value ? <>Saved <Counted value={standing.value} one="section" other="sections" />.</> : "No CRNs notunh knows in that."}</p>)}
-    </div>
-  )
+      {results}
+    </div> as HTMLElement
+  return wrapper
 }
 
 /** Your saved sections' finals, soonest first, where this device is told them, till the last is over */
@@ -187,7 +251,7 @@ const Finals = () =>
   })
 
 /**
- * My courses, a section of You: the week, the sections saved, their finals, your feed of them, and a pasted schedule
+ * My courses, a section of You: the week, the sections saved, their finals, your feed of them, and adding more
  */
 export const MyCourses = () => {
   state.wantCourses()
@@ -198,24 +262,27 @@ export const MyCourses = () => {
         const courses = state.courses.value
         if (!courses)
           return <p class="muted">{state.coursesFailed.value ? "The courses couldn't load." : "Loading courses…"}</p>
+        // Adding is made once for the courses, apart from what's saved, so a save keeps what's typed and found
         return <>
-          {(state.saved.value.length > 0 || state.calendars.value.length > 0) && <Week courses={courses} />}
-          {state.saved.value.length > 0
-            ? <>
-                <ul class="rows" aria-label="Saved sections">
-                  {state.saved.value.map(found =>
-                    <SectionRow {...found} aside={
-                      <button type="button" class="clear" aria-label={`Forget ${codeOf(found.section)}`} onclick={() => state.unsave(found)}>
-                        <Icon name="close" />
-                      </button>
-                    } />
-                  )}
-                </ul>
-                <Finals />
-                <Feed />
-              </>
-            : <p class="muted">Save a section from its page, or paste your schedule.</p>}
-          <Paste courses={courses} />
+          {r(() => <>
+            {(state.saved.value.length > 0 || state.calendars.value.length > 0) && <Week courses={courses} />}
+            {state.saved.value.length > 0
+              ? <>
+                  <ul class="rows" aria-label="Saved sections">
+                    {state.saved.value.map(found =>
+                      <SectionRow {...found} aside={
+                        <button type="button" class="clear" aria-label={`Forget ${codeOf(found.section)}`} onclick={() => state.unsave(found)}>
+                          <Icon name="close" />
+                        </button>
+                      } />
+                    )}
+                  </ul>
+                  <Finals />
+                  <Feed />
+                </>
+              : <p class="muted">Find your sections by course or CRN, or paste your schedule.</p>}
+          </>)}
+          <Add courses={courses} />
         </>
       })}
     </section>

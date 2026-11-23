@@ -206,6 +206,37 @@ test("an away game is placed nowhere, the home games are the events, and a postp
   expect(games.length).toBeGreaterThan(athletics.length)
 })
 
+/** Athletics' calendar of one game, as it writes one: its title, where, and under the title its result once it's final */
+const calendarOf = (summary: string, location: string, result?: string) => [
+  "BEGIN:VCALENDAR",
+  "BEGIN:VEVENT",
+  "UID:vcal_1-admin.unhwildcats.com",
+  "DTSTART:20261121T180000Z",
+  "DTEND:20261121T210000Z",
+  `LOCATION:${location.replaceAll(",", "\\,")}`,
+  `SUMMARY:${summary}`,
+  `DESCRIPTION:${summary}\\n${result ? `${result}\\n` : ""}TV: ESPN+\\n`,
+  "END:VEVENT",
+  "END:VCALENDAR"
+].join("\r\n")
+
+test("a game away from Durham that Athletics says vs of is at neither's, and one it gives a venue of ours with no town is at home", () => {
+  // As Athletics wrote them in November 2026: a tournament's semifinal in Baltimore, and a meet at Swasey Pool
+  const [semifinal] = gamesOf(calendarOf("[W] University of New Hampshire Women's Volleyball vs Bryant - Semifinal Round", "Baltimore, Md., Chesapeake Employers Insurance Arena", "W 3-2"), match)
+  expect(semifinal).toMatchObject({ place: undefined, where: "Baltimore, Md., Chesapeake Employers Insurance Arena" })
+  expect(semifinal.game).toEqual({ sport: "Women's Volleyball", opponent: "Bryant", home: false, neutral: true, result: { outcome: "W", us: 3, them: 2 } })
+  const [meet] = gamesOf(calendarOf("University of New Hampshire Women's Swimming and Diving vs Maine", ", Swasey Pool"), match)
+  expect(meet).toMatchObject({ place: "Field House", where: "Swasey Pool", game: { sport: "Women's Swimming and Diving", opponent: "Maine", home: true } })
+  // A venue the map doesn't know, with no town, is nobody's home here, and Durham in another state isn't ours
+  const [elsewhere] = gamesOf(calendarOf("University of New Hampshire Women's Gymnastics vs West Chester", ", SECU Arena"), match)
+  expect(elsewhere).toMatchObject({ place: undefined, where: "SECU Arena", game: { home: false, neutral: true } })
+  const [duke] = gamesOf(calendarOf("University of New Hampshire Men's Basketball at Duke", "Durham, N.C., Cameron Indoor Stadium"), match)
+  expect(duke).toMatchObject({ place: undefined, game: { opponent: "Duke", home: false } })
+  expect(duke.game).not.toHaveProperty("neutral")
+  const [townOnly] = gamesOf(calendarOf("University of New Hampshire Men's Cross Country vs Maine", "Durham, N.H."), match)
+  expect(townOnly).toMatchObject({ place: undefined, where: "Durham, N.H.", game: { home: true } })
+})
+
 test("the games kept are those played and those in the week to come, soonest first", () =>
   fc.assert(fc.property(fc.shuffledSubarray(games), fc.integer({ min: Math.min(...games.map(game => game.start)) - 30 * DAY, max: Math.max(...games.map(game => game.start)) + 30 * DAY }), (some, now) => {
     const kept = gamesKept(some, now)

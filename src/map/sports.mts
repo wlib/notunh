@@ -5,9 +5,10 @@
 
 import type { Event, Game, Result } from "../social/event.mts"
 import { LINGER } from "../social/event.mts"
+import { foundBy } from "../shared/words.mts"
 
 /** An event that's one of UNH's teams' games */
-export type Played = Event & { game: Game }
+export type GameEvent = Event & { game: Game }
 
 const ordinal = new Intl.PluralRules("en-US", { type: "ordinal" })
 const SUFFIX: Record<string, string> = { one: "st", two: "nd", few: "rd", other: "th" }
@@ -18,43 +19,38 @@ export const scoreOf = (result: Result) =>
     ? `${result.place}${SUFFIX[ordinal.select(result.place)]}`
     : `${result.outcome} ${result.us}–${result.them}${result.extra ? ` ${result.extra}` : ""}`
 
-/** Who a game's against as a line says it, "vs Maine" at home and "at Harvard" away, or a meet's name alone */
-export const againstOf = ({ opponent, home }: Game) =>
-  opponent ? `${home ? "vs" : "at"} ${opponent}` : ""
+/**
+ * Who a game's against as a line says it, "vs Maine" at home or at neither's and "at Harvard" away, as Athletics'
+ * title does, or nothing where it names nobody
+ */
+export const againstOf = ({ opponent, home, neutral }: Game) =>
+  opponent ? `${home || neutral ? "vs" : "at"} ${opponent}` : ""
+
+/** Where a game is, in a word */
+export const sideOf = ({ home, neutral }: Game) =>
+  home ? "Home" : neutral ? "Neutral" : "Away"
 
 /** The games with a result, newest first */
-export const results = (games: readonly Event[]): Played[] =>
-  games.filter((game): game is Played => game.game?.result !== undefined).sort((a, b) => b.start - a.start)
+export const results = (games: readonly Event[]): GameEvent[] =>
+  games.filter((game): game is GameEvent => game.game?.result !== undefined).sort((a, b) => b.start - a.start)
 
 /** How many games to come the page lists */
 export const NEXT = 3
 
 /** The next few games, soonest first: not over, and with no result yet */
-export const nextGames = (games: readonly Event[], now: number): Played[] =>
+export const nextGames = (games: readonly Event[], now: number): GameEvent[] =>
   games
-    .filter((game): game is Played => game.game !== undefined && game.game.result === undefined && game.end + LINGER > now)
+    .filter((game): game is GameEvent => game.game !== undefined && game.game.result === undefined && game.end + LINGER > now)
     .sort((a, b) => a.start - b.start)
     .slice(0, NEXT)
 
 /** What the page's own row is found by, besides a sport's name */
 const WORDS = ["scores", "results", "sports", "games", "athletics", "wildcats", "teams"]
 
-/** Text as words, lowercased, without punctuation */
-const wordsOf = (text: string) =>
-  text.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean)
-
 /**
- * What search finds for what's typed, three letters or more: the results of each sport each of whose words a word of
- * its name starts with ("hockey", "women's ice"), newest first, and whether the page is found, for those or a word
- * like "scores"
+ * What search finds for what's typed (src/shared/words.mts): the results of each sport the words typed start words
+ * of the name of ("hockey", "women's ice"), newest first, and whether the page is found, for those or a word like
+ * "scores"
  */
-export const sportsFor = (typed: string, games: readonly Event[]) => {
-  const typedWords = wordsOf(typed)
-  if (typedWords.join(" ").length < 3)
-    return { isPage: false, played: [] }
-  const played = results(games).filter(({ game }) => {
-    const words = wordsOf(game.sport)
-    return typedWords.every(typed => words.some(word => word.startsWith(typed)))
-  })
-  return { isPage: played.length > 0 || typedWords.some(typed => WORDS.some(word => word.startsWith(typed))), played }
-}
+export const sportsFor = (typed: string, games: readonly Event[]) =>
+  foundBy(typed, results(games), ({ game }) => game.sport, WORDS)

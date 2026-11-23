@@ -56,7 +56,10 @@ export const Game = v.object({
   sport:    v.pipe(Text(SHORT), v.minLength(1)),
   /** "Maine", or a meet's name */
   opponent: Text(SHORT),
+  /** In Durham */
   home:     v.boolean(),
+  /** At neither's: away from Durham, though Athletics says "vs" of it, as of a tournament's game or a meet */
+  neutral:  v.optional(v.boolean()),
   result:   v.optional(Result)
 })
 export type Game = v.InferOutput<typeof Game>

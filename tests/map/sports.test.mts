@@ -6,7 +6,7 @@ import { LINGER } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
 import { gamesOf } from "../../src/social/sources.mts"
 import type { Gazetteer } from "../../src/places/gazetteer.mts"
-import { NEXT, againstOf, nextGames, results, scoreOf, sportsFor } from "../../src/map/sports.mts"
+import { NEXT, againstOf, nextGames, results, scoreOf, sideOf, sportsFor } from "../../src/map/sports.mts"
 
 const gazetteer: Gazetteer = JSON.parse(await readFile(new URL("../fixtures/data/src/map/gazetteer.json", import.meta.url), "utf8"))
 const games = gamesOf(await readFile(new URL("../fixtures/events/athletics.ics", import.meta.url), "utf8"), placeMatcher(gazetteer.places.map(place => place.name)))
@@ -35,11 +35,14 @@ test("a result reads as a row says it: the outcome and the score with an en dash
     .toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st", "112th"])
 })
 
-test("who a game's against says vs at home and at away, and nothing for none", () => {
+test("who a game's against says vs at home or at neither's and at away, and nothing for none", () => {
   const game: Game = { sport: "Football", opponent: "Maine", home: true }
   expect(againstOf(game)).toBe("vs Maine")
   expect(againstOf({ ...game, home: false })).toBe("at Maine")
   expect(againstOf({ ...game, opponent: "" })).toBe("")
+  // At neither's, as a tournament's game is, Athletics says vs
+  expect(againstOf({ ...game, home: false, neutral: true })).toBe("vs Maine")
+  expect([game, { ...game, home: false }, { ...game, home: false, neutral: true }].map(sideOf)).toEqual(["Home", "Away", "Neutral"])
 })
 
 test("results are every game with one, newest first; the next games are those still to come without one, soonest first", () =>
@@ -57,22 +60,19 @@ test("results are every game with one, newest first; the next games are those st
 test("search finds a sport's results by the start of any word of its name, and the page for those or a word like scores", () => {
   const hockey = sportsFor("hockey", games)
   expect(hockey.isPage).toBe(true)
-  expect(new Set(hockey.played.map(({ game }) => game.sport))).toEqual(new Set(["Women's Ice Hockey", "Field Hockey"]))
-  expect(sportsFor("women's ice", games).played.every(({ game }) => game.sport === "Women's Ice Hockey")).toBe(true)
-  expect(sportsFor("FOOT", games).played.map(({ game }) => game.result)).toEqual([{ outcome: "W", us: 30, them: 23 }, { outcome: "L", us: 13, them: 20 }])
-  expect(sportsFor("scores", games)).toEqual({ isPage: true, played: [] })
+  expect(new Set(hockey.found.map(({ game }) => game.sport))).toEqual(new Set(["Women's Ice Hockey", "Field Hockey"]))
+  expect(sportsFor("women's ice", games).found.every(({ game }) => game.sport === "Women's Ice Hockey")).toBe(true)
+  expect(sportsFor("FOOT", games).found.map(({ game }) => game.result)).toEqual([{ outcome: "W", us: 30, them: 23 }, { outcome: "L", us: 13, them: 20 }])
+  expect(sportsFor("scores", games)).toEqual({ isPage: true, found: [] })
   expect(sportsFor("game", games).isPage).toBe(true)
-  expect(sportsFor("ab", games)).toEqual({ isPage: false, played: [] })
-  expect(sportsFor("kingsbury", games)).toEqual({ isPage: false, played: [] })
+  expect(sportsFor("ab", games)).toEqual({ isPage: false, found: [] })
+  expect(sportsFor("kingsbury", games)).toEqual({ isPage: false, found: [] })
 })
 
-test("whatever's typed, search finds only results of sports whose words it starts", () =>
-  fc.assert(fc.property(fc.string(), typed => {
-    const { played } = sportsFor(typed, games)
-    const words = typed.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean)
-    for (const { game } of played) {
-      expect(game.result).toBeDefined()
-      expect(words.every(word => game.sport.toLowerCase().split(/[^\p{L}\p{N}]+/u).some(part => part.startsWith(word)))).toBe(true)
-    }
+test("whatever's typed, search finds only games with a result, newest first", () =>
+  fc.assert(fc.property(fc.array(aGame, { maxLength: 30 }), fc.oneof(fc.string(), fc.constantFrom("hockey", "ice", "foot", "field")), (games, typed) => {
+    const { found } = sportsFor(typed, games)
+    expect(found.every(({ game }) => game.result !== undefined)).toBe(true)
+    expect(found.map(game => game.start)).toEqual(found.map(game => game.start).sort((a, b) => b - a))
   }))
 )

@@ -10,7 +10,7 @@ import type { Result } from "../../social/event.mts"
 import { groupBy } from "../../shared/group.mts"
 import { daysBetween, localDay } from "../../shared/time.mts"
 import { ClockTime, Day, relativeDay } from "../../shell/intl.tsx"
-import { type Played, againstOf, nextGames, results, scoreOf, sportsFor } from "../sports.mts"
+import { type GameEvent, againstOf, nextGames, results, scoreOf, sideOf, sportsFor } from "../sports.mts"
 import { state } from "../state/map.mts"
 import { nowMs } from "./common.tsx"
 import { Group } from "./Courses.tsx"
@@ -21,11 +21,11 @@ export const Score = ({ result, alone }: { result: Result, alone?: boolean }) =>
   <span class={`score score-${result.outcome}`}>{scoreOf(result)}{alone && result.outcome === "placed" && " place"}</span>
 
 /** Who a game's against, and where: "vs Maine · Home" */
-const AgainstOf = ({ game }: { game: Played["game"] }) =>
-  <>{againstOf(game)}{againstOf(game) && " · "}{game.home ? "Home" : "Away"}</>
+const AgainstOf = ({ game }: { game: GameEvent["game"] }) =>
+  <>{againstOf(game)}{againstOf(game) && " · "}{sideOf(game)}</>
 
 /** A game played, as a row: the sport, who against and where, and how it ended, which opens the game's page */
-const ResultRow = ({ game }: { game: Played }) =>
+const ResultRow = ({ game }: { game: GameEvent }) =>
   <Row
     class="score-row"
     what={game.game.sport}
@@ -35,7 +35,7 @@ const ResultRow = ({ game }: { game: Played }) =>
   />
 
 /** A game to come, as a row: when, the sport, and who against and where */
-const NextRow = ({ game }: { game: Played }) =>
+const NextRow = ({ game }: { game: GameEvent }) =>
   <Row
     time={<><DayName day={localDay(game.start)} /><small><ClockTime at={new Date(game.start)} /></small></>}
     what={game.game.sport}
@@ -65,7 +65,7 @@ export const SportsView = () => {
       {days.size
         ? [...days].map(([day, played]) => <>
           <h2 class="eyebrow"><DayHeading day={day} /></h2>
-          <ul class="rows" aria-label={day}>{played.map(game => <ResultRow game={game} />)}</ul>
+          <ul class="rows" data-day={day}>{played.map(game => <ResultRow game={game} />)}</ul>
         </>)
         : <p class="muted">No results yet.</p>}
       <p class="view-foot muted">Final scores from <a href="https://unhwildcats.com" target="_blank" rel="noopener">UNH Athletics</a>, updated nightly.</p>
@@ -89,10 +89,10 @@ export const SportsFact = () =>
 /** Search's results of a sport for what's typed, the newest first, and the page of them all */
 export const SportResults = ({ query }: { query: DerivativeNode<string> }) =>
   r(() => {
-    const { isPage, played } = sportsFor(query.value, state.events.value.games)
+    const { isPage, found } = sportsFor(query.value, state.events.value.games)
     return isPage &&
       <Group label="Sports">
-        {played.slice(0, 3).map(game => <ResultRow game={game} />)}
+        {found.slice(0, 3).map(game => <ResultRow game={game} />)}
         <Row what="All scores" standing="›" onclick={() => state.go({ kind: "sports" })} />
       </Group>
   })

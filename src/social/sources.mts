@@ -241,8 +241,10 @@ export const resultOf = (line: string): Result | undefined => {
 /**
  * Athletics' games and meets, home and away, from Sidearm's ICS (src/shared/ics.mts), each with its game: the sport
  * and who against, read from its title ("Women's Ice Hockey vs Maine - Pink in the Rink"), whether it's in Durham,
- * and the result its description gives under the title once it's final. One in Durham is placed by its venue, which
- * the gazetteer knows, and one elsewhere nowhere, whatever its venue's called. Postponed ones are left out
+ * and the result its description gives under the title once it's final. One's in Durham by its town, or where
+ * Athletics gives a venue with no town (", Swasey Pool"), by a venue the gazetteer knows, and is placed by its venue;
+ * one elsewhere is placed nowhere, whatever its venue's called, and is at neither's where the title still says "vs",
+ * as of a tournament's game. Postponed ones are left out
  */
 export const gamesOf = (ics: string, match: Matcher): Event[] =>
   readEvents(ics).flatMap(({ uid, title: summary, where, description, url, zone, day, session }) => {
@@ -250,19 +252,20 @@ export const gamesOf = (ics: string, match: Matcher): Event[] =>
     if (!id || !summary || summary.startsWith("POSTPONED"))
       return []
     const named = plain(summary.replace(/^\[[A-Z]\] /, "").replace(/^University of New Hampshire /, "UNH "), Infinity)
-    const [, sport, opponent] = named.match(/^(?:UNH )?(.+?) (?:vs\.?|at) (.+?)(?: - .*)?$/) ?? []
-    const home = /^Durham, N\.H\.(,|$)/.test(where)
-    const venue = where.match(/^Durham, N\.H\., (.+)$/)?.[1]
+    const [, sport, versus, opponent] = named.match(/^(?:UNH )?(.+?) (vs\.?|at) (.+?)(?: - .*)?$/) ?? []
+    const [here, town, venue] = where.match(/^(Durham, N\.H\.)?(?:, (.+))?$/) ?? []
+    const place = venue && match(venue)
+    const home = here !== undefined && (town !== undefined || place !== undefined)
     const result = resultOf(description.split("\n")[1] ?? "")
     return [{
       id:     `athletics:${id}`,
       title:  named.slice(0, SHORT),
       ...spanOn(session, plainDay(day), zone),
-      place:  venue && match(venue),
+      place:  home ? place : undefined,
       where:  plain(venue ?? where),
       source: "athletics",
       url:    (url ?? "https://unhwildcats.com").replace(/&amp;/g, "&"),
-      game:   { sport: plain(sport ?? named.replace(/^UNH /, "")), opponent: plain(opponent ?? ""), home, ...result && { result } }
+      game:   { sport: plain(sport ?? named.replace(/^UNH /, "")), opponent: plain(opponent ?? ""), home, ...!home && versus?.startsWith("vs") && { neutral: true }, ...result && { result } }
     }]
   })
 

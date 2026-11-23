@@ -574,13 +574,14 @@ export const FinalRow = ({ yours: { term, section, final, event, clashes } }: { 
     onclick={() => state.go(sectionPage(term, section))}
   />
 
-/** A section as a row: its weekly pattern, its code and title, where it meets, and its CRN */
-export const SectionRow = ({ term, section, aside }: { term: Term, section: Section, aside?: BruhChild }) =>
+/** A section as a row: its weekly pattern, its code and title, where it meets and who teaches it, and its CRN */
+export const SectionRow = ({ term, section, aside, class: className }: { term: Term, section: Section, aside?: BruhChild, class?: Reactive<string | undefined> }) =>
   <Row
+    class={className}
     aside={aside}
     time={<Pattern section={section} />}
     what={`${codeOf(section)} · ${section.title}`}
-    sub={<Where section={section} />}
+    sub={<><Where section={section} />{section.instructors.length > 0 && <>{"\u00a0· "}<List items={section.instructors.map(({ name }) => name)} /></>}</>}
     standing={section.crn}
     onclick={() => state.go(sectionPage(term, section))}
   />

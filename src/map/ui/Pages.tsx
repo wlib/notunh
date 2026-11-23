@@ -264,12 +264,6 @@ export const roomOf = (where: string) =>
 const personPage = ({ name, mail }: { name: string, mail?: string }): Page =>
   ({ kind: "person", id: mail ?? name })
 
-/** An instructor's search on RateMyProfessors, out to theirs alone, which nothing here reads; none for "Staff" */
-const RatingsLink = ({ name }: { name: string }) => {
-  const href = rmpUrl(name)
-  return href && <a class="go" href={href} target="_blank" rel="noopener">RateMyProfessors ›</a>
-}
-
 /**
  * A section's credits as the registrar gives them, "4.0" as "4 credits"; a range, "1.0-4.0", as its own words, as
  * its count isn't one number to say the plural of
@@ -437,7 +431,7 @@ const SectionView = ({ courses, term, section }: { courses: Courses, term: Term,
         {section.instructors.map(instructor =>
           <Line label="Instructor">
             <Go to={personPage(instructor)}>{instructor.name} ›</Go>
-            <RatingsLink name={instructor.name} />
+            <a class="go" href={rmpUrl(instructor.name)} target="_blank" rel="noopener">RateMyProfessors ›</a>
           </Line>
         )}
         {r(() => {
@@ -490,7 +484,7 @@ const PersonView = ({ courses, person }: { courses: Courses, person: Person }) =
       })}
       <Week person={person} courses={courses} />
       <div class="lines">
-        {rmpUrl(person.name) && <LinkLine href={rmpUrl(person.name)}>RateMyProfessors</LinkLine>}
+        <LinkLine href={rmpUrl(person.name)}>RateMyProfessors</LinkLine>
         {person.mail && <LinkLine onclick={() => location.href = mailto(person.mail!)}>Email</LinkLine>}
       </div>
       {courses.terms.length > 0 && <Source term={courses.terms[0]} extra=" · scheduled teaching only" />}

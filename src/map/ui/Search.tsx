@@ -4,10 +4,10 @@
 // each. What's typed is searched among the places the map knows, and with Photon for addresses and anywhere else, the
 // places nearer the trip's other end, or you, first, as are those chosen often on this device, which an empty field
 // suggests. The home's and where to also find rooms to book, parking, instructors, sections, rooms, events and
-// programs, each a labelled group, as do the fraternities and sororities whose houses the map doesn't place, and the
-// home's finds UNH's phone numbers ahead of them all (Phones.tsx). All that's local comes before anything Photon finds
-// further off. A place found by the home's search opens its page, a stop its own, and anywhere else, as an address,
-// directions there
+// programs, and the home's the halls' menus for a search for food, each a labelled group, as do the fraternities and
+// sororities whose houses the map doesn't place, and the home's finds UNH's phone numbers ahead of them all
+// (Phones.tsx). All that's local comes before anything Photon finds further off. A place found by the home's search
+// opens its page, a stop its own, and anywhere else, as an address, directions there
 
 import { type DerivativeNode, r, watch } from "bruh/reactive"
 import { type Place, createNameSearch } from "../../places/search.mts"
@@ -19,10 +19,12 @@ import { capture } from "../../shell/usage.tsx"
 import { remembered } from "../../shell/state.mts"
 import { CourseResults, Group } from "./Courses.tsx"
 import { ParkingResults } from "./Parking.tsx"
+import { DiningResults } from "./Campus.tsx"
 import { ChapterKind, EventResults, placeNamed } from "./Pages.tsx"
 import { ProgramResults } from "./Program.tsx"
 import { PhoneResults } from "./Phones.tsx"
 import { SeriesResults } from "./Explore.tsx"
+import { SportResults } from "./Sports.tsx"
 import { SpaceResults, wantRoomsFor } from "./Rooms.tsx"
 import { HOUR, hhmm, nextAt } from "../../shared/time.mts"
 
@@ -328,7 +330,8 @@ const ChapterResults = ({ query }: { query: DerivativeNode<string> }) =>
 /**
  * The places for what's typed, the home's search's phone numbers (Phones.tsx), and for the home's search and where
  * to, rooms to book (Rooms.tsx), parking (Parking.tsx), the instructors, sections and rooms (Courses.tsx), events
- * (Pages.tsx) and programs (Program.tsx) too, all before the places Photon finds further off
+ * (Pages.tsx) and programs (Program.tsx) too, and for the home's alone the halls' menus (Campus.tsx), all before the
+ * places Photon finds further off
  */
 export const Suggestions = () => {
   const isFar = (option: Place | undefined) => option !== undefined && elsewhere.value.includes(option)
@@ -337,7 +340,8 @@ export const Suggestions = () => {
       {r(() => options.value.map((option, i) => !isFar(option) && <Option option={option} i={i} />))}
     </ul>
     {editing.peek() === "search" && <PhoneResults query={query} />}
-    {editing.peek() !== "from" && <><SpaceResults query={query} /><CourseResults query={query} /><ParkingResults query={query} /><SeriesResults query={query} /><EventResults query={query} /><ProgramResults query={query} /><ChapterResults query={query} /></>}
+    {editing.peek() !== "from" && <><SpaceResults query={query} /><CourseResults query={query} />{editing.peek() === "search" && <DiningResults query={query} />}<ParkingResults query={query} /><SeriesResults query={query} /><EventResults query={query} /><ProgramResults query={query} /><ChapterResults query={query} /></>}
+    {editing.peek() === "search" && <SportResults query={query} />}
     {r(() => elsewhere.value.length > 0 &&
       <ul class="suggestions" role="listbox" aria-label="Further off">
         {options.value.map((option, i) => isFar(option) && <Option option={option} i={i} />)}

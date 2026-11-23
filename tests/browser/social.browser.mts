@@ -42,16 +42,21 @@ const openMap = (page: Page, origin: string) =>
 /** A linking code as shown, once the Worker has given one */
 const CODE = /^[2-9A-Z]{4}-[2-9A-Z]{4}$/
 
-type Timed = { start: number, end: number, place?: string, source: string }
+type Timed = { start: number, end: number, place?: string, source: string, game?: { result?: unknown } }
 
 /**
  * The build's placed events, or others given, moved to today, each starting an hour after the last from a whole hour
- * ahead, so the list has them
+ * ahead, so the list has them, a game among them as yet unplayed
  */
 const eventsToday = (page: Page, base: number, given?: Timed[]) =>
   page.route(/\/assets\/events-[\w-]+\.json$/, async route => {
     const data = await (await route.fetch()).json() as { fetched: number, events: Timed[] }
-    data.events = (given ?? data.events).filter(event => event.place).map((event, i) => ({ ...event, start: base + (i + 1) * 3_600_000, end: base + (i + 2) * 3_600_000 }))
+    data.events = (given ?? data.events).filter(event => event.place).map((event, i) => ({
+      ...event,
+      start: base + (i + 1) * 3_600_000,
+      end:   base + (i + 2) * 3_600_000,
+      ...event.game && { game: { ...event.game, result: undefined } }
+    }))
     await route.fulfill({ json: data })
   })
 

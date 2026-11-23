@@ -1,13 +1,14 @@
 // Fetches UNH's public event calendars into src/map/events.json, one request each, as the inputs are made nightly
 // (scripts/data.mts): Presence (Wildcat Link) whole, as it answers the past month and what's upcoming; 25Live
 // Publisher a week at a time, as it answers at most 200 entries; Wildcat Link's clubs, whose weekly meetings are told
-// on the class days of the academic calendar the courses step read; Athletics' ICS whole; sport clubs' events from
+// on the class days of the academic calendar the courses step read; Athletics' ICS whole, its home games among the
+// events, and every game, home and away, with the results it gives, kept apart as the games; sport clubs' events from
 // DSE Rec, the same weeks in one page, from the JSON its own pages ask for, without our User-Agent; and Campus Rec's
 // programs, found by classification, each program's page then its sessions or its offerings in each of its
 // semesters. Only events are asked of DSE, never its rosters or members. Each is read into the one event shape
 // (src/social/sources.mts), placed on the gazetteer by name (src/social/aliases.mts), and events already over are
-// left out. The series only UNH's pages tell, kept by hand (src/social/curated.mts), join them as a build installs
-// them (scripts/inputs.mts). If any calendar fails, the step fails and the last night's file stays
+// left out, but games played. The series only UNH's pages tell, kept by hand (src/social/curated.mts), join them as a
+// build installs them (scripts/inputs.mts). If any calendar fails, the step fails and the last night's file stays
 // (scripts/data.mts); a build without one gets an empty list (scripts/inputs.mts)
 
 import { readFile } from "node:fs/promises"
@@ -16,7 +17,7 @@ import { fileURLToPath } from "node:url"
 import { getJson } from "../../src/shared/json.mts"
 import type { Event, EventsData } from "../../src/social/event.mts"
 import { placeMatcher } from "../../src/social/aliases.mts"
-import { ATHLETICS, EVENTS, PRESENCE, PRESENCE_CLUBS, REC_INDEX, WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, fromPresence, fromPresenceClubs, fromPresenceOrgs, fromRecInstances, fromRecOfferings, instancesUrl, live25Url, merged, offeringsUrl, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
+import { ATHLETICS, EVENTS, PRESENCE, PRESENCE_CLUBS, REC_INDEX, WEEKS, classificationUrl, classificationsOf, dserecUrl, from25Live, fromAthletics, fromDserec, gamesKept, gamesOf, fromPresence, fromPresenceClubs, fromPresenceOrgs, fromRecInstances, fromRecOfferings, instancesUrl, live25Url, merged, offeringsUrl, programOf, programUrl, programsOf } from "../../src/social/sources.mts"
 import { Gazetteer } from "../../src/places/gazetteer.mts"
 import { addDays, localDay } from "../../src/shared/time.mts"
 import { COURSES, CoursesIndex } from "../../src/courses/course.mts"
@@ -81,5 +82,6 @@ const events = merged([
   ...weeks.map(week => from25Live(week, match)),
   ...programs
 ], now)
-await writeInput(EVENTS, JSON.stringify({ fetched: now, events, orgs } satisfies EventsData) + "\n")
-console.log(`${events.length} events, ${events.filter(event => event.place).length} placed`)
+const kept = gamesKept(gamesOf(athletics, match), now)
+await writeInput(EVENTS, JSON.stringify({ fetched: now, events, orgs, games: kept } satisfies EventsData) + "\n")
+console.log(`${events.length} events, ${events.filter(event => event.place).length} placed; ${kept.length} games, ${kept.filter(game => game.game?.result).length} with results`)

@@ -4,14 +4,14 @@
 // it and the one in view is lit: Today, a timeline, and Campus, a directory (Campus.tsx). Today is one day read down:
 // what you're due at next, once you have anything, as the one card, a saved class, a final, the next thing in the
 // calendars you've imported, a session you've saved, the next of an activity you follow or an event you're going to,
-// whichever is soonest or under way; then what's on now and the next few things today (state/today.mts) with the rest
-// of what's yours today in its place among them by its time, washed in gold, the card's own event too, what recurs
-// folded under them by kind, and making an event of your own as the last row. Then Yours beyond today, the sooner first
-// (state/courses.mts, state/finals.mts, state/calendars.mts, state/saves.mts), with deadlines and breaks in the next
-// few days, the reminders set on this phone (Remind.tsx) and the trips saved here (state/trip.mts); then plan ahead,
-// three rows, and the week. With nothing of yours it's the day's list alone, which leads. While the search is typed in,
-// its suggestions lie over the page (Search.tsx), which stays as it was beneath them, scrolled and opened as it was,
-// and the sheet the size it was
+// whichever is soonest or under way; then the halls serving or about to, each opening its menu (Campus.tsx); then
+// what's on now and the next few things today (state/today.mts) with the rest of what's yours today in its place among
+// them by its time, washed in gold, the card's own event too, what recurs folded under them by kind, and making an
+// event of your own as the last row. Then Yours beyond today, the sooner first (state/courses.mts, state/finals.mts,
+// state/calendars.mts, state/saves.mts), with deadlines and breaks in the next few days, the reminders set on this
+// phone (Remind.tsx) and the trips saved here (state/trip.mts); then plan ahead, three rows, and the week. With nothing
+// of yours it's the day's list alone, which leads. While the search is typed in, its suggestions lie over the page
+// (Search.tsx), which stays as it was beneath them, scrolled and opened as it was, and the sheet the size it was
 
 import { r } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
@@ -28,7 +28,7 @@ import { state } from "../state/map.mts"
 import { nowMs, walkTo } from "./common.tsx"
 import { DayName, EventLines, EventRow, FinalWhere, Row, placeNamed, sectionPage } from "./Pages.tsx"
 import { DateRow, PlanAhead, dueSoon, finalsSoon } from "./Ahead.tsx"
-import { CampusIndex } from "./Campus.tsx"
+import { CampusIndex, DiningSoon } from "./Campus.tsx"
 import { Reminders, currentReminders } from "./Remind.tsx"
 import { Suggestions, SearchRow, isSearching } from "./Search.tsx"
 
@@ -228,8 +228,9 @@ const NewEvent = ({ place }: { place?: string }) =>
 const NEXT_FEW = 4
 
 /**
- * Today, one day read down: the card, then what's on now, then the next few things later today with the rest of
- * what's yours today among them by its time, each kind of what recurs folded under them, and New event as the last row
+ * Today, one day read down: the card, then dining while it's on, then what's on now, then the next few things later
+ * today with the rest of what's yours today among them by its time, each kind of what recurs folded under them, and
+ * New event as the last row
  */
 const Today = ({ yours }: { yours: YoursNow }) =>
   r(() => {
@@ -240,14 +241,16 @@ const Today = ({ yours }: { yours: YoursNow }) =>
     const on = state.todayList.value.filter(event => event.start <= now && now < event.end)
     const later = state.todayList.value.filter(event => event.start > now)
     const also = all.filter(item => item !== next && !item.event && isToday(item) && item.start > now).map(({ start, row }) => ({ start, row: row() }))
+    const { serving } = state.dining.value
     return <>
       {next && <Next next={next} />}
+      {serving.length > 0 && <DiningSoon halls={serving} />}
       {on.length > 0 && <>
         <h2 class="eyebrow">Now</h2>
         <ul class="rows" aria-label="Now"><EventLines events={on} standing={<span class="on">On</span>} rows={NEXT_FEW} /></ul>
       </>}
       {/* Under the part's own name, the day's list needs none unless something comes between them */}
-      {(on.length > 0 || next) && <h2 class="eyebrow">{on.length ? "Later today" : "Today"}</h2>}
+      {(on.length > 0 || next || serving.length > 0) && <h2 class="eyebrow">{on.length ? "Later today" : "Today"}</h2>}
       <ul class="rows" aria-label="Today">
         <EventLines events={later} rows={NEXT_FEW} also={also} />
         <NewEvent />

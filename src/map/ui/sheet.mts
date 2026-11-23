@@ -448,24 +448,26 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
       window.scrollTo(0, 0)
   }, { passive: true })
 
-  // The keyboard covers the bottom of the layout viewport, by however much the visual viewport doesn't reach
+  // The sheet's floor is the bottom of the visual viewport, which the keyboard is all that keeps short of the app's,
+  // so whatever it covers is the keyboard, focus or no focus, and nothing's left to say it's up once it's gone. It's
+  // measured from the app, which fills the layout viewport, never innerHeight, which iOS reports as the visual
+  // viewport's height while it scrolls the page to show a field the keyboard would cover, as if there were no keyboard
   const viewport = window.visualViewport
   if (viewport) {
     const lift = () => {
-      const isTyping = document.activeElement?.matches("input, textarea") ?? false
-      const covered = isTyping ? Math.max(0, innerHeight - viewport.height - viewport.offsetTop) : 0
+      // Zoomed in, the visual viewport is short of the app by the zoom, which the sheet doesn't chase
+      const covered = viewport.scale > 1 ? 0 : Math.max(0, app.getBoundingClientRect().bottom - viewport.offsetTop - viewport.height)
       const isNew = covered !== keyboard
       keyboard = covered
       set("--keyboard", keyboard)
       settle()
       // The field typed in, in sight above the keyboard once the sheet's at rest there, now or after its slide
-      if (isNew && isTyping && panel.contains(document.activeElement))
+      if (isNew && covered && panel.contains(document.activeElement) && document.activeElement!.matches("input, textarea"))
         reveal = document.activeElement!
       if (!panel.classList.contains("moving"))
         revealField()
     }
-    // Once per frame, as the viewport reports every step of the keyboard or toolbar animating, and focus has
-    // only settled on its new element once its events are over
+    // Once per frame, as the viewport reports every step of the keyboard or toolbar animating
     let lifting = 0
     const liftLater = () => {
       cancelAnimationFrame(lifting)
@@ -473,8 +475,6 @@ export const makeSheet = (panel: HTMLElement, grabber: HTMLElement, header: HTML
     }
     viewport.addEventListener("resize", liftLater)
     viewport.addEventListener("scroll", liftLater)
-    document.addEventListener("focusin", liftLater)
-    document.addEventListener("focusout", liftLater)
   }
 
   return { scrolled, scrollTo }

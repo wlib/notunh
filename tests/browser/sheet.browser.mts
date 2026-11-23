@@ -299,14 +299,16 @@ test("the sheet is lifted above the keyboard however iOS reports the viewport wh
 
   /**
    * The keyboard over the bottom px given, as iOS has it while it scrolls the page to show a field: the visual viewport
-   * short of the layout viewport by that much, and innerHeight saying the same, as if it weren't there
+   * short of the layout viewport by that much, and innerHeight saying the same, as if it weren't there; and scrolled
+   * down the layout viewport by some of it, as iOS leaves it
    */
-  const keyboard = (covered: number) => page.evaluate(covered => {
+  const keyboard = (covered: number, scrolled = 0) => page.evaluate(([covered, scrolled]) => {
     const shown = document.documentElement.clientHeight - covered
     Object.defineProperty(visualViewport!, "height", { configurable: true, get: () => shown })
+    Object.defineProperty(visualViewport!, "offsetTop", { configurable: true, get: () => scrolled })
     Object.defineProperty(window, "innerHeight", { configurable: true, get: () => shown })
     visualViewport!.dispatchEvent(new Event("resize"))
-  }, covered)
+  }, [covered, scrolled])
   /** Where the sheet's bottom edge is, and its top, once it's still */
   const edges = async () => {
     await framesOn(page)
@@ -322,6 +324,10 @@ test("the sheet is lifted above the keyboard however iOS reports the viewport wh
   const lifted = await edges()
   expect(lifted.bottom).toBe(screen - 300)
   expect(lifted.top).toBeGreaterThanOrEqual(0)
+
+  // The visual viewport scrolled down the app shows that much more of it above the keyboard
+  await keyboard(300, 120)
+  expect((await edges()).bottom).toBe(screen - 180)
 
   // The keyboard gone, the sheet's back at the bottom, as tall as it was
   await search.blur()

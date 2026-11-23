@@ -189,11 +189,11 @@ test("a correction stops pickups or drop-offs at its stop on its route from its 
   ))
 )
 
-test("the Evening Connector's loops due at West Edge after midnight pick nobody up there, nor let anyone off beyond 10 West Edge Drive", () => {
+test.each(["Evening", "Weekend"])("the %s Connector's loops due at West Edge after midnight pick nobody up there, nor let anyone off beyond 10 West Edge Drive", route => {
   // 218 Main Street, 10 West Edge Drive, West Edge Lot, and the Lodges, the end of each loop
   const stops = ["162", "173", "169", "181"]
   const loop = (times: string[]) =>
-    tables(times.map(at => ({ arrival_time: at, departure_time: at })), { route: "Evening", stops, corrections: CORRECTIONS }).trips[0]
+    tables(times.map(at => ({ arrival_time: at, departure_time: at })), { route, stops, corrections: CORRECTIONS }).trips[0]
   const late = loop(["24:05:00", "24:08:00", "24:09:00", "24:10:00"])
   expect(late.noPickup).toEqual([1, 2])
   expect(late.noDropOff).toEqual([2, 3])

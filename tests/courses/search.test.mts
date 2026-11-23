@@ -104,7 +104,7 @@ test("unlimited, any section's title in any case finds its course", () =>
   }), { numRuns: 100 })
 )
 
-test("a limit caps every group, and none lists everything", () => {
+test("a limit caps the sections found, eight unless it's said, and Infinity lists them all", () => {
   const big = Object.entries(Object.groupBy(fall.sections, courseOf)).map(([code, sections]) => ({ code, count: sections!.length })).sort((a, b) => b.count - a.count)[0]
   expect(search(big.code).sections.length).toBe(Math.min(8, big.count))
   expect(search(big.code, Infinity).sections.length).toBe(fall.sections.filter(section => courseOf(section).startsWith(big.code)).length)

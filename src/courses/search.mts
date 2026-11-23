@@ -9,6 +9,7 @@
 import { type Section, type Term, courseOf } from "./course.mts"
 import type { Person } from "./people.mts"
 import { fuzzySearch, latinize } from "../shared/fuzzy.mts"
+import { groupBy } from "../shared/group.mts"
 
 const LIMIT = 8
 
@@ -103,13 +104,6 @@ export const createCourseSearch = (terms: readonly Term[], people: readonly Pers
 export type CourseSearch = ReturnType<typeof createCourseSearch>
 
 /** Sections as the courses they're of, a term's course once, in the order each is first found, its sections in theirs */
-export const byCourse = (found: readonly Found[]) => {
-  const courses = new Map<string, { term: Term, code: string, sections: Found[] }>()
-  for (const one of found) {
-    const code = courseOf(one.section)
-    const key = `${one.term.code} ${code}`
-    const course = courses.get(key) ?? courses.set(key, { term: one.term, code, sections: [] }).get(key)!
-    course.sections.push(one)
-  }
-  return [...courses.values()]
-}
+export const byCourse = (found: readonly Found[]) =>
+  [...groupBy(found, ({ term, section }) => `${term.code} ${courseOf(section)}`).values()]
+    .map(sections => ({ term: sections[0].term, code: courseOf(sections[0].section), sections }))

@@ -2191,8 +2191,8 @@ a.row {
   gap: 0.5rem;
 }
 
-/* A section found says where it meets and who teaches it in full, to tell yours from the rest */
-.add-courses .row-what .muted {
+/* A section found says its title, where it meets and who teaches it in full, to tell yours from the rest */
+.add-courses .row-what > * {
   white-space: normal;
 }
 

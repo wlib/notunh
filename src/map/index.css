@@ -482,6 +482,38 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* A phone number's row (ui/Phones.tsx), which calls it: its name and what it's for, wrapping, and the number, in the
+   accent as a link is; emergency's larger */
+.rows .row.phone-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  padding-block: 0.55rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.phone-row .row-what strong {
+  font-weight: 650;
+}
+
+.phone-number {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.phones.urgent .row-what strong,
+.phones.urgent .phone-number {
+  font-size: 1.05rem;
+}
+
+/* Directions' word on the walking escort, and the line that calls for one */
+.escort {
+  display: grid;
+  gap: 0.35rem;
+}
+
 /* A thing's mark, in ink on the raised surface: the index's, as the map's own markers are drawn */
 .mark {
   display: grid;

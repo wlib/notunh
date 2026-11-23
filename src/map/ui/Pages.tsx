@@ -66,6 +66,7 @@ import { NewEvent } from "./Home.tsx"
 import { ActivityView, ExploreView, PartOf, SeriesHere, WeekView } from "./Explore.tsx"
 import { AheadView } from "./Ahead.tsx"
 import { ClassesView, DiningView, LaundryView, PlaceGlance } from "./Campus.tsx"
+import { PhonesView } from "./Phones.tsx"
 import { About, PhotoCredits, Photos, Rating } from "./Profile.tsx"
 import { FinalScore, SportsView } from "./Sports.tsx"
 import { againstOf } from "../sports.mts"
@@ -252,10 +253,13 @@ export const Line = ({ label, children }: { label: BruhChild, children?: BruhChi
 export const Go = ({ to, children }: { to: Page, children?: BruhChild }) =>
   <button type="button" class="go" onclick={() => state.go(to)}>{children}</button>
 
-/** A line that is a link on, to a page, an address, or whatever a tap does, named by what it leads to: "Parking ›" */
+/**
+ * A line that is a link on, to a page, an address, or whatever a tap does, named by what it leads to: "Parking ›".
+ * Another site's opens beside the map; the site's own pages and a number to call, tel:, take its place
+ */
 export const LinkLine = ({ to, href, onclick, children }: { to?: Page, href?: string, onclick?: () => void, children?: BruhChild }) =>
   href !== undefined
-    ? <a class="line link-line" href={href} {...href.startsWith("/") ? {} : { target: "_blank", rel: "noopener" }}><span>{children}</span><span>›</span></a>
+    ? <a class="line link-line" href={href} {.../^https?:/.test(href) ? { target: "_blank", rel: "noopener" } : {}}><span>{children}</span><span>›</span></a>
     : <button type="button" class="line link-line" onclick={onclick ?? (() => state.go(to!))}><span>{children}</span><span>›</span></button>
 
 /** The room alone, "N343", where a page has already said the building */
@@ -1080,6 +1084,7 @@ export const PageView = ({ page }: { page: Page }) => {
         page.kind === "dining"     ? <DiningView /> :
         page.kind === "laundry"    ? <LaundryView /> :
         page.kind === "classes"    ? <ClassesView /> :
+        page.kind === "phones"     ? <PhonesView /> :
                                      <EventView id={page.id} />}
       {r(() => notice.value && <p class="notice" role="status">{notice.value}</p>)}
     </section>

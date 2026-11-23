@@ -1,6 +1,7 @@
 /** @jsxImportSource bruh/browser */
 
-// The ways to get there by bus, and walking the whole way, and for a visit, where to park for it instead
+// The ways to get there by bus, and walking the whole way, with UNH Police's walking escort where no bus goes on
+// campus, and for a visit, where to park for it instead
 
 import { r } from "bruh/reactive"
 import { lateness, slack } from "../../transit/models/forecast.mts"
@@ -13,6 +14,7 @@ import { capture } from "../../shell/usage.tsx"
 import { Remind } from "./Remind.tsx"
 import { parkingFor } from "./Parking.tsx"
 import { LinkLine } from "./Pages.tsx"
+import { Escort } from "./Phones.tsx"
 import { othersOf } from "../state/ways.mts"
 import { clockOf } from "../../shared/time.mts"
 
@@ -212,6 +214,7 @@ export const Itineraries = () =>
           </ul>
         : <p class="muted">No bus gets there in the next few hours.</p>
     )}
+    <Escort />
     <WalkOption first={false} />
     {r(() => state.visiting.value && <div class="lines"><LinkLine to={parkingFor(state.visiting.value)}>Parking</LinkLine></div>)}
   </section>

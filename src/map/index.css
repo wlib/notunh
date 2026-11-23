@@ -508,6 +508,12 @@ body {
   font-size: 1.05rem;
 }
 
+/* Directions' word on the walking escort, and the line that calls for one */
+.escort {
+  display: grid;
+  gap: 0.35rem;
+}
+
 /* A thing's mark, in ink on the raised surface: the index's, as the map's own markers are drawn */
 .mark {
   display: grid;

@@ -1,8 +1,21 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
-import { DISPATCH, PHONES, phonesFor, telOf } from "../../src/map/phones.mts"
+import { DISPATCH, PHONES, offersEscort, phonesFor, telOf } from "../../src/map/phones.mts"
+import { CAMPUS, isOnCampus } from "../../src/places/durham.mts"
+import { project } from "../../src/geo/projection.mts"
 
 const ALL = PHONES.flatMap(({ phones }) => phones)
+
+/** A place a given distance from the middle of campus, in any direction */
+const at = (meters: number, bearing: number) => {
+  const [lon, lat] = project([CAMPUS.lon, CAMPUS.lat], bearing, meters)
+  return { lat, lon }
+}
+const aBearing = fc.integer({ min: 0, max: 359 })
+const onCampus = fc.tuple(fc.integer({ min: 0, max: 1700 }), aBearing).map(([meters, bearing]) => at(meters, bearing))
+const offCampus = fc.tuple(fc.integer({ min: 1900, max: 30_000 }), aBearing).map(([meters, bearing]) => at(meters, bearing))
+const aWalk = fc.integer({ min: 800, max: 4000 })
+const aShortWalk = fc.integer({ min: 0, max: 799 })
 
 test("every number is from a unh.edu page, dials as written, and names no one", () => {
   for (const phone of ALL) {
@@ -36,5 +49,21 @@ test("each number is found by its own name, and anything found is the page's too
     const found = phonesFor(typed)
     if (found.phones.length)
       expect(found.isPage).toBe(true)
+  }))
+)
+
+test("the escort is offered with no bus, for a walk of ten minutes or so between two places on campus, and only then", () =>
+  fc.assert(fc.property(onCampus, onCampus, aWalk, aShortWalk, (from, to, meters, short) => {
+    expect(isOnCampus(from) && isOnCampus(to)).toBe(true)
+    expect(offersEscort({ from, to, hasBus: false, meters })).toBe(true)
+    expect(offersEscort({ from, to, hasBus: true, meters })).toBe(false)
+    expect(offersEscort({ from, to, hasBus: false, meters: short })).toBe(false)
+  }))
+)
+
+test("the escort is never offered to or from anywhere off campus", () =>
+  fc.assert(fc.property(onCampus, offCampus, aWalk, fc.boolean(), (campus, away, meters, isOut) => {
+    const [from, to] = isOut ? [campus, away] : [away, campus]
+    expect(offersEscort({ from, to, hasBus: false, meters })).toBe(false)
   }))
 )

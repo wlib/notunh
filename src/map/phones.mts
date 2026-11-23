@@ -1,7 +1,11 @@
 // The numbers worth having on the Durham campus, emergency first, each from a unh.edu page and none from memory: a
-// page of their own in the sheet (ui/Phones.tsx), found by search. Curated by hand, and checked against the pages named on 2026-11-23. A
+// page of their own in the sheet (ui/Phones.tsx), found by search, and in directions, UNH Police's walking escort where
+// no bus goes between two places on campus. Curated by hand, and checked against the pages named on 2026-11-23. A
 // number a page didn't confirm is left out: Residential Life's on-call line, which UNH posts in each hall instead, and
 // the 24-hour support page's "(603) 862-1212" for UNH Police, which UNH Police's own pages never give
+
+import type { Point } from "../geo/projection.mts"
+import { isOnCampus } from "../places/durham.mts"
 
 export type Phone = {
   name:   string,
@@ -84,3 +88,20 @@ export const phonesFor = (typed: string) => {
   })
   return { isPage: phones.length > 0 || typedWords.some(typed => WORDS.some(word => word.startsWith(typed))), phones }
 }
+
+//#region The walking escort
+
+/** The page UNH Police say it on: where the shuttle isn't running, Security walks you between on-campus locations */
+export const ESCORT_SOURCE = "https://www.unh.edu/upd/services-outreach/new-student-resources"
+
+/** How far a walk is before an escort's worth offering, about ten minutes */
+const ESCORT_METERS = 800
+
+/**
+ * Whether directions offer UNH Police's walking escort: with no bus to take, for a walk of some length from one place
+ * on campus to another, as it's only between on-campus locations
+ */
+export const offersEscort = ({ from, to, hasBus, meters }: { from: Point, to: Point, hasBus: boolean, meters: number }) =>
+  !hasBus && meters >= ESCORT_METERS && isOnCampus(from) && isOnCampus(to)
+
+//#endregion

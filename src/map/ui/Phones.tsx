@@ -1,10 +1,11 @@
 /** @jsxImportSource bruh/browser */
 
 // The phone numbers worth having (../phones.mts), a page of the sheet from Campus, emergency first, each a tap from
-// calling, and search's rows for them. All of it is in the app as built, so it's there offline
+// calling; search's rows for them; and in directions, UNH Police's walking escort where no bus goes between two places
+// on campus. All of it is in the app as built, so it's there offline
 
 import { type DerivativeNode, r } from "bruh/reactive"
-import { type Phone, PHONES, phonesFor, telOf } from "../phones.mts"
+import { DISPATCH, type Phone, PHONES, offersEscort, phonesFor, telOf } from "../phones.mts"
 import { state } from "../state/map.mts"
 import { Group } from "./Courses.tsx"
 import { Head, Row } from "./Pages.tsx"
@@ -44,4 +45,15 @@ export const PhoneResults = ({ query }: { query: DerivativeNode<string> }) =>
         {phones.slice(0, 3).map(phone => <PhoneRow phone={phone} />)}
         <Row what="All phone numbers" standing="›" onclick={() => state.go({ kind: "phones" })} />
       </Group>
+  })
+
+/** Directions' word on UNH Police's walking escort, where it's offered for the trip, which calls dispatch */
+export const Escort = () =>
+  r(() => {
+    const [from, to, walk] = [state.from.value, state.to.value, state.walk.value]
+    return from && to && walk && offersEscort({ from, to, hasBus: state.ways.value.length > 0, meters: walk.meters }) &&
+      <div class="escort">
+        <p class="notice">No shuttle running? UNH Security gives a free walking escort between on-campus locations.</p>
+        <a class="line link-line" href={`tel:${telOf(DISPATCH)}`}><span>Call for an escort · {DISPATCH.number}</span><span>›</span></a>
+      </div>
   })

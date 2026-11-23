@@ -202,16 +202,14 @@ test("R is Thursday, as the registrar writes the weekdays", () => {
   expect(occurrences(fall, section, calendar, addDays(thursday, 1))).toHaveLength(0)
 })
 
-test("an instructor's RateMyProfessors link searches UNH's school for their name, and none is made for Staff", () => {
+test("an instructor's RateMyProfessors link searches UNH's school for their name", () => {
   expect(rmpUrl("David Benedetto")).toBe("https://www.ratemyprofessors.com/search/professors/1231?q=David+Benedetto")
   expect(rmpUrl("Zoë O'Brien-Núñez & Co")).toBe("https://www.ratemyprofessors.com/search/professors/1231?q=Zo%C3%AB+O%27Brien-N%C3%BA%C3%B1ez+%26+Co")
-  for (const name of ["Staff", "staff", " TBA ", "TBD", "To Be Announced", ""])
-    expect(rmpUrl(name)).toBeUndefined()
 })
 
 test("any name round-trips through its RateMyProfessors link, which never leaves the school's search", () =>
-  fc.assert(fc.property(fc.string({ unit: "grapheme", minLength: 1 }).filter(name => rmpUrl(name) !== undefined), name => {
-    const url = new URL(rmpUrl(name)!)
+  fc.assert(fc.property(fc.string({ unit: "grapheme" }), name => {
+    const url = new URL(rmpUrl(name))
     expect(url.origin + url.pathname).toBe("https://www.ratemyprofessors.com/search/professors/1231")
     expect([...url.searchParams.keys()]).toEqual(["q"])
     expect(url.searchParams.get("q")).toBe(name)

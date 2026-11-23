@@ -2,12 +2,12 @@
 
 // The campus as a directory with a pulse: the home's Campus view (Home.tsx), one row for each thing the app does, in
 // the same order every visit, each saying what's so of it now in place of a description: the meal on and till when, the
-// washers free in your hall, the buses live, the next club meeting, your next class, where you can park. Each row opens
-// a page in the sheet. Dining's is the two halls side by side, which is the choice there is to make, and laundry's
-// every hall with yours first, both marked on the map while they're shown (render/status.mts); classes' is your week
-// and the ways into the courses. A hall's place then leads with its meal, and a residence hall's with its machines
-// (PlaceGlance), and those link on to the pages of their own, /dining/ and /laundry/, for the week's menus and each
-// machine
+// washers free in your hall, the buses live, the next club meeting, your next class, where you can park, and last, the
+// number for UNH Police's dispatch, which opens the rest (Phones.tsx). Each row opens a page in the sheet. Dining's is
+// the two halls side by side, which is the choice there is to make, and laundry's every hall with yours first, both
+// marked on the map while they're shown (render/status.mts); classes' is your week and the ways into the courses. A
+// hall's place then leads with its meal, and a residence hall's with its machines (PlaceGlance), and those link on to
+// the pages of their own, /dining/ and /laundry/, for the week's menus and each machine
 
 import { r } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
@@ -25,6 +25,7 @@ import { Icon } from "../../shell/ui.tsx"
 import type { Page } from "../link.mts"
 import type { HallNow, Laundry } from "../state/campus.mts"
 import { defaultStay } from "../state/parking.mts"
+import { DISPATCH } from "../phones.mts"
 import { state } from "../state/map.mts"
 import { nextDate } from "./Ahead.tsx"
 import { Status as BusStatus } from "./Buses.tsx"
@@ -363,6 +364,7 @@ export const CampusIndex = () => {
       <IndexRow icon="classes" name="Classes" to={{ kind: "classes" }}><ClassesFact /></IndexRow>
       <IndexRow icon="parking" name="Parking" to={{ kind: "parking" }}><ParkingFact /></IndexRow>
       <IndexRow icon="flag" name="Term dates" to={{ kind: "ahead" }}><TermFact /></IndexRow>
+      <IndexRow icon="phone" name="Phone numbers" to={{ kind: "phones" }}>Police dispatch {DISPATCH.number} · any hour</IndexRow>
     </ul>
   )
 }

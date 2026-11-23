@@ -3,7 +3,8 @@
 // names. A code in any spelling ("CS 520", "cs520", "CS 520-01", "CHEM 403 NL1") is a code, five digits are a CRN,
 // several are a pasted schedule, "N343", "Kingsbury N343" or "James 140" is a room, and anything else is fuzzy over
 // titles and names (src/shared/fuzzy.mts). Terms are searched in the order given, live ones first, so a spring
-// section never outranks today's
+// section never outranks today's. The map's search shows a few sections; adding courses in You asks for every one
+// and shows them by course (byCourse), so a code finds your section however many the course has
 
 import { type Section, type Term, courseOf } from "./course.mts"
 import type { Person } from "./people.mts"
@@ -41,6 +42,10 @@ export const parseRoom = (query: string) => {
 const crnTokens = (text: string) =>
   [...new Set(text.match(/\b\d{5}\b/g) ?? [])]
 
+/** Whether a text has a CRN in it, as a pasted schedule does */
+export const hasCrns = (text: string) =>
+  crnTokens(text).length > 0
+
 /** The sections a pasted schedule names, each once, in the order pasted, the earlier term's where two share a CRN */
 export const crnsIn = (pasted: string, terms: readonly Term[]): Found[] => {
   const byCrn = new Map<string, Found>()
@@ -61,7 +66,8 @@ export const createCourseSearch = (terms: readonly Term[], people: readonly Pers
   const isIn = (building: string, where: string, place: string) =>
     where.toLowerCase().startsWith(building) || place.toLowerCase().startsWith(building) || building.startsWith(where.toLowerCase().replace(/\s+\S+$/, ""))
 
-  return (query: string): Results => {
+  /** The groups for what's typed, at most `limit` sections, or people and rooms, of each */
+  return (query: string, limit = LIMIT): Results => {
     const needle = query.trim()
     if (!needle)
       return none
@@ -73,7 +79,7 @@ export const createCourseSearch = (terms: readonly Term[], people: readonly Pers
     if (code) {
       const sections = found.filter(({ section }) => section.subject === code.subject && section.number.startsWith(code.number) && (!code.section || section.section.toUpperCase() === code.section))
       if (sections.length)
-        return { ...none, sections: sections.slice(0, LIMIT) }
+        return { ...none, sections: sections.slice(0, limit) }
     }
     const room = parseRoom(needle)
     if (room) {
@@ -85,13 +91,25 @@ export const createCourseSearch = (terms: readonly Term[], people: readonly Pers
             listed.sections.push(item)
         }
       if (rooms.size)
-        return { ...none, rooms: [...rooms.values()].slice(0, LIMIT) }
+        return { ...none, rooms: [...rooms.values()].slice(0, limit) }
     }
     return {
-      people:   fuzzySearch(names, needle).slice(0, LIMIT).map(({ index }) => people[index]),
-      sections: fuzzySearch(titles, needle).slice(0, LIMIT).map(({ index }) => found[index]),
+      people:   fuzzySearch(names, needle).slice(0, limit).map(({ index }) => people[index]),
+      sections: fuzzySearch(titles, needle).slice(0, limit).map(({ index }) => found[index]),
       rooms:    []
     }
   }
 }
 export type CourseSearch = ReturnType<typeof createCourseSearch>
+
+/** Sections as the courses they're of, a term's course once, in the order each is first found, its sections in theirs */
+export const byCourse = (found: readonly Found[]) => {
+  const courses = new Map<string, { term: Term, code: string, sections: Found[] }>()
+  for (const one of found) {
+    const code = courseOf(one.section)
+    const key = `${one.term.code} ${code}`
+    const course = courses.get(key) ?? courses.set(key, { term: one.term, code, sections: [] }).get(key)!
+    course.sections.push(one)
+  }
+  return [...courses.values()]
+}

@@ -129,7 +129,7 @@ export const CORRECTIONS: Correction[] = [
   { route: "Evening", stop: "181", from: 24 * 3600, dropOff: false }
 ]
 
-const DAY_COLUMNS =["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+const DAY_COLUMNS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 /** GTFS's YYYYMMDD as a Day, or "" for none */
 const dayOf = (date = "") =>

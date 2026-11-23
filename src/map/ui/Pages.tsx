@@ -17,7 +17,7 @@ import { type DerivativeNode, type Reactive, type SourceNode, r, untrack, watch 
 import type { Page } from "../link.mts"
 import { urlOf } from "../link.mts"
 import { state } from "../state/map.mts"
-import { type CourseEvent, type Meeting, type Section, type Term, KINDS, codeOf, courseOf, meets, registrarUrl, standing } from "../../courses/course.mts"
+import { type CourseEvent, type Meeting, type Section, type Term, KINDS, codeOf, courseOf, meets, registrarUrl, rmpUrl, standing } from "../../courses/course.mts"
 import type { Courses } from "../../courses/browser/terms.mts"
 import { type Person, nextTeaching } from "../../courses/people.mts"
 import { mailto } from "../../courses/email.mts"
@@ -264,6 +264,12 @@ export const roomOf = (where: string) =>
 const personPage = ({ name, mail }: { name: string, mail?: string }): Page =>
   ({ kind: "person", id: mail ?? name })
 
+/** An instructor's search on RateMyProfessors, out to theirs alone, which nothing here reads; none for "Staff" */
+const RatingsLink = ({ name }: { name: string }) => {
+  const href = rmpUrl(name)
+  return href && <a class="go" href={href} target="_blank" rel="noopener">RateMyProfessors ›</a>
+}
+
 /**
  * A section's credits as the registrar gives them, "4.0" as "4 credits"; a range, "1.0-4.0", as its own words, as
  * its count isn't one number to say the plural of
@@ -428,7 +434,12 @@ const SectionView = ({ courses, term, section }: { courses: Courses, term: Term,
           <span class="muted">to <Day of={section.to} month="short" day="numeric" /></span>
         </Line>
         <SectionFinal term={term} section={section} finals={finals} />
-        {section.instructors.map(instructor => <Line label="Instructor"><Go to={personPage(instructor)}>{instructor.name} ›</Go></Line>)}
+        {section.instructors.map(instructor =>
+          <Line label="Instructor">
+            <Go to={personPage(instructor)}>{instructor.name} ›</Go>
+            <RatingsLink name={instructor.name} />
+          </Line>
+        )}
         {r(() => {
           void nextId.value
           const visit = !isFinal.peek() && next.peek() && visitOf(next.peek()!)
@@ -478,7 +489,10 @@ const PersonView = ({ courses, person }: { courses: Courses, person: Person }) =
         )
       })}
       <Week person={person} courses={courses} />
-      {person.mail && <div class="lines"><LinkLine onclick={() => location.href = mailto(person.mail!)}>Email</LinkLine></div>}
+      <div class="lines">
+        {rmpUrl(person.name) && <LinkLine href={rmpUrl(person.name)}>RateMyProfessors</LinkLine>}
+        {person.mail && <LinkLine onclick={() => location.href = mailto(person.mail!)}>Email</LinkLine>}
+      </div>
       {courses.terms.length > 0 && <Source term={courses.terms[0]} extra=" · scheduled teaching only" />}
     </>
   )

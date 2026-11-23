@@ -118,16 +118,17 @@ export const smoothShape = (shape: Coordinates[]) => {
 /** Where buses don't do what the timetable says: on a route, at a stop, from a service day's time on, in seconds */
 export type Correction = { route: string, stop: string, from: number, pickup?: false, dropOff?: false }
 
-// The Evening Connector's last loop of the night, due at West Edge after midnight, ends in the yard beside 10 West Edge
-// Drive, where the bus parks, rather than at the Lodges. Of 45 such loops in Umo's fixes from Oct 7 to Nov 20, 2026
-// (the observations releases), 10 went on to West Edge Lot and 4 to the Lodges, against 482 and 485 of the 487 loops
-// before each bus's last. UNH's schedule says 7 PM to midnight (unh.edu/transportation/evening-connector). So nobody
-// gets on at 10 West Edge Drive, from where the bus goes no further, or at West Edge Lot, nor off beyond
-export const CORRECTIONS: Correction[] = [
-  { route: "Evening", stop: "173", from: 24 * 3600, pickup: false },
-  { route: "Evening", stop: "169", from: 24 * 3600, pickup: false, dropOff: false },
-  { route: "Evening", stop: "181", from: 24 * 3600, dropOff: false }
-]
+// The Evening and Weekend Connectors' last loop of the night, due at West Edge after midnight, ends in the yard beside
+// 10 West Edge Drive, where the bus parks, rather than at the Lodges. Of 45 such Evening loops in Umo's fixes from Oct 7
+// to Nov 20, 2026 (the observations releases), 10 went on to West Edge Lot and 4 to the Lodges, against 482 and 485 of
+// the 487 loops before each bus's last; of 12 Weekend loops to Nov 22, 2 and 4, against 438 and 437 of 440. UNH's
+// schedule says the Evening Connector runs 7 PM to midnight (unh.edu/transportation/evening-connector). So nobody gets
+// on at 10 West Edge Drive, from where the bus goes no further, or at West Edge Lot, nor off beyond
+export const CORRECTIONS: Correction[] = ["Evening", "Weekend"].flatMap(route => [
+  { route, stop: "173", from: 24 * 3600, pickup: false },
+  { route, stop: "169", from: 24 * 3600, pickup: false, dropOff: false },
+  { route, stop: "181", from: 24 * 3600, dropOff: false }
+] satisfies Correction[])
 
 const DAY_COLUMNS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 

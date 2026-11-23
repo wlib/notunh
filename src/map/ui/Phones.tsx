@@ -5,10 +5,14 @@
 // on campus. All of it is in the app as built, so it's there offline
 
 import { type DerivativeNode, r } from "bruh/reactive"
+import { campusOf } from "../../places/gazetteer.mts"
 import { DISPATCH, type Phone, PHONES, offersEscort, phonesFor, telOf } from "../phones.mts"
 import { state } from "../state/map.mts"
 import { Group } from "./Courses.tsx"
-import { Head, Row } from "./Pages.tsx"
+import { Head, LinkLine, Row } from "./Pages.tsx"
+
+/** What UNH Police publish of the escort (../phones.mts), in a line */
+const ESCORT = "No shuttle running? UNH Security gives a free walking escort between on-campus locations."
 
 /** A number as a row that calls it: its name, what it's for, and the number */
 const PhoneRow = ({ phone }: { phone: Phone }) =>
@@ -30,7 +34,7 @@ export const PhonesView = () => {
     {PHONES.map(({ heading, phones }, i) => <>
       <h2 class="eyebrow">{heading}</h2>
       <ul class={i === 0 ? "rows phones urgent" : "rows phones"}>{phones.map(phone => <PhoneRow phone={phone} />)}</ul>
-      {i === 0 && <p class="view-facts muted">No shuttle running? UNH Security gives a free walking escort between on-campus locations. Call dispatch.</p>}
+      {i === 0 && <p class="view-facts muted">{ESCORT} Call dispatch.</p>}
     </>)}
     <p class="view-foot muted">From UNH's pages. TTY: <a href="tel:711">Relay NH, 711</a>.</p>
   </>
@@ -51,9 +55,10 @@ export const PhoneResults = ({ query }: { query: DerivativeNode<string> }) =>
 export const Escort = () =>
   r(() => {
     const [from, to, walk] = [state.from.value, state.to.value, state.walk.value]
-    return from && to && walk && offersEscort({ from, to, hasBus: state.ways.value.length > 0, meters: walk.meters }) &&
+    const campus = campusOf(state.gazetteer.value)
+    return from && to && walk && offersEscort({ from, to, hasBus: state.ways.value.length > 0, meters: walk.meters, campus }) &&
       <div class="escort">
-        <p class="notice">No shuttle running? UNH Security gives a free walking escort between on-campus locations.</p>
-        <a class="line link-line" href={`tel:${telOf(DISPATCH)}`}><span>Call for an escort · {DISPATCH.number}</span><span>›</span></a>
+        <p class="notice">{ESCORT}</p>
+        <LinkLine href={`tel:${telOf(DISPATCH)}`}>Call for an escort · {DISPATCH.number}</LinkLine>
       </div>
   })

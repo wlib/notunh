@@ -47,6 +47,14 @@ export const kindOf = (key: string, value: string) =>
   PLACE_KEYS.includes(key) && !NOT_PLACES.has(value) ? value :
                                                        undefined
 
+/**
+ * UNH's Durham campus, as far as OpenStreetMap's university of that name spreads: its extent, as only buildings keep
+ * their outlines, so a box around the campus from West Edge to where downtown begins, which holds every hall, class
+ * building and UNH lot, and little of the town
+ */
+export const campusOf = (places: readonly GazetteerPlace[]) =>
+  places.find(place => place.kind === "university" && place.name === "University of New Hampshire")?.extent
+
 // Further than this from a tap, a place isn't what was tapped
 const MAX_NEARBY = 60 // m
 

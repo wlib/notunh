@@ -7,10 +7,10 @@
 // every hall with yours first, both marked on the map while they're shown (render/status.mts); classes' is your week
 // and the ways into the courses. A hall's place then leads with its meal, and a residence hall's with its machines
 // (PlaceGlance), and those link on to the pages of their own, /dining/ and /laundry/, for the week's menus and each
-// machine. Dining is the one thing Today shows too, near its top while a hall is serving or about to, each hall's row
-// there going straight to its menu (DiningSoon)
+// machine. Dining is the one thing Today shows too, near its top while a hall is serving or about to, and the search
+// for food, each hall's row there going straight to its menu (DiningSoon, DiningResults)
 
-import { r } from "bruh/reactive"
+import { type DerivativeNode, r } from "bruh/reactive"
 import type { BruhChild } from "bruh/browser"
 import { type Status, wallDate } from "../../dining/hours.mts"
 import { highlights } from "../../dining/menus.mts"
@@ -30,7 +30,7 @@ import { state } from "../state/map.mts"
 import { nextDate } from "./Ahead.tsx"
 import { Status as BusStatus } from "./Buses.tsx"
 import { minutes, nowMs, walkTo } from "./common.tsx"
-import { MyCourses } from "./Courses.tsx"
+import { Group, MyCourses } from "./Courses.tsx"
 import { DayName, Head, LinkLine, placeNamed } from "./Pages.tsx"
 
 const capitalized = (word: string) =>
@@ -79,7 +79,7 @@ const DiningFact = () =>
 
 /**
  * A hall as a row: its standing, the walk there, and what the meal leads with, which opens its place on the map, or
- * its menu where the row is the quick way there, as on the home
+ * its menu where the row is the quick way there, as on the home and in the search
  */
 const HallRow = ({ hall, toMenu = false }: { hall: HallNow, toMenu?: boolean }) => {
   const walk = walkTo(placeNamed(hall.name))
@@ -110,6 +110,18 @@ export const DiningSoon = () =>
       <h2 class="eyebrow">Dining</h2>
       <ul class="rows halls" aria-label="Dining">{serving.map(hall => <HallRow hall={hall} toMenu />)}</ul>
     </>
+  })
+
+// What searching for food means, each word typed matched by its start, or matching one's start
+const FOOD_WORDS = ["dining", "menu", "food", "eat", "meal", "breakfast", "brunch", "lunch", "dinner"]
+
+/** The halls for a search that means food, each row its menu, open or not */
+export const DiningResults = ({ query }: { query: DerivativeNode<string> }) =>
+  r(() => {
+    const words = query.value.trim().toLocaleLowerCase().split(/\s+/)
+    const isFood = words.some(word => word.length >= 3 && FOOD_WORDS.some(food => food.startsWith(word) || word.startsWith(food)))
+    const halls = state.hallsNow.value
+    return isFood && halls.length > 0 && <Group label="Dining">{halls.map(hall => <HallRow hall={hall} toMenu />)}</Group>
   })
 
 /** Dining in the sheet: the two halls beside each other, as the choice between them is the one there is to make */

@@ -2,12 +2,13 @@
 // changing the sheet's size, and the sheet keeps its height from page to page, Directions and Back included, unless
 // it's dragged. A trip's ends are marked only on its directions. A page opens at once, and Back, the sheet's or the
 // browser's, returns to the list it was opened from scrolled as it was; so does a swipe to the right, which the page
-// follows. The camera following only the page shown is tested in tests/map/camera.test.mts and page.test.mts, as the
-// fixtures' map never loads, having no tiles
+// follows. Today leads with the dining halls while one is serving or about to, each opening its menu. The camera
+// following only the page shown is tested in tests/map/camera.test.mts and page.test.mts, as the fixtures' map never
+// loads, having no tiles
 
 import { test as base, expect, devices, type Page } from "@playwright/test"
 import { localDay } from "../../src/shared/time.mts"
-import { type Fixture, open, startFixture } from "./fixture.mts"
+import { type Fixture, open, shoot, startFixture } from "./fixture.mts"
 
 const test = base.extend<{ fixture: Fixture }>({
   fixture: async ({}, use) => {
@@ -114,6 +115,51 @@ test("searching lays suggestions over the week, keeping the sheet's size, and cl
   await expect(week).toBeVisible()
   await expect(search).toHaveValue("")
   await holds(page, height)
+})
+
+// The dining fixtures' menus are for October 7 and 8, 2026, a Wednesday and Thursday, when both halls open 7:15 AM
+// to 9:00 PM. Durham's clock, as the page is on New York's
+const at = (time: string) =>
+  new Date(`2026-10-07T${time}:00-04:00`)
+
+test("Today leads with the halls serving, each opening its menu, says which open soon, and steps aside for the night", async ({ page, fixture }) => {
+  await page.clock.setFixedTime(at("12:00"))
+  await open(page, fixture.origin, "/map/")
+  const dining = page.locator("#today").getByRole("list", { name: "Dining" })
+  const holloway = dining.getByRole("link", { name: /Holloway Commons/ })
+  await expect(dining.getByRole("link")).toHaveCount(2)
+  await expect(holloway).toContainText(/Open till 9:00\sPM/)
+  await expect(holloway).toContainText(/Lunch \S/)
+  await shoot(page, "dining-open")
+
+  // Searching for food finds each hall's menu too
+  await page.getByPlaceholder("Search campus").fill("lunch")
+  await expect(page.getByRole("region", { name: "Dining" }).getByRole("link")).toHaveCount(2)
+  // A name that merely starts with a food word, like Eaton House, finds none
+  await page.getByPlaceholder("Search campus").fill("eaton")
+  await expect(page.getByRole("region", { name: "Dining" })).toHaveCount(0)
+  await page.getByPlaceholder("Search campus").fill("")
+
+  await holloway.tap()
+  await expect(page).toHaveURL(/\/dining\/\?hall=holloway-commons-dining$/)
+  await expect(page.locator(".stations .station").first()).toBeVisible()
+
+  await page.clock.setFixedTime(at("06:30"))
+  await page.goto(`${fixture.origin}/map/`)
+  await expect(dining.getByRole("link")).toHaveCount(2)
+  await expect(holloway).toContainText(/Opens 7:15\sAM/)
+  await shoot(page, "dining-soon")
+
+  await page.clock.setFixedTime(at("22:30"))
+  await page.reload()
+  await expect(page.locator("#campus").getByRole("button", { name: /^Dining/ })).toContainText(/Closed · Holloway opens Thu 7:15\sAM/)
+  await expect(dining).toHaveCount(0)
+  await shoot(page, "dining-closed")
+  // Where Campus says when the next opens, scrolled to at once
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.locator(".parts").getByRole("link", { name: "Campus" }).tap()
+  await expect(page.locator(".parts a[aria-current]")).toHaveText("Campus")
+  await shoot(page, "dining-closed-campus")
 })
 
 test("the sheet keeps its height through Directions and Back, from home and from a place, and a drag's height after", async ({ page, fixture }) => {
@@ -289,6 +335,51 @@ test("a tap leaves the sheet as it is, and the page scrolled under it, as iOS do
   })
   await page.waitForFunction(() => scrollY === 0)
   await holds(page, height)
+})
+
+test("the sheet is lifted above the keyboard however iOS reports the viewport while it shows a field, and set back down once it's gone", async ({ page, fixture }) => {
+  await open(page, fixture.origin, "/map/")
+  const search = page.getByPlaceholder("Search campus")
+  await search.tap()
+  const height = await sheetHeight(page)
+
+  /**
+   * The keyboard over the bottom px given, as iOS has it while it scrolls the page to show a field: the visual viewport
+   * short of the layout viewport by that much, and innerHeight saying the same, as if it weren't there; and scrolled
+   * down the layout viewport by some of it, as iOS leaves it
+   */
+  const keyboard = (covered: number, scrolled = 0) => page.evaluate(([covered, scrolled]) => {
+    const shown = document.documentElement.clientHeight - covered
+    Object.defineProperty(visualViewport!, "height", { configurable: true, get: () => shown })
+    Object.defineProperty(visualViewport!, "offsetTop", { configurable: true, get: () => scrolled })
+    Object.defineProperty(window, "innerHeight", { configurable: true, get: () => shown })
+    visualViewport!.dispatchEvent(new Event("resize"))
+  }, [covered, scrolled])
+  /** Where the sheet's bottom edge is, and its top, once it's still */
+  const edges = async () => {
+    await framesOn(page)
+    await page.waitForFunction(() => !document.querySelector(".panel")!.classList.contains("moving"))
+    return page.locator(".panel").evaluate(panel => {
+      const { top, bottom } = panel.getBoundingClientRect()
+      return { top: Math.round(top), bottom: Math.round(bottom) }
+    })
+  }
+  const screen = await page.evaluate(() => document.documentElement.clientHeight)
+
+  await keyboard(300)
+  const lifted = await edges()
+  expect(lifted.bottom).toBe(screen - 300)
+  expect(lifted.top).toBeGreaterThanOrEqual(0)
+
+  // The visual viewport scrolled down the app shows that much more of it above the keyboard
+  await keyboard(300, 120)
+  expect((await edges()).bottom).toBe(screen - 180)
+
+  // The keyboard gone, the sheet's back at the bottom, as tall as it was
+  await search.blur()
+  await keyboard(0)
+  expect((await edges()).bottom).toBe(screen)
+  expect(await sheetHeight(page)).toBe(height)
 })
 
 /** Where the sheet is on screen this instant, mid-drag included */

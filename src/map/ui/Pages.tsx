@@ -17,7 +17,7 @@ import { type DerivativeNode, type Reactive, type SourceNode, r, untrack, watch 
 import type { Page } from "../link.mts"
 import { urlOf } from "../link.mts"
 import { state } from "../state/map.mts"
-import { type CourseEvent, type Meeting, type Section, type Term, KINDS, codeOf, courseOf, meets, registrarUrl, standing } from "../../courses/course.mts"
+import { type CourseEvent, type Meeting, type Section, type Term, KINDS, codeOf, courseOf, meets, registrarUrl, rmpUrl, standing } from "../../courses/course.mts"
 import type { Courses } from "../../courses/browser/terms.mts"
 import { type Person, nextTeaching } from "../../courses/people.mts"
 import { mailto } from "../../courses/email.mts"
@@ -430,7 +430,12 @@ const SectionView = ({ courses, term, section }: { courses: Courses, term: Term,
           <span class="muted">to <Day of={section.to} month="short" day="numeric" /></span>
         </Line>
         <SectionFinal term={term} section={section} finals={finals} />
-        {section.instructors.map(instructor => <Line label="Instructor"><Go to={personPage(instructor)}>{instructor.name} ›</Go></Line>)}
+        {section.instructors.map(instructor =>
+          <Line label="Instructor">
+            <Go to={personPage(instructor)}>{instructor.name} ›</Go>
+            <a class="go" href={rmpUrl(instructor.name)} target="_blank" rel="noopener">RateMyProfessors ›</a>
+          </Line>
+        )}
         {r(() => {
           void nextId.value
           const visit = !isFinal.peek() && next.peek() && visitOf(next.peek()!)
@@ -480,7 +485,10 @@ const PersonView = ({ courses, person }: { courses: Courses, person: Person }) =
         )
       })}
       <Week person={person} courses={courses} />
-      {person.mail && <div class="lines"><LinkLine onclick={() => location.href = mailto(person.mail!)}>Email</LinkLine></div>}
+      <div class="lines">
+        <LinkLine href={rmpUrl(person.name)}>RateMyProfessors</LinkLine>
+        {person.mail && <LinkLine onclick={() => location.href = mailto(person.mail!)}>Email</LinkLine>}
+      </div>
       {courses.terms.length > 0 && <Source term={courses.terms[0]} extra=" · scheduled teaching only" />}
     </>
   )
@@ -568,13 +576,14 @@ export const FinalRow = ({ yours: { term, section, final, event, clashes } }: { 
     onclick={() => state.go(sectionPage(term, section))}
   />
 
-/** A section as a row: its weekly pattern, its code and title, where it meets, and its CRN */
-export const SectionRow = ({ term, section, aside }: { term: Term, section: Section, aside?: BruhChild }) =>
+/** A section as a row: its weekly pattern, its code and title, where it meets and who teaches it, and its CRN */
+export const SectionRow = ({ term, section, aside, class: className }: { term: Term, section: Section, aside?: BruhChild, class?: Reactive<string | undefined> }) =>
   <Row
+    class={className}
     aside={aside}
     time={<Pattern section={section} />}
     what={`${codeOf(section)} · ${section.title}`}
-    sub={<Where section={section} />}
+    sub={<><Where section={section} />{section.instructors.length > 0 && <>{"\u00a0· "}<List items={section.instructors.map(({ name }) => name)} /></>}</>}
     standing={section.crn}
     onclick={() => state.go(sectionPage(term, section))}
   />

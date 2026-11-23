@@ -1,7 +1,7 @@
 import { test, expect } from "vitest"
 import fc from "fast-check"
 import { ColorSpace, contrastWCAG21, parse, sRGB } from "colorjs.io/fn"
-import { type Row, convert, interpolateTimes, parseTable, readableText, smoothShape } from "../../scripts/map/convert.mts"
+import { type Correction, type Row, CORRECTIONS, convert, interpolateTimes, parseTable, readableText, smoothShape } from "../../scripts/map/convert.mts"
 import { alongSegment } from "../../src/geo/lines.mts"
 import { type Coordinates, ruler } from "../../src/geo/projection.mts"
 
@@ -129,19 +129,19 @@ test("smoothShape keeps straight streets straight, rounding off only their corne
   ))
 )
 
-/** A GTFS feed of one trip along three stops, with whatever each stop time says besides its times */
-const tables = (stopTimes: Row[]) => {
+/** A GTFS feed of one trip of a route along stops, with whatever each stop time says besides its times */
+const tables = (stopTimes: Row[], { route = "R", stops = ["a", "b", "c"], corrections }: { route?: string, stops?: string[], corrections?: Correction[] } = {}) => {
   const rows: Record<string, Row[]> = {
     "feed_info.txt":      [{ feed_version: "v", feed_start_date: "20260901", feed_end_date: "20261231" }],
-    "routes.txt":         [{ route_id: "R", route_short_name: "R", route_long_name: "Route", route_color: "", route_text_color: "" }],
+    "routes.txt":         [{ route_id: route, route_short_name: route, route_long_name: "Route", route_color: "", route_text_color: "" }],
     "calendar.txt":       [{ service_id: "S", monday: "1", tuesday: "1", wednesday: "1", thursday: "1", friday: "1", saturday: "0", sunday: "0", start_date: "20260901", end_date: "20261231" }],
     "calendar_dates.txt": [],
-    "stops.txt":          ["a", "b", "c"].map((id, i) => ({ stop_id: id, stop_name: `Stop ${id}`, stop_lat: `${43.13 + i / 100}`, stop_lon: "-70.93" })),
-    "trips.txt":          [{ trip_id: "T", route_id: "R", service_id: "S", trip_headsign: "Town", shape_id: "" }],
-    "stop_times.txt":     stopTimes.map((stopTime, i) => ({ trip_id: "T", stop_id: ["a", "b", "c"][i], stop_sequence: `${i}`, ...stopTime })),
+    "stops.txt":          stops.map((id, i) => ({ stop_id: id, stop_name: `Stop ${id}`, stop_lat: `${43.13 + i / 100}`, stop_lon: "-70.93" })),
+    "trips.txt":          [{ trip_id: "T", route_id: route, service_id: "S", trip_headsign: "Town", shape_id: "" }],
+    "stop_times.txt":     stopTimes.map((stopTime, i) => ({ trip_id: "T", stop_id: stops[i], stop_sequence: `${i}`, ...stopTime })),
     "shapes.txt":         []
   }
-  return convert(name => rows[name])
+  return convert(name => rows[name], corrections)
 }
 
 test("each stop time's own pickup and drop-off rules, and arrival before departure, come through to the trip", () => {
@@ -163,4 +163,41 @@ test("each stop time's own pickup and drop-off rules, and arrival before departu
   expect(plain).not.toHaveProperty("arrivals")
   expect(plain).not.toHaveProperty("noPickup")
   expect(plain).not.toHaveProperty("noDropOff")
+})
+
+const clock = (seconds: number) =>
+  [seconds / 3600, seconds / 60 % 60, seconds % 60].map(part => String(Math.floor(part)).padStart(2, "0")).join(":")
+
+test("a correction stops pickups or drop-offs at its stop on its route from its time on, and nowhere else", () =>
+  fc.assert(fc.property(
+    fc.array(fc.nat({ max: 1200 }), { minLength: 3, maxLength: 3 }),
+    fc.integer({ min: 22 * 3600, max: 25 * 3600 }),
+    fc.integer({ min: 22 * 3600, max: 25 * 3600 }),
+    fc.constantFrom("R", "Q"),
+    fc.constantFrom<"pickup" | "dropOff">("pickup", "dropOff"),
+    (gaps, start, from, route, rule) => {
+      let time = start
+      const times = gaps.map((gap, i) => i === 0 ? time : time += gap)
+      const [trip] = tables(
+        times.map(at => ({ arrival_time: clock(at), departure_time: clock(at) })),
+        { route, corrections: [{ route: "R", stop: "b", from, [rule]: false }] }
+      ).trips
+      const isCut = route === "R" && times[1] >= from
+      expect(trip.noPickup ?? []).toEqual(rule === "pickup" && isCut ? [1] : [])
+      expect(trip.noDropOff ?? []).toEqual(rule === "dropOff" && isCut ? [1] : [])
+    }
+  ))
+)
+
+test("the Evening Connector's loops due at West Edge after midnight pick nobody up there, nor let anyone off beyond 10 West Edge Drive", () => {
+  // 218 Main Street, 10 West Edge Drive, West Edge Lot, and the Lodges, the end of each loop
+  const stops = ["162", "173", "169", "181"]
+  const loop = (times: string[]) =>
+    tables(times.map(at => ({ arrival_time: at, departure_time: at })), { route: "Evening", stops, corrections: CORRECTIONS }).trips[0]
+  const late = loop(["24:05:00", "24:08:00", "24:09:00", "24:10:00"])
+  expect(late.noPickup).toEqual([1, 2])
+  expect(late.noDropOff).toEqual([2, 3])
+  const earlier = loop(["23:55:00", "23:57:00", "23:58:00", "23:59:00"])
+  expect(earlier).not.toHaveProperty("noPickup")
+  expect(earlier).not.toHaveProperty("noDropOff")
 })
